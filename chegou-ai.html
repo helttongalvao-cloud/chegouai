@@ -365,7 +365,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="logo-mini">🛵</div>
       <h3>Chegou Aí</h3>
     </div>
-    <button class="header-acao" onclick="irPerfil()">👤 Meu perfil</button>
+    <button class="header-acao" onclick="irLogin()">Sair</button>
   </div>
   <div class="home-content">
     <div class="endereco-bar" onclick="alterarEndereco()">
@@ -611,7 +611,6 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 // CHEGOU AÍ — CONFIGURAÇÃO E API CLIENT
 // ============================================
 var API_BASE = '';  // Mesmo domínio (backend serve o frontend)
-var MP_PUBLIC_KEY = 'TEST-sua-public-key-aqui'; // Substituir pela chave real
 
 // Token de sessão (gerenciado pelo backend/Supabase)
 var authToken = localStorage.getItem('chegouai_token') || null;
@@ -639,9 +638,14 @@ async function apiCall(path, options) {
 // ============================================
 // INICIALIZAR SDK MERCADO PAGO
 // ============================================
-function inicializarMP() {
+async function inicializarMP() {
   if(window.MercadoPago) {
-    window.mp = new window.MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
+    try {
+      var resp = await apiCall('/api/health');
+      // A chave pública vem do backend. Se necessário, criar rota específica.
+      // Por enquanto, o SDK MP só é usado para Checkout Pro (redirecionamento),
+      // então não precisamos da public key no frontend.
+    } catch(e) {}
   }
 }
 
@@ -846,7 +850,7 @@ function entrarComo(perfil) {
 }
 
 function irCadastro() { irTela('tela-cadastro'); }
-function irPerfil() { alert('Perfil em breve!'); }
+// Função de perfil (futuramente será implementada)
 // irLogin definida abaixo com limpeza de sessão
 
 // HOME
@@ -1998,16 +2002,33 @@ if('serviceWorker' in navigator) {
 // ============================================
 // Verificar sessão ao iniciar (auto-login)
 // ============================================
-(function verificarSessao() {
+(async function verificarSessao() {
   var token = localStorage.getItem('chegouai_token');
   var user = JSON.parse(localStorage.getItem('chegouai_user') || 'null');
   if(token && user) {
-    authToken = token;
-    currentUser = user;
-    // Ao carregar o app, ir direto para a tela correspondente ao perfil
-    setTimeout(function() {
-      entrarComo(user.perfil);
-    }, 1800); // Após o splash
+    // Validar o token com o servidor antes de auto-logar
+    try {
+      authToken = token;
+      var resp = await apiCall('/api/auth/me');
+      if(resp && resp.id) {
+        currentUser = user;
+        setTimeout(function() {
+          entrarComo(user.perfil);
+        }, 1800);
+      } else {
+        // Token inválido: limpar tudo
+        authToken = null;
+        currentUser = null;
+        localStorage.removeItem('chegouai_token');
+        localStorage.removeItem('chegouai_user');
+      }
+    } catch(e) {
+      // Token expirado ou inválido
+      authToken = null;
+      currentUser = null;
+      localStorage.removeItem('chegouai_token');
+      localStorage.removeItem('chegouai_user');
+    }
   }
 })();
 
