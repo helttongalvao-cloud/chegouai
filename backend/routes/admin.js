@@ -152,14 +152,15 @@ router.post(
       });
       if (authErr) throw authErr;
 
-      // Atualizar perfil (trigger do Supabase já cria o básico, precisamos completar)
-      await supabaseAdmin.from('profiles').upsert({
-        id: authData.user.id,
-        nome,
-        telefone,
-        email,
-        perfil: 'estabelecimento',
-      }, { onConflict: 'id' });
+      // Atualizar perfil (trigger do Supabase já cria o básico com perfil='cliente', precisamos corrigir)
+      const { error: profileErr } = await supabaseAdmin
+        .from('profiles')
+        .update({ nome, telefone, email, perfil: 'estabelecimento' })
+        .eq('id', authData.user.id);
+      if (profileErr) {
+        console.error('[Admin] Erro ao atualizar profile para estabelecimento:', profileErr.message);
+        throw profileErr;
+      }
 
       // Criar estabelecimento
       const { data: est, error: estErr } = await supabaseAdmin
@@ -217,14 +218,15 @@ router.post(
       });
       if (authErr) throw authErr;
 
-      // Atualizar perfil (trigger do Supabase já cria o básico, precisamos completar)
-      await supabaseAdmin.from('profiles').upsert({
-        id: authData.user.id,
-        nome,
-        telefone,
-        email,
-        perfil: 'motoboy',
-      }, { onConflict: 'id' });
+      // Atualizar perfil (trigger do Supabase já cria o básico com perfil='cliente', precisamos corrigir)
+      const { error: profileErr } = await supabaseAdmin
+        .from('profiles')
+        .update({ nome, telefone, email, perfil: 'motoboy' })
+        .eq('id', authData.user.id);
+      if (profileErr) {
+        console.error('[Admin] Erro ao atualizar profile para motoboy:', profileErr.message);
+        throw profileErr;
+      }
 
       const { data: motoboy, error: mbErr } = await supabaseAdmin
         .from('motoboys')
