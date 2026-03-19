@@ -569,11 +569,11 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <div class="label">Sua comissão hoje</div>
       </div>
       <div class="admin-stat">
-        <div class="valor">8</div>
+        <div class="valor" id="admin-pedidos">0</div>
         <div class="label">Pedidos hoje</div>
       </div>
       <div class="admin-stat">
-        <div class="valor">3</div>
+        <div class="valor" id="admin-motoboys">0</div>
         <div class="label">Motoboys ativos</div>
       </div>
       <div class="admin-stat">
@@ -1545,7 +1545,8 @@ async function renderAdmin(secao) {
   if (adminDataCache && adminDataCache.stats) {
     document.getElementById('admin-comissao') && (document.getElementById('admin-comissao').textContent = 'R$ ' + (adminDataCache.stats.comissaoHoje || 0).toFixed(2).replace('.', ','));
     document.getElementById('admin-lojas') && (document.getElementById('admin-lojas').textContent = adminDataCache.stats.estabelecimentosAtivos || 0);
-    // Atualiza outras caixas se necessário pegando pela classe baseada nos textos (está fixo no HTML, não tem ID para todos, mas deixo pronto)
+    document.getElementById('admin-pedidos') && (document.getElementById('admin-pedidos').textContent = adminDataCache.stats.pedidosHoje || 0);
+    document.getElementById('admin-motoboys') && (document.getElementById('admin-motoboys').textContent = adminDataCache.stats.motoboysAtivos || 0);
   }
 
   // Fases progressivas
