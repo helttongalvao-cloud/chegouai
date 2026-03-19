@@ -315,5 +315,35 @@ router.post(
     }
   }
 );
+// =============================================
+// PATCH /api/orders/motoboy/disponibilidade — Motoboy altera disponibilidade
+// =============================================
+router.patch(
+  '/motoboy/disponibilidade',
+  requireAuth,
+  async (req, res, next) => {
+    try {
+      const { disponivel } = req.body;
+      const userId = req.user.id;
+
+      const { data: motoboy } = await supabaseAdmin
+        .from('motoboys')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (!motoboy) return res.status(404).json({ error: 'Motoboy não encontrado' });
+
+      await supabaseAdmin
+        .from('motoboys')
+        .update({ disponivel: !!disponivel })
+        .eq('id', motoboy.id);
+
+      res.json({ message: disponivel ? 'Disponível para entregas' : 'Indisponível', disponivel: !!disponivel });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 module.exports = router;

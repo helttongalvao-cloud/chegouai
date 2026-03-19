@@ -510,8 +510,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   <div class="est-content" id="est-conteudo">
     <div id="est-secao-pedidos">
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-valor">3</div><div class="stat-label">Pedidos hoje</div></div>
-        <div class="stat-card"><div class="stat-valor">R$127</div><div class="stat-label">Faturamento hoje</div></div>
+        <div class="stat-card"><div class="stat-valor" id="est-pedidos-hoje">0</div><div class="stat-label">Pedidos hoje</div></div>
+        <div class="stat-card"><div class="stat-valor" id="est-faturamento-hoje">R$0</div><div class="stat-label">Faturamento hoje</div></div>
       </div>
       <div class="secao-titulo">Pedidos em aberto</div>
       <div class="pedidos-lista" id="pedidos-estabelecimento"></div>
@@ -540,11 +540,11 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     </div>
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-valor">5</div>
+        <div class="stat-valor" id="moto-entregas">0</div>
         <div class="stat-label">Entregas hoje</div>
       </div>
       <div class="stat-card">
-        <div class="stat-valor">R$20</div>
+        <div class="stat-valor" id="moto-ganhos">R$0</div>
         <div class="stat-label">Ganhos hoje</div>
       </div>
     </div>
@@ -840,10 +840,7 @@ function irPerfil() { alert('Perfil em breve!'); }
 // irLogin definida abaixo com limpeza de sessão
 
 // HOME
-// Usuários locais apenas para demo offline (sem backend)
-// Em produção os dados vêm do Supabase via API
-let usuarios = [];
-let proximoId = 100;
+// Variáveis legadas (removidas — tudo agora vem da API)
 
 function mascaraTelefone(input) {
   let v = input.value.replace(/\D/g,'');
@@ -1720,60 +1717,121 @@ function aceitarPedidoLoja(btn) {
   btn.onclick = function() { this.textContent = '✅ Pronto para entrega'; this.className = 'btn-acao secundario'; };
 }
 
-function renderMotoboy() {
+async function renderMotoboy() {
   var el = document.getElementById('entregas-motoboy');
-  el.innerHTML =
-    '<div class="entrega-card">' +
-      '<h4>🔔 Nova entrega disponível!</h4>' +
-      '<div class="entrega-info">' +
-        '<div class="entrega-linha"><span class="label">Loja:</span><span class="valor">Lanchonete Sabor Caseiro</span></div>' +
-        '<div class="entrega-linha"><span class="label">Endereço:</span><span class="valor">Rua das Flores, 45</span></div>' +
-        '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:97999990000" style="color:var(--verde);text-decoration:none;">(97) 99999-0000</a></span></div>' +
-        '<div class="entrega-linha"><span class="label">Distância:</span><span class="valor">~1,2 km</span></div>' +
-        '<div class="entrega-linha"><span class="label">Seu ganho:</span><span class="valor" style="color:var(--verde)">R$ 3,00 ~ R$ 4,00</span></div>' +
-      '</div>' +
-      '<div class="btns-entrega">' +
-        '<button class="btn-acao secundario" onclick="recusarEntrega(this)">Recusar</button>' +
-        '<button class="btn-acao" onclick="aceitarEntrega(this)">Aceitar entrega</button>' +
-      '</div>' +
-    '</div>';
+  el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando entregas...</div>';
+
+  try {
+    // Buscar pedidos prontos para coleta (status 'pronto' = loja preparou, precisa de motoboy)
+    var pedidos = await apiCall('/api/orders?status=pronto');
+    var entregues = await apiCall('/api/orders?status=entregue');
+
+    // Atualizar estatísticas
+    var elEntregas = document.getElementById('moto-entregas');
+    var elGanhos = document.getElementById('moto-ganhos');
+    if(elEntregas) elEntregas.textContent = (entregues.pedidos || []).length;
+    var totalGanhos = (entregues.pedidos || []).reduce(function(s,p){ return s + parseFloat(p.taxa_entrega || 0); }, 0);
+    if(elGanhos) elGanhos.textContent = 'R$' + totalGanhos.toFixed(2).replace('.',',');
+
+    var lista = pedidos.pedidos || [];
+    if(lista.length === 0) {
+      el.innerHTML = '<div class="vazio"><div class="vazio-icon">🛵</div>Nenhuma entrega disponível no momento.<br><small style="color:var(--texto2)">Quando um pedido ficar pronto, ele aparecerá aqui.</small></div>';
+      return;
+    }
+
+    el.innerHTML = lista.map(function(p) {
+      var loja = p.estabelecimentos ? p.estabelecimentos.nome : 'Loja';
+      var taxa = parseFloat(p.taxa_entrega || 0).toFixed(2).replace('.',',');
+      return '<div class="entrega-card" data-pedido-id="' + p.id + '">' +
+        '<h4>🔔 Nova entrega disponível!</h4>' +
+        '<div class="entrega-info">' +
+          '<div class="entrega-linha"><span class="label">Loja:</span><span class="valor">' + loja + '</span></div>' +
+          '<div class="entrega-linha"><span class="label">Endereço:</span><span class="valor">' + (p.endereco_entrega || 'Não informado') + '</span></div>' +
+          '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + (p.telefone_cliente || '') + '" style="color:var(--verde);text-decoration:none;">' + (p.telefone_cliente || 'Não informado') + '</a></span></div>' +
+          '<div class="entrega-linha"><span class="label">Seu ganho:</span><span class="valor" style="color:var(--verde)">R$ ' + taxa + '</span></div>' +
+        '</div>' +
+        '<div class="btns-entrega">' +
+          '<button class="btn-acao secundario" onclick="recusarEntrega(this)">Recusar</button>' +
+          '<button class="btn-acao" onclick="aceitarEntrega(this, \'' + p.id + '\')">Aceitar entrega</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar entregas: ' + e.message + '</div>';
+  }
 }
 
-function aceitarEntrega(btn) {
-  var card = btn.closest('.entrega-card');
-  card.innerHTML =
-    '<h4 style="color:var(--verde)">✅ Entrega aceita!</h4>' +
-    '<div class="entrega-info" style="margin-top:12px;">' +
-      '<div class="entrega-linha"><span class="label">Vá até:</span><span class="valor">Lanchonete Sabor Caseiro</span></div>' +
-      '<div class="entrega-linha"><span class="label">Retire:</span><span class="valor">Pedido #001 - João Silva</span></div>' +
-      '<div class="entrega-linha"><span class="label">Entregue em:</span><span class="valor">Rua das Flores, 45</span></div>' +
-      '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:97999990000" style="color:var(--verde);text-decoration:none;">(97) 99999-0000 📞</a></span></div>' +
-    '</div>' +
-    '<div class="btns-entrega" style="margin-top:14px;">' +
-      '<button class="btn-acao" onclick="confirmarEntrega(this)" style="flex:1;">Confirmar entrega</button>' +
-    '</div>';
+async function aceitarEntrega(btn, pedidoId) {
+  btn.disabled = true;
+  btn.textContent = 'Aceitando...';
+  try {
+    await apiCall('/api/orders/' + pedidoId + '/assign-motoboy', { method: 'POST' });
+    var card = btn.closest('.entrega-card');
+    // Buscar detalhes atualizados
+    var p = await apiCall('/api/orders/' + pedidoId);
+    var loja = p.estabelecimentos ? p.estabelecimentos.nome : 'Loja';
+    card.innerHTML =
+      '<h4 style="color:var(--verde)">✅ Entrega aceita!</h4>' +
+      '<div class="entrega-info" style="margin-top:12px;">' +
+        '<div class="entrega-linha"><span class="label">Vá até:</span><span class="valor">' + loja + '</span></div>' +
+        '<div class="entrega-linha"><span class="label">Entregue em:</span><span class="valor">' + (p.endereco_entrega || '') + '</span></div>' +
+        '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + (p.telefone_cliente || '') + '" style="color:var(--verde);text-decoration:none;">' + (p.telefone_cliente || '') + ' 📞</a></span></div>' +
+      '</div>' +
+      '<div class="btns-entrega" style="margin-top:14px;">' +
+        '<button class="btn-acao" onclick="confirmarEntrega(this, \'' + pedidoId + '\')" style="flex:1;">Confirmar entrega realizada</button>' +
+      '</div>';
+  } catch(e) {
+    alert('Erro ao aceitar: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Aceitar entrega';
+  }
 }
 
-function confirmarEntrega(btn) {
-  var card = btn.closest('.entrega-card');
-  card.innerHTML =
-    '<div style="text-align:center;padding:20px;">' +
-      '<div style="font-size:48px;margin-bottom:8px;">🎉</div>' +
-      '<div style="font-weight:700;color:var(--verde)">Entrega concluída!</div>' +
-      '<div style="color:var(--texto2);font-size:13px;margin-top:4px;">R$ 3,00 ~ R$ 4,00 adicionado ao seu saldo</div>' +
-    '</div>';
+async function confirmarEntrega(btn, pedidoId) {
+  btn.disabled = true;
+  btn.textContent = 'Confirmando...';
+  try {
+    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'entregue' } });
+    var card = btn.closest('.entrega-card');
+    card.innerHTML =
+      '<div style="text-align:center;padding:20px;">' +
+        '<div style="font-size:48px;margin-bottom:8px;">🎉</div>' +
+        '<div style="font-weight:700;color:var(--verde)">Entrega concluída!</div>' +
+        '<div style="color:var(--texto2);font-size:13px;margin-top:4px;">Valor adicionado ao seu saldo</div>' +
+      '</div>';
+    // Atualizar estatísticas
+    setTimeout(renderMotoboy, 2000);
+  } catch(e) {
+    alert('Erro: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Confirmar entrega realizada';
+  }
 }
 
 function recusarEntrega(btn) {
   var card = btn.closest('.entrega-card');
-  card.innerHTML = '<div class="vazio"><div class="vazio-icon">🛵</div>Aguardando novas entregas...</div>';
+  card.remove();
+  // Se não sobrou nenhuma entrega
+  var el = document.getElementById('entregas-motoboy');
+  if(el && el.children.length === 0) {
+    el.innerHTML = '<div class="vazio"><div class="vazio-icon">🛵</div>Aguardando novas entregas...</div>';
+  }
 }
 
 let statusAtivo = true;
-function alternarStatus() {
+async function alternarStatus() {
   statusAtivo = !statusAtivo;
   const toggle = document.getElementById('toggle-motoboy');
   toggle.classList.toggle('ativo', statusAtivo);
+  // Notificar o backend sobre a mudança de disponibilidade
+  try {
+    await apiCall('/api/orders/motoboy/disponibilidade', { method: 'PATCH', body: { disponivel: statusAtivo } });
+  } catch(e) {
+    // Reverter visual se falhar
+    statusAtivo = !statusAtivo;
+    toggle.classList.toggle('ativo', statusAtivo);
+    alert('Erro ao mudar status: ' + e.message);
+  }
 }
 
 // ADMIN
@@ -1887,10 +1945,7 @@ function adminNav(btn, secao) {
     <div class="modal-titulo">📍 Onde entregar?</div>
     <input class="modal-campo" type="text" id="input-endereco" placeholder="Digite seu endereço completo..." oninput="filtrarSugestoes(this.value)">
     <div class="sugestoes" id="sugestoes-end">
-      <div class="sugestao-item" onclick="selecionarEnd('Rua das Flores, 45 — Centro')"><span class="s-icon">🏠</span>Rua das Flores, 45 — Centro</div>
-      <div class="sugestao-item" onclick="selecionarEnd('Av. Principal, 120 — Centro')"><span class="s-icon">📍</span>Av. Principal, 120 — Centro</div>
-      <div class="sugestao-item" onclick="selecionarEnd('Rua do Mercado, 8 — Mercado')"><span class="s-icon">📍</span>Rua do Mercado, 8 — Mercado</div>
-      <div class="sugestao-item" onclick="selecionarEnd('Bairro Novo, Rua B, 33')"><span class="s-icon">📍</span>Bairro Novo, Rua B, 33</div>
+      <div class="sugestao-item" onclick="selecionarEnd(this.textContent.trim())"><span class="s-icon">📍</span>Digite seu endereço acima</div>
     </div>
     <button class="btn-principal" onclick="confirmarEndereco()">Confirmar endereço</button>
     <button onclick="fecharModal()" style="width:100%;background:transparent;border:none;color:var(--texto2);padding:14px;cursor:pointer;font-size:14px;font-family:'DM Sans',sans-serif;margin-top:4px;">Cancelar</button>
