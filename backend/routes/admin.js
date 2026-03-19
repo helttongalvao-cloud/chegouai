@@ -210,37 +210,86 @@ router.post(
     const { nome, telefone, email, senha, moto, mpUserId } = req.body;
 
     try {
+      // PASSO 1: Criar usuario no Supabase Auth
+      let userId;
       const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
         email,
         password: senha,
         email_confirm: true,
         user_metadata: { nome, telefone },
       });
-      if (authErr) throw authErr;
 
-      // Atualizar perfil (trigger do Supabase já cria o básico com perfil='cliente', precisamos corrigir)
+      if (authErr) {
+        // Se usuario ja existe, tentar buscar o id dele
+        if (authErr.message && authErr.message.includes('already')) {
+          const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+          const existing = users.find(u => u.email === email);
+          if (existing) {
+            userId = existing.id;
+          } else {
+            return res.status(409).json({ error: 'E-mail já cadastrado no sistema' });
+          }
+        } else {
+          console.error('[Admin] Erro createUser:', authErr.message);
+          return res.status(400).json({ error: 'Erro ao criar usuario: ' + authErr.message });
+        }
+      } else {
+        userId = authData.user.id;
+      }
+
+      // PASSO 2: Atualizar perfil para motoboy
+      // Aguardar um instante para o trigger criar o profile
+      await new Promise(r => setTimeout(r, 500));
+
       const { error: profileErr } = await supabaseAdmin
         .from('profiles')
         .update({ nome, telefone, email, perfil: 'motoboy' })
-        .eq('id', authData.user.id);
+        .eq('id', userId);
+
       if (profileErr) {
-        console.error('[Admin] Erro ao atualizar profile para motoboy:', profileErr.message);
-        throw profileErr;
+        console.error('[Admin] Erro update profile:', profileErr.message);
+        // Nao bloquear — tentar inserir motoboy mesmo assim
       }
 
-      const { data: motoboy, error: mbErr } = await supabaseAdmin
+      // PASSO 3: Inserir na tabela motoboys (verificar se ja existe)
+      const { data: motoboyExistente } = await supabaseAdmin
         .from('motoboys')
-        .insert({
-          user_id: authData.user.id,
-          nome,
-          telefone,
-          moto: moto || '',
-          mp_user_id: mpUserId || null,
-        })
-        .select()
-        .single();
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (mbErr) throw mbErr;
+      let motoboy;
+      if (motoboyExistente) {
+        // Ja existe, atualizar
+        const { data: mb, error: mbErr } = await supabaseAdmin
+          .from('motoboys')
+          .update({ nome, telefone, moto: moto || '' })
+          .eq('user_id', userId)
+          .select()
+          .single();
+        if (mbErr) {
+          console.error('[Admin] Erro update motoboy:', mbErr.message);
+          return res.status(500).json({ error: 'Erro ao atualizar motoboy: ' + mbErr.message });
+        }
+        motoboy = mb;
+      } else {
+        const { data: mb, error: mbErr } = await supabaseAdmin
+          .from('motoboys')
+          .insert({
+            user_id: userId,
+            nome,
+            telefone,
+            moto: moto || '',
+            mp_user_id: mpUserId || null,
+          })
+          .select()
+          .single();
+        if (mbErr) {
+          console.error('[Admin] Erro insert motoboy:', mbErr.message);
+          return res.status(500).json({ error: 'Erro ao salvar motoboy: ' + mbErr.message });
+        }
+        motoboy = mb;
+      }
 
       res.status(201).json({
         message: 'Motoboy cadastrado com sucesso',
@@ -248,7 +297,8 @@ router.post(
         login: { email, perfil: 'motoboy' },
       });
     } catch (err) {
-      next(err);
+      console.error('[Admin] Erro geral cadastro motoboy:', err.message);
+      res.status(500).json({ error: 'Erro no cadastro: ' + err.message });
     }
   }
 );
