@@ -51,7 +51,7 @@ router.post('/register', validateRegister, async (req, res, next) => {
       .from('profiles')
       .select('id')
       .eq('telefone', telLimpo)
-      .single();
+      .maybeSingle();
 
     if (existente) {
       return res.status(409).json({ error: 'Telefone já cadastrado' });
@@ -72,10 +72,10 @@ router.post('/register', validateRegister, async (req, res, next) => {
       throw authError;
     }
 
-    // Criar perfil na tabela profiles
+    // Atualizar perfil criado pelo trigger com os dados completos
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .insert({
+      .upsert({
         id: authData.user.id,
         nome,
         telefone: telLimpo,
