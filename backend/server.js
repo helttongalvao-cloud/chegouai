@@ -27,10 +27,12 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: [
         "'self'",
-        "'unsafe-inline'",        // necessário para o HTML monolítico atual
+        "'unsafe-inline'",        // necessário para o HTML monolítico com onclick
+        "'unsafe-eval'",          // necessário para alguns scripts inline
         'https://sdk.mercadopago.com',
         'https://fonts.googleapis.com',
       ],
+      scriptSrcAttr: ["'unsafe-inline'"], // permite onclick, oninput etc.
       styleSrc: [
         "'self'",
         "'unsafe-inline'",
@@ -40,7 +42,7 @@ app.use(helmet({
       imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: [
         "'self'",
-        process.env.SUPABASE_URL,
+        process.env.SUPABASE_URL || 'https://*.supabase.co',
         'https://api.mercadopago.com',
         'https://*.supabase.co',
       ],
