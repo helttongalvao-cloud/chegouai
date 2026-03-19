@@ -39,6 +39,16 @@
 body { background:var(--preto); color:var(--texto); font-family:'DM Sans',sans-serif; min-height:100vh; overflow-x:hidden; }
 h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
+/* TOAST NOTIFICATIONS */
+#toast-container { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
+.toast { background:var(--cinza2); border:1.5px solid var(--verde); border-radius:14px; padding:14px 18px; color:var(--texto); font-size:14px; font-family:'DM Sans',sans-serif; box-shadow:0 8px 32px rgba(0,0,0,0.5); animation: toastIn 0.4s ease, toastOut 0.4s ease 3.6s forwards; max-width:340px; pointer-events:auto; display:flex; align-items:center; gap:10px; }
+.toast-icon { font-size:20px; flex-shrink:0; }
+.toast-body { flex:1; }
+.toast-title { font-weight:700; font-size:13px; font-family:'Plus Jakarta Sans',sans-serif; }
+.toast-msg { font-size:12px; color:var(--texto2); margin-top:2px; }
+@keyframes toastIn { from { opacity:0; transform:translateX(100px); } to { opacity:1; transform:translateX(0); } }
+@keyframes toastOut { from { opacity:1; } to { opacity:0; transform:translateY(-20px); } }
+
 /* TELAS */
 .tela { display:none; min-height:100vh; flex-direction:column; }
 .tela.ativa { display:flex; }
@@ -2039,6 +2049,140 @@ function instalarApp() {
     }
   }
 })();
+</script>
+
+<!-- TOAST NOTIFICATIONS CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- SISTEMA DE NOTIFICAÇÕES + RASTREIO + SERVICE WORKER -->
+<script>
+// === TOAST NOTIFICATION SYSTEM ===
+function showToast(icon, title, msg) {
+  var container = document.getElementById('toast-container');
+  if(!container) return;
+  var t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = '<div class="toast-icon">' + icon + '</div><div class="toast-body"><div class="toast-title">' + title + '</div><div class="toast-msg">' + msg + '</div></div>';
+  container.appendChild(t);
+  // Emitir som de notificação
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.value = 0.15;
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+    setTimeout(function() {
+      var osc2 = ctx.createOscillator();
+      var gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.frequency.value = 1100;
+      gain2.gain.value = 0.15;
+      osc2.start();
+      osc2.stop(ctx.currentTime + 0.2);
+    }, 180);
+  } catch(e) {}
+  setTimeout(function() { if(t.parentNode) t.parentNode.removeChild(t); }, 4200);
+}
+
+// === POLLING DE STATUS DE PEDIDOS (para lojista e cliente) ===
+let ultimoStatusConhecido = {};
+let pollingInterval = null;
+
+function iniciarPollingPedidos() {
+  if(pollingInterval) clearInterval(pollingInterval);
+  pollingInterval = setInterval(async function() {
+    if(!authToken || !currentUser) return;
+
+    try {
+      if(currentUser.perfil === 'estabelecimento') {
+        // Lojista: verificar novos pedidos
+        var resp = await apiCall('/api/orders?status=pendente');
+        var pedidos = resp.pedidos || [];
+        pedidos.forEach(function(p) {
+          if(!ultimoStatusConhecido[p.id]) {
+            ultimoStatusConhecido[p.id] = p.status;
+            showToast('🔔', 'Novo pedido!', 'Pedido de R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') + ' para ' + (p.endereco_entrega || '').substring(0, 40));
+            // Recarregar a tela se estiver no painel
+            if(document.getElementById('tela-estabelecimento').classList.contains('ativa')) {
+              estNav(document.getElementById('est-nav-pedidos'), 'pedidos');
+            }
+          }
+        });
+      } else if(currentUser.perfil === 'cliente' && pedidoAtualId) {
+        // Cliente: verificar mudança de status do pedido atual
+        var resp = await apiCall('/api/payments/status/' + pedidoAtualId);
+        var novoStatus = resp.status;
+        if(ultimoStatusConhecido[pedidoAtualId] !== novoStatus) {
+          ultimoStatusConhecido[pedidoAtualId] = novoStatus;
+          atualizarRastreioPedido(novoStatus);
+          var msgs = {
+            'aceito': { icon: '✅', title: 'Pedido aceito!', msg: 'O estabelecimento aceitou seu pedido.' },
+            'preparando': { icon: '👨‍🍳', title: 'Preparando...', msg: 'Seu pedido está sendo preparado.' },
+            'pronto': { icon: '📦', title: 'Pedido pronto!', msg: 'Aguardando motoboy para entrega.' },
+            'coletado': { icon: '🛵', title: 'Saiu para entrega!', msg: 'O motoboy está a caminho.' },
+            'entregue': { icon: '🎉', title: 'Entregue!', msg: 'Seu pedido foi entregue. Bom apetite!' },
+          };
+          if(msgs[novoStatus]) showToast(msgs[novoStatus].icon, msgs[novoStatus].title, msgs[novoStatus].msg);
+        }
+      } else if(currentUser.perfil === 'motoboy') {
+        // Motoboy: verificar novos pedidos prontos
+        var resp = await apiCall('/api/orders?status=pronto');
+        var pedidos = resp.pedidos || [];
+        var novos = pedidos.filter(function(p) { return !ultimoStatusConhecido['moto_' + p.id]; });
+        if(novos.length > 0) {
+          novos.forEach(function(p) { ultimoStatusConhecido['moto_' + p.id] = true; });
+          showToast('🔔', novos.length + ' nova(s) entrega(s)!', 'Há entregas disponíveis para você.');
+          if(document.getElementById('tela-motoboy').classList.contains('ativa')) {
+            renderMotoboy();
+          }
+        }
+      }
+    } catch(e) { /* silencioso */ }
+  }, 15000); // A cada 15 segundos
+}
+
+// === RASTREIO DO PEDIDO (barra de progresso para o cliente) ===
+function atualizarRastreioPedido(status) {
+  var etapas = ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'entregue'];
+  var dots = document.querySelectorAll('#tela-confirmado .status-dot');
+  var labels = document.querySelectorAll('#tela-confirmado .status-label');
+  var idx = etapas.indexOf(status);
+  if(idx === -1) idx = 0;
+  // Mapear: 0-1=step0, 2=step1, 3-4=step2, 5=step3
+  var stepMap = [0, 0, 1, 2, 2, 3];
+  var step = stepMap[Math.min(idx, stepMap.length - 1)];
+  dots.forEach(function(d, i) {
+    d.classList.remove('feito', 'ativo');
+    if(i < step) d.classList.add('feito');
+    if(i === step) d.classList.add('ativo');
+  });
+  labels.forEach(function(l, i) {
+    l.classList.remove('ativo');
+    if(i === step) l.classList.add('ativo');
+  });
+}
+
+// === INICIAR POLLING AO FAZER LOGIN ===
+var _entrarComo_original = entrarComo;
+entrarComo = function(perfil) {
+  _entrarComo_original(perfil);
+  ultimoStatusConhecido = {};
+  iniciarPollingPedidos();
+};
+
+// === REGISTRAR SERVICE WORKER ===
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').then(function() {
+    console.log('SW registrado');
+  }).catch(function(e) {
+    console.log('SW falhou:', e);
+  });
+}
 </script>
 
 </body>
