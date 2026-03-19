@@ -276,5 +276,31 @@ router.patch('/establishments/:id/toggle', async (req, res, next) => {
     next(err);
   }
 });
+// =============================================
+// PATCH /api/admin/motoboys/:id/toggle — Ativar/desativar motoboy
+// =============================================
+router.patch('/motoboys/:id/toggle', async (req, res, next) => {
+  try {
+    const { data: motoboy } = await supabaseAdmin
+      .from('motoboys')
+      .select('ativo')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!motoboy) return res.status(404).json({ error: 'Motoboy não encontrado' });
+
+    const { data, error } = await supabaseAdmin
+      .from('motoboys')
+      .update({ ativo: !motoboy.ativo })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ ativo: data.ativo, message: data.ativo ? 'Motoboy ativado' : 'Motoboy desativado' });
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;
