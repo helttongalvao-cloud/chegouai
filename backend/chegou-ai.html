@@ -1783,37 +1783,7 @@ function adminNav(btn, secao) {
   renderAdmin(secao);
 }
 
-function cadastrarLoja() {
-  var nome = sanitizar(document.getElementById('new-loja-nome').value);
-  var tel = document.getElementById('new-loja-tel').value.replace(/[^0-9]/g,'');
-  var cat = document.getElementById('new-loja-cat').value;
-  var senha = document.getElementById('new-loja-senha').value;
-  if(!nome) { destacarErro('new-loja-nome'); return; }
-  if(tel.length < 10) { destacarErro('new-loja-tel'); return; }
-  if(!senha) { destacarErro('new-loja-senha'); return; }
-  if(usuarios.find(function(u){ return u.telefone === tel; })) { alert('Telefone ja cadastrado'); return; }
-  usuarios.push({ id: proximoId++, nome: nome, telefone: tel, senha: senha, perfil: 'estabelecimento', categoria: cat, aberto: true, cadastroMes: 1 });
-  alert('Loja cadastrada com sucesso. Login: ' + tel + ' Senha: ' + senha);
-  document.getElementById('new-loja-nome').value = '';
-  document.getElementById('new-loja-tel').value = '';
-  document.getElementById('new-loja-senha').value = '';
-}
-function cadastrarMotoboy() {
-  var nome = sanitizar(document.getElementById('new-moto-nome').value);
-  var tel = document.getElementById('new-moto-tel').value.replace(/[^0-9]/g,'');
-  var moto = sanitizar(document.getElementById('new-moto-moto').value);
-  var senha = document.getElementById('new-moto-senha').value;
-  if(!nome) { destacarErro('new-moto-nome'); return; }
-  if(tel.length < 10) { destacarErro('new-moto-tel'); return; }
-  if(!senha) { destacarErro('new-moto-senha'); return; }
-  if(usuarios.find(function(u){ return u.telefone === tel; })) { alert('Telefone ja cadastrado'); return; }
-  usuarios.push({ id: proximoId++, nome: nome, telefone: tel, senha: senha, perfil: 'motoboy', moto: moto });
-  alert('Motoboy cadastrado com sucesso. Login: ' + tel + ' Senha: ' + senha);
-  document.getElementById('new-moto-nome').value = '';
-  document.getElementById('new-moto-tel').value = '';
-  document.getElementById('new-moto-moto').value = '';
-  document.getElementById('new-moto-senha').value = '';
-}
+
 </script>
 
 
