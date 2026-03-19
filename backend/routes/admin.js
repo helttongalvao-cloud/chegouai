@@ -152,14 +152,14 @@ router.post(
       });
       if (authErr) throw authErr;
 
-      // Criar perfil
-      await supabaseAdmin.from('profiles').insert({
+      // Atualizar perfil (trigger do Supabase já cria o básico, precisamos completar)
+      await supabaseAdmin.from('profiles').upsert({
         id: authData.user.id,
         nome,
         telefone,
         email,
         perfil: 'estabelecimento',
-      });
+      }, { onConflict: 'id' });
 
       // Criar estabelecimento
       const { data: est, error: estErr } = await supabaseAdmin
@@ -217,13 +217,14 @@ router.post(
       });
       if (authErr) throw authErr;
 
-      await supabaseAdmin.from('profiles').insert({
+      // Atualizar perfil (trigger do Supabase já cria o básico, precisamos completar)
+      await supabaseAdmin.from('profiles').upsert({
         id: authData.user.id,
         nome,
         telefone,
         email,
         perfil: 'motoboy',
-      });
+      }, { onConflict: 'id' });
 
       const { data: motoboy, error: mbErr } = await supabaseAdmin
         .from('motoboys')
