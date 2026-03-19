@@ -793,35 +793,8 @@ function fecharModalPagamento() {
 }
 // ============================================
 
-// DADOS
-let estabelecimentos = [
-  { id:1, nome:'Lanchonete Sabor Caseiro', emoji:'🍔', categoria:'lanche', tempo:'25-35 min', taxa:4, aberto:true, cadastroMes:1, itens:[
-    { nome:'X-Burguer', desc:'Pão, carne, queijo e salada', preco:18, emoji:'🍔' },
-    { nome:'X-Frango', desc:'Pão, frango grelhado, queijo', preco:16, emoji:'🥪' },
-    { nome:'Batata Frita', desc:'Porção média crocante', preco:12, emoji:'🍟' },
-    { nome:'Suco Natural', desc:'Laranja, limão ou abacaxi', preco:8, emoji:'🥤' },
-  ]},
-  { id:2, nome:'Mercadinho Central', emoji:'🛒', categoria:'mercado', tempo:'20-30 min', taxa:4, aberto:true, cadastroMes:2, itens:[
-    { nome:'Refrigerante 2L', desc:'Coca-Cola, Pepsi ou Guaraná', preco:12, emoji:'🥤' },
-    { nome:'Água Mineral', desc:'500ml gelada', preco:3, emoji:'💧' },
-    { nome:'Pão de Forma', desc:'Pacote 500g', preco:9, emoji:'🍞' },
-    { nome:'Ovos (dúzia)', desc:'Ovos brancos frescos', preco:14, emoji:'🥚' },
-  ]},
-  { id:3, nome:'Farmácia Bem Estar', emoji:'💊', categoria:'farmacia', tempo:'15-25 min', taxa:4, aberto:true, cadastroMes:3, itens:[
-    { nome:'Dipirona 500mg', desc:'Caixa com 20 comprimidos', preco:12, emoji:'💊' },
-    { nome:'Vitamina C 1g', desc:'Efervescente, 10 comprimidos', preco:18, emoji:'🍋' },
-    { nome:'Álcool Gel 70%', desc:'Frasco 500ml', preco:15, emoji:'🧴' },
-  ]},
-  { id:4, nome:'Restaurante do Zé', emoji:'🍽️', categoria:'restaurante', tempo:'35-50 min', taxa:4, aberto:true, cadastroMes:4, itens:[
-    { nome:'Prato do Dia', desc:'Arroz, feijão, carne e salada', preco:22, emoji:'🍽️' },
-    { nome:'Peixe Frito', desc:'Filé de tambaqui com mandioca', preco:35, emoji:'🐟' },
-    { nome:'Sopa de Peixe', desc:'Caldo temperado especial', preco:20, emoji:'🥣' },
-  ]},
-  { id:5, nome:'Açaí da Maria', emoji:'🫐', categoria:'lanche', tempo:'15-20 min', taxa:4, aberto:false, cadastroMes:1, itens:[
-    { nome:'Açaí 500ml', desc:'Com granola, banana e mel', preco:18, emoji:'🫐' },
-    { nome:'Açaí 1L', desc:'Com acompanhamentos', preco:32, emoji:'🫐' },
-  ]},
-];
+// Lista global vazia (será preenchida pela API)
+let estabelecimentos = [];
 
 // Taxa de entrega por distância
 function calcularTaxaEntrega(distanciaKm) {
@@ -855,14 +828,8 @@ function entrarComo(perfil) {
   if(perfil === 'cliente') { irHome(); }
   else if(perfil === 'estabelecimento') {
     irTela('tela-estabelecimento');
-    // Aguardar DOM estar visível antes de atualizar labels
-    setTimeout(function() {
-      renderEstabelecimento();
-      const u = usuarios.find(function(x){ return x.perfil === 'estabelecimento'; });
-      const cat = u ? u.categoria : null;
-      const btn = document.getElementById('est-nav-cardapio');
-      if(btn) btn.textContent = labelCardapio(cat);
-    }, 50);
+    // Inicializa carregando dados do backend e indo pra aba de pedidos
+    estNav(document.getElementById('est-nav-pedidos'), 'pedidos');
   }
   else if(perfil === 'motoboy') { renderMotoboy(); irTela('tela-motoboy'); }
   else if(perfil === 'admin') { renderAdmin('pedidos'); irTela('tela-admin'); }
@@ -1004,7 +971,8 @@ function renderEstabelecimentos(cat) {
   lista.innerHTML = filtrados.map(function(e) {
     var badge = e.aberto ? 'badge-aberto' : 'badge-fechado';
     var status = e.aberto ? 'Aberto' : 'Fechado';
-    return '<div class="card-est" onclick="abrirCardapio(\'' + e.id + '\')">' +
+    var esmaecido = e.aberto ? '' : 'style="opacity: 0.5; filter: grayscale(1);"';
+    return '<div class="card-est" onclick="abrirCardapio(\'' + e.id + '\')" ' + esmaecido + '>' +
       '<div class="card-est-img">' + (e.emoji || '🏪') + '</div>' +
       '<div class="card-est-info">' +
         '<div class="card-est-nome">' + e.nome + '</div>' +
@@ -1277,128 +1245,142 @@ function usarLocalizacao() {
   );
 }
 
-// DADOS DO CARDÁPIO DO ESTABELECIMENTO
-let cardapioEst = [
-  { nome:'X-Burguer', desc:'Pão, carne, queijo e salada', preco:18, emoji:'🍔', disponivel:true },
-  { nome:'X-Frango', desc:'Pão, frango grelhado, queijo', preco:16, emoji:'🥪', disponivel:true },
-  { nome:'Batata Frita', desc:'Porção média crocante', preco:12, emoji:'🍟', disponivel:true },
-  { nome:'Suco Natural', desc:'Laranja, limão ou abacaxi', preco:8, emoji:'🥤', disponivel:true },
-];
-let emojiSelecionado = '🍔';
+// CACHE DO ESTABELECIMENTO
+let estDataCache = null;
 
-function estNav(btn, secao) {
+async function carregarDadosEst() {
+  try {
+    estDataCache = await apiCall('/api/establishments/me/dashboard');
+    var prodReq = await apiCall('/api/establishments/me/products');
+    estDataCache.produtos = prodReq;
+  } catch(e) {
+    alert('Erro ao carregar dados da loja: ' + e.message);
+  }
+}
+
+async function estNav(btn, secao) {
   document.querySelectorAll('#tela-estabelecimento .nav-btn').forEach(function(b){ b.classList.remove('ativo'); });
-  btn.classList.add('ativo');
-  const lojaUsuario = usuarios.find(function(u){ return u.perfil === 'estabelecimento'; });
-  const cat = lojaUsuario ? lojaUsuario.categoria : null;
+  if(btn) btn.classList.add('ativo');
+
+  document.getElementById('est-conteudo').innerHTML = '<div class="loading-spinner" style="margin:20px auto;"></div>';
+  await carregarDadosEst();
+
+  // Restaurar as divs
+  document.getElementById('est-conteudo').innerHTML =
+    '<div id="est-secao-pedidos" style="display:none;"></div>' +
+    '<div id="est-secao-cardapio" style="display:none;"></div>' +
+    '<div id="est-secao-loja" style="display:none;"></div>';
+
+  const cat = estDataCache?.estabelecimento?.categoria || 'lanche';
   const nomeCardapio = labelCardapio(cat).replace(/^.{2}/,'').trim();
   document.getElementById('est-titulo-header').textContent =
     secao === 'pedidos' ? 'Pedidos' : secao === 'cardapio' ? nomeCardapio : 'Minha Loja';
+
   document.getElementById('est-secao-pedidos').style.display = secao === 'pedidos' ? 'block' : 'none';
   document.getElementById('est-secao-cardapio').style.display = secao === 'cardapio' ? 'block' : 'none';
   document.getElementById('est-secao-loja').style.display = secao === 'loja' ? 'block' : 'none';
+
+  if(secao === 'pedidos') renderEstabelecimento();
   if(secao === 'cardapio') renderCardapioEst();
   if(secao === 'loja') renderInfoLoja();
 }
 
 function renderCardapioEst() {
   var el = document.getElementById('est-secao-cardapio');
-  var itensHtml = cardapioEst.map(function(p, i) {
+  var produtos = estDataCache?.produtos || [];
+  var itensHtml = produtos.map(function(p, i) {
     var op = p.disponivel ? '1' : '0.4';
     var indisponivel = !p.disponivel ? '<div style="font-size:11px;color:var(--erro);margin-top:2px;">⛔ Indisponível</div>' : '';
-    var preco = 'R$ ' + p.preco.toFixed(2).replace('.',',');
-    return '<div class="card-produto">' +
-      '<div class="prod-emoji" style="opacity:' + op + '">' + p.emoji + '</div>' +
+    var preco = 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.',',');
+    return '<div class="card-produto" data-id="' + p.id + '">' +
+      '<div class="prod-emoji" style="opacity:' + op + '">' + (p.emoji || '🍽️') + '</div>' +
       '<div class="prod-info">' +
         '<div class="prod-nome">' + p.nome + '</div>' +
-        '<div class="prod-desc">' + p.desc + '</div>' +
+        '<div class="prod-desc">' + (p.descricao || '') + '</div>' +
         '<div class="prod-preco">' + preco + '</div>' +
         indisponivel +
       '</div>' +
       '<div class="prod-acoes">' +
         '<button class="btn-editar" onclick="editarProduto(' + i + ')">✏️ Editar</button>' +
-        '<button class="btn-deletar" onclick="deletarProduto(' + i + ')">🗑️ Remover</button>' +
+        '<button class="btn-deletar" onclick="deletarProduto(\'' + p.id + '\')">🗑️ Remover</button>' +
       '</div>' +
     '</div>';
   }).join('');
-  var vazio = cardapioEst.length ? itensHtml : '<div class="vazio"><div class="vazio-icon">🍽️</div>Nenhum produto cadastrado ainda</div>';
+  var vazio = produtos.length ? itensHtml : '<div class="vazio"><div class="vazio-icon">🍽️</div>Nenhum produto cadastrado ainda</div>';
   el.innerHTML =
     '<button class="btn-principal" onclick="abrirModalProduto()" style="margin-bottom:16px;">+ Adicionar produto</button>' +
-    '<div class="secao-titulo" style="font-size:14px;color:var(--texto2);">' + cardapioEst.length + ' produto(s) cadastrado(s)</div>' +
+    '<div class="secao-titulo" style="font-size:14px;color:var(--texto2);">' + produtos.length + ' produto(s) cadastrado(s)</div>' +
     vazio;
 }
 
 function renderInfoLoja() {
   const el = document.getElementById('est-secao-loja');
-  const u = usuarios.find(function(x){ return x.perfil === 'estabelecimento'; });
-  const catAtual = u ? u.categoria : 'lanche';
+  const est = estDataCache?.estabelecimento;
+  if(!est) return;
+
+  const catAtual = est.categoria || 'lanche';
+  const aberto = est.aberto ? 'checked' : '';
 
   el.innerHTML =
     '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:16px;padding:16px;">' +
     '<h4 style="font-size:15px;font-weight:700;margin-bottom:14px;">Configurações da loja</h4>' +
     '<div class="form-grupo"><label>Nome da loja</label>' +
-    '<input type="text" id="loja-nome-input" class="modal-campo" style="margin:0;"></div>' +
+    '<input type="text" id="loja-nome-input" value="' + est.nome + '" class="modal-campo" style="margin:0;"></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Categoria</label>' +
     '<select id="loja-cat-select" class="modal-campo" style="margin:0;" onchange="atualizarLabelCardapio(this.value)">' +
-    '<option value="lanche">Lanchonete</option>' +
-    '<option value="restaurante">Restaurante</option>' +
-    '<option value="mercado">Mercado</option>' +
-    '<option value="farmacia">Farmácia</option>' +
+    '<option value="lanche" ' + (catAtual==='lanche'?'selected':'') + '>Lanchonete</option>' +
+    '<option value="restaurante" ' + (catAtual==='restaurante'?'selected':'') + '>Restaurante</option>' +
+    '<option value="mercado" ' + (catAtual==='mercado'?'selected':'') + '>Mercado</option>' +
+    '<option value="farmacia" ' + (catAtual==='farmacia'?'selected':'') + '>Farmácia</option>' +
     '</select></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Tempo médio de entrega</label>' +
-    '<input type="text" id="loja-tempo-input" value="25-35 min" class="modal-campo" style="margin:0;"></div>' +
+    '<input type="text" id="loja-tempo-input" value="' + (est.tempo_entrega || '30-45 min') + '" class="modal-campo" style="margin:0;"></div>' +
     '<div class="form-grupo" style="margin-top:12px;">' +
     '<div class="disponivel-toggle">' +
-    '<input type="checkbox" id="loja-aberta" checked style="width:auto;accent-color:var(--verde);">' +
+    '<input type="checkbox" id="loja-aberta" ' + aberto + ' style="width:auto;accent-color:var(--verde);">' +
     '<label for="loja-aberta">Loja aberta para pedidos</label>' +
     '</div></div>' +
-    '<button class="btn-principal" style="margin-top:16px;" id="btn-salvar-loja">Salvar alterações</button>' +
+    '<button class="btn-principal" style="margin-top:16px;" id="btn-salvar-loja" onclick="salvarInfoLoja()">Salvar alterações</button>' +
     '</div>';
+}
 
-  // Preencher valores após renderizar
-  var nomeInput = document.getElementById('loja-nome-input');
-  var catSelect = document.getElementById('loja-cat-select');
-  var btnSalvar = document.getElementById('btn-salvar-loja');
-
-  if(nomeInput) nomeInput.value = u ? u.nome : '';
-  if(catSelect) {
-    catSelect.value = catAtual;
-    catSelect.addEventListener('change', function() {
-      atualizarLabelCardapio(this.value);
-    });
-  }
-  if(btnSalvar) {
-    btnSalvar.addEventListener('click', function() {
-      salvarInfoLoja();
-    });
+async function salvarInfoLoja() {
+  const btn = document.getElementById('btn-salvar-loja');
+  if(btn) { btn.disabled = true; btn.textContent = 'Aguarde...'; }
+  try {
+    const payload = {
+      nome: document.getElementById('loja-nome-input').value,
+      categoria: document.getElementById('loja-cat-select').value,
+      tempo_entrega: document.getElementById('loja-tempo-input').value,
+      aberto: document.getElementById('loja-aberta').checked
+    };
+    await apiCall('/api/establishments/me', { method: 'PUT', body: payload });
+    alert('Alterações salvas com sucesso!');
+    estNav(document.getElementById('est-nav-loja'), 'loja');
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  } finally {
+    if(btn) { btn.disabled = false; btn.textContent = 'Salvar alterações'; }
   }
 }
 
-
-function salvarInfoLoja() {
-  var cat = document.getElementById('loja-cat-select') ? document.getElementById('loja-cat-select').value : null;
-  var u = usuarios.find(function(x){ return x.perfil === 'estabelecimento'; });
-  if(u && cat) {
-    u.categoria = cat;
-    var btn = document.getElementById('est-nav-cardapio');
-    if(btn) btn.textContent = labelCardapio(cat);
-  }
-  alert('Alterações salvas com sucesso!');
-}
+let emojiSelecionado = '🍔';
 
 function abrirModalProduto(idx) {
   document.getElementById('modal-produto-titulo').textContent = idx !== undefined ? '✏️ Editar produto' : '➕ Novo produto';
   document.getElementById('produto-idx').value = idx !== undefined ? idx : -1;
-  if(idx !== undefined) {
-    const p = cardapioEst[idx];
+  const produtos = estDataCache?.produtos || [];
+  
+  if(idx !== undefined && produtos[idx]) {
+    const p = produtos[idx];
     document.getElementById('prod-nome').value = p.nome;
-    document.getElementById('prod-desc').value = p.desc;
+    document.getElementById('prod-desc').value = p.descricao || '';
     document.getElementById('prod-preco').value = p.preco;
-    document.getElementById('prod-emoji').value = p.emoji;
+    document.getElementById('prod-emoji').value = p.emoji || '🍽️';
     document.getElementById('prod-disponivel').checked = p.disponivel;
-    emojiSelecionado = p.emoji;
+    emojiSelecionado = p.emoji || '🍽️';
     document.querySelectorAll('.emoji-op').forEach(function(e) {
-      e.classList.toggle('selecionado', e.textContent === p.emoji);
+      e.classList.toggle('selecionado', e.textContent === emojiSelecionado);
     });
   } else {
     document.getElementById('prod-nome').value = '';
@@ -1422,31 +1404,52 @@ function selecionarEmoji(el, emoji) {
   document.getElementById('prod-emoji').value = emoji;
 }
 
-function salvarProduto() {
+async function salvarProduto() {
+  const btn = document.querySelector('#modal-produto .btn-principal');
   const nome = sanitizar(document.getElementById('prod-nome').value);
-  const desc = sanitizar(document.getElementById('prod-desc').value);
+  const descricao = sanitizar(document.getElementById('prod-desc').value);
   const preco = parseFloat(document.getElementById('prod-preco').value);
   const disponivel = document.getElementById('prod-disponivel').checked;
   const idx = parseInt(document.getElementById('produto-idx').value);
+  
   if(!nome) { document.getElementById('prod-nome').style.borderColor='var(--erro)'; return; }
   if(isNaN(preco) || preco <= 0) { document.getElementById('prod-preco').style.borderColor='var(--erro)'; return; }
-  const produto = { nome, desc, preco, emoji: emojiSelecionado, disponivel };
-  if(idx >= 0) cardapioEst[idx] = produto;
-  else cardapioEst.push(produto);
-  fecharModalProduto();
-  renderCardapioEst();
+  
+  btn.disabled = true; btn.textContent = 'Aguarde...';
+  
+  const payload = { nome, descricao, preco, emoji: emojiSelecionado, disponivel };
+  const produtos = estDataCache?.produtos || [];
+  
+  try {
+    if(idx >= 0 && produtos[idx]) {
+      // Editar
+      await apiCall('/api/establishments/me/products/' + produtos[idx].id, { method: 'PUT', body: payload });
+    } else {
+      // Novo
+      await apiCall('/api/establishments/me/products', { method: 'POST', body: payload });
+    }
+    fecharModalProduto();
+    estNav(document.getElementById('est-nav-cardapio'), 'cardapio');
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Salvar produto'; }
+  }
 }
 
 function editarProduto(idx) { abrirModalProduto(idx); }
 
-function deletarProduto(idx) {
-  if(confirm('Remover "' + cardapioEst[idx].nome + '" do cardápio?')) {
-    cardapioEst.splice(idx, 1);
-    renderCardapioEst();
+async function deletarProduto(id) {
+  if(confirm('Tem certeza que deseja remover este produto definitivamente?')) {
+    try {
+      await apiCall('/api/establishments/me/products/' + id, { method: 'DELETE' });
+      estNav(document.getElementById('est-nav-cardapio'), 'cardapio');
+    } catch(e) {
+      alert('Erro: ' + e.message);
+    }
   }
 }
 
-// ESTABELECIMENTO
 function labelCardapio(categoria) {
   if(!categoria) return '🍽️ Cardápio';
   if(categoria === 'farmacia') return '💊 Medicamentos';
@@ -1459,69 +1462,96 @@ function labelCardapio(categoria) {
 function atualizarLabelCardapio(cat) {
   var btn = document.getElementById('est-nav-cardapio');
   if(btn) btn.textContent = labelCardapio(cat);
-  var u = usuarios.find(function(x){ return x.perfil === 'estabelecimento'; });
-  if(u) u.categoria = cat;
 }
 
 function renderEstabelecimento() {
-  // Definir label da aba conforme categoria
-  const lojaUsuario = usuarios.find(function(u){ return u.perfil === 'estabelecimento'; });
-  const cat = lojaUsuario ? lojaUsuario.categoria : null;
-  const btnCardapio = document.getElementById('est-nav-cardapio');
-  if(btnCardapio) btnCardapio.textContent = labelCardapio(cat);
-  const pedidos = [
-    { num:'#001', status:'novo', cliente:'João Silva', itens:'1x X-Burguer, 1x Batata Frita', total:30, end:'Rua das Flores, 45' },
-    { num:'#002', status:'preparando', cliente:'Maria Santos', itens:'2x Prato do Dia', total:44, end:'Av. Principal, 120' },
-    { num:'#003', status:'pronto', cliente:'Pedro Costa', itens:'1x Peixe Frito', total:35, end:'Rua do Mercado, 8' },
-  ];
-  const lista = document.getElementById('pedidos-estabelecimento');
-  lista.innerHTML = pedidos.map(function(p) {
-    var sc = p.status === 'novo' ? 'badge-novo' : p.status === 'preparando' ? 'badge-preparando' : 'badge-pronto';
-    var sl = p.status === 'novo' ? '🔔 Novo' : p.status === 'preparando' ? '👨‍🍳 Preparando' : '✅ Pronto';
-    var btn = '';
-    if(p.status === 'novo') btn = '<button class="btn-acao" onclick="aceitarPedidoLoja(this)">Aceitar</button>';
-    else if(p.status === 'preparando') btn = '<button class="btn-acao" onclick="this.textContent=\'✅ Pronto\'">Marcar pronto</button>';
-    else if(p.status === 'pronto') btn = '<button class="btn-acao secundario">Aguardando motoboy</button>';
-    return '<div class="card-pedido">' +
-      '<div class="pedido-header">' +
-        '<span class="pedido-num">Pedido ' + p.num + '</span>' +
-        '<span class="badge-status ' + sc + '">' + sl + '</span>' +
-      '</div>' +
-      '<div class="pedido-endereco">📍 ' + p.end + '</div>' +
-      '<div class="pedido-itens">' + p.itens + '</div>' +
-      '<div class="pedido-footer">' +
-        '<span class="pedido-total">R$ ' + p.total.toFixed(2).replace('.',',') + '</span>' +
-        btn +
-      '</div>' +
-    '</div>';
-  }).join('');
+  var el = document.getElementById('est-secao-pedidos');
+  if(!estDataCache) return;
+  const sts = estDataCache.stats || {};
+  
+  let html = '<div class="stats-grid">' +
+    '<div class="stat-card"><div class="stat-valor">' + (sts.pedidosHoje || 0) + '</div><div class="stat-label">Pedidos hoje</div></div>' +
+    '<div class="stat-card"><div class="stat-valor">R$ ' + (sts.faturamento || 0).toFixed(2).replace('.',',') + '</div><div class="stat-label">Faturamento hoje</div></div>' +
+    '</div><div class="secao-titulo">Pedidos em aberto</div><div class="pedidos-lista" id="pedidos-estabelecimento">';
+  
+  const pedidos = estDataCache.pedidosAbertos || [];
+  if(pedidos.length === 0) {
+    html += '<div class="vazio"><div class="vazio-icon">📋</div>Nenhum pedido em andamento</div>';
+  } else {
+    html += pedidos.map(function(p) {
+      var sc = p.status === 'pendente' || p.status === 'aceito' ? 'badge-novo' : p.status === 'preparando' ? 'badge-preparando' : 'badge-pronto';
+      var sl = p.status === 'pendente' || p.status === 'aceito' ? '🔔 Novo' : p.status === 'preparando' ? '👨‍🍳 Preparando' : '✅ Pronto';
+      var btn = '';
+      if(p.status === 'pendente' || p.status === 'aceito') btn = '<button class="btn-acao" onclick="lojistaMudarStatus(\'' + p.id + '\', \'preparando\')">Aceitar e Preparar</button>';
+      else if(p.status === 'preparando') btn = '<button class="btn-acao" onclick="lojistaMudarStatus(\'' + p.id + '\', \'pronto\')">Marcar como Pronto</button>';
+      else if(p.status === 'pronto') btn = '<button class="btn-acao secundario">Aguardando motoboy</button>';
+      
+      var itens = p.itens_pedido.map(i => i.quantidade + 'x ' + i.nome).join(', ');
+      
+      return '<div class="card-pedido">' +
+        '<div class="pedido-header">' +
+          '<span class="pedido-num">Pedido ' + p.id.split('-')[0] + '</span>' +
+          '<span class="badge-status ' + sc + '">' + sl + '</span>' +
+        '</div>' +
+        '<div class="pedido-endereco">📍 ' + p.endereco_entrega + '</div>' +
+        '<div class="pedido-itens">' + itens + '</div>' +
+        '<div class="pedido-footer">' +
+          '<span class="pedido-total">R$ ' + p.total.toFixed(2).replace('.',',') + '</span>' +
+          btn +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+  html += '</div>';
+  el.innerHTML = html;
 }
 
+async function lojistaMudarStatus(id, novoStatus) {
+  try {
+    await apiCall('/api/orders/' + id + '/status', { method: 'PATCH', body: { status: novoStatus } });
+    estNav(document.getElementById('est-nav-pedidos'), 'pedidos'); // Recarrega
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+// ADMIN — Variável de cache do dashboard
+let adminDataCache = null;
+
 // ADMIN — renderizar seções
-function renderAdmin(secao) {
+async function renderAdmin(secao) {
   var el = document.getElementById('admin-conteudo');
   if(!el) return;
 
-  // Calcular comissão total do dia (simulado)
-  var totalComissao = 0;
-  estabelecimentos.forEach(function(e) {
-    // 8% sobre pedidos simulados
-    totalComissao += 15 * 0.08;
-  });
-  var elComissao = document.getElementById('admin-comissao');
-  if(elComissao) elComissao.textContent = 'R$' + totalComissao.toFixed(0);
+  if (secao !== 'cadastrar') {
+    el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando painel...</div>';
+    try {
+      // Buscar dados reais do Backend
+      if (secao === 'pedidos') {
+        var pedReq = await apiCall('/api/admin/pedidos');
+        adminDataCache = adminDataCache || {};
+        adminDataCache.pedidos = pedReq.pedidos;
+      } else {
+        var dashReq = await apiCall('/api/admin/dashboard');
+        adminDataCache = dashReq;
+      }
+    } catch(e) {
+      el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar dados do Admin: ' + e.message + '</div>';
+      return;
+    }
+  }
 
-  var elLojas = document.getElementById('admin-lojas');
-  if(elLojas) elLojas.textContent = estabelecimentos.length;
+  // Atualiza blocos de estatísticas no topo da tela Admin (se houver cache geral)
+  if (adminDataCache && adminDataCache.stats) {
+    document.getElementById('admin-comissao') && (document.getElementById('admin-comissao').textContent = 'R$ ' + (adminDataCache.stats.comissaoHoje || 0).toFixed(2).replace('.', ','));
+    document.getElementById('admin-lojas') && (document.getElementById('admin-lojas').textContent = adminDataCache.stats.estabelecimentosAtivos || 0);
+    // Atualiza outras caixas se necessário pegando pela classe baseada nos textos (está fixo no HTML, não tem ID para todos, mas deixo pronto)
+  }
 
   // Fases progressivas
   var elFases = document.getElementById('admin-fases');
   if(elFases) {
-    var fases = [
-      calcularComissao(1),
-      calcularComissao(2),
-      calcularComissao(4),
-    ];
+    var fases = [ calcularComissao(1), calcularComissao(2), calcularComissao(4) ];
     var fasesUnicas = [];
     var vistas = {};
     fases.forEach(function(f) { if(!vistas[f.fase]) { vistas[f.fase]=true; fasesUnicas.push(f); } });
@@ -1534,35 +1564,56 @@ function renderAdmin(secao) {
   }
 
   if(secao === 'pedidos') {
+    const peds = adminDataCache.pedidos || [];
     el.innerHTML =
-      '<div class="secao-titulo">Todos os pedidos</div>' +
+      '<div class="secao-titulo">Todos os pedidos (' + peds.length + ')</div>' +
       '<div class="tabela">' +
-        '<div class="tabela-row"><div class="info"><div class="nome">João Silva — Lanchonete Sabor Caseiro</div><div class="sub">1x X-Burguer, 1x Batata Frita</div></div><div class="valor">R$ 30,00</div></div>' +
-        '<div class="tabela-row"><div class="info"><div class="nome">Maria Santos — Restaurante do Zé</div><div class="sub">2x Prato do Dia</div></div><div class="valor">R$ 44,00</div></div>' +
-        '<div class="tabela-row"><div class="info"><div class="nome">Pedro Costa — Restaurante do Zé</div><div class="sub">1x Peixe Frito</div></div><div class="valor">R$ 35,00</div></div>' +
+      (peds.length === 0 ? '<div class="tabela-row"><div class="info">Nenhum pedido hoje.</div></div>' :
+      peds.map(function(p) {
+        return '<div class="tabela-row">' +
+          '<div class="info"><div class="nome">' + (p.profiles?.nome || 'Cliente Anônimo') + ' — ' + (p.estabelecimentos?.nome || 'Loja') + '</div>' +
+          '<div class="sub">Status: ' + p.status + ' • Pagamento: ' + p.pagamento_status + '</div></div>' +
+          '<div class="valor">R$ ' + p.total.toFixed(2).replace('.',',') + '</div>' +
+        '</div>';
+      }).join('')) +
       '</div>';
   } else if(secao === 'repasses') {
+    // Por enquanto, usando um placeholder de design, conectado no futuro
     el.innerHTML =
-      '<div class="secao-titulo">Repasses pendentes</div>' +
-      '<div class="tabela">' +
-        '<div class="tabela-row"><div class="info"><div class="nome">Lanchonete Sabor Caseiro</div><div class="sub">3 pedidos • Mês 1 (gratuito)</div></div><div><span class="repasse-badge">Pendente</span></div></div>' +
-        '<div class="tabela-row"><div class="info"><div class="nome">Restaurante do Zé</div><div class="sub">5 pedidos • 8% = R$15,60</div></div><div><span class="repasse-feito">Pago</span></div></div>' +
-      '</div>';
+      '<div class="secao-titulo">Repasses (Em breve)</div>' +
+      '<div class="tabela"><div class="tabela-row"><div class="info">Módulo de repasse em desenvolvimento.</div></div></div>';
   } else if(secao === 'lojas') {
+    const lojas = adminDataCache.estabelecimentos || [];
     el.innerHTML =
       '<div class="secao-titulo">Lojas parceiras</div>' +
       '<div class="tabela">' +
-      estabelecimentos.map(function(e) {
-        var c = calcularComissao(e.cadastroMes || 1);
-        return '<div class="tabela-row"><div class="info"><div class="nome">' + e.nome + '</div><div class="sub">' + c.desc + '</div></div><div class="valor">' + c.taxa + '%</div></div>';
-      }).join('') +
+      (lojas.length === 0 ? '<div class="tabela-row"><div class="info">Nenhuma loja cadastrada.</div></div>' :
+      lojas.map(function(e) {
+        var c = e.comissao || { desc: 'Taxa fixa', taxa: 0 };
+        var btnStatus = e.ativo 
+          ? '<button class="btn-acao secundario" onclick="adminToggleLoja(\'' + e.id + '\')" style="margin-left:10px;padding:6px 12px;">Desativar</button>'
+          : '<button class="btn-acao" onclick="adminToggleLoja(\'' + e.id + '\')" style="margin-left:10px;padding:6px 12px;background:var(--verde);">Ativar</button>';
+        return '<div class="tabela-row" style="align-items:center;">' +
+          '<div class="info"><div class="nome">' + e.nome + (e.ativo ? '' : ' <i>(Inativo)</i>') + '</div><div class="sub">' + c.desc + '</div></div>' +
+          '<div style="display:flex;align-items:center;"><div class="valor">' + c.taxa + '%</div>' + btnStatus + '</div>' +
+        '</div>';
+      }).join('')) +
       '</div>';
   } else if(secao === 'motoboys') {
+    const motos = adminDataCache.motoboys || [];
     el.innerHTML =
       '<div class="secao-titulo">Motoboys cadastrados</div>' +
       '<div class="tabela">' +
-        '<div class="tabela-row"><div class="info"><div class="nome">Carlos Moto</div><div class="sub">5 entregas hoje • R$20 ganhos</div></div><div><span class="repasse-feito">Ativo</span></div></div>' +
-        '<div class="tabela-row"><div class="info"><div class="nome">Raimundo Speed</div><div class="sub">3 entregas hoje • R$12 ganhos</div></div><div><span class="repasse-feito">Ativo</span></div></div>' +
+      (motos.length === 0 ? '<div class="tabela-row"><div class="info">Nenhum motoboy cadastrado.</div></div>' :
+      motos.map(function(m) {
+        var btnStatus = m.ativo 
+          ? '<button class="btn-acao secundario" onclick="adminToggleMotoboy(\'' + m.id + '\')" style="margin-left:10px;padding:6px 12px;">Desativar</button>'
+          : '<button class="btn-acao" onclick="adminToggleMotoboy(\'' + m.id + '\')" style="margin-left:10px;padding:6px 12px;background:var(--verde);">Ativar</button>';
+        return '<div class="tabela-row" style="align-items:center;">' +
+          '<div class="info"><div class="nome">' + m.nome + (m.disponivel ? ' 🟢' : ' 🔴') + (m.ativo ? '' : ' <i>(Inativo)</i>') + '</div></div>' +
+          '<div>' + btnStatus + '</div>' +
+        '</div>';
+      }).join('')) +
       '</div>';
   } else if(secao === 'cadastrar') {
     el.innerHTML =
@@ -1571,19 +1622,90 @@ function renderAdmin(secao) {
         '<h4>🏪 Nova Loja</h4>' +
         '<div class="campo"><label>Nome da loja</label><input type="text" id="new-loja-nome" placeholder="Ex: Pizzaria do Marcos"></div>' +
         '<div class="campo"><label>Telefone</label><input type="tel" id="new-loja-tel" placeholder="(97) 99999-9999" oninput="mascaraTelefone(this)"></div>' +
+        '<div class="campo"><label>E-mail de acesso</label><input type="email" id="new-loja-email" placeholder="loja@email.com"></div>' +
         '<div class="campo"><label>Categoria</label><select id="new-loja-cat" style="width:100%;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:16px 18px;color:var(--texto);font-size:16px;"><option value="lanche">Lanchonete</option><option value="restaurante">Restaurante</option><option value="mercado">Mercado</option><option value="farmacia">Farmácia</option></select></div>' +
-        '<div class="campo"><label>Senha de acesso</label><input type="password" id="new-loja-senha" placeholder="Senha para o estabelecimento"></div>' +
-        '<button class="btn-principal" onclick="cadastrarLoja()">Cadastrar loja</button>' +
+        '<div class="campo"><label>Senha de acesso</label><input type="password" id="new-loja-senha" placeholder="Senha (mínimo 6 chars)"></div>' +
+        '<button class="btn-principal" id="btn-cad-loja" onclick="cadastrarLoja()">Cadastrar loja</button>' +
       '</div>' +
       '<div class="secao-titulo" style="font-size:16px;margin-bottom:20px;">Cadastrar motoboy</div>' +
       '<div class="secao-checkout">' +
         '<h4>🛵 Novo Motoboy</h4>' +
-        '<div class="campo"><label>Nome</label><input type="text" id="new-moto-nome" placeholder="Ex: Carlos Silva"></div>' +
+        '<div class="campo"><label>Nome completo</label><input type="text" id="new-moto-nome" placeholder="Ex: Carlos Silva"></div>' +
         '<div class="campo"><label>Telefone</label><input type="tel" id="new-moto-tel" placeholder="(97) 99999-9999" oninput="mascaraTelefone(this)"></div>' +
+        '<div class="campo"><label>E-mail de acesso</label><input type="email" id="new-moto-email" placeholder="motoboy@email.com"></div>' +
         '<div class="campo"><label>Moto (modelo/placa)</label><input type="text" id="new-moto-moto" placeholder="Ex: Honda CG 150 - ABC1234"></div>' +
-        '<div class="campo"><label>Senha de acesso</label><input type="password" id="new-moto-senha" placeholder="Senha para o motoboy"></div>' +
-        '<button class="btn-principal" onclick="cadastrarMotoboy()">Cadastrar motoboy</button>' +
+        '<div class="campo"><label>Senha de acesso</label><input type="password" id="new-moto-senha" placeholder="Senha (mínimo 6 chars)"></div>' +
+        '<button class="btn-principal" id="btn-cad-moto" onclick="cadastrarMotoboy()">Cadastrar motoboy</button>' +
       '</div>';
+  }
+}
+
+// Funções reais para os botões do Admin
+async function adminToggleLoja(id) {
+  try {
+    const res = await apiCall('/api/admin/establishments/' + id + '/toggle', { method: 'PATCH' });
+    alert(res.message);
+    renderAdmin('lojas');
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function adminToggleMotoboy(id) {
+  try {
+    const res = await apiCall('/api/admin/motoboys/' + id + '/toggle', { method: 'PATCH' });
+    alert(res.message);
+    renderAdmin('motoboys');
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function cadastrarLoja() {
+  const nome = sanitizar(document.getElementById('new-loja-nome').value);
+  const telefone = document.getElementById('new-loja-tel').value.replace(/\D/g,'');
+  const email = sanitizar(document.getElementById('new-loja-email').value);
+  const senha = document.getElementById('new-loja-senha').value;
+  const categoria = document.getElementById('new-loja-cat').value;
+
+  if(!nome || telefone.length < 10 || !email || senha.length < 6) return alert('Preencha os campos corretamente');
+  
+  const btn = document.getElementById('btn-cad-loja');
+  btn.disabled = true; btn.textContent = 'Aguarde...';
+
+  try {
+    await apiCall('/api/admin/establishments', {
+      method: 'POST',
+      body: { nome, telefone, email, senha, categoria }
+    });
+    alert('Loja cadastrada com sucesso!');
+    renderAdmin('lojas'); // recarrega a tela com as lojas para ver a nova!
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Cadastrar loja';
+  }
+}
+
+async function cadastrarMotoboy() {
+  const nome = sanitizar(document.getElementById('new-moto-nome').value);
+  const telefone = document.getElementById('new-moto-tel').value.replace(/\D/g,'');
+  const email = sanitizar(document.getElementById('new-moto-email').value);
+  const senha = document.getElementById('new-moto-senha').value;
+  const moto = sanitizar(document.getElementById('new-moto-moto').value);
+
+  if(!nome || telefone.length < 10 || !email || senha.length < 6) return alert('Preencha os campos corretamente');
+  
+  const btn = document.getElementById('btn-cad-moto');
+  btn.disabled = true; btn.textContent = 'Aguarde...';
+
+  try {
+    await apiCall('/api/admin/motoboys', {
+      method: 'POST',
+      body: { nome, telefone, email, senha, moto }
+    });
+    alert('Motoboy cadastrado com sucesso!');
+    renderAdmin('motoboys');
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Cadastrar motoboy';
   }
 }
 
