@@ -1585,13 +1585,9 @@ function renderEstabelecimento() {
   if(!estDataCache) return;
   const sts = estDataCache.stats || {};
   
-  // Faturamento = soma de subtotal dos pedidos entregues/em andamento (sem a taxa de entrega)
-  var totalFaturamento = (estDataCache.pedidosAbertos || []).reduce((acc, p) => acc + (p.subtotal || 0), 0) +
-                         (sts.pedidosEntregues || []).reduce((acc, p) => acc + (p.subtotal || 0), 0);
-
   let html = '<div class="stats-grid">' +
     '<div class="stat-card"><div class="stat-valor">' + (sts.pedidosHoje || 0) + '</div><div class="stat-label">Pedidos hoje</div></div>' +
-    '<div class="stat-card"><div class="stat-valor">R$ ' + totalFaturamento.toFixed(2).replace('.',',') + '</div><div class="stat-label">Faturamento</div></div>' +
+    '<div class="stat-card"><div class="stat-valor">R$ ' + (sts.faturamento || 0).toFixed(2).replace('.',',') + '</div><div class="stat-label">Faturamento</div></div>' +
     '</div><div class="secao-titulo">Pedidos em aberto</div><div class="pedidos-lista" id="pedidos-estabelecimento">';
   
   const pedidos = estDataCache.pedidosAbertos || [];
