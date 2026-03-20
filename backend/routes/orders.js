@@ -208,7 +208,7 @@ router.get('/:id', requireAuth, [param('id').isUUID()], async (req, res, next) =
         *,
         estabelecimentos (nome, emoji, telefone),
         itens_pedido (*),
-        motoboys (nome, telefone)
+        motoboys (id, nome, telefone, lat, lng)
       `)
       .eq('id', req.params.id)
       .single();
@@ -372,5 +372,30 @@ router.patch(
     }
   }
 );
+
+// =============================================
+// PATCH /api/orders/motoboy/location — Atualizar GPS do Motoboy
+// =============================================
+router.patch('/motoboy/location', requireRole('motoboy'), async (req, res, next) => {
+  try {
+    const { lat, lng } = req.body;
+    if(lat === undefined || lng === undefined) {
+      return res.status(400).json({ error: 'Coordenadas inválidas' });
+    }
+
+    const { data: motoboy } = await supabaseAdmin
+      .from('motoboys')
+      .update({ lat, lng })
+      .eq('user_id', req.user.id)
+      .select('id')
+      .single();
+
+    if (!motoboy) return res.status(404).json({ error: 'Motoboy não encontrado' });
+
+    res.json({ message: 'Localização atualizada' });
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;

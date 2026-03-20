@@ -132,6 +132,10 @@ router.put(
     body('nome').optional().trim().isLength({ min: 2, max: 100 }).escape(),
     body('categoria').optional().isIn(['restaurante', 'mercado', 'farmacia', 'lanche', 'bebida']),
     body('tempo_entrega').optional().trim().isLength({ max: 30 }).escape(),
+    body('taxa_entrega')
+      .optional()
+      .isFloat({ min: 2.00, max: 4.00 })
+      .withMessage('A taxa de entrega deve ser entre R$ 2,00 e R$ 4,00'),
     body('aberto').optional().isBoolean(),
     body('mp_user_id').optional().trim().isLength({ max: 50 }),
   ],

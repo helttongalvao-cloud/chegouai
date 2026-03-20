@@ -19,6 +19,9 @@
 <meta name="robots" content="index, follow">
 
 <script src="https://sdk.mercadopago.com/js/v2"></script>
+<!-- Leaflet GPS Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -507,7 +510,13 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="status-label">Entregue!</div>
     </div>
   </div>
-  <button class="btn-principal" onclick="irHome()" style="width:100%;">Fazer novo pedido</button>
+  
+  <div id="box-rastreio" style="display:none; margin-top:20px; text-align:left;">
+    <h4 style="margin-bottom:10px; font-size:14px; color:var(--texto2);">📍 Acompanhe o Motoboy</h4>
+    <div id="map" style="width:100%; height:220px; border-radius:12px; background:var(--cinza3); overflow:hidden;"></div>
+  </div>
+
+  <button class="btn-principal mt16" onclick="irHome()" style="width:100%;">Fazer novo pedido</button>
 </div>
 
 <!-- ESTABELECIMENTO -->
@@ -820,7 +829,8 @@ let estabelecimentos = [];
 
 // Taxa de entrega por distância
 function calcularTaxaEntrega(distanciaKm) {
-  if(distanciaKm <= 1.5) return 3;
+  if(distanciaKm <= 1.0) return 2;
+  if(distanciaKm <= 2.0) return 3;
   return 4;
 }
 
@@ -1967,6 +1977,33 @@ async function renderMotoboy() {
   }
 }
 
+let gpsTrackerId = null;
+
+function iniciarRastreio() {
+  if (gpsTrackerId) return;
+  if ("geolocation" in navigator) {
+    gpsTrackerId = navigator.geolocation.watchPosition(
+      async function(pos) {
+        try {
+          await apiCall('/api/orders/motoboy/location', {
+            method: 'PATCH',
+            body: { lat: pos.coords.latitude, lng: pos.coords.longitude }
+          });
+        } catch(e) {}
+      },
+      function(err) { console.warn("Erro GPS:", err); },
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+    );
+  }
+}
+
+function pararRastreio() {
+  if (gpsTrackerId !== null && "geolocation" in navigator) {
+    navigator.geolocation.clearWatch(gpsTrackerId);
+    gpsTrackerId = null;
+  }
+}
+
 async function aceitarEntrega(btn, pedidoId) {
   btn.disabled = true;
   btn.textContent = 'Aceitando...';
@@ -1983,9 +2020,14 @@ async function aceitarEntrega(btn, pedidoId) {
         '<div class="entrega-linha"><span class="label">Entregue em:</span><span class="valor">' + (p.endereco_entrega || '') + '</span></div>' +
         '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + (p.telefone_cliente || '') + '" style="color:var(--verde);text-decoration:none;">' + (p.telefone_cliente || '') + ' 📞</a></span></div>' +
       '</div>' +
+      '</div>' +
       '<div class="btns-entrega" style="margin-top:14px;">' +
         '<button class="btn-acao" onclick="confirmarEntrega(this, \'' + pedidoId + '\')" style="flex:1;">Confirmar entrega realizada</button>' +
       '</div>';
+    
+    // Liga o envio de coordenadas
+    iniciarRastreio();
+
   } catch(e) {
     alert('Erro ao aceitar: ' + e.message);
     btn.disabled = false;
@@ -2005,6 +2047,10 @@ async function confirmarEntrega(btn, pedidoId) {
         '<div style="font-weight:700;color:var(--verde)">Entrega concluída!</div>' +
         '<div style="color:var(--texto2);font-size:13px;margin-top:4px;">Valor adicionado ao seu saldo</div>' +
       '</div>';
+    
+    // Desliga a transmissão do GPS
+    pararRastreio();
+
     // Atualizar estatísticas
     setTimeout(renderMotoboy, 2000);
   } catch(e) {
@@ -2327,9 +2373,11 @@ function iniciarPollingPedidos() {
           }
         });
       } else if(currentUser.perfil === 'cliente' && pedidoAtualId) {
-        // Cliente: verificar mudança de status do pedido atual
-        var resp = await apiCall('/api/payments/status/' + pedidoAtualId);
+        // Cliente: verificar mudança de status e pegar info completa do pedido para o mapa
+        var resp = await apiCall('/api/orders/' + pedidoAtualId);
         var novoStatus = resp.status;
+        
+        // Atualiza UI de status e manda push notification
         if(ultimoStatusConhecido[pedidoAtualId] !== novoStatus) {
           ultimoStatusConhecido[pedidoAtualId] = novoStatus;
           atualizarRastreioPedido(novoStatus);
@@ -2341,6 +2389,14 @@ function iniciarPollingPedidos() {
             'entregue': { icon: '🎉', title: 'Entregue!', msg: 'Seu pedido foi entregue. Bom apetite!' },
           };
           if(msgs[novoStatus]) showToast(msgs[novoStatus].icon, msgs[novoStatus].title, msgs[novoStatus].msg);
+        }
+
+        // Rastreamento GPS:
+        if (novoStatus === 'coletado' && resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
+          document.getElementById('box-rastreio').style.display = 'block';
+          atualizarMapaCliente(resp.motoboys.lat, resp.motoboys.lng, resp.motoboys.nome);
+        } else {
+          document.getElementById('box-rastreio').style.display = 'none';
         }
       } else if(currentUser.perfil === 'motoboy') {
         // Motoboy: verificar novos pedidos prontos
@@ -2378,6 +2434,40 @@ function atualizarRastreioPedido(status) {
     l.classList.remove('ativo');
     if(i === step) l.classList.add('ativo');
   });
+}
+
+// === MAPA EM TEMPO REAL (LEAFLET) ===
+let mapCliente = null;
+let markerMotoboy = null;
+
+function atualizarMapaCliente(lat, lng, nomeMoto) {
+  // Se o mapa não foi criado, inicializa
+  if (!mapCliente) {
+    mapCliente = L.map('map').setView([lat, lng], 16);
+    // Tile do OpenStreetMap puro e gratuito
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(mapCliente);
+    
+    // Cria icone bonitinho pra moto
+    var motoIcon = L.divIcon({
+      className: 'custom-div-icon',
+      html: '<div style="font-size:24px; line-height:24px; background:white; width:34px; height:34px; text-align:center; border-radius:50%; border:2px solid var(--verde); box-shadow:0 4px 8px rgba(0,0,0,0.2);">🛵</div>',
+      iconSize: [34, 34],
+      iconAnchor: [17, 17]
+    });
+    
+    markerMotoboy = L.marker([lat, lng], { icon: motoIcon }).addTo(mapCliente)
+      .bindPopup('<b>' + (nomeMoto || 'Motoboy') + '</b><br>Está a caminho!').openPopup();
+
+    // Arruma bugs visuais do leaflet escondido
+    setTimeout(function() { mapCliente.invalidateSize(); }, 500);
+  } else {
+    // Só atualiza a posição e centraliza
+    markerMotoboy.setLatLng([lat, lng]);
+    mapCliente.panTo([lat, lng]);
+  }
 }
 
 // === INICIAR POLLING AO FAZER LOGIN ===
