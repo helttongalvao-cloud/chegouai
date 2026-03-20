@@ -1919,12 +1919,12 @@ async function renderMotoboy() {
     // Atualizar estatísticas
     var elEntregas = document.getElementById('moto-entregas');
     var elGanhos = document.getElementById('moto-ganhos');
-    var listaEntregues = entregues.pedidos || [];
+    var listaEntregues = Array.isArray(entregues) ? entregues : (entregues.pedidos || []);
     if(elEntregas) elEntregas.textContent = listaEntregues.length;
     var totalGanhos = listaEntregues.reduce(function(s,p){ return s + parseFloat(p.taxa_entrega || 0); }, 0);
     if(elGanhos) elGanhos.textContent = 'R$' + totalGanhos.toFixed(2).replace('.',',');
 
-    var lista = pedidos.pedidos || [];
+    var lista = Array.isArray(pedidos) ? pedidos : (pedidos.pedidos || []);
     if(lista.length === 0) {
       el.innerHTML = '<div class="vazio"><div class="vazio-icon">🛵</div>Nenhuma entrega disponível no momento.<br><small style="color:var(--texto2)">Quando um pedido ficar pronto, ele aparecerá aqui.</small></div>';
     } else {
