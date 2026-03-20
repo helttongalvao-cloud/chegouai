@@ -1590,10 +1590,49 @@ async function renderAdmin(secao) {
       }).join('')) +
       '</div>';
   } else if(secao === 'repasses') {
-    // Por enquanto, usando um placeholder de design, conectado no futuro
-    el.innerHTML =
-      '<div class="secao-titulo">Repasses (Em breve)</div>' +
-      '<div class="tabela"><div class="tabela-row"><div class="info">Módulo de repasse em desenvolvimento.</div></div></div>';
+    // Buscar repasses do backend
+    try {
+      var repasses = await apiCall('/api/admin/repasses');
+      if(!Array.isArray(repasses)) repasses = [];
+      
+      var totalPendente = 0;
+      var totalPago = 0;
+      repasses.forEach(function(r) {
+        if(r.status === 'pendente') totalPendente += r.valor;
+        else if(r.status === 'pago') totalPago += r.valor;
+      });
+
+      var resumoHtml = '<div class="stats-grid" style="margin-bottom:16px;">' +
+        '<div class="stat-card"><div class="stat-valor" style="color:var(--laranja);">R$ ' + totalPendente.toFixed(2).replace('.',',') + '</div><div class="stat-label">Pendente de repasse</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" style="color:var(--verde);">R$ ' + totalPago.toFixed(2).replace('.',',') + '</div><div class="stat-label">Já repassado</div></div>' +
+        '</div>';
+
+      var tabelaHtml;
+      if(repasses.length === 0) {
+        tabelaHtml = '<div class="tabela"><div class="tabela-row"><div class="info">Nenhum repasse registrado ainda. Os repasses aparecem quando pedidos são pagos.</div></div></div>';
+      } else {
+        tabelaHtml = '<div class="secao-titulo">Histórico de repasses (' + repasses.length + ')</div><div class="tabela">' +
+          repasses.map(function(r) {
+            var dest = r.destinatario_tipo === 'estabelecimento' ? '🏪 ' + (r.pedidos?.estabelecimentos?.nome || 'Loja') :
+                       r.destinatario_tipo === 'motoboy' ? '🛵 ' + (r.pedidos?.motoboys?.nome || 'Motoboy') :
+                       '💰 Plataforma';
+            var statusCor = r.status === 'pendente' ? 'color:var(--laranja)' : r.status === 'pago' ? 'color:var(--verde)' : '';
+            var statusLabel = r.status === 'pendente' ? '⏳ Pendente' : r.status === 'pago' ? '✅ Pago' : r.status;
+            var data = new Date(r.criado_em).toLocaleDateString('pt-BR');
+            return '<div class="tabela-row" style="align-items:center;">' +
+              '<div class="info"><div class="nome">' + dest + '</div>' +
+              '<div class="sub">' + data + ' — Pedido ' + (r.pedido_id || '').split('-')[0] + ' • <span style="' + statusCor + '">' + statusLabel + '</span></div></div>' +
+              '<div class="valor">R$ ' + parseFloat(r.valor).toFixed(2).replace('.',',') + '</div>' +
+            '</div>';
+          }).join('') +
+          '</div>';
+      }
+      el.innerHTML = resumoHtml + tabelaHtml;
+    } catch(e) {
+      el.innerHTML =
+        '<div class="secao-titulo">Repasses</div>' +
+        '<div class="tabela"><div class="tabela-row"><div class="info">Erro ao carregar repasses: ' + e.message + '</div></div></div>';
+    }
   } else if(secao === 'lojas') {
     const lojas = adminDataCache.estabelecimentos || [];
     el.innerHTML =
