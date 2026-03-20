@@ -95,7 +95,10 @@ router.post(
         cadastroData: est.cadastro_data,
       });
 
-      // 5. Criar pedido
+      // 5. Criar pedido (Usar a taxa informada pelo cliente, se for menor ou igual à da loja, ou validá-la. Para simplificar no MVP, aceitar a taxa enviada ou fallback)
+      const taxaFinal = req.body.taxaEntrega !== undefined ? parseFloat(req.body.taxaEntrega) : split.taxaEntrega;
+      const totalFinal = parseFloat((subtotal + taxaFinal).toFixed(2));
+      
       const { data: pedido, error: pedidoErr } = await supabaseAdmin
         .from('pedidos')
         .insert({
@@ -105,9 +108,9 @@ router.post(
           endereco_entrega: enderecoEntrega,
           telefone_cliente: telefoneCliente,
           subtotal,
-          taxa_entrega: split.taxaEntrega,
+          taxa_entrega: taxaFinal,
           comissao_plataforma: split.valorPlataforma,
-          total: split.total,
+          total: totalFinal,
           forma_pagamento: formaPagamento,
           pagamento_status: 'pendente',
         })
@@ -126,9 +129,9 @@ router.post(
       res.status(201).json({
         pedidoId: pedido.id,
         status: pedido.status,
-        total: split.total,
+        total: totalFinal,
         subtotal,
-        taxaEntrega: split.taxaEntrega,
+        taxaEntrega: taxaFinal,
         comissao: split.comissao,
         split: {
           lojista: split.valorLojista,

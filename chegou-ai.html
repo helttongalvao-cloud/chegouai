@@ -366,7 +366,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <h3>Chegou Aí</h3>
     </div>
     <button class="header-acao" onclick="irLogin()" style="margin-left:8px;">Sair</button>
-    <button class="header-acao" onclick="abrirHistorico()" style="margin-right:4px;">📋</button>
+    <div class="btn-icone" onclick="alert('Seu histórico está na tela de pedidos! Configurações do perfil em breve.')">👤</div>
   </div>
   <div class="home-content">
     <div class="endereco-bar" onclick="alterarEndereco()">
@@ -443,12 +443,13 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     </div>
     <div class="secao-checkout">
       <h4>📍 Endereço de entrega</h4>
-      <div class="campo" style="margin:0 0 10px;">
-        <input type="text" placeholder="Ex: Rua das Flores, 123, Centro" id="endereco-entrega" style="margin:0;">
+      <div class="campo" style="margin:0;">
+        <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;">
       </div>
-      <button onclick="usarLocalizacao()" style="width:100%;background:var(--cinza3);border:1.5px solid var(--cinza4);border-radius:12px;padding:12px;color:var(--texto2);font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;" id="btn-localizacao">
-        📡 Usar minha localização atual
-      </button>
+      <label style="display:flex;align-items:center;margin-top:8px;font-size:14px;color:var(--texto);cursor:pointer;">
+        <input type="checkbox" id="salvar-endereco" checked style="margin-right:8px;accent-color:var(--verde);">
+        Salvar este endereço para a próxima
+      </label>
     </div>
     <div class="secao-checkout">
       <h4>📱 Seu telefone</h4>
@@ -1197,8 +1198,23 @@ function adicionarItem(idx) {
   atualizarCarrinho();
   // feedback visual
   const btns = document.querySelectorAll('.item-add');
-  btns[idx].style.background = 'var(--verde2)';
-  setTimeout(function(){ btns[idx].style.background = 'var(--verde)'; }, 200);
+  if(btns[idx]) {
+    btns[idx].style.background = 'var(--verde2)';
+    setTimeout(function(){ btns[idx].style.background = 'var(--verde)'; }, 200);
+  }
+}
+
+function alterarQtdCarrinho(idx, delta) {
+  var item = carrinho[idx];
+  item.qtd += delta;
+  if(item.qtd <= 0) {
+    carrinho.splice(idx, 1);
+  }
+  atualizarCarrinho();
+  if(document.getElementById('tela-checkout').classList.contains('ativa')) {
+    if(carrinho.length === 0) irTela('tela-cardapio');
+    else irCheckout(); // recarrega checkout
+  }
 }
 
 function atualizarCarrinho() {
@@ -1233,12 +1249,20 @@ function irCheckout() {
   document.getElementById('taxa-entrega-valor').textContent = 'R$ ' + taxaEntrega.toFixed(2).replace('.',',');
   document.getElementById('taxa-entrega-info').textContent = '📍 Distância estimada: ' + distancia + ' km — taxa R$ ' + taxaEntrega + ',00';
   const resumo = document.getElementById('resumo-itens');
-  resumo.innerHTML = carrinho.map(function(i) {
-    return '<div class="item-resumo">' +
-      '<span class="item-resumo-nome">' + i.qtd + 'x ' + i.nome + '</span>' +
+  resumo.innerHTML = carrinho.map(function(i, idx) {
+    return '<div class="item-resumo" style="align-items:center;">' +
+      '<div style="display:flex;align-items:center;gap:10px;">' +
+        '<button onclick="alterarQtdCarrinho(' + idx + ', -1)" style="width:24px;height:24px;border-radius:4px;border:none;background:var(--fundo2);color:var(--texto);cursor:pointer;">-</button>' +
+        '<span class="item-resumo-nome">' + i.qtd + 'x ' + i.nome + '</span>' +
+        '<button onclick="alterarQtdCarrinho(' + idx + ', 1)" style="width:24px;height:24px;border-radius:4px;border:none;background:var(--fundo2);color:var(--texto);cursor:pointer;">+</button>' +
+      '</div>' +
       '<span class="item-resumo-preco">R$ ' + (i.preco*i.qtd).toFixed(2).replace('.',',') + '</span>' +
     '</div>';
   }).join('');
+  
+  // Salva no objeto global para passar ao backend
+  window.taxaEntregaSimulada = taxaEntrega;
+  
   irTela('tela-checkout');
 }
 
@@ -1280,8 +1304,15 @@ async function confirmarPedido() {
         enderecoEntrega: end,
         telefoneCliente: tel,
         formaPagamento: formaPag,
+        taxaEntrega: window.taxaEntregaSimulada, // <- envia a taxa validada
       },
     });
+    
+    // Salvar o endereço para a próxima
+    var salvarInput = document.getElementById('salvar-endereco');
+    if(salvarInput && salvarInput.checked) {
+      localStorage.setItem('chegouai_endereco', end);
+    }
 
     pedidoAtualId = pedidoResp.pedidoId;
     esconderLoadingPagamento();
