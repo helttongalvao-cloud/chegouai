@@ -43,7 +43,20 @@ async function criarPagamentoPix(params) {
     payerFirstName,
     payerLastName,
     payerCpf,
+    mpAccessToken,
+    applicationFee,
   } = params;
+
+  let localPaymentClient = paymentClient;
+
+  // Se a loja forneceu seu próprio Access Token, cobra na conta dela e repassa a taxa para nós
+  if (mpAccessToken) {
+    const localMpClient = new MercadoPagoConfig({
+      accessToken: mpAccessToken,
+      options: { timeout: 5000 },
+    });
+    localPaymentClient = new Payment(localMpClient);
+  }
 
   const body = {
     transaction_amount: total,
@@ -64,7 +77,12 @@ async function criarPagamentoPix(params) {
     metadata: { order_id: orderId },
   };
 
-  const response = await paymentClient.create({ body });
+  // Se usar Token da Loja, adicionamos a taxa da plataforma
+  if (mpAccessToken && applicationFee > 0) {
+    body.application_fee = applicationFee;
+  }
+
+  const response = await localPaymentClient.create({ body });
 
   return {
     paymentId: response.id,
@@ -105,6 +123,8 @@ async function criarPreferenciaCartao(params) {
     items,
     payerEmail,
     backUrl,
+    mpAccessToken,
+    applicationFee,
   } = params;
 
   const body = {
@@ -126,11 +146,20 @@ async function criarPreferenciaCartao(params) {
     notification_url: `${process.env.WEBHOOK_URL}/api/payments/webhook`,
     statement_descriptor: 'CHEGOUAI',
     metadata: { order_id: orderId, store: storeName },
-    // marketplace_fee vai para conta da plataforma automaticamente
-    ...(marketplaceFee > 0 && { marketplace_fee: marketplaceFee }),
+    // marketplace_fee vai para conta da plataforma automaticamente se a preferência for criada com credentials do vendedor
+    ...(applicationFee > 0 && { marketplace_fee: applicationFee }),
   };
 
-  const response = await preferenceClient.create({ body });
+  let localPreferenceClient = preferenceClient;
+  if (mpAccessToken) {
+    const localMpClient = new MercadoPagoConfig({
+      accessToken: mpAccessToken,
+      options: { timeout: 5000 },
+    });
+    localPreferenceClient = new Preference(localMpClient);
+  }
+
+  const response = await localPreferenceClient.create({ body });
 
   return {
     preferenceId: response.id,

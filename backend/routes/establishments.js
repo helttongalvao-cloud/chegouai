@@ -88,6 +88,7 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
       .select('id, total, subtotal, comissao_plataforma, status, pagamento_status')
       .eq('estabelecimento_id', est.id)
       .gte('criado_em', hoje.toISOString())
+      .eq('pagamento_status', 'aprovado') // Só conta como pedido real se foi pago
       .neq('status', 'cancelado');
 
     const pedidosAbertos = await supabaseAdmin
@@ -99,7 +100,7 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         motoboys (nome, telefone)
       `)
       .eq('estabelecimento_id', est.id)
-      .in('status', ['aceito', 'preparando', 'pronto'])
+      .in('status', ['pendente', 'aceito', 'preparando', 'pronto']) // 'pendente' precisa aparecer para a loja aceitar
       .order('criado_em', { ascending: true });
 
     const faturamento = pedidosHoje?.reduce((s, p) => s + (p.subtotal || 0), 0) || 0;

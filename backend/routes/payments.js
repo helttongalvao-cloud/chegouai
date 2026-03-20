@@ -37,7 +37,7 @@ router.post(
         .from('pedidos')
         .select(`
           *,
-          estabelecimentos (nome, cadastro_data)
+          estabelecimentos (nome, cadastro_data, chave_pix)
         `)
         .eq('id', pedidoId)
         .eq('cliente_id', user.id)
@@ -55,6 +55,14 @@ router.post(
         cadastroData: pedido.estabelecimentos.cadastro_data,
       });
 
+      // Verifica se a loja cadastrou um Access Token para Split Automático (inicia com APP_USR-)
+      let mpAccessToken = null;
+      let applicationFee = 0;
+      if (pedido.estabelecimentos.chave_pix && pedido.estabelecimentos.chave_pix.startsWith('APP_USR-')) {
+        mpAccessToken = pedido.estabelecimentos.chave_pix.trim();
+        applicationFee = split.valorPlataforma + split.valorMotoboy; // Tudo que não é da loja vai pro app transferir depois
+      }
+
       // Criar pagamento Pix no MP
       const pixData = await criarPagamentoPix({
         total: split.total,
@@ -64,6 +72,8 @@ router.post(
         payerFirstName: user.profile.nome.split(' ')[0],
         payerLastName: user.profile.nome.split(' ').slice(1).join(' ') || 'Cliente',
         payerCpf: payerCpf || '00000000000', // CPF obrigatório pelo MP em produção
+        mpAccessToken,
+        applicationFee,
       });
 
       // Salvar mp_payment_id no pedido e comissão calculada
@@ -121,7 +131,7 @@ router.post(
         .select(`
           *,
           itens_pedido (*),
-          estabelecimentos (nome, cadastro_data)
+          estabelecimentos (nome, cadastro_data, chave_pix)
         `)
         .eq('id', pedidoId)
         .eq('cliente_id', user.id)
@@ -138,9 +148,16 @@ router.post(
         cadastroData: pedido.estabelecimentos.cadastro_data,
       });
 
+      let mpAccessToken = null;
+      let applicationFee = 0;
+      if (pedido.estabelecimentos.chave_pix && pedido.estabelecimentos.chave_pix.startsWith('APP_USR-')) {
+        mpAccessToken = pedido.estabelecimentos.chave_pix.trim();
+        applicationFee = split.valorPlataforma + split.valorMotoboy;
+      }
+
       const preference = await criarPreferenciaCartao({
         total: split.total,
-        marketplaceFee: split.valorPlataforma,
+        applicationFee,
         orderId: pedidoId,
         storeName: pedido.estabelecimentos.nome,
         items: pedido.itens_pedido.map((i) => ({
@@ -150,6 +167,7 @@ router.post(
         })),
         payerEmail: user.email,
         backUrl: process.env.BASE_URL,
+        mpAccessToken,
       });
 
       await supabaseAdmin
