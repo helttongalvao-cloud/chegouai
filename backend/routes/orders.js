@@ -151,21 +151,41 @@ router.post(
 );
 
 // =============================================
-// GET /api/orders — Listar pedidos do cliente
+// GET /api/orders — Listar pedidos do cliente (ou motoboy buscando disponiveis/entregues)
 // =============================================
 router.get('/', requireAuth, async (req, res, next) => {
   try {
-    const { data: pedidos, error } = await supabaseAdmin
+    const { status } = req.query;
+    const perfil = req.user.profile.perfil;
+    
+    let query = supabaseAdmin
       .from('pedidos')
       .select(`
         id, status, pagamento_status, total, subtotal, taxa_entrega,
-        forma_pagamento, criado_em,
+        forma_pagamento, criado_em, endereco_entrega, telefone_cliente,
         estabelecimentos (nome, emoji),
         itens_pedido (nome, quantidade, preco_unitario)
       `)
-      .eq('cliente_id', req.user.id)
       .order('criado_em', { ascending: false })
       .limit(50);
+      
+    // Lógica condicional de busca:
+    if (perfil === 'motoboy') {
+      // Se motoboy procurar por prontos ou entregues (via query params)
+      if (status) query = query.eq('status', status);
+      // O endpoint motoboys que pedem entregues pega do motoboy_id
+      if (status === 'entregue') {
+         // Precisa do id na tabela motoboys
+         const { data: mtb } = await supabaseAdmin.from('motoboys').select('id').eq('user_id', req.user.id).single();
+         if(mtb) query = query.eq('motoboy_id', mtb.id);
+      }
+    } else {
+      // Cliente normal: vê só os dele
+      query = query.eq('cliente_id', req.user.id);
+      if (status) query = query.eq('status', status);
+    }
+
+    const { data: pedidos, error } = await query;
 
     if (error) throw error;
     res.json(pedidos);
