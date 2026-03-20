@@ -132,6 +132,7 @@ router.post(
     body('email').isEmail().normalizeEmail(),
     body('senha').isLength({ min: 6 }),
     body('categoria').isIn(['restaurante', 'mercado', 'farmacia', 'lanche', 'bebida']),
+    body('chave_pix').optional().trim(),
     body('mpUserId').optional().trim(),
   ],
   async (req, res, next) => {
@@ -140,7 +141,7 @@ router.post(
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const { nome, telefone, email, senha, categoria, mpUserId } = req.body;
+    const { nome, telefone, email, senha, categoria, chave_pix, mpUserId } = req.body;
 
     try {
       // Criar usuário Supabase Auth
@@ -169,6 +170,7 @@ router.post(
           user_id: authData.user.id,
           nome,
           categoria,
+          chave_pix: chave_pix || null,
           mp_user_id: mpUserId || null,
           cadastro_data: new Date().toISOString(),
         })
@@ -199,6 +201,7 @@ router.post(
     body('email').isEmail().normalizeEmail(),
     body('senha').isLength({ min: 6 }),
     body('moto').optional().trim().isLength({ max: 100 }).escape(),
+    body('chave_pix').optional().trim(),
     body('mpUserId').optional().trim(),
   ],
   async (req, res, next) => {
@@ -207,7 +210,7 @@ router.post(
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const { nome, telefone, email, senha, moto, mpUserId } = req.body;
+    const { nome, telefone, email, senha, moto, chave_pix, mpUserId } = req.body;
 
     try {
       // PASSO 1: Criar usuario no Supabase Auth
@@ -263,7 +266,7 @@ router.post(
         // Ja existe, atualizar
         const { data: mb, error: mbErr } = await supabaseAdmin
           .from('motoboys')
-          .update({ nome, telefone, moto: moto || '' })
+          .update({ nome, telefone, moto: moto || '', chave_pix: chave_pix || null })
           .eq('user_id', userId)
           .select()
           .single();
@@ -280,6 +283,7 @@ router.post(
             nome,
             telefone,
             moto: moto || '',
+            chave_pix: chave_pix || null,
             mp_user_id: mpUserId || null,
           })
           .select()

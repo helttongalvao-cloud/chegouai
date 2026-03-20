@@ -1585,9 +1585,13 @@ function renderEstabelecimento() {
   if(!estDataCache) return;
   const sts = estDataCache.stats || {};
   
+  // Faturamento = soma de subtotal dos pedidos entregues/em andamento (sem a taxa de entrega)
+  var totalFaturamento = (estDataCache.pedidosAbertos || []).reduce((acc, p) => acc + (p.subtotal || 0), 0) +
+                         (sts.pedidosEntregues || []).reduce((acc, p) => acc + (p.subtotal || 0), 0);
+
   let html = '<div class="stats-grid">' +
     '<div class="stat-card"><div class="stat-valor">' + (sts.pedidosHoje || 0) + '</div><div class="stat-label">Pedidos hoje</div></div>' +
-    '<div class="stat-card"><div class="stat-valor">R$ ' + (sts.faturamento || 0).toFixed(2).replace('.',',') + '</div><div class="stat-label">Faturamento hoje</div></div>' +
+    '<div class="stat-card"><div class="stat-valor">R$ ' + totalFaturamento.toFixed(2).replace('.',',') + '</div><div class="stat-label">Faturamento</div></div>' +
     '</div><div class="secao-titulo">Pedidos em aberto</div><div class="pedidos-lista" id="pedidos-estabelecimento">';
   
   const pedidos = estDataCache.pedidosAbertos || [];
@@ -1794,6 +1798,7 @@ async function renderAdmin(secao) {
         '<div class="campo"><label>Nome da loja</label><input type="text" id="new-loja-nome" placeholder="Ex: Pizzaria do Marcos"></div>' +
         '<div class="campo"><label>Telefone</label><input type="tel" id="new-loja-tel" placeholder="(97) 99999-9999" oninput="mascaraTelefone(this)"></div>' +
         '<div class="campo"><label>E-mail de acesso</label><input type="email" id="new-loja-email" placeholder="loja@email.com"></div>' +
+        '<div class="campo"><label>Chave Pix para Repasses</label><input type="text" id="new-loja-pix" placeholder="CPF, Celular, E-mail ou Aleatória"></div>' +
         '<div class="campo"><label>Categoria</label><select id="new-loja-cat" style="width:100%;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:16px 18px;color:var(--texto);font-size:16px;"><option value="lanche">Lanchonete</option><option value="restaurante">Restaurante</option><option value="mercado">Mercado</option><option value="farmacia">Farmácia</option></select></div>' +
         '<div class="campo"><label>Senha de acesso</label><input type="password" id="new-loja-senha" placeholder="Senha (mínimo 6 chars)"></div>' +
         '<button class="btn-principal" id="btn-cad-loja" onclick="cadastrarLoja()">Cadastrar loja</button>' +
@@ -1804,6 +1809,7 @@ async function renderAdmin(secao) {
         '<div class="campo"><label>Nome completo</label><input type="text" id="new-moto-nome" placeholder="Ex: Carlos Silva"></div>' +
         '<div class="campo"><label>Telefone</label><input type="tel" id="new-moto-tel" placeholder="(97) 99999-9999" oninput="mascaraTelefone(this)"></div>' +
         '<div class="campo"><label>E-mail de acesso</label><input type="email" id="new-moto-email" placeholder="motoboy@email.com"></div>' +
+        '<div class="campo"><label>Chave Pix para Repasses</label><input type="text" id="new-moto-pix" placeholder="CPF, Celular, E-mail ou Aleatória"></div>' +
         '<div class="campo"><label>Moto (modelo/placa)</label><input type="text" id="new-moto-moto" placeholder="Ex: Honda CG 150 - ABC1234"></div>' +
         '<div class="campo"><label>Senha de acesso</label><input type="password" id="new-moto-senha" placeholder="Senha (mínimo 6 chars)"></div>' +
         '<button class="btn-principal" id="btn-cad-moto" onclick="cadastrarMotoboy()">Cadastrar motoboy</button>' +
@@ -1834,6 +1840,7 @@ async function cadastrarLoja() {
   const email = sanitizar(document.getElementById('new-loja-email').value);
   const senha = document.getElementById('new-loja-senha').value;
   const categoria = document.getElementById('new-loja-cat').value;
+  const chavePix = sanitizar(document.getElementById('new-loja-pix').value);
 
   if(!nome || telefone.length < 10 || !email || senha.length < 6) return alert('Preencha os campos corretamente');
   
@@ -1843,7 +1850,7 @@ async function cadastrarLoja() {
   try {
     await apiCall('/api/admin/establishments', {
       method: 'POST',
-      body: { nome, telefone, email, senha, categoria }
+      body: { nome, telefone, email, senha, categoria, chave_pix: chavePix }
     });
     alert('Loja cadastrada com sucesso!');
     renderAdmin('lojas'); // recarrega a tela com as lojas para ver a nova!
@@ -1860,6 +1867,7 @@ async function cadastrarMotoboy() {
   const email = sanitizar(document.getElementById('new-moto-email').value);
   const senha = document.getElementById('new-moto-senha').value;
   const moto = sanitizar(document.getElementById('new-moto-moto').value);
+  const chavePix = sanitizar(document.getElementById('new-moto-pix').value);
 
   if(!nome) return alert('Preencha o nome do motoboy');
   if(telefone.length < 10) return alert('Telefone inválido. Digite com DDD, ex: 97999999999 (' + telefone.length + ' dígitos encontrados)');
@@ -1872,7 +1880,7 @@ async function cadastrarMotoboy() {
   try {
     await apiCall('/api/admin/motoboys', {
       method: 'POST',
-      body: { nome, telefone, email, senha, moto }
+      body: { nome, telefone, email, senha, moto, chave_pix: chavePix }
     });
     alert('Motoboy cadastrado com sucesso!');
     renderAdmin('motoboys');
