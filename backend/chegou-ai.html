@@ -365,7 +365,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="logo-mini">🛵</div>
       <h3>Chegou Aí</h3>
     </div>
-    <button class="header-acao" onclick="irLogin()">Sair</button>
+    <button class="header-acao" onclick="irLogin()" style="margin-left:8px;">Sair</button>
+    <button class="header-acao" onclick="abrirHistorico()" style="margin-right:4px;">📋</button>
   </div>
   <div class="home-content">
     <div class="endereco-bar" onclick="alterarEndereco()">
@@ -411,6 +412,11 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       </div>
     </div>
   </div>
+  <div style="padding:0 16px 8px;">
+    <input type="text" id="busca-produto" placeholder="🔍 Buscar produto..." oninput="filtrarProdutos(this.value)" style="width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;">
+  </div>
+  <div id="cardapio-avaliacao" style="padding:0 16px 8px;font-size:13px;color:var(--texto2);"></div>
+  <div id="area-lista-compras" style="display:none;padding:0 16px;"></div>
   <div class="itens-cardapio" id="lista-itens"></div>
   <div class="carrinho-float oculto" id="carrinho-float2" onclick="irCheckout()">
     <div class="carrinho-qtd" id="carrinho-qtd2">0</div>
@@ -1082,10 +1088,14 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 // CARDÁPIO
+var produtosCache = [];
 async function abrirCardapio(id) {
   const lista = document.getElementById('lista-itens');
   lista.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando cardápio...</div>';
   irTela('tela-cardapio');
+  // Limpar busca
+  var buscaInput = document.getElementById('busca-produto');
+  if(buscaInput) buscaInput.value = '';
 
   try {
     var data = await apiCall('/api/establishments/' + id);
@@ -1102,20 +1112,73 @@ async function abrirCardapio(id) {
     document.getElementById('est-meta-cardapio').textContent =
       'Aberto • ' + (estAtual.tempo_entrega || '30-45 min') + ' • Taxa R$' + parseFloat(estAtual.taxa_entrega || 4).toFixed(2).replace('.',',');
 
-    lista.innerHTML = (estAtual.produtos || []).map(function(item, i) {
-      return '<div class="card-item">' +
-        '<div class="item-emoji">' + (item.emoji || '🍽️') + '</div>' +
-        '<div class="item-info">' +
-          '<div class="item-nome">' + item.nome + '</div>' +
-          '<div class="item-desc">' + (item.descricao || '') + '</div>' +
-          '<div class="item-preco">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + '</div>' +
+    // Carregar avaliações
+    try {
+      var avResp = await apiCall('/api/features/avaliacoes/' + id);
+      var elAv = document.getElementById('cardapio-avaliacao');
+      if(elAv && avResp.total > 0) {
+        var estrelas = '⭐'.repeat(Math.round(avResp.media));
+        elAv.innerHTML = estrelas + ' ' + avResp.media + '/5 (' + avResp.total + ' avaliações)';
+      } else if(elAv) {
+        elAv.innerHTML = 'Novo no Chegou Aí ✨';
+      }
+    } catch(e) {}
+
+    // Verificar se é mercado/farmácia → mostrar campo de lista de compras
+    var areaLista = document.getElementById('area-lista-compras');
+    var cat = estAtual.categoria;
+    if(cat === 'mercado' || cat === 'farmacia') {
+      areaLista.style.display = 'block';
+      areaLista.innerHTML =
+        '<div style="background:var(--cinza2);border:1.5px solid var(--verde);border-radius:14px;padding:16px;margin-bottom:16px;">' +
+        '<h4 style="font-size:14px;margin-bottom:8px;">📝 Enviar lista de compras</h4>' +
+        '<p style="font-size:12px;color:var(--texto2);margin-bottom:10px;">Escreva o que precisa e o ' + (cat === 'farmacia' ? 'farmacêutico' : 'mercado') + ' vai separar para você!</p>' +
+        '<textarea id="textarea-lista" placeholder="Ex:\n1 arroz 5kg\n2 leite integral\n1 detergente\n..." style="width:100%;min-height:120px;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:14px;font-family:\'DM Sans\',sans-serif;resize:vertical;"></textarea>' +
+        '<button class="btn-principal" onclick="enviarListaCompras()" style="margin-top:10px;width:100%;">Enviar lista</button>' +
         '</div>' +
-        '<button class="item-add" onclick="adicionarItem(' + i + ')">+</button>' +
-      '</div>';
-    }).join('') || '<div class="vazio"><div class="vazio-icon">🍽️</div>Cardápio vazio</div>';
+        '<div class="secao-titulo" style="font-size:13px;">Ou escolha dos produtos cadastrados:</div>';
+    } else {
+      areaLista.style.display = 'none';
+    }
+
+    // Salvar produtos para busca
+    produtosCache = (estAtual.produtos || []).filter(function(p) { return p.disponivel !== false; });
+    renderProdutos(produtosCache);
+
+    // Carregar endereço salvo
+    var endSalvo = localStorage.getItem('chegouai_endereco');
+    if(endSalvo) {
+      var elEnd = document.getElementById('endereco-entrega');
+      if(elEnd && !elEnd.value) elEnd.value = endSalvo;
+    }
   } catch(e) {
     lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar cardápio</div>';
   }
+}
+
+function renderProdutos(produtos) {
+  var lista = document.getElementById('lista-itens');
+  lista.innerHTML = produtos.map(function(item, i) {
+    var imgHtml = item.imagem_url
+      ? '<img src="' + item.imagem_url + '" style="width:56px;height:56px;border-radius:10px;object-fit:cover;" onerror="this.style.display=\'none\'">'
+      : '<div class="item-emoji">' + (item.emoji || '🍽️') + '</div>';
+    return '<div class="card-item" data-nome="' + (item.nome || '').toLowerCase() + '">' +
+      imgHtml +
+      '<div class="item-info">' +
+        '<div class="item-nome">' + item.nome + '</div>' +
+        '<div class="item-desc">' + (item.descricao || '') + '</div>' +
+        '<div class="item-preco">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + '</div>' +
+      '</div>' +
+      '<button class="item-add" onclick="adicionarItem(' + i + ')">+</button>' +
+    '</div>';
+  }).join('') || '<div class="vazio"><div class="vazio-icon">🍽️</div>Cardápio vazio</div>';
+}
+
+function filtrarProdutos(termo) {
+  if(!termo) return renderProdutos(produtosCache);
+  var t = termo.toLowerCase();
+  var filtrado = produtosCache.filter(function(p) { return p.nome.toLowerCase().includes(t) || (p.descricao || '').toLowerCase().includes(t); });
+  renderProdutos(filtrado);
 }
 
 function adicionarItem(idx) {
@@ -2234,6 +2297,179 @@ entrarComo = function(perfil) {
   ultimoStatusConhecido = {};
   iniciarPollingPedidos();
 };
+
+// === FEATURES: LISTA DE COMPRAS ===
+async function enviarListaCompras() {
+  var texto = document.getElementById('textarea-lista').value.trim();
+  if(!texto || texto.length < 5) return alert('Escreva pelo menos alguns itens na lista.');
+  var endereco = localStorage.getItem('chegouai_endereco') || '';
+  if(!endereco) {
+    endereco = prompt('Informe seu endereço de entrega:');
+    if(!endereco) return;
+    localStorage.setItem('chegouai_endereco', endereco);
+  }
+  var telefone = (currentUser && currentUser.telefone) || '';
+  if(!telefone || telefone.length < 10) {
+    telefone = prompt('Informe seu telefone (DDD + número):');
+    if(!telefone) return;
+  }
+  try {
+    await apiCall('/api/features/pedido-lista', {
+      method: 'POST',
+      body: {
+        estabelecimento_id: estAtual.id,
+        lista_compras: texto,
+        endereco: endereco,
+        telefone: telefone.replace(/\D/g, ''),
+        forma_pagamento: 'pix',
+      }
+    });
+    showToast('✅', 'Lista enviada!', 'O estabelecimento vai preparar e informar o valor.');
+    irHome();
+  } catch(e) {
+    alert('Erro ao enviar lista: ' + e.message);
+  }
+}
+
+// === FEATURES: HISTÓRICO DE PEDIDOS ===
+async function abrirHistorico() {
+  irTela('tela-cardapio'); // Reutilizar a tela
+  var lista = document.getElementById('lista-itens');
+  var areaLista = document.getElementById('area-lista-compras');
+  if(areaLista) areaLista.style.display = 'none';
+  document.getElementById('est-nome-cardapio').textContent = 'Meus Pedidos';
+  document.getElementById('est-meta-cardapio').textContent = 'Histórico de pedidos';
+  document.getElementById('est-avatar').textContent = '📋';
+  document.getElementById('cardapio-avaliacao').innerHTML = '';
+  var buscaEl = document.getElementById('busca-produto');
+  if(buscaEl) buscaEl.style.display = 'none';
+
+  lista.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando histórico...</div>';
+
+  try {
+    var pedidos = await apiCall('/api/features/historico');
+    if(!pedidos.length) {
+      lista.innerHTML = '<div class="vazio"><div class="vazio-icon">📋</div>Nenhum pedido ainda. Faça seu primeiro pedido!</div>';
+      return;
+    }
+    lista.innerHTML = pedidos.map(function(p) {
+      var data = new Date(p.criado_em).toLocaleDateString('pt-BR');
+      var loja = p.estabelecimentos ? (p.estabelecimentos.emoji || '🏪') + ' ' + p.estabelecimentos.nome : 'Loja';
+      var statusCor = p.status === 'entregue' ? 'color:var(--verde)' : p.status === 'cancelado' ? 'color:var(--erro)' : 'color:var(--laranja)';
+      var statusTxt = p.status === 'entregue' ? '✅ Entregue' : p.status === 'cancelado' ? '❌ Cancelado' : '⏳ ' + p.status;
+      var itens = p.tipo === 'lista' ? '📝 Lista de compras' : (p.itens_pedido || []).map(function(i) { return i.quantidade + 'x ' + i.nome; }).join(', ');
+      var total = p.total > 0 ? 'R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') : 'A definir';
+      var btnAvaliar = p.status === 'entregue' ? '<button class="btn-acao" onclick="avaliarPedido(\'' + p.id + '\',\'' + (p.estabelecimentos?.id || p.estabelecimento_id) + '\')" style="margin-top:8px;padding:6px 12px;font-size:12px;">⭐ Avaliar</button>' : '';
+      return '<div class="card-item" style="flex-direction:column;align-items:stretch;gap:6px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<div style="font-weight:700;font-size:14px;">' + loja + '</div>' +
+          '<span style="font-size:12px;' + statusCor + '">' + statusTxt + '</span>' +
+        '</div>' +
+        '<div style="font-size:12px;color:var(--texto2);">' + data + ' • ' + itens + '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<span style="font-weight:700;color:var(--verde);">' + total + '</span>' +
+          btnAvaliar +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro: ' + e.message + '</div>';
+  }
+}
+
+// === FEATURES: AVALIAÇÃO ===
+function avaliarPedido(pedidoId, estId) {
+  var nota = prompt('De 1 a 5, que nota você dá? (1=ruim, 5=excelente)');
+  if(!nota || nota < 1 || nota > 5) return alert('Nota deve ser de 1 a 5');
+  var comentario = prompt('Quer deixar um comentário? (opcional)') || '';
+  apiCall('/api/features/avaliar', {
+    method: 'POST',
+    body: { pedido_id: pedidoId, estabelecimento_id: estId, nota: parseInt(nota), comentario: comentario }
+  }).then(function() {
+    showToast('⭐', 'Avaliação enviada!', 'Obrigado pelo feedback!');
+    abrirHistorico(); // Recarregar
+  }).catch(function(e) {
+    alert('Erro: ' + e.message);
+  });
+}
+
+// === FEATURES: CHAT CLIENTE ↔ LOJA ===
+var chatPedidoId = null;
+var chatInterval = null;
+function abrirChat(pedidoId) {
+  chatPedidoId = pedidoId;
+  irTela('tela-cardapio'); // Reutilizar
+  var lista = document.getElementById('lista-itens');
+  var areaLista = document.getElementById('area-lista-compras');
+  if(areaLista) areaLista.style.display = 'none';
+  document.getElementById('est-nome-cardapio').textContent = 'Chat do Pedido';
+  document.getElementById('est-meta-cardapio').textContent = 'Converse com o estabelecimento';
+  document.getElementById('est-avatar').textContent = '💬';
+  document.getElementById('cardapio-avaliacao').innerHTML = '';
+  var buscaEl = document.getElementById('busca-produto');
+  if(buscaEl) buscaEl.style.display = 'none';
+
+  lista.innerHTML =
+    '<div id="chat-mensagens" style="flex:1;overflow-y:auto;padding:16px;min-height:300px;"></div>' +
+    '<div style="display:flex;gap:8px;padding:12px 16px;background:var(--cinza2);border-top:1px solid var(--cinza3);">' +
+      '<input type="text" id="chat-input" placeholder="Digite sua mensagem..." style="flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:14px;font-family:\'DM Sans\',sans-serif;" onkeydown="if(event.key===\'Enter\')enviarMensagem()">' +
+      '<button class="btn-principal" onclick="enviarMensagem()" style="padding:12px 20px;">Enviar</button>' +
+    '</div>';
+
+  carregarMensagens();
+  if(chatInterval) clearInterval(chatInterval);
+  chatInterval = setInterval(carregarMensagens, 5000);
+}
+
+async function carregarMensagens() {
+  if(!chatPedidoId) return;
+  try {
+    var msgs = await apiCall('/api/features/chat/' + chatPedidoId);
+    var el = document.getElementById('chat-mensagens');
+    if(!el) return;
+    el.innerHTML = msgs.map(function(m) {
+      var minha = m.remetente_tipo === (currentUser.perfil === 'estabelecimento' ? 'estabelecimento' : 'cliente');
+      var hora = new Date(m.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      return '<div style="display:flex;justify-content:' + (minha ? 'flex-end' : 'flex-start') + ';margin-bottom:8px;">' +
+        '<div style="max-width:75%;padding:10px 14px;border-radius:14px;background:' + (minha ? 'var(--verde)' : 'var(--cinza3)') + ';color:' + (minha ? 'var(--preto)' : 'var(--texto)') + ';font-size:14px;">' +
+          m.texto +
+          '<div style="font-size:10px;opacity:0.7;margin-top:4px;text-align:right;">' + hora + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('') || '<div class="vazio" style="padding:40px;"><div class="vazio-icon">💬</div>Nenhuma mensagem ainda. Inicie a conversa!</div>';
+    el.scrollTop = el.scrollHeight;
+  } catch(e) {}
+}
+
+async function enviarMensagem() {
+  var input = document.getElementById('chat-input');
+  if(!input || !input.value.trim()) return;
+  try {
+    await apiCall('/api/features/chat', {
+      method: 'POST',
+      body: { pedido_id: chatPedidoId, texto: input.value.trim() }
+    });
+    input.value = '';
+    carregarMensagens();
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+// === FEATURES: ENDEREÇO SALVO ===
+// Salvar automaticamente quando finalizar pedido
+var _finalizarPedidoOriginal = typeof finalizarPedido === 'function' ? finalizarPedido : null;
+// Override para salvar endereço
+(function() {
+  var endInput = document.getElementById('endereco-entrega');
+  if(endInput) {
+    endInput.addEventListener('blur', function() {
+      if(this.value.trim()) {
+        localStorage.setItem('chegouai_endereco', this.value.trim());
+      }
+    });
+  }
+})();
 
 // === REGISTRAR SERVICE WORKER ===
 if ('serviceWorker' in navigator) {
