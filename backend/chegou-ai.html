@@ -1804,7 +1804,10 @@ async function cadastrarMotoboy() {
   const senha = document.getElementById('new-moto-senha').value;
   const moto = sanitizar(document.getElementById('new-moto-moto').value);
 
-  if(!nome || telefone.length < 10 || !email || senha.length < 6) return alert('Preencha os campos corretamente');
+  if(!nome) return alert('Preencha o nome do motoboy');
+  if(telefone.length < 10) return alert('Telefone inválido. Digite com DDD, ex: 97999999999 (' + telefone.length + ' dígitos encontrados)');
+  if(!email || !email.includes('@')) return alert('E-mail inválido');
+  if(senha.length < 6) return alert('Senha deve ter pelo menos 6 caracteres (' + senha.length + ' informados)');
   
   const btn = document.getElementById('btn-cad-moto');
   btn.disabled = true; btn.textContent = 'Aguarde...';
