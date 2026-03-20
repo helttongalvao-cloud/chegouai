@@ -542,7 +542,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   <div class="header">
     <div class="header-logo">
       <div class="logo-mini">🛵</div>
-      <h3>Motoboy</h3>
+      <h3 id="motoboy-header-nome">Motoboy</h3>
     </div>
     <button class="header-acao" onclick="irLogin()">Sair</button>
   </div>
@@ -566,6 +566,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     </div>
     <div class="secao-titulo">Entregas disponíveis</div>
     <div id="entregas-motoboy"></div>
+    <div class="secao-titulo" style="margin-top:20px;">Minhas entregas recentes</div>
+    <div id="historico-motoboy"></div>
   </div>
 </div>
 
@@ -604,7 +606,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <div class="nav-admin">
       <div class="nav-btn ativo" onclick="adminNav(this,'pedidos')">Pedidos</div>
       <div class="nav-btn" onclick="adminNav(this,'repasses')">Repasses</div>
-      <div class="nav-btn" onclick="adminNav(this,'lojas')">Lojas</div>
+      <div class="nav-btn" onclick="adminNav(this,'lojas')">Estabelecimentos</div>
       <div class="nav-btn" onclick="adminNav(this,'motoboys')">Motoboys</div>
       <div class="nav-btn" onclick="adminNav(this,'cadastrar')">+ Cadastrar</div>
     </div>
@@ -661,10 +663,9 @@ async function inicializarMP() {
 async function pagarPix(pedidoId) {
   mostrarLoadingPagamento('Gerando QR Code Pix...');
   try {
-    var payerCpf = null; // Em produção solicitar CPF ao usuário
     var resp = await apiCall('/api/payments/pix', {
       method: 'POST',
-      body: { pedidoId: pedidoId, payerCpf: payerCpf },
+      body: { pedidoId: pedidoId },
     });
     esconderLoadingPagamento();
     mostrarQRCodeReal(resp);
@@ -1111,6 +1112,13 @@ async function abrirCardapio(id) {
     document.getElementById('est-nome-cardapio').textContent = estAtual.nome;
     document.getElementById('est-meta-cardapio').textContent =
       'Aberto • ' + (estAtual.tempo_entrega || '30-45 min') + ' • Taxa R$' + parseFloat(estAtual.taxa_entrega || 4).toFixed(2).replace('.',',');
+
+    // Título dinâmico conforme categoria
+    var tituloCardapio = 'Cardápio';
+    if(estAtual.categoria === 'mercado') tituloCardapio = 'Produtos';
+    else if(estAtual.categoria === 'farmacia') tituloCardapio = 'Medicamentos';
+    var btnVoltar = document.querySelector('#tela-cardapio .btn-voltar');
+    if(btnVoltar) btnVoltar.textContent = '← ' + tituloCardapio;;
 
     // Carregar avaliações
     try {
@@ -1699,7 +1707,7 @@ async function renderAdmin(secao) {
   } else if(secao === 'lojas') {
     const lojas = adminDataCache.estabelecimentos || [];
     el.innerHTML =
-      '<div class="secao-titulo">Lojas parceiras</div>' +
+      '<div class="secao-titulo">Estabelecimentos parceiros</div>' +
       '<div class="tabela">' +
       (lojas.length === 0 ? '<div class="tabela-row"><div class="info">Nenhuma loja cadastrada.</div></div>' :
       lojas.map(function(e) {
@@ -1840,6 +1848,12 @@ async function renderMotoboy() {
   var el = document.getElementById('entregas-motoboy');
   el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando entregas...</div>';
 
+  // Mostrar nome do motoboy
+  var elNome = document.getElementById('motoboy-header-nome');
+  if(elNome && currentUser && currentUser.nome) {
+    elNome.textContent = 'Olá, ' + currentUser.nome.split(' ')[0] + '!';
+  }
+
   try {
     // Buscar pedidos prontos para coleta (status 'pronto' = loja preparou, precisa de motoboy)
     var pedidos = await apiCall('/api/orders?status=pronto');
@@ -1848,33 +1862,51 @@ async function renderMotoboy() {
     // Atualizar estatísticas
     var elEntregas = document.getElementById('moto-entregas');
     var elGanhos = document.getElementById('moto-ganhos');
-    if(elEntregas) elEntregas.textContent = (entregues.pedidos || []).length;
-    var totalGanhos = (entregues.pedidos || []).reduce(function(s,p){ return s + parseFloat(p.taxa_entrega || 0); }, 0);
+    var listaEntregues = entregues.pedidos || [];
+    if(elEntregas) elEntregas.textContent = listaEntregues.length;
+    var totalGanhos = listaEntregues.reduce(function(s,p){ return s + parseFloat(p.taxa_entrega || 0); }, 0);
     if(elGanhos) elGanhos.textContent = 'R$' + totalGanhos.toFixed(2).replace('.',',');
 
     var lista = pedidos.pedidos || [];
     if(lista.length === 0) {
       el.innerHTML = '<div class="vazio"><div class="vazio-icon">🛵</div>Nenhuma entrega disponível no momento.<br><small style="color:var(--texto2)">Quando um pedido ficar pronto, ele aparecerá aqui.</small></div>';
-      return;
+    } else {
+      el.innerHTML = lista.map(function(p) {
+        var loja = p.estabelecimentos ? p.estabelecimentos.nome : 'Loja';
+        var taxa = parseFloat(p.taxa_entrega || 0).toFixed(2).replace('.',',');
+        return '<div class="entrega-card" data-pedido-id="' + p.id + '">' +
+          '<h4>🔔 Nova entrega disponível!</h4>' +
+          '<div class="entrega-info">' +
+            '<div class="entrega-linha"><span class="label">Loja:</span><span class="valor">' + loja + '</span></div>' +
+            '<div class="entrega-linha"><span class="label">Endereço:</span><span class="valor">' + (p.endereco_entrega || 'Não informado') + '</span></div>' +
+            '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + (p.telefone_cliente || '') + '" style="color:var(--verde);text-decoration:none;">' + (p.telefone_cliente || 'Não informado') + '</a></span></div>' +
+            '<div class="entrega-linha"><span class="label">Seu ganho:</span><span class="valor" style="color:var(--verde)">R$ ' + taxa + '</span></div>' +
+          '</div>' +
+          '<div class="btns-entrega">' +
+            '<button class="btn-acao secundario" onclick="recusarEntrega(this)">Recusar</button>' +
+            '<button class="btn-acao" onclick="aceitarEntrega(this, \'' + p.id + '\')">Aceitar entrega</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
     }
 
-    el.innerHTML = lista.map(function(p) {
-      var loja = p.estabelecimentos ? p.estabelecimentos.nome : 'Loja';
-      var taxa = parseFloat(p.taxa_entrega || 0).toFixed(2).replace('.',',');
-      return '<div class="entrega-card" data-pedido-id="' + p.id + '">' +
-        '<h4>🔔 Nova entrega disponível!</h4>' +
-        '<div class="entrega-info">' +
-          '<div class="entrega-linha"><span class="label">Loja:</span><span class="valor">' + loja + '</span></div>' +
-          '<div class="entrega-linha"><span class="label">Endereço:</span><span class="valor">' + (p.endereco_entrega || 'Não informado') + '</span></div>' +
-          '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + (p.telefone_cliente || '') + '" style="color:var(--verde);text-decoration:none;">' + (p.telefone_cliente || 'Não informado') + '</a></span></div>' +
-          '<div class="entrega-linha"><span class="label">Seu ganho:</span><span class="valor" style="color:var(--verde)">R$ ' + taxa + '</span></div>' +
-        '</div>' +
-        '<div class="btns-entrega">' +
-          '<button class="btn-acao secundario" onclick="recusarEntrega(this)">Recusar</button>' +
-          '<button class="btn-acao" onclick="aceitarEntrega(this, \'' + p.id + '\')">Aceitar entrega</button>' +
-        '</div>' +
-      '</div>';
-    }).join('');
+    // Histórico de entregas recentes
+    var elHist = document.getElementById('historico-motoboy');
+    if(elHist) {
+      if(listaEntregues.length === 0) {
+        elHist.innerHTML = '<div class="vazio" style="padding:20px;"><div class="vazio-icon">📋</div>Nenhuma entrega realizada ainda.</div>';
+      } else {
+        elHist.innerHTML = listaEntregues.slice(0, 10).map(function(p) {
+          var loja = p.estabelecimentos ? p.estabelecimentos.nome : 'Loja';
+          var data = new Date(p.criado_em).toLocaleDateString('pt-BR');
+          var taxa = parseFloat(p.taxa_entrega || 0).toFixed(2).replace('.',',');
+          return '<div class="tabela-row" style="padding:12px;">' +
+            '<div class="info"><div class="nome">✅ ' + loja + '</div><div class="sub">' + data + ' • ' + (p.endereco_entrega || '').substring(0,30) + '</div></div>' +
+            '<div class="valor" style="color:var(--verde)">R$ ' + taxa + '</div>' +
+          '</div>';
+        }).join('');
+      }
+    }
   } catch(e) {
     el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar entregas: ' + e.message + '</div>';
   }
