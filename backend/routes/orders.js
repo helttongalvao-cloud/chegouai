@@ -328,8 +328,12 @@ router.post(
         .select()
         .single();
 
-      if (error || !pedido) {
-        return res.status(400).json({ error: 'Pedido não está pronto para coleta' });
+      if (error) {
+        console.error('[Assign Motoboy] Erro Supabase:', error);
+        return res.status(400).json({ error: 'Erro no banco: ' + error.message });
+      }
+      if (!pedido) {
+        return res.status(400).json({ error: 'Pedido não está pronto para coleta ou não existe' });
       }
 
       res.json({ message: 'Motoboy atribuído', pedido });

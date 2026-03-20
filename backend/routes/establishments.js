@@ -100,7 +100,7 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         motoboys (nome, telefone)
       `)
       .eq('estabelecimento_id', est.id)
-      .in('status', ['pendente', 'aceito', 'preparando', 'pronto']) // 'pendente' precisa aparecer para a loja aceitar
+      .in('status', ['aceito', 'preparando', 'pronto']) // Exclui pendente = checkout abandonado
       .order('criado_em', { ascending: true });
 
     const faturamento = pedidosHoje?.reduce((s, p) => s + (p.subtotal || 0), 0) || 0;

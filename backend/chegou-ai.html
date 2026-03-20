@@ -1912,8 +1912,10 @@ async function renderMotoboy() {
   }
 
   try {
-    // Buscar pedidos prontos para coleta (status 'pronto' = loja preparou, precisa de motoboy)
-    var pedidos = await apiCall('/api/orders?status=pronto');
+    var stat = document.getElementById('moto-status-disponivel').checked;
+    
+    // Buscar pedidos prontos se estiver online, senao array vazio
+    var pedidos = stat ? await apiCall('/api/orders?status=pronto') : [];
     var entregues = await apiCall('/api/orders?status=entregue');
 
     // Atualizar estatísticas
