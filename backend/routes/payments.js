@@ -148,16 +148,14 @@ router.post(
         cadastroData: pedido.estabelecimentos.cadastro_data,
       });
 
+      // Sem application_fee para tokens APP_USR manuais no MVP
       let mpAccessToken = null;
-      let applicationFee = 0;
       if (pedido.estabelecimentos.chave_pix && pedido.estabelecimentos.chave_pix.startsWith('APP_USR-')) {
         mpAccessToken = pedido.estabelecimentos.chave_pix.trim();
-        applicationFee = split.valorPlataforma + split.valorMotoboy;
       }
 
       const preference = await criarPreferenciaCartao({
         total: split.total,
-        applicationFee,
         orderId: pedidoId,
         storeName: pedido.estabelecimentos.nome,
         items: pedido.itens_pedido.map((i) => ({

@@ -447,7 +447,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <div class="secao-checkout">
       <h4>📍 Endereço de entrega</h4>
       <div class="campo" style="margin:0;">
-        <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;">
+        <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value)">
       </div>
       <label style="display:flex;align-items:center;margin-top:8px;font-size:14px;color:var(--texto);cursor:pointer;">
         <input type="checkbox" id="salvar-endereco" checked style="margin-right:8px;accent-color:var(--verde);">
@@ -1251,16 +1251,44 @@ function atualizarCarrinho() {
 
 function voltarCardapio() { irTela('tela-cardapio'); }
 
+function simularFrete(endereco) {
+  var subtotal = carrinho.reduce(function(s,i){ return s + i.preco * i.qtd; }, 0);
+  if (!endereco || endereco.length < 5) {
+    document.getElementById('taxa-entrega-valor').textContent = 'Preencha o Endereço';
+    document.getElementById('taxa-entrega-valor').style.color = 'var(--texto2)';
+    document.getElementById('total-valor').textContent = 'R$ ' + subtotal.toFixed(2).replace('.',',');
+    document.getElementById('taxa-entrega-info').textContent = '📍 Digite o endereço para estimar o frete.';
+    window.taxaEntregaSimulada = 0;
+    return;
+  }
+  
+  // Lógica fake de cálculo de distância baseada no texto para o MVP (ex: bairro Centro)
+  let distFake = 1.0;
+  let text = endereco.toLowerCase();
+  if(text.includes('centro')) distFake = 0.5;
+  else if (text.length > 20) distFake = 2.5;
+  else distFake = 1.5;
+  
+  const taxa = calcularTaxaEntrega(distFake);
+  window.taxaEntregaSimulada = taxa;
+  
+  document.getElementById('taxa-entrega-valor').textContent = 'R$ ' + taxa.toFixed(2).replace('.',',');
+  document.getElementById('taxa-entrega-valor').style.color = 'var(--verde)';
+  document.getElementById('total-valor').textContent = 'R$ ' + (subtotal + taxa).toFixed(2).replace('.',',');
+  document.getElementById('taxa-entrega-info').textContent = '📍 Distância est.: ' + distFake + ' km — Frete R$ ' + taxa.toFixed(2).replace('.',',');
+}
+
 // CHECKOUT
 function irCheckout() {
   var subtotal = carrinho.reduce(function(s,i){ return s + i.preco * i.qtd; }, 0);
-  // Simular distância aleatória entre 0.5 e 3km para demo
-  const distancia = Math.round((Math.random() * 2.5 + 0.5) * 10) / 10;
-  const taxaEntrega = calcularTaxaEntrega(distancia);
   document.getElementById('subtotal-valor').textContent = 'R$ ' + subtotal.toFixed(2).replace('.',',');
-  document.getElementById('total-valor').textContent = 'R$ ' + (subtotal + taxaEntrega).toFixed(2).replace('.',',');
-  document.getElementById('taxa-entrega-valor').textContent = 'R$ ' + taxaEntrega.toFixed(2).replace('.',',');
-  document.getElementById('taxa-entrega-info').textContent = '📍 Distância estimada: ' + distancia + ' km — taxa R$ ' + taxaEntrega + ',00';
+  
+  // Limpa frete para requerer o endereço do usuário primeiro
+  document.getElementById('taxa-entrega-valor').textContent = 'Preencha o Endereço';
+  document.getElementById('taxa-entrega-valor').style.color = 'var(--texto2)';
+  document.getElementById('total-valor').textContent = 'R$ ' + subtotal.toFixed(2).replace('.',',');
+  document.getElementById('taxa-entrega-info').textContent = '📍 Digite o endereço para ver a taxa final.';
+  window.taxaEntregaSimulada = 0;
   const resumo = document.getElementById('resumo-itens');
   resumo.innerHTML = carrinho.map(function(i, idx) {
     return '<div class="item-resumo" style="align-items:center;">' +
@@ -1273,10 +1301,13 @@ function irCheckout() {
     '</div>';
   }).join('');
   
-  // Salva no objeto global para passar ao backend
-  window.taxaEntregaSimulada = taxaEntrega;
-  
   irTela('tela-checkout');
+  
+  // Se houver endereço salvo no localStorage/auto-fill, chama o simulador
+  setTimeout(function() {
+    var eInput = document.getElementById('endereco-entrega').value;
+    if(eInput) simularFrete(eInput);
+  }, 100);
 }
 
 function selecionarPag(el, tipo) {
@@ -1467,6 +1498,14 @@ function renderInfoLoja() {
     '<label for="loja-aberta">Loja aberta para pedidos</label>' +
     '</div></div>' +
     '<button class="btn-principal" style="margin-top:16px;" id="btn-salvar-loja" onclick="salvarInfoLoja()">Salvar alterações</button>' +
+    
+    // BOTAO OAUTH MP
+    '<div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--cinza3); text-align:center;">' +
+    '<h4 style="font-size:14px; margin-bottom:8px;">Repasses Automáticos</h4>' +
+    (est.mp_user_id ? '<div style="color:var(--verde); font-weight:bold; margin-bottom:8px; font-size:13px;">✅ Conectado ao Mercado Pago (' + est.mp_user_id + ')</div>' : '<div style="color:var(--texto2); font-size:12px; margin-bottom:12px;">Conecte sua conta Mercado Pago para receber o valor de suas vendas direto no Pix.</div>') +
+    '<button class="btn-secundario" style="background:#009EE3; color:#fff; border:none; padding:12px; width:100%; border-radius:12px; cursor:pointer;" onclick="conectarMercadoPago(\'estabelecimento\')">' + (est.mp_user_id ? 'Reconectar Mercado Pago' : '🤝 Conectar Mercado Pago') + '</button>' +
+    '</div>' +
+    
     '</div>';
 }
 
@@ -1957,6 +1996,25 @@ async function renderMotoboy() {
 
     // Histórico de entregas recentes
     var elHist = document.getElementById('historico-motoboy');
+    
+    // INJETAR OAUTH MOTOBOY
+    if(currentUser) { 
+      var conectado = currentUser.mp_user_id ? true : false;
+      var elBtn = document.getElementById('motoboy-oauth-btn');
+      if(!elBtn) {
+        elBtn = document.createElement('div');
+        elBtn.id = 'motoboy-oauth-btn';
+        elBtn.style.cssText = 'margin-top:24px; padding:16px; background:var(--cinza2); border-radius:16px; text-align:center;';
+        // Inserir antes da lista de entregas
+        var content = document.querySelector('.motoboy-content');
+        if(content) content.insertBefore(elBtn, document.getElementById('entregas-motoboy').previousElementSibling);
+      }
+      if(elBtn) {
+        elBtn.innerHTML = '<h4 style="font-size:14px; margin-bottom:8px;">Meus Pagamentos (Fretes)</h4>' +
+        (conectado ? '<div style="color:var(--verde); font-weight:bold; margin-bottom:8px; font-size:13px;">✅ M. Pago Conectado (' + currentUser.mp_user_id + ')</div>' : '<div style="color:var(--texto2); font-size:12px; margin-bottom:12px;">É obrigatório conectar sua conta Mercado Pago para receber fretes.</div>') +
+        '<button class="btn-secundario" style="background:#009EE3; color:#fff; border:none; padding:12px; width:100%; border-radius:12px; cursor:pointer;" onclick="conectarMercadoPago(\'motoboy\')">' + (conectado ? 'Trocar Conta M. Pago' : '🤝 Conectar Mercado Pago') + '</button>';
+      }
+    }
     if(elHist) {
       if(listaEntregues.length === 0) {
         elHist.innerHTML = '<div class="vazio" style="padding:20px;"><div class="vazio-icon">📋</div>Nenhuma entrega realizada ainda.</div>';
@@ -2650,6 +2708,19 @@ var _finalizarPedidoOriginal = typeof finalizarPedido === 'function' ? finalizar
     });
   }
 })();
+
+// === INTEGRAÇÃO OAUTH MERCADO PAGO ===
+async function conectarMercadoPago(tipo) {
+  if(!currentUser) return alert('Faça login primeiro.');
+  try {
+    const res = await apiCall('/api/oauth/mercadopago/url?tipo=' + tipo + '&id=' + currentUser.id);
+    if(res.url) {
+      window.open(res.url, '_blank', 'width=500,height=700');
+    }
+  } catch (e) {
+    alert('Erro ao gerar link do Mercado Pago: ' + e.message);
+  }
+}
 
 // === REGISTRAR SERVICE WORKER ===
 if ('serviceWorker' in navigator) {
