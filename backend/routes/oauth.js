@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-const { supabaseAdmin } = require('../supabase/client');
+const { supabaseAdmin } = require('../config/supabase');
 
 // =============================================
 // GET /api/oauth/mercadopago/url — Obter URL de Autenticação
