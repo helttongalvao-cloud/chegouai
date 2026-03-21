@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
+const https = require('https');
 const { supabaseAdmin } = require('../config/supabase');
 
 // =============================================
@@ -49,21 +49,42 @@ router.get('/mercadopago/callback', async (req, res, next) => {
     const clientSecret = process.env.MP_CLIENT_SECRET;
 
     // Troca o auth code por access_token e refresh_token via API OAuth do Mercado Pago
-    const tokenResponse = await axios.post('https://api.mercadopago.com/oauth/token', null, {
-      params: {
-        client_id: clientId,
-        client_secret: clientSecret,
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: redirectUri
-      },
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
-      }
+    const tokenData = JSON.stringify({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: redirectUri
     });
 
-    const tokens = tokenResponse.data;
+    const options = {
+      hostname: 'api.mercadopago.com',
+      port: 443,
+      path: '/oauth/token',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Content-Length': tokenData.length
+      }
+    };
+
+    const tokens = await new Promise((resolve, reject) => {
+      const reqMP = https.request(options, (resMP) => {
+        let responseBody = '';
+        resMP.on('data', (chunk) => responseBody += chunk);
+        resMP.on('end', () => {
+          if (resMP.statusCode >= 200 && resMP.statusCode < 300) {
+            resolve(JSON.parse(responseBody));
+          } else {
+            reject(new Error(responseBody));
+          }
+        });
+      });
+      reqMP.on('error', (e) => reject(e));
+      reqMP.write(tokenData);
+      reqMP.end();
+    });
     
     // tokens.access_token, tokens.refresh_token, tokens.user_id, tokens.public_key
     // Vamos salvar a public_key ou access_token no campo chave_pix (que já usamos pra guardar a credencial)
@@ -93,8 +114,8 @@ router.get('/mercadopago/callback', async (req, res, next) => {
     `);
 
   } catch (err) {
-    console.error('[OAuth] Erro na troca de token MP:', err.response?.data || err.message);
-    res.send('<h2>Erro interno ao conectar a conta do Mercado Pago.</h2><p>' + (err.response?.data?.message || err.message) + '</p>');
+    console.error('[OAuth] Erro na troca de token MP:', err.message);
+    res.send('<h2>Erro interno ao conectar a conta do Mercado Pago.</h2><p>' + err.message + '</p>');
   }
 });
 
