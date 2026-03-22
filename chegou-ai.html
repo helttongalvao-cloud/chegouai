@@ -391,7 +391,6 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="cat-btn" onclick="filtrarCat(this,'mercado')">🛒 Mercados</div>
       <div class="cat-btn" onclick="filtrarCat(this,'farmacia')">💊 Farmácias</div>
       <div class="cat-btn" onclick="filtrarCat(this,'lanche')">🥪 Lanches</div>
-      <div class="cat-btn" onclick="filtrarCat(this,'bebida')">🥤 Bebidas</div>
     </div>
     <div class="secao-titulo">Estabelecimentos</div>
     <div class="estabelecimentos" id="lista-estabelecimentos"></div>
@@ -1432,6 +1431,9 @@ async function estNav(btn, secao) {
   const nomeCardapio = labelCardapio(cat).replace(/^.{2}/,'').trim();
   document.getElementById('est-titulo-header').textContent =
     secao === 'pedidos' ? 'Pedidos' : secao === 'cardapio' ? nomeCardapio : 'Minha Loja';
+    
+  var navCardapio = document.getElementById('est-nav-cardapio');
+  if(navCardapio) navCardapio.textContent = labelCardapio(cat);
 
   document.getElementById('est-secao-pedidos').style.display = secao === 'pedidos' ? 'block' : 'none';
   document.getElementById('est-secao-cardapio').style.display = secao === 'cardapio' ? 'block' : 'none';
@@ -1498,14 +1500,6 @@ function renderInfoLoja() {
     '<label for="loja-aberta">Loja aberta para pedidos</label>' +
     '</div></div>' +
     '<button class="btn-principal" style="margin-top:16px;" id="btn-salvar-loja" onclick="salvarInfoLoja()">Salvar alterações</button>' +
-    
-    // BOTAO OAUTH MP
-    '<div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--cinza3); text-align:center;">' +
-    '<h4 style="font-size:14px; margin-bottom:8px;">Repasses Automáticos</h4>' +
-    (est.mp_user_id ? '<div style="color:var(--verde); font-weight:bold; margin-bottom:8px; font-size:13px;">✅ Conectado ao Mercado Pago (' + est.mp_user_id + ')</div>' : '<div style="color:var(--texto2); font-size:12px; margin-bottom:12px;">Conecte sua conta Mercado Pago para receber o valor de suas vendas direto no Pix.</div>') +
-    '<button class="btn-secundario" style="background:#009EE3; color:#fff; border:none; padding:12px; width:100%; border-radius:12px; cursor:pointer;" onclick="conectarMercadoPago(\'estabelecimento\')">' + (est.mp_user_id ? 'Reconectar Mercado Pago' : '🤝 Conectar Mercado Pago') + '</button>' +
-    '</div>' +
-    
     '</div>';
 }
 
@@ -1997,24 +1991,6 @@ async function renderMotoboy() {
     // Histórico de entregas recentes
     var elHist = document.getElementById('historico-motoboy');
     
-    // INJETAR OAUTH MOTOBOY
-    if(currentUser) { 
-      var conectado = currentUser.mp_user_id ? true : false;
-      var elBtn = document.getElementById('motoboy-oauth-btn');
-      if(!elBtn) {
-        elBtn = document.createElement('div');
-        elBtn.id = 'motoboy-oauth-btn';
-        elBtn.style.cssText = 'margin-top:24px; padding:16px; background:var(--cinza2); border-radius:16px; text-align:center;';
-        // Inserir antes da lista de entregas
-        var content = document.querySelector('.motoboy-content');
-        if(content) content.insertBefore(elBtn, document.getElementById('entregas-motoboy').previousElementSibling);
-      }
-      if(elBtn) {
-        elBtn.innerHTML = '<h4 style="font-size:14px; margin-bottom:8px;">Meus Pagamentos (Fretes)</h4>' +
-        (conectado ? '<div style="color:var(--verde); font-weight:bold; margin-bottom:8px; font-size:13px;">✅ M. Pago Conectado (' + currentUser.mp_user_id + ')</div>' : '<div style="color:var(--texto2); font-size:12px; margin-bottom:12px;">É obrigatório conectar sua conta Mercado Pago para receber fretes.</div>') +
-        '<button class="btn-secundario" style="background:#009EE3; color:#fff; border:none; padding:12px; width:100%; border-radius:12px; cursor:pointer;" onclick="conectarMercadoPago(\'motoboy\')">' + (conectado ? 'Trocar Conta M. Pago' : '🤝 Conectar Mercado Pago') + '</button>';
-      }
-    }
     if(elHist) {
       if(listaEntregues.length === 0) {
         elHist.innerHTML = '<div class="vazio" style="padding:20px;"><div class="vazio-icon">📋</div>Nenhuma entrega realizada ainda.</div>';
