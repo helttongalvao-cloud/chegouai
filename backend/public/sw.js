@@ -1,32 +1,47 @@
-const CACHE_NAME = 'chegouai-v1';
-const ASSETS = ['/', '/manifest.json'];
+const CACHE = 'chegouai-v2';
+const PRECACHE = [
+  '/',
+  '/manifest.json',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap',
+];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {
-  // Network-first strategy: try network, fallback to cache
-  if (e.request.url.includes('/api/')) return; // Never cache API calls
+  const url = new URL(e.request.url);
+
+  // Rotas de API: sempre rede (sem cache)
+  if (url.pathname.startsWith('/api/')) return;
+
+  // Recursos estáticos e o app shell: cache-first
   e.respondWith(
-    fetch(e.request)
-      .then((res) => {
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
-        return res;
-      })
-      .catch(() => caches.match(e.request))
+    caches.match(e.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(e.request).then((resp) => {
+        // Cachear apenas respostas 200 do mesmo domínio
+        if (resp.ok && (url.origin === self.location.origin || url.hostname.includes('googleapis'))) {
+          const clone = resp.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, clone));
+        }
+        return resp;
+      }).catch(() => {
+        // Offline: retornar app shell para navegação
+        if (e.request.mode === 'navigate') return caches.match('/');
+      });
+    })
   );
 });

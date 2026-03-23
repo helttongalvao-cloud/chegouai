@@ -151,7 +151,46 @@ router.post(
 );
 
 // =============================================
-// GET /api/orders — Listar pedidos do cliente (ou motoboy buscando disponiveis/entregues)
+// GET /api/orders/available — Entregas disponíveis + ativa (motoboy)
+// =============================================
+router.get('/available', requireRole('motoboy'), async (req, res, next) => {
+  try {
+    // Buscar ID do motoboy logado
+    const { data: motoboy } = await supabaseAdmin
+      .from('motoboys')
+      .select('id')
+      .eq('user_id', req.user.id)
+      .single();
+
+    const [dispRes, ativaRes] = await Promise.all([
+      // Pedidos prontos sem motoboy atribuído
+      supabaseAdmin
+        .from('pedidos')
+        .select('id, status, total, taxa_entrega, endereco_entrega, telefone_cliente, estabelecimentos (nome, emoji)')
+        .eq('status', 'pronto')
+        .is('motoboy_id', null)
+        .order('criado_em', { ascending: true }),
+
+      // Entrega ativa deste motoboy (coletado)
+      motoboy ? supabaseAdmin
+        .from('pedidos')
+        .select('id, status, total, taxa_entrega, endereco_entrega, telefone_cliente, estabelecimentos (nome, emoji)')
+        .eq('status', 'coletado')
+        .eq('motoboy_id', motoboy.id)
+        .maybeSingle() : Promise.resolve({ data: null }),
+    ]);
+
+    res.json({
+      disponiveis: dispRes.data || [],
+      ativa: ativaRes.data || null,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// =============================================
+// GET /api/orders — Listar pedidos do cliente
 // =============================================
 router.get('/', requireAuth, async (req, res, next) => {
   try {

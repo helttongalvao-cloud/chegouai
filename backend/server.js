@@ -113,6 +113,17 @@ app.use('/api/features', featuresRoutes);
 app.use('/api/oauth', oauthRoutes);
 
 // =============================================
+// CONFIG PÚBLICA — Expõe chaves seguras ao frontend
+// =============================================
+app.get('/api/config', (req, res) => {
+  res.json({
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+    mpPublicKey: process.env.MP_PUBLIC_KEY,
+  });
+});
+
+// =============================================
 // HEALTH CHECK
 // =============================================
 app.get('/api/health', (req, res) => {

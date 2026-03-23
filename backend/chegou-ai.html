@@ -22,6 +22,7 @@
 <!-- Leaflet GPS Map -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -535,8 +536,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   <div class="est-content" id="est-conteudo">
     <div id="est-secao-pedidos">
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-valor" id="est-pedidos-hoje">0</div><div class="stat-label">Pedidos hoje</div></div>
-        <div class="stat-card"><div class="stat-valor" id="est-faturamento-hoje">R$0</div><div class="stat-label">Faturamento hoje</div></div>
+        <div class="stat-card"><div class="stat-valor" id="est-pedidos-hoje">—</div><div class="stat-label">Pedidos hoje</div></div>
+        <div class="stat-card"><div class="stat-valor" id="est-faturamento">—</div><div class="stat-label">Faturamento hoje</div></div>
       </div>
       <div class="secao-titulo">Pedidos em aberto</div>
       <div class="pedidos-lista" id="pedidos-estabelecimento"></div>
@@ -628,6 +629,9 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 // CHEGOU AÍ — CONFIGURAÇÃO E API CLIENT
 // ============================================
 var API_BASE = '';  // Mesmo domínio (backend serve o frontend)
+var MP_PUBLIC_KEY = ''; // Carregado via /api/config
+var supabaseClient = null;
+var realtimeChannel = null;
 
 // Token de sessão (gerenciado pelo backend/Supabase)
 var authToken = localStorage.getItem('chegouai_token') || null;
@@ -655,15 +659,80 @@ async function apiCall(path, options) {
 // ============================================
 // INICIALIZAR SDK MERCADO PAGO
 // ============================================
-async function inicializarMP() {
-  if(window.MercadoPago) {
-    try {
-      var resp = await apiCall('/api/health');
-      // A chave pública vem do backend. Se necessário, criar rota específica.
-      // Por enquanto, o SDK MP só é usado para Checkout Pro (redirecionamento),
-      // então não precisamos da public key no frontend.
-    } catch(e) {}
+function inicializarMP() {
+  if(window.MercadoPago && MP_PUBLIC_KEY) {
+    window.mp = new window.MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
   }
+}
+
+// ============================================
+// CARREGAR CONFIGURAÇÃO DO SERVIDOR
+// ============================================
+async function inicializarApp() {
+  try {
+    var cfg = await fetch('/api/config').then(function(r){ return r.json(); });
+    if(cfg.mpPublicKey) MP_PUBLIC_KEY = cfg.mpPublicKey;
+    if(cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase) {
+      supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    }
+  } catch(e) {
+    console.warn('[Config] Erro ao carregar config do servidor:', e.message);
+  }
+  inicializarMP();
+}
+inicializarApp();
+
+// ============================================
+// REALTIME — Supabase subscriptions
+// ============================================
+function pararRealtime() {
+  if(realtimeChannel && supabaseClient) {
+    supabaseClient.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+  }
+}
+
+function iniciarRealtimeLojista(estId) {
+  if(!supabaseClient || !estId) return;
+  pararRealtime();
+  supabaseClient.realtime.setAuth(authToken);
+  realtimeChannel = supabaseClient
+    .channel('pedidos-lojista')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'pedidos',
+      filter: 'estabelecimento_id=eq.' + estId,
+    }, function() {
+      // Novo pedido chegou — tocar alerta e re-renderizar
+      try { new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAA==').play(); } catch(e) {}
+      renderEstabelecimento();
+    })
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'pedidos',
+      filter: 'estabelecimento_id=eq.' + estId,
+    }, function() { renderEstabelecimento(); })
+    .subscribe();
+}
+
+function iniciarRealtimeMotoboy() {
+  if(!supabaseClient) return;
+  pararRealtime();
+  supabaseClient.realtime.setAuth(authToken);
+  realtimeChannel = supabaseClient
+    .channel('pedidos-motoboy')
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'pedidos',
+    }, function(payload) {
+      if(payload.new && payload.new.status === 'pronto') {
+        renderMotoboy();
+      }
+    })
+    .subscribe();
 }
 
 // ============================================
@@ -844,25 +913,29 @@ let carrinho = [];
 let estAtual = null;
 let perfilAtual = 'cliente';
 
-// SPLASH
-setTimeout(function(){ irTela('tela-login'); }, 1800);
 
 function irTela(id) {
   document.querySelectorAll('.tela').forEach(function(t){ t.classList.remove('ativa'); });
   document.getElementById(id).classList.add('ativa');
-}
+}// SPLASH
+setTimeout(function(){ irTela('tela-login'); }, 1800);
+
 
 
 
 function entrarComo(perfil) {
   perfilAtual = perfil;
+  pararRealtime();
   if(perfil === 'cliente') { irHome(); }
   else if(perfil === 'estabelecimento') {
     irTela('tela-estabelecimento');
-    // Inicializa carregando dados do backend e indo pra aba de pedidos
-    estNav(document.getElementById('est-nav-pedidos'), 'pedidos');
+    setTimeout(function() { renderEstabelecimento(); }, 50);
   }
-  else if(perfil === 'motoboy') { renderMotoboy(); irTela('tela-motoboy'); }
+  else if(perfil === 'motoboy') {
+    renderMotoboy();
+    irTela('tela-motoboy');
+    iniciarRealtimeMotoboy();
+  }
   else if(perfil === 'admin') { renderAdmin('pedidos'); irTela('tela-admin'); }
 }
 
@@ -958,6 +1031,7 @@ async function entrar() {
 }
 
 function irLogin() {
+  pararRealtime();
   authToken = null;
   currentUser = null;
   localStorage.removeItem('chegouai_token');
@@ -1444,10 +1518,19 @@ async function estNav(btn, secao) {
   if(secao === 'loja') renderInfoLoja();
 }
 
-function renderCardapioEst() {
+async function renderCardapioEst() {
   var el = document.getElementById('est-secao-cardapio');
-  var produtos = estDataCache?.produtos || [];
-  var itensHtml = produtos.map(function(p, i) {
+  el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando...</div>';
+  try {
+    var produtos = await apiCall('/api/establishments/me/products');
+    cardapioEst = produtos.map(function(p) {
+      return { id: p.id, nome: p.nome, desc: p.descricao || '', preco: parseFloat(p.preco), emoji: p.emoji || '🍽️', disponivel: p.disponivel };
+    });
+  } catch(e) {
+    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar cardápio</div>';
+    return;
+  }
+  var itensHtml = cardapioEst.map(function(p, i) {
     var op = p.disponivel ? '1' : '0.4';
     var indisponivel = !p.disponivel ? '<div style="font-size:11px;color:var(--erro);margin-top:2px;">⛔ Indisponível</div>' : '';
     var preco = 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.',',');
@@ -1455,7 +1538,7 @@ function renderCardapioEst() {
       '<div class="prod-emoji" style="opacity:' + op + '">' + (p.emoji || '🍽️') + '</div>' +
       '<div class="prod-info">' +
         '<div class="prod-nome">' + p.nome + '</div>' +
-        '<div class="prod-desc">' + (p.descricao || '') + '</div>' +
+        '<div class="prod-desc">' + (p.desc || '') + '</div>' +
         '<div class="prod-preco">' + preco + '</div>' +
         indisponivel +
       '</div>' +
@@ -1472,58 +1555,78 @@ function renderCardapioEst() {
     vazio;
 }
 
-function renderInfoLoja() {
+async function renderInfoLoja() {
   const el = document.getElementById('est-secao-loja');
-  const est = estDataCache?.estabelecimento;
-  if(!est) return;
-
-  const catAtual = est.categoria || 'lanche';
-  const aberto = est.aberto ? 'checked' : '';
+  el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando...</div>';
+  var est = {};
+  try {
+    var data = await apiCall('/api/establishments/me/dashboard');
+    est = data.estabelecimento || {};
+  } catch(e) {
+    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar dados da loja</div>';
+    return;
+  }
 
   el.innerHTML =
     '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:16px;padding:16px;">' +
     '<h4 style="font-size:15px;font-weight:700;margin-bottom:14px;">Configurações da loja</h4>' +
     '<div class="form-grupo"><label>Nome da loja</label>' +
-    '<input type="text" id="loja-nome-input" value="' + est.nome + '" class="modal-campo" style="margin:0;"></div>' +
+    '<input type="text" id="loja-nome-input" class="modal-campo" style="margin:0;" value="' + (est.nome || '') + '"></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Categoria</label>' +
-    '<select id="loja-cat-select" class="modal-campo" style="margin:0;" onchange="atualizarLabelCardapio(this.value)">' +
-    '<option value="lanche" ' + (catAtual==='lanche'?'selected':'') + '>Lanchonete</option>' +
-    '<option value="restaurante" ' + (catAtual==='restaurante'?'selected':'') + '>Restaurante</option>' +
-    '<option value="mercado" ' + (catAtual==='mercado'?'selected':'') + '>Mercado</option>' +
-    '<option value="farmacia" ' + (catAtual==='farmacia'?'selected':'') + '>Farmácia</option>' +
+    '<select id="loja-cat-select" class="modal-campo" style="margin:0;">' +
+    '<option value="lanche">Lanchonete</option>' +
+    '<option value="restaurante">Restaurante</option>' +
+    '<option value="mercado">Mercado</option>' +
+    '<option value="farmacia">Farmácia</option>' +
+    '<option value="bebida">Bebidas</option>' +
     '</select></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Tempo médio de entrega</label>' +
-    '<input type="text" id="loja-tempo-input" value="' + (est.tempo_entrega || '30-45 min') + '" class="modal-campo" style="margin:0;"></div>' +
+    '<input type="text" id="loja-tempo-input" class="modal-campo" style="margin:0;" value="' + (est.tempo_entrega || '25-35 min') + '"></div>' +
     '<div class="form-grupo" style="margin-top:12px;">' +
     '<div class="disponivel-toggle">' +
-    '<input type="checkbox" id="loja-aberta" ' + aberto + ' style="width:auto;accent-color:var(--verde);">' +
+    '<input type="checkbox" id="loja-aberta" style="width:auto;accent-color:var(--verde);" ' + (est.aberto ? 'checked' : '') + '>' +
     '<label for="loja-aberta">Loja aberta para pedidos</label>' +
     '</div></div>' +
     '<button class="btn-principal" style="margin-top:16px;" id="btn-salvar-loja" onclick="salvarInfoLoja()">Salvar alterações</button>' +
     '</div>';
 }
 
+  var catSelect = document.getElementById('loja-cat-select');
+  if(catSelect) {
+    catSelect.value = est.categoria || 'lanche';
+    catSelect.addEventListener('change', function() {
+      var btn = document.getElementById('est-nav-cardapio');
+      if(btn) btn.textContent = labelCardapio(this.value);
+    });
+  }
+  var btnSalvar = document.getElementById('btn-salvar-loja');
+  if(btnSalvar) btnSalvar.addEventListener('click', salvarInfoLoja);
+}
+
 async function salvarInfoLoja() {
-  const btn = document.getElementById('btn-salvar-loja');
-  if(btn) { btn.disabled = true; btn.textContent = 'Aguarde...'; }
+  var nome = document.getElementById('loja-nome-input') ? document.getElementById('loja-nome-input').value.trim() : null;
+  var cat = document.getElementById('loja-cat-select') ? document.getElementById('loja-cat-select').value : null;
+  var tempo = document.getElementById('loja-tempo-input') ? document.getElementById('loja-tempo-input').value.trim() : null;
+  var aberto = document.getElementById('loja-aberta') ? document.getElementById('loja-aberta').checked : null;
+  var btn = document.getElementById('btn-salvar-loja');
+  if(btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
   try {
-    const payload = {
-      nome: document.getElementById('loja-nome-input').value,
-      categoria: document.getElementById('loja-cat-select').value,
-      tempo_entrega: document.getElementById('loja-tempo-input').value,
-      aberto: document.getElementById('loja-aberta').checked
-    };
-    await apiCall('/api/establishments/me', { method: 'PUT', body: payload });
+    var body = {};
+    if(nome) body.nome = nome;
+    if(cat) body.categoria = cat;
+    if(tempo) body.tempo_entrega = tempo;
+    if(aberto !== null) body.aberto = aberto;
+    await apiCall('/api/establishments/me', { method: 'PUT', body });
+    var navBtn = document.getElementById('est-nav-cardapio');
+    if(navBtn && cat) navBtn.textContent = labelCardapio(cat);
     alert('Alterações salvas com sucesso!');
-    estNav(document.getElementById('est-nav-loja'), 'loja');
   } catch(e) {
-    alert('Erro: ' + e.message);
-  } finally {
+    alert('Erro ao salvar: ' + e.message);
     if(btn) { btn.disabled = false; btn.textContent = 'Salvar alterações'; }
   }
 }
-
 let emojiSelecionado = '🍔';
+
 
 function abrirModalProduto(idx) {
   document.getElementById('modal-produto-titulo').textContent = idx !== undefined ? '✏️ Editar produto' : '➕ Novo produto';
@@ -1573,26 +1676,20 @@ async function salvarProduto() {
   
   if(!nome) { document.getElementById('prod-nome').style.borderColor='var(--erro)'; return; }
   if(isNaN(preco) || preco <= 0) { document.getElementById('prod-preco').style.borderColor='var(--erro)'; return; }
-  
-  btn.disabled = true; btn.textContent = 'Aguarde...';
-  
-  const payload = { nome, descricao, preco, emoji: emojiSelecionado, disponivel };
-  const produtos = estDataCache?.produtos || [];
-  
+  const btn = document.querySelector('#modal-produto .btn-principal');
+  if(btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
   try {
-    if(idx >= 0 && produtos[idx]) {
-      // Editar
-      await apiCall('/api/establishments/me/products/' + produtos[idx].id, { method: 'PUT', body: payload });
+    const body = { nome, descricao: descricao, preco, emoji: emojiSelecionado, disponivel };
+    if(idx >= 0 && cardapioEst[idx] && cardapioEst[idx].id) {
+      await apiCall('/api/establishments/me/products/' + cardapioEst[idx].id, { method: 'PUT', body });
     } else {
-      // Novo
-      await apiCall('/api/establishments/me/products', { method: 'POST', body: payload });
+      await apiCall('/api/establishments/me/products', { method: 'POST', body });
     }
     fecharModalProduto();
-    estNav(document.getElementById('est-nav-cardapio'), 'cardapio');
+    renderCardapioEst();
   } catch(e) {
-    alert('Erro: ' + e.message);
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Salvar produto'; }
+    alert('Erro ao salvar produto: ' + e.message);
+    if(btn) { btn.disabled = false; btn.textContent = 'Salvar produto'; }
   }
 }
 
@@ -1623,71 +1720,66 @@ function atualizarLabelCardapio(cat) {
   if(btn) btn.textContent = labelCardapio(cat);
 }
 
-function renderEstabelecimento() {
-  var el = document.getElementById('est-secao-pedidos');
-  if(!estDataCache) return;
-  const sts = estDataCache.stats || {};
-  
-  let html = '<div class="stats-grid">' +
-    '<div class="stat-card"><div class="stat-valor">' + (sts.pedidosHoje || 0) + '</div><div class="stat-label">Pedidos hoje</div></div>' +
-    '<div class="stat-card"><div class="stat-valor">R$ ' + (sts.faturamento || 0).toFixed(2).replace('.',',') + '</div><div class="stat-label">Faturamento</div></div>' +
-    '</div><div class="secao-titulo">Pedidos em aberto</div><div class="pedidos-lista" id="pedidos-estabelecimento">';
-  
-  const pedidos = estDataCache.pedidosAbertos || [];
-  if(pedidos.length === 0) {
-    html += '<div class="vazio"><div class="vazio-icon">📋</div>Nenhum pedido em andamento</div>';
-  } else {
-    html += pedidos.map(function(p) {
-      var statusNome = '';
-      var statusClasse = '';
-      var btnHtml = '';
-
-      if (p.status === 'pendente' || p.status === 'aceito') {
-        statusClasse = 'badge-novo';
-        statusNome = '🔔 Novo';
-        btnHtml = '<button class="btn-acao" onclick="lojistaMudarStatus(\'' + p.id + '\', \'preparando\')">Aceitar e Preparar</button>';
-      } else if (p.status === 'preparando') {
-        statusClasse = 'badge-preparando';
-        statusNome = '👨‍🍳 Preparando';
-        btnHtml = '<button class="btn-acao" onclick="lojistaMudarStatus(\'' + p.id + '\', \'pronto\')">Marcar como Pronto</button>';
-      } else if (p.status === 'pronto') {
-        statusClasse = 'badge-pronto';
-        statusNome = '✅ Pronto';
-        btnHtml = '<button class="btn-acao secundario">Aguardando motoboy</button>';
-      } else if (p.status === 'acao_motoboy' || p.status === 'a_caminho') {
-         statusClasse = 'badge-pronto';
-         statusNome = '🛵 A caminho';
-         btnHtml = '<button class="btn-acao secundario" disabled>Com o motoboy</button>';
-      }
-
-      var itens = p.itens_pedido ? p.itens_pedido.map(i => i.quantidade + 'x ' + i.nome).join(', ') : 'Itens...';
-      
+async function renderEstabelecimento() {
+  var lista = document.getElementById('pedidos-estabelecimento');
+  if(lista) lista.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando pedidos...</div>';
+  try {
+    var data = await apiCall('/api/establishments/me/dashboard');
+    // Atualizar stats do dashboard
+    var stats = data.stats || {};
+    var el;
+    el = document.getElementById('est-pedidos-hoje'); if(el) el.textContent = stats.pedidosHoje || 0;
+    el = document.getElementById('est-faturamento'); if(el) el.textContent = 'R$ ' + (stats.faturamento || 0).toFixed(2).replace('.',',');
+    // Atualizar label cardápio pela categoria real
+    if(data.estabelecimento) {
+      var btnCap = document.getElementById('est-nav-cardapio');
+      if(btnCap) btnCap.textContent = labelCardapio(data.estabelecimento.categoria);
+      // Iniciar realtime com o ID real do estabelecimento
+      iniciarRealtimeLojista(data.estabelecimento.id);
+    }
+    var pedidos = data.pedidosAbertos || [];
+    if(!lista) return;
+    if(pedidos.length === 0) {
+      lista.innerHTML = '<div class="vazio"><div class="vazio-icon">📦</div>Nenhum pedido aberto no momento</div>';
+      return;
+    }
+    lista.innerHTML = pedidos.map(function(p) {
+      var sc = p.status === 'aceito' ? 'badge-novo'
+             : p.status === 'preparando' ? 'badge-preparando' : 'badge-pronto';
+      var sl = p.status === 'aceito' ? '🔔 Novo'
+             : p.status === 'preparando' ? '👨‍🍳 Preparando' : '✅ Pronto';
+      var botao = '';
+      if(p.status === 'aceito')
+        botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'preparando\',this)">Iniciar preparo</button>';
+      else if(p.status === 'preparando')
+        botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'pronto\',this)">Marcar pronto</button>';
+      else
+        botao = '<button class="btn-acao secundario">Aguardando motoboy</button>';
+      var itensTxt = (p.itens_pedido || []).map(function(i){ return i.quantidade + 'x ' + i.nome; }).join(', ');
+      var tel = p.telefone_cliente ? '<div class="pedido-endereco">📞 <a href="tel:' + p.telefone_cliente + '" style="color:var(--verde);text-decoration:none;">' + p.telefone_cliente + '</a></div>' : '';
       return '<div class="card-pedido">' +
-        '<div class="pedido-header">' +
-          '<span class="pedido-num">Pedido ' + p.id.split('-')[0] + '</span>' +
-          '<span class="badge-status ' + statusClasse + '">' + statusNome + '</span>' +
-        '</div>' +
-        '<div class="pedido-endereco">📍 ' + (p.endereco_entrega || 'Balcão') + '</div>' +
-        '<div class="pedido-itens">' + itens + '</div>' +
-        '<div class="pedido-footer">' +
-          '<span class="pedido-total">R$ ' + (p.total || 0).toFixed(2).replace('.',',') + '</span>' +
-          btnHtml +
-        '</div>' +
+        '<div class="pedido-header"><span class="pedido-num">Pedido #' + p.id.substring(0,8) + '</span>' +
+        '<span class="badge-status ' + sc + '">' + sl + '</span></div>' +
+        '<div class="pedido-endereco">📍 ' + (p.endereco_entrega || '') + '</div>' +
+        tel +
+        '<div class="pedido-itens">' + (itensTxt || '—') + '</div>' +
+        '<div class="pedido-footer"><span class="pedido-total">R$ ' + parseFloat(p.total || 0).toFixed(2).replace('.',',') + '</span>' + botao + '</div>' +
       '</div>';
     }).join('');
+  } catch(e) {
+    if(lista) lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar pedidos. Verifique a conexão.</div>';
   }
-  html += '</div>';
-  el.innerHTML = html;
 }
 
-async function lojistaMudarStatus(id, novoStatus) {
+async function atualizarStatusPedido(pedidoId, novoStatus, btn) {
+  if(btn) { btn.disabled = true; btn.textContent = '...'; }
   try {
-    await apiCall('/api/orders/' + id + '/status', { method: 'PATCH', body: { status: novoStatus } });
-    estNav(document.getElementById('est-nav-pedidos'), 'pedidos'); // Recarrega
+    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: novoStatus } });
+    renderEstabelecimento();
   } catch(e) {
     alert('Erro: ' + e.message);
-  }
-}
+    if(btn) { btn.disabled = false; btn.textContent = 'Tentar novamente'; }
+
 
 // ADMIN — Variável de cache do dashboard
 let adminDataCache = null;
@@ -1942,72 +2034,72 @@ function aceitarPedidoLoja(btn) {
 
 async function renderMotoboy() {
   var el = document.getElementById('entregas-motoboy');
-  el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando entregas...</div>';
-
-  // Mostrar nome do motoboy
-  var elNome = document.getElementById('motoboy-header-nome');
-  if(elNome && currentUser && currentUser.nome) {
-    elNome.textContent = 'Olá, ' + currentUser.nome.split(' ')[0] + '!';
-  }
-
+  el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Buscando entregas...</div>';
   try {
-    var stat = document.getElementById('moto-status-disponivel').checked;
-    
-    // Buscar pedidos prontos se estiver online, senao array vazio
-    var pedidos = stat ? await apiCall('/api/orders?status=pronto') : [];
-    var entregues = await apiCall('/api/orders?status=entregue');
+    var data = await apiCall('/api/orders/available');
+    var disponiveis = data.disponiveis || [];
+    var ativa = data.ativa || null;
+    var html = '';
 
-    // Atualizar estatísticas
-    var elEntregas = document.getElementById('moto-entregas');
-    var elGanhos = document.getElementById('moto-ganhos');
-    var listaEntregues = Array.isArray(entregues) ? entregues : (entregues.pedidos || []);
-    if(elEntregas) elEntregas.textContent = listaEntregues.length;
-    var totalGanhos = listaEntregues.reduce(function(s,p){ return s + parseFloat(p.taxa_entrega || 0); }, 0);
-    if(elGanhos) elGanhos.textContent = 'R$' + totalGanhos.toFixed(2).replace('.',',');
-
-    var lista = Array.isArray(pedidos) ? pedidos : (pedidos.pedidos || []);
-    if(lista.length === 0) {
-      el.innerHTML = '<div class="vazio"><div class="vazio-icon">🛵</div>Nenhuma entrega disponível no momento.<br><small style="color:var(--texto2)">Quando um pedido ficar pronto, ele aparecerá aqui.</small></div>';
-    } else {
-      el.innerHTML = lista.map(function(p) {
-        var loja = p.estabelecimentos ? p.estabelecimentos.nome : 'Loja';
-        var taxa = parseFloat(p.taxa_entrega || 0).toFixed(2).replace('.',',');
-        return '<div class="entrega-card" data-pedido-id="' + p.id + '">' +
-          '<h4>🔔 Nova entrega disponível!</h4>' +
-          '<div class="entrega-info">' +
-            '<div class="entrega-linha"><span class="label">Loja:</span><span class="valor">' + loja + '</span></div>' +
-            '<div class="entrega-linha"><span class="label">Endereço:</span><span class="valor">' + (p.endereco_entrega || 'Não informado') + '</span></div>' +
-            '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + (p.telefone_cliente || '') + '" style="color:var(--verde);text-decoration:none;">' + (p.telefone_cliente || 'Não informado') + '</a></span></div>' +
-            '<div class="entrega-linha"><span class="label">Seu ganho:</span><span class="valor" style="color:var(--verde)">R$ ' + taxa + '</span></div>' +
-          '</div>' +
-          '<div class="btns-entrega">' +
-            '<button class="btn-acao secundario" onclick="recusarEntrega(this)">Recusar</button>' +
-            '<button class="btn-acao" onclick="aceitarEntrega(this, \'' + p.id + '\')">Aceitar entrega</button>' +
-          '</div>' +
-        '</div>';
-      }).join('');
+    // Entrega ativa (a caminho)
+    if(ativa) {
+      var ganhoAtivo = 'R$ ' + parseFloat(ativa.taxa_entrega || 4).toFixed(2).replace('.',',');
+      html += '<div class="entrega-card" style="border-color:var(--verde);">' +
+        '<h4 style="color:var(--verde)">🛵 Entrega em andamento</h4>' +
+        '<div class="entrega-info">' +
+          '<div class="entrega-linha"><span class="label">Loja:</span><span class="valor">' + (ativa.estabelecimentos ? ativa.estabelecimentos.nome : '—') + '</span></div>' +
+          '<div class="entrega-linha"><span class="label">Entregue em:</span><span class="valor">' + (ativa.endereco_entrega || '—') + '</span></div>' +
+          '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + ativa.telefone_cliente + '" style="color:var(--verde);text-decoration:none;">' + (ativa.telefone_cliente || '—') + ' 📞</a></span></div>' +
+          '<div class="entrega-linha"><span class="label">Seu ganho:</span><span class="valor" style="color:var(--verde)">' + ganhoAtivo + '</span></div>' +
+        '</div>' +
+        '<div class="btns-entrega"><button class="btn-acao" onclick="confirmarEntregaReal(\'' + ativa.id + '\',this)">✅ Confirmar entrega</button></div>' +
+      '</div>';
     }
 
-    // Histórico de entregas recentes
-    var elHist = document.getElementById('historico-motoboy');
-    
-    if(elHist) {
-      if(listaEntregues.length === 0) {
-        elHist.innerHTML = '<div class="vazio" style="padding:20px;"><div class="vazio-icon">📋</div>Nenhuma entrega realizada ainda.</div>';
-      } else {
-        elHist.innerHTML = listaEntregues.slice(0, 10).map(function(p) {
-          var loja = p.estabelecimentos ? p.estabelecimentos.nome : 'Loja';
-          var data = new Date(p.criado_em).toLocaleDateString('pt-BR');
-          var taxa = parseFloat(p.taxa_entrega || 0).toFixed(2).replace('.',',');
-          return '<div class="tabela-row" style="padding:12px;">' +
-            '<div class="info"><div class="nome">✅ ' + loja + '</div><div class="sub">' + data + ' • ' + (p.endereco_entrega || '').substring(0,30) + '</div></div>' +
-            '<div class="valor" style="color:var(--verde)">R$ ' + taxa + '</div>' +
-          '</div>';
-        }).join('');
-      }
+    // Entregas disponíveis
+    if(disponiveis.length === 0 && !ativa) {
+      el.innerHTML = '<div class="vazio"><div class="vazio-icon">🛵</div>Nenhuma entrega disponível no momento</div>';
+      return;
     }
+    html += disponiveis.map(function(p) {
+      var ganho = 'R$ ' + parseFloat(p.taxa_entrega || 4).toFixed(2).replace('.',',');
+      return '<div class="entrega-card">' +
+        '<h4>🔔 Entrega disponível!</h4>' +
+        '<div class="entrega-info">' +
+          '<div class="entrega-linha"><span class="label">Loja:</span><span class="valor">' + (p.estabelecimentos ? p.estabelecimentos.nome : '—') + '</span></div>' +
+          '<div class="entrega-linha"><span class="label">Endereço:</span><span class="valor">' + (p.endereco_entrega || '—') + '</span></div>' +
+          '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + p.telefone_cliente + '" style="color:var(--verde);text-decoration:none;">' + (p.telefone_cliente || '—') + '</a></span></div>' +
+          '<div class="entrega-linha"><span class="label">Seu ganho:</span><span class="valor" style="color:var(--verde)">' + ganho + '</span></div>' +
+        '</div>' +
+        '<div class="btns-entrega"><button class="btn-acao" onclick="aceitarEntregaReal(\'' + p.id + '\',this)">Aceitar entrega</button></div>' +
+      '</div>';
+    }).join('');
+
+    el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar entregas: ' + e.message + '</div>';
+    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao buscar entregas</div>';
+  }
+}
+
+async function confirmarEntregaReal(pedidoId, btn) {
+  if(btn) { btn.disabled = true; btn.textContent = 'Confirmando...'; }
+  try {
+    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'entregue' } });
+    renderMotoboy();
+  } catch(e) {
+    alert('Erro: ' + e.message);
+    if(btn) { btn.disabled = false; btn.textContent = '✅ Confirmar entrega'; }
+  }
+}
+
+async function aceitarEntregaReal(pedidoId, btn) {
+  if(btn) { btn.disabled = true; btn.textContent = 'Aceitando...'; }
+  try {
+    await apiCall('/api/orders/' + pedidoId + '/assign-motoboy', { method: 'POST' });
+    renderMotoboy();
+  } catch(e) {
+    alert('Erro: ' + e.message);
+    if(btn) { btn.disabled = false; btn.textContent = 'Aceitar entrega'; }
   }
 }
 
@@ -2122,7 +2214,7 @@ async function alternarStatus() {
 
 // ADMIN
 function adminNav(btn, secao) {
-  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('ativo'); });
+  document.querySelectorAll('#tela-admin .nav-btn').forEach(function(b){ b.classList.remove('ativo'); });
   btn.classList.add('ativo');
   renderAdmin(secao);
 }

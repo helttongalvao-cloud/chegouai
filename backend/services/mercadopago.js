@@ -1,4 +1,5 @@
 const { MercadoPagoConfig, Payment, Preference } = require('mercadopago');
+const crypto = require('crypto');
 
 if (!process.env.MP_ACCESS_TOKEN) {
   console.error('[MercadoPago] MP_ACCESS_TOKEN não definido no .env');
@@ -192,10 +193,52 @@ async function buscarPagamento(paymentId) {
  * Documentação: https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks
  */
 function verificarAssinaturaWebhook(req) {
-  // Em produção implemente a verificação da assinatura HMAC
-  // Por ora, verificar apenas que veio do IP do MP e tem os campos esperados
   const { type, data } = req.body;
-  return type && data && data.id;
+
+  // Campos obrigatórios do payload
+  if (!type || !data || !data.id) return false;
+
+  const secret = process.env.MP_WEBHOOK_SECRET;
+
+  // Em desenvolvimento sem secret, aceita sem HMAC
+  if (!secret) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[Webhook] MP_WEBHOOK_SECRET não configurado — HMAC desativado (dev)');
+      return true;
+    }
+    console.error('[Webhook] MP_WEBHOOK_SECRET obrigatório em produção');
+    return false;
+  }
+
+  const xSignature = req.headers['x-signature'];
+  const xRequestId = req.headers['x-request-id'];
+
+  if (!xSignature || !xRequestId) return false;
+
+  // Parsear "ts=<timestamp>,v1=<hash>"
+  let ts = '', v1 = '';
+  xSignature.split(',').forEach((part) => {
+    const [key, val] = part.trim().split('=');
+    if (key === 'ts') ts = val;
+    if (key === 'v1') v1 = val;
+  });
+
+  if (!ts || !v1) return false;
+
+  // String assinada pelo MP: id:<data.id>;request-id:<xRequestId>;ts:<ts>;
+  const manifest = `id:${data.id};request-id:${xRequestId};ts:${ts};`;
+
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(manifest)
+    .digest('hex');
+
+  try {
+    // timingSafeEqual previne timing attacks
+    return crypto.timingSafeEqual(Buffer.from(v1, 'hex'), Buffer.from(expected, 'hex'));
+  } catch {
+    return false;
+  }
 }
 
 module.exports = {
