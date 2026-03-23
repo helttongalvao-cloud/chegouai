@@ -683,6 +683,43 @@ async function inicializarApp() {
 inicializarApp();
 
 // ============================================
+// PUSH NOTIFICATIONS
+// ============================================
+async function ativarNotificacoesPush() {
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    var perm = await Notification.requestPermission();
+    if(perm !== 'granted') return;
+
+    var reg = await navigator.serviceWorker.ready;
+    var existingSub = await reg.pushManager.getSubscription();
+    if(existingSub) {
+      // já inscrito, só garantir que o servidor tem
+      await apiCall('/api/notifications/subscribe', { method: 'POST', body: { subscription: existingSub.toJSON() } });
+      return;
+    }
+
+    var keyResp = await fetch('/api/notifications/vapid-public-key').then(function(r){ return r.json(); });
+    var appKey = keyResp.publicKey;
+    var convertedKey = urlBase64ToUint8Array(appKey);
+
+    var sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: convertedKey });
+    await apiCall('/api/notifications/subscribe', { method: 'POST', body: { subscription: sub.toJSON() } });
+  } catch(e) {
+    console.warn('[Push] Não foi possível ativar notificações:', e.message);
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  var padding = '='.repeat((4 - base64String.length % 4) % 4);
+  var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  var rawData = window.atob(base64);
+  var outputArray = new Uint8Array(rawData.length);
+  for(var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+// ============================================
 // REALTIME — Supabase subscriptions
 // ============================================
 function pararRealtime() {
@@ -895,12 +932,29 @@ function fecharModalPagamento() {
 // Lista global vazia (será preenchida pela API)
 let estabelecimentos = [];
 
+// Haversine — distância real entre dois pontos GPS em km
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 // Taxa de entrega por distância
 function calcularTaxaEntrega(distanciaKm) {
   if(distanciaKm <= 1.0) return 2;
   if(distanciaKm <= 2.0) return 3;
-  return 4;
+  if(distanciaKm <= 3.5) return 4;
+  if(distanciaKm <= 5.0) return 5;
+  return 6;
 }
+
+// Coordenadas GPS do cliente (capturadas ao usar "minha localização")
+var clienteLat = null;
+var clienteLng = null;
 
 // Modelo progressivo de comissão
 function calcularComissao(cadastroMes) {
@@ -1017,6 +1071,7 @@ async function entrar() {
     localStorage.setItem('chegouai_user', JSON.stringify(currentUser));
 
     entrarComo(resp.user.perfil);
+    ativarNotificacoesPush();
   } catch(e) {
     alert(e.message || 'E-mail ou senha incorretos');
     document.getElementById('login-usuario').style.borderColor = 'var(--erro)';
@@ -1318,7 +1373,7 @@ function atualizarCarrinho() {
   // Mostra faixa de R$3 a R$4 no carrinho
   ['carrinho-total','carrinho-total2'].forEach(function(id) {
     const el = document.getElementById(id);
-    if(el) el.textContent = 'R$ ' + (total+3).toFixed(2).replace('.',',') + ' ~ ' + (total+4).toFixed(2).replace('.',',');
+    if(el) el.textContent = 'R$ ' + (total+2).toFixed(2).replace('.',',') + ' ~ ' + (total+6).toFixed(2).replace('.',',');
   });
 }
 
@@ -1335,20 +1390,28 @@ function simularFrete(endereco) {
     return;
   }
   
-  // Lógica fake de cálculo de distância baseada no texto para o MVP (ex: bairro Centro)
-  let distFake = 1.0;
-  let text = endereco.toLowerCase();
-  if(text.includes('centro')) distFake = 0.5;
-  else if (text.length > 20) distFake = 2.5;
-  else distFake = 1.5;
-  
-  const taxa = calcularTaxaEntrega(distFake);
+  // Calcular distância real via GPS se disponível, senão estimativa por texto
+  var distKm;
+  var infoTxt;
+  if(clienteLat && clienteLng && estAtual && estAtual.lat && estAtual.lng) {
+    distKm = haversine(clienteLat, clienteLng, parseFloat(estAtual.lat), parseFloat(estAtual.lng));
+    infoTxt = '📍 Distância real: ' + distKm.toFixed(1) + ' km';
+  } else {
+    // Estimativa por texto quando GPS indisponível
+    let text = endereco.toLowerCase();
+    if(text.includes('centro')) distKm = 0.5;
+    else if(text.length > 20) distKm = 2.5;
+    else distKm = 1.5;
+    infoTxt = '📍 Distância est.: ~' + distKm.toFixed(1) + ' km (use 📡 para precisão)';
+  }
+
+  const taxa = calcularTaxaEntrega(distKm);
   window.taxaEntregaSimulada = taxa;
-  
+
   document.getElementById('taxa-entrega-valor').textContent = 'R$ ' + taxa.toFixed(2).replace('.',',');
   document.getElementById('taxa-entrega-valor').style.color = 'var(--verde)';
   document.getElementById('total-valor').textContent = 'R$ ' + (subtotal + taxa).toFixed(2).replace('.',',');
-  document.getElementById('taxa-entrega-info').textContent = '📍 Distância est.: ' + distFake + ' km — Frete R$ ' + taxa.toFixed(2).replace('.',',');
+  document.getElementById('taxa-entrega-info').textContent = infoTxt + ' — Frete R$ ' + taxa.toFixed(2).replace('.',',');
 }
 
 // CHECKOUT
@@ -1458,12 +1521,17 @@ function usarLocalizacao() {
   btn.style.color = 'var(--verde)';
   navigator.geolocation.getCurrentPosition(
     function(pos) {
-      const lat = pos.coords.latitude.toFixed(6);
-      const lng = pos.coords.longitude.toFixed(6);
-      document.getElementById('endereco-entrega').value = 'Lat: ' + lat + ', Lng: ' + lng;
+      clienteLat = pos.coords.latitude;
+      clienteLng = pos.coords.longitude;
+      const lat = clienteLat.toFixed(6);
+      const lng = clienteLng.toFixed(6);
+      // Manter endereço já digitado se houver; senão preencher com coords
+      var endInput = document.getElementById('endereco-entrega');
+      if(!endInput.value) endInput.value = 'Lat: ' + lat + ', Lng: ' + lng;
       btn.textContent = '✅ Localização obtida!';
       btn.style.borderColor = 'var(--verde)';
       btn.style.color = 'var(--verde)';
+      simularFrete(endInput.value);
     },
     function(err) {
       btn.textContent = '📡 Usar minha localização atual';
@@ -1931,6 +1999,10 @@ async function renderAdmin(secao) {
         '<div class="campo"><label>E-mail de acesso</label><input type="email" id="new-loja-email" placeholder="loja@email.com"></div>' +
         '<div class="campo"><label>Token MP ou Chave Pix</label><input type="text" id="new-loja-pix" placeholder="APP_USR-... ou Pix Aleatório" title="Cole o Access Token do Mercado Pago do lojista"></div>' +
         '<div class="campo"><label>Categoria</label><select id="new-loja-cat" style="width:100%;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:16px 18px;color:var(--texto);font-size:16px;"><option value="lanche">Lanchonete</option><option value="restaurante">Restaurante</option><option value="mercado">Mercado</option><option value="farmacia">Farmácia</option></select></div>' +
+        '<div class="campo"><label>Endereço da loja (para calcular frete)</label>' +
+          '<input type="text" id="new-loja-endereco" placeholder="Ex: Rua das Flores, 123, Guajará-AM" oninput="geocodificarLoja()">' +
+          '<div id="new-loja-geo" style="font-size:12px;color:var(--texto2);margin-top:4px;"></div>' +
+        '</div>' +
         '<div class="campo"><label>Senha de acesso</label><input type="password" id="new-loja-senha" placeholder="Senha (mínimo 6 chars)"></div>' +
         '<button class="btn-principal" id="btn-cad-loja" onclick="cadastrarLoja()">Cadastrar loja</button>' +
       '</div>' +
@@ -1965,6 +2037,37 @@ async function adminToggleMotoboy(id) {
   } catch(e) { alert('Erro: ' + e.message); }
 }
 
+var geoDebounce = null;
+var lojaLatGeo = null;
+var lojaLngGeo = null;
+
+function geocodificarLoja() {
+  clearTimeout(geoDebounce);
+  var endereco = document.getElementById('new-loja-endereco').value.trim();
+  var info = document.getElementById('new-loja-geo');
+  if(endereco.length < 5) { if(info) info.textContent = ''; return; }
+  if(info) info.textContent = '🔍 Buscando coordenadas...';
+  geoDebounce = setTimeout(async function() {
+    try {
+      var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(endereco) + '&format=json&limit=1';
+      var r = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
+      var data = await r.json();
+      if(data && data.length > 0) {
+        lojaLatGeo = parseFloat(data[0].lat);
+        lojaLngGeo = parseFloat(data[0].lon);
+        if(info) info.textContent = '✅ Localização: ' + data[0].display_name.split(',').slice(0,2).join(',') + ' (' + lojaLatGeo.toFixed(4) + ', ' + lojaLngGeo.toFixed(4) + ')';
+        if(info) info.style.color = 'var(--verde)';
+      } else {
+        lojaLatGeo = null; lojaLngGeo = null;
+        if(info) info.textContent = '⚠️ Endereço não encontrado. Tente ser mais específico.';
+        if(info) info.style.color = 'var(--erro)';
+      }
+    } catch(e) {
+      if(info) info.textContent = '⚠️ Erro ao geocodificar.';
+    }
+  }, 800);
+}
+
 async function cadastrarLoja() {
   const nome = sanitizar(document.getElementById('new-loja-nome').value);
   const telefone = document.getElementById('new-loja-tel').value.replace(/\D/g,'');
@@ -1974,15 +2077,14 @@ async function cadastrarLoja() {
   const chavePix = sanitizar(document.getElementById('new-loja-pix').value);
 
   if(!nome || telefone.length < 10 || !email || senha.length < 6) return alert('Preencha os campos corretamente');
-  
+
   const btn = document.getElementById('btn-cad-loja');
   btn.disabled = true; btn.textContent = 'Aguarde...';
 
   try {
-    await apiCall('/api/admin/establishments', {
-      method: 'POST',
-      body: { nome, telefone, email, senha, categoria, chave_pix: chavePix }
-    });
+    var body = { nome, telefone, email, senha, categoria, chave_pix: chavePix };
+    if(lojaLatGeo && lojaLngGeo) { body.lat = lojaLatGeo; body.lng = lojaLngGeo; }
+    await apiCall('/api/admin/establishments', { method: 'POST', body });
     alert('Loja cadastrada com sucesso!');
     renderAdmin('lojas'); // recarrega a tela com as lojas para ver a nova!
   } catch(e) {
@@ -2085,6 +2187,7 @@ async function confirmarEntregaReal(pedidoId, btn) {
   if(btn) { btn.disabled = true; btn.textContent = 'Confirmando...'; }
   try {
     await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'entregue' } });
+    pararRastreio();
     renderMotoboy();
   } catch(e) {
     alert('Erro: ' + e.message);
@@ -2096,6 +2199,7 @@ async function aceitarEntregaReal(pedidoId, btn) {
   if(btn) { btn.disabled = true; btn.textContent = 'Aceitando...'; }
   try {
     await apiCall('/api/orders/' + pedidoId + '/assign-motoboy', { method: 'POST' });
+    iniciarRastreio();
     renderMotoboy();
   } catch(e) {
     alert('Erro: ' + e.message);

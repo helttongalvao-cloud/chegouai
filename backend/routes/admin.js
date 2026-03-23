@@ -134,6 +134,8 @@ router.post(
     body('categoria').isIn(['restaurante', 'mercado', 'farmacia', 'lanche', 'bebida']),
     body('chave_pix').optional().trim(),
     body('mpUserId').optional().trim(),
+    body('lat').optional().isFloat({ min: -90, max: 90 }),
+    body('lng').optional().isFloat({ min: -180, max: 180 }),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -141,7 +143,7 @@ router.post(
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const { nome, telefone, email, senha, categoria, chave_pix, mpUserId } = req.body;
+    const { nome, telefone, email, senha, categoria, chave_pix, mpUserId, lat, lng } = req.body;
 
     try {
       // Criar usuário Supabase Auth
@@ -173,6 +175,8 @@ router.post(
           chave_pix: chave_pix || null,
           mp_user_id: mpUserId || null,
           cadastro_data: new Date().toISOString(),
+          lat: lat || null,
+          lng: lng || null,
         })
         .select()
         .single();

@@ -15,7 +15,7 @@ router.get('/', async (req, res, next) => {
 
     let query = supabaseAdmin
       .from('estabelecimentos')
-      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto')
+      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng')
       .eq('ativo', true)
       .order('nome');
 
@@ -48,7 +48,7 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
     const { data: est, error } = await supabaseAdmin
       .from('estabelecimentos')
       .select(`
-        id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto,
+        id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng,
         produtos (id, nome, descricao, preco, emoji, disponivel)
       `)
       .eq('id', req.params.id)

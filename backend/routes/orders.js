@@ -3,6 +3,7 @@ const { body, param, validationResult } = require('express-validator');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { supabaseAdmin } = require('../config/supabase');
 const { calcularSplit } = require('../services/commission');
+const { enviarPush } = require('./notifications');
 
 const router = express.Router();
 
@@ -44,7 +45,7 @@ router.post(
       // 1. Validar estabelecimento
       const { data: est, error: estErr } = await supabaseAdmin
         .from('estabelecimentos')
-        .select('id, nome, aberto, taxa_entrega, cadastro_data, ativo')
+        .select('id, nome, aberto, taxa_entrega, cadastro_data, ativo, user_id')
         .eq('id', estabelecimentoId)
         .eq('ativo', true)
         .single();
@@ -125,6 +126,16 @@ router.post(
         .insert(itensPedido.map((i) => ({ ...i, pedido_id: pedido.id })));
 
       if (itensErr) throw itensErr;
+
+      // 7. Notificar lojista via push
+      if (est.user_id) {
+        enviarPush(
+          est.user_id,
+          '🔔 Novo pedido!',
+          `R$ ${totalFinal.toFixed(2).replace('.', ',')} — ${itensPedido.map((i) => `${i.quantidade}x ${i.nome}`).join(', ')}`,
+          { pedidoId: pedido.id }
+        );
+      }
 
       res.status(201).json({
         pedidoId: pedido.id,
@@ -313,6 +324,19 @@ router.patch(
         .single();
 
       if (error || !pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
+
+      // Notificar cliente sobre mudança de status
+      const msgStatus = {
+        aceito: '✅ Pedido aceito! A loja está preparando.',
+        preparando: '👨‍🍳 Seu pedido está sendo preparado.',
+        pronto: '📦 Pedido pronto! Aguardando motoboy.',
+        coletado: '🛵 Motoboy a caminho! Acompanhe no app.',
+        entregue: '🎉 Pedido entregue! Bom apetite.',
+        cancelado: '❌ Seu pedido foi cancelado.',
+      };
+      if (pedido.cliente_id && msgStatus[status]) {
+        enviarPush(pedido.cliente_id, 'Chegou Aí', msgStatus[status], { pedidoId: orderId, status });
+      }
 
       // Ao confirmar entrega, marcar repasses como pagos
       if (status === 'entregue') {

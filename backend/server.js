@@ -16,6 +16,7 @@ const establishmentsRoutes = require('./routes/establishments');
 const adminRoutes = require('./routes/admin');
 const featuresRoutes = require('./routes/features');
 const oauthRoutes = require('./routes/oauth');
+const notificationsRoutes = require('./routes/notifications');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -111,6 +112,7 @@ app.use('/api/establishments', establishmentsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/features', featuresRoutes);
 app.use('/api/oauth', oauthRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // =============================================
 // CONFIG PÚBLICA — Expõe chaves seguras ao frontend
