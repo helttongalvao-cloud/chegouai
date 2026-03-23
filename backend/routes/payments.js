@@ -45,7 +45,7 @@ router.post(
         .single();
 
       if (pedidoErr || !pedido) {
-        return res.status(404).json({ error: 'Pedido não encontrado ou já pago' });
+        return res.status(404).json({ error: 'Erro DB: ' + (pedidoErr ? pedidoErr.message : 'Pedido nulo') });
       }
 
       // Calcular split
@@ -139,7 +139,7 @@ router.post(
         .single();
 
       if (pedidoErr || !pedido) {
-        return res.status(404).json({ error: 'Pedido não encontrado ou já pago' });
+        return res.status(404).json({ error: 'Erro DB: ' + (pedidoErr ? pedidoErr.message : 'Pedido nulo') });
       }
 
       const split = calcularSplit({
