@@ -209,8 +209,10 @@ router.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 
   try {
+    console.log('[Webhook] Recebido:', JSON.stringify(req.body));
+
     if (!verificarAssinaturaWebhook(req)) {
-      console.warn('[Webhook] Payload inválido recebido');
+      console.warn('[Webhook] Assinatura inválida — headers:', JSON.stringify(req.headers['x-signature']));
       return;
     }
 
