@@ -21,6 +21,9 @@ const notificationsRoutes = require('./routes/notifications');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Railway e outros proxies enviam X-Forwarded-For
+app.set('trust proxy', 1);
+
 // =============================================
 // SEGURANÇA — CABEÇALHOS HTTP
 // =============================================

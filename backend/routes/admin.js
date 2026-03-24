@@ -145,7 +145,18 @@ router.post(
 
     const { nome, telefone, email, senha, categoria, chave_pix, mpUserId, lat, lng } = req.body;
 
+    let authUserId = null;
     try {
+      // Verificar se telefone já existe noutro perfil
+      const { data: telExiste } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('telefone', telefone)
+        .maybeSingle();
+      if (telExiste) {
+        return res.status(409).json({ error: 'Telefone já cadastrado noutro perfil' });
+      }
+
       // Criar usuário Supabase Auth
       const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
         email,
@@ -153,22 +164,28 @@ router.post(
         email_confirm: true,
         user_metadata: { nome, telefone },
       });
-      if (authErr) throw authErr;
+      if (authErr) {
+        if (authErr.message.includes('already been registered') || authErr.message.includes('already registered')) {
+          return res.status(409).json({ error: 'E-mail já cadastrado' });
+        }
+        throw authErr;
+      }
+      authUserId = authData.user.id;
 
-      // Upsert do perfil (trigger pode ainda não ter disparado)
+      // Upsert do perfil
       const { error: profileErr } = await supabaseAdmin
         .from('profiles')
-        .upsert({ id: authData.user.id, nome, telefone, email, perfil: 'estabelecimento' });
+        .upsert({ id: authUserId, nome, telefone, email, perfil: 'estabelecimento' });
       if (profileErr) {
-        console.error('[Admin] Erro ao upsert profile para estabelecimento:', profileErr.message);
-        throw profileErr;
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+        return res.status(400).json({ error: profileErr.message });
       }
 
       // Criar estabelecimento
       const { data: est, error: estErr } = await supabaseAdmin
         .from('estabelecimentos')
         .insert({
-          user_id: authData.user.id,
+          user_id: authUserId,
           nome,
           categoria,
           chave_pix: chave_pix || null,
@@ -180,7 +197,10 @@ router.post(
         .select()
         .single();
 
-      if (estErr) throw estErr;
+      if (estErr) {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+        throw estErr;
+      }
 
       res.status(201).json({
         message: 'Loja cadastrada com sucesso',
