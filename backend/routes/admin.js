@@ -330,6 +330,26 @@ router.post(
 );
 
 // =============================================
+// PUT /api/admin/establishments/:id — Editar dados da loja
+// =============================================
+router.put('/establishments/:id', async (req, res, next) => {
+  try {
+    const campos = {};
+    ['nome', 'categoria', 'tempo_entrega', 'mp_user_id', 'taxa_entrega', 'emoji', 'aberto'].forEach((k) => {
+      if (req.body[k] !== undefined) campos[k] = req.body[k];
+    });
+    const { data, error } = await supabaseAdmin
+      .from('estabelecimentos')
+      .update(campos)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // PATCH /api/admin/establishments/:id/toggle — Ativar/desativar loja
 // =============================================
 router.patch('/establishments/:id/toggle', async (req, res, next) => {

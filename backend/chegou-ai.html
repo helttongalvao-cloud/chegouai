@@ -1970,13 +1970,15 @@ async function renderAdmin(secao) {
       '<div class="tabela">' +
       (lojas.length === 0 ? '<div class="tabela-row"><div class="info">Nenhuma loja cadastrada.</div></div>' :
       lojas.map(function(e) {
-        var c = e.comissao || { desc: 'Taxa fixa', taxa: 0 };
-        var btnStatus = e.ativo 
-          ? '<button class="btn-acao secundario" onclick="adminToggleLoja(\'' + e.id + '\')" style="margin-left:10px;padding:6px 12px;">Desativar</button>'
-          : '<button class="btn-acao" onclick="adminToggleLoja(\'' + e.id + '\')" style="margin-left:10px;padding:6px 12px;background:var(--verde);">Ativar</button>';
+        var c = e.comissao || { descricao: 'Taxa fixa', taxa: 0 };
+        var btnStatus = e.ativo
+          ? '<button class="btn-acao secundario" onclick="adminToggleLoja(\'' + e.id + '\')" style="margin-left:6px;padding:6px 10px;">Desativar</button>'
+          : '<button class="btn-acao" onclick="adminToggleLoja(\'' + e.id + '\')" style="margin-left:6px;padding:6px 10px;background:var(--verde);">Ativar</button>';
         return '<div class="tabela-row" style="align-items:center;">' +
-          '<div class="info"><div class="nome">' + e.nome + (e.ativo ? '' : ' <i>(Inativo)</i>') + '</div><div class="sub">' + c.desc + '</div></div>' +
-          '<div style="display:flex;align-items:center;"><div class="valor">' + c.taxa + '%</div>' + btnStatus + '</div>' +
+          '<div class="info" style="flex:1;"><div class="nome">' + e.nome + (e.ativo ? '' : ' <i>(Inativo)</i>') + '</div><div class="sub">' + (c.descricao || '') + '</div></div>' +
+          '<div style="display:flex;align-items:center;gap:4px;"><div class="valor">' + c.taxa + '%</div>' +
+          '<button class="btn-acao" onclick="adminEditarLoja(' + JSON.stringify(e).replace(/"/g,'&quot;') + ')" style="padding:6px 10px;">✏️ Editar</button>' +
+          btnStatus + '</div>' +
         '</div>';
       }).join('')) +
       '</div>';
@@ -2041,6 +2043,41 @@ async function adminToggleMotoboy(id) {
     const res = await apiCall('/api/admin/motoboys/' + id + '/toggle', { method: 'PATCH' });
     alert(res.message);
     renderAdmin('motoboys');
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+function adminEditarLoja(e) {
+  var html =
+    '<div style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;" id="modal-admin-loja">' +
+    '<div style="background:var(--cinza2);border-radius:16px;padding:24px;width:90%;max-width:400px;">' +
+    '<h3 style="margin-bottom:16px;">✏️ Editar loja</h3>' +
+    '<div class="form-grupo"><label>Nome</label><input id="adm-loja-nome" class="modal-campo" style="margin:0;" value="' + (e.nome || '') + '"></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>Categoria</label>' +
+    '<select id="adm-loja-cat" class="modal-campo" style="margin:0;">' +
+    '<option value="lanche">Lanchonete</option><option value="restaurante">Restaurante</option>' +
+    '<option value="mercado">Mercado</option><option value="farmacia">Farmácia</option><option value="bebida">Bebidas</option>' +
+    '</select></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>Tempo de entrega</label><input id="adm-loja-tempo" class="modal-campo" style="margin:0;" value="' + (e.tempo_entrega || '30-45 min') + '"></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>Token MP / Chave Pix</label><input id="adm-loja-mp" class="modal-campo" style="margin:0;" value="' + (e.mp_user_id || '') + '"></div>' +
+    '<div style="display:flex;gap:8px;margin-top:16px;">' +
+    '<button class="btn-principal" style="flex:1;" onclick="adminSalvarLoja(\'' + e.id + '\')">Salvar</button>' +
+    '<button class="btn-acao secundario" style="flex:1;" onclick="document.getElementById(\'modal-admin-loja\').remove()">Cancelar</button>' +
+    '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.getElementById('adm-loja-cat').value = e.categoria || 'lanche';
+}
+
+async function adminSalvarLoja(id) {
+  var body = {
+    nome: document.getElementById('adm-loja-nome').value.trim(),
+    categoria: document.getElementById('adm-loja-cat').value,
+    tempo_entrega: document.getElementById('adm-loja-tempo').value.trim(),
+    mp_user_id: document.getElementById('adm-loja-mp').value.trim(),
+  };
+  try {
+    await apiCall('/api/admin/establishments/' + id, { method: 'PUT', body });
+    document.getElementById('modal-admin-loja').remove();
+    renderAdmin('lojas');
   } catch(e) { alert('Erro: ' + e.message); }
 }
 
