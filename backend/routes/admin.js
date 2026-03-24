@@ -155,13 +155,12 @@ router.post(
       });
       if (authErr) throw authErr;
 
-      // Atualizar perfil (trigger do Supabase já cria o básico com perfil='cliente', precisamos corrigir)
+      // Upsert do perfil (trigger pode ainda não ter disparado)
       const { error: profileErr } = await supabaseAdmin
         .from('profiles')
-        .update({ nome, telefone, email, perfil: 'estabelecimento' })
-        .eq('id', authData.user.id);
+        .upsert({ id: authData.user.id, nome, telefone, email, perfil: 'estabelecimento' });
       if (profileErr) {
-        console.error('[Admin] Erro ao atualizar profile para estabelecimento:', profileErr.message);
+        console.error('[Admin] Erro ao upsert profile para estabelecimento:', profileErr.message);
         throw profileErr;
       }
 
