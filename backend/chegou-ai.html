@@ -944,13 +944,10 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Taxa de entrega por distância
+// Taxa de entrega por distância — R$2 (até 2km) a R$3 (acima de 2km)
 function calcularTaxaEntrega(distanciaKm) {
-  if(distanciaKm <= 1.0) return 2;
-  if(distanciaKm <= 2.0) return 3;
-  if(distanciaKm <= 3.5) return 4;
-  if(distanciaKm <= 5.0) return 5;
-  return 6;
+  var taxa = 2 + (distanciaKm * 0.5);
+  return Math.min(3, Math.max(2, parseFloat(taxa.toFixed(2))));
 }
 
 // Coordenadas GPS do cliente (capturadas ao usar "minha localização")
