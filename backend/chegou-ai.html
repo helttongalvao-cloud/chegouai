@@ -1641,6 +1641,8 @@ async function renderInfoLoja() {
     '<h4 style="font-size:15px;font-weight:700;margin-bottom:14px;">Configurações da loja</h4>' +
     '<div class="form-grupo"><label>Nome da loja</label>' +
     '<input type="text" id="loja-nome-input" class="modal-campo" style="margin:0;" value="' + (est.nome || '') + '"></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>Emoji da loja</label>' +
+    '<input type="text" id="loja-emoji-input" class="modal-campo" style="margin:0;font-size:22px;" maxlength="4" value="' + (est.emoji || '🏪') + '"></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Categoria</label>' +
     '<select id="loja-cat-select" class="modal-campo" style="margin:0;">' +
     '<option value="lanche">Lanchonete</option>' +
@@ -1651,6 +1653,8 @@ async function renderInfoLoja() {
     '</select></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Tempo médio de entrega</label>' +
     '<input type="text" id="loja-tempo-input" class="modal-campo" style="margin:0;" value="' + (est.tempo_entrega || '25-35 min') + '"></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>Taxa base de entrega (R$)</label>' +
+    '<input type="number" id="loja-taxa-input" class="modal-campo" style="margin:0;" min="2" max="20" step="0.50" value="' + (est.taxa_entrega || '4.00') + '"></div>' +
     '<div class="form-grupo" style="margin-top:12px;">' +
     '<div class="disponivel-toggle">' +
     '<input type="checkbox" id="loja-aberta" style="width:auto;accent-color:var(--verde);" ' + (est.aberto ? 'checked' : '') + '>' +
@@ -1671,16 +1675,21 @@ async function renderInfoLoja() {
 
 async function salvarInfoLoja() {
   var nome = document.getElementById('loja-nome-input') ? document.getElementById('loja-nome-input').value.trim() : null;
+  var emoji = document.getElementById('loja-emoji-input') ? document.getElementById('loja-emoji-input').value.trim() : null;
   var cat = document.getElementById('loja-cat-select') ? document.getElementById('loja-cat-select').value : null;
   var tempo = document.getElementById('loja-tempo-input') ? document.getElementById('loja-tempo-input').value.trim() : null;
+  var taxaStr = document.getElementById('loja-taxa-input') ? document.getElementById('loja-taxa-input').value : null;
+  var taxa = taxaStr ? parseFloat(taxaStr) : null;
   var aberto = document.getElementById('loja-aberta') ? document.getElementById('loja-aberta').checked : null;
   var btn = document.getElementById('btn-salvar-loja');
   if(btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
   try {
     var body = {};
     if(nome) body.nome = nome;
+    if(emoji) body.emoji = emoji;
     if(cat) body.categoria = cat;
     if(tempo) body.tempo_entrega = tempo;
+    if(taxa && !isNaN(taxa)) body.taxa_entrega = taxa;
     if(aberto !== null) body.aberto = aberto;
     await apiCall('/api/establishments/me', { method: 'PUT', body });
     var navBtn = document.getElementById('est-nav-cardapio');

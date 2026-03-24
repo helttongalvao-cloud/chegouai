@@ -130,12 +130,10 @@ router.put(
   requireRole('estabelecimento'),
   [
     body('nome').optional().trim().isLength({ min: 2, max: 100 }).escape(),
+    body('emoji').optional().trim().isLength({ min: 1, max: 8 }),
     body('categoria').optional().isIn(['restaurante', 'mercado', 'farmacia', 'lanche', 'bebida']),
     body('tempo_entrega').optional().trim().isLength({ max: 30 }).escape(),
-    body('taxa_entrega')
-      .optional()
-      .isFloat({ min: 2.00, max: 4.00 })
-      .withMessage('A taxa de entrega deve ser entre R$ 2,00 e R$ 4,00'),
+    body('taxa_entrega').optional().isFloat({ min: 0, max: 50 }).withMessage('Taxa de entrega inválida'),
     body('aberto').optional().isBoolean(),
     body('mp_user_id').optional().trim().isLength({ max: 50 }),
   ],
@@ -146,7 +144,7 @@ router.put(
     }
 
     const campos = {};
-    ['nome', 'categoria', 'tempo_entrega', 'aberto', 'mp_user_id'].forEach((key) => {
+    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'aberto', 'mp_user_id'].forEach((key) => {
       if (req.body[key] !== undefined) campos[key] = req.body[key];
     });
 
