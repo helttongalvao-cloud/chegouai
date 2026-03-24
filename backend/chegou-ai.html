@@ -2056,8 +2056,8 @@ function geocodificarLoja() {
   if(info) info.textContent = '🔍 Buscando coordenadas...';
   geoDebounce = setTimeout(async function() {
     try {
-      var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(endereco) + '&format=json&limit=1';
-      var r = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
+      var url = '/api/geocode?q=' + encodeURIComponent(endereco);
+      var r = await fetch(url);
       var data = await r.json();
       if(data && data.length > 0) {
         lojaLatGeo = parseFloat(data[0].lat);
