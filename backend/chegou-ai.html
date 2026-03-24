@@ -1657,7 +1657,6 @@ async function renderInfoLoja() {
     '</div></div>' +
     '<button class="btn-principal" style="margin-top:16px;" id="btn-salvar-loja" onclick="salvarInfoLoja()">Salvar alterações</button>' +
     '</div>';
-}
 
   var catSelect = document.getElementById('loja-cat-select');
   if(catSelect) {
@@ -1667,8 +1666,6 @@ async function renderInfoLoja() {
       if(btn) btn.textContent = labelCardapio(this.value);
     });
   }
-  var btnSalvar = document.getElementById('btn-salvar-loja');
-  if(btnSalvar) btnSalvar.addEventListener('click', salvarInfoLoja);
 }
 
 async function salvarInfoLoja() {
@@ -1744,7 +1741,6 @@ async function salvarProduto() {
   
   if(!nome) { document.getElementById('prod-nome').style.borderColor='var(--erro)'; return; }
   if(isNaN(preco) || preco <= 0) { document.getElementById('prod-preco').style.borderColor='var(--erro)'; return; }
-  const btn = document.querySelector('#modal-produto .btn-principal');
   if(btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
   try {
     const body = { nome, descricao: descricao, preco, emoji: emojiSelecionado, disponivel };
@@ -1847,7 +1843,8 @@ async function atualizarStatusPedido(pedidoId, novoStatus, btn) {
   } catch(e) {
     alert('Erro: ' + e.message);
     if(btn) { btn.disabled = false; btn.textContent = 'Tentar novamente'; }
-
+  }
+}
 
 // ADMIN — Variável de cache do dashboard
 let adminDataCache = null;

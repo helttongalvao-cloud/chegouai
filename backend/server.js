@@ -34,20 +34,26 @@ app.use(helmet({
         "'unsafe-eval'",          // necessário para alguns scripts inline
         'https://sdk.mercadopago.com',
         'https://fonts.googleapis.com',
+        'https://unpkg.com',
+        'https://cdn.jsdelivr.net',
       ],
       scriptSrcAttr: ["'unsafe-inline'"], // permite onclick, oninput etc.
       styleSrc: [
         "'self'",
         "'unsafe-inline'",
         'https://fonts.googleapis.com',
+        'https://unpkg.com',
+        'https://cdn.jsdelivr.net',
       ],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc: ["'self'", 'data:', 'https:'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://unpkg.com', 'https://cdn.jsdelivr.net'],
+      imgSrc: ["'self'", 'data:', 'https:', 'https://unpkg.com'],
       connectSrc: [
         "'self'",
         process.env.SUPABASE_URL || 'https://*.supabase.co',
         'https://api.mercadopago.com',
         'https://*.supabase.co',
+        'https://nominatim.openstreetmap.org',
+        'wss://*.supabase.co',
       ],
       frameSrc: ["'self'", 'https://www.mercadopago.com.br'],
     },
