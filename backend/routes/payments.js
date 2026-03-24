@@ -37,7 +37,7 @@ router.post(
         .from('pedidos')
         .select(`
           *,
-          estabelecimentos (nome, cadastro_data, chave_pix)
+          estabelecimentos (nome, cadastro_data, mp_user_id)
         `)
         .eq('id', pedidoId)
         .eq('cliente_id', user.id)
@@ -58,8 +58,8 @@ router.post(
       // Verifica se a loja cadastrou um Access Token para Split Automático (inicia com APP_USR-)
       let mpAccessToken = null;
       let applicationFee = 0;
-      if (pedido.estabelecimentos.chave_pix && pedido.estabelecimentos.chave_pix.startsWith('APP_USR-')) {
-        mpAccessToken = pedido.estabelecimentos.chave_pix.trim();
+      if (pedido.estabelecimentos.mp_user_id && pedido.estabelecimentos.mp_user_id.startsWith('APP_USR-')) {
+        mpAccessToken = pedido.estabelecimentos.mp_user_id.trim();
         applicationFee = split.valorPlataforma + split.valorMotoboy; // Tudo que não é da loja vai pro app transferir depois
       }
 
@@ -131,7 +131,7 @@ router.post(
         .select(`
           *,
           itens_pedido (*),
-          estabelecimentos (nome, cadastro_data, chave_pix)
+          estabelecimentos (nome, cadastro_data, mp_user_id)
         `)
         .eq('id', pedidoId)
         .eq('cliente_id', user.id)
@@ -150,8 +150,8 @@ router.post(
 
       // Sem application_fee para tokens APP_USR manuais no MVP
       let mpAccessToken = null;
-      if (pedido.estabelecimentos.chave_pix && pedido.estabelecimentos.chave_pix.startsWith('APP_USR-')) {
-        mpAccessToken = pedido.estabelecimentos.chave_pix.trim();
+      if (pedido.estabelecimentos.mp_user_id && pedido.estabelecimentos.mp_user_id.startsWith('APP_USR-')) {
+        mpAccessToken = pedido.estabelecimentos.mp_user_id.trim();
       }
 
       const preference = await criarPreferenciaCartao({
