@@ -106,11 +106,9 @@ router.get('/repasses', async (req, res, next) => {
       .from('repasses')
       .select(`
         *,
-        pedidos (
-          id, total, subtotal, taxa_entrega, criado_em,
-          estabelecimentos (nome),
-          motoboys (nome, telefone)
-        )
+        estabelecimentos (id, nome),
+        motoboys (id, nome, telefone),
+        pedidos (id, total, subtotal, taxa_entrega, criado_em)
       `)
       .order('criado_em', { ascending: false });
 
@@ -119,6 +117,18 @@ router.get('/repasses', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// PATCH /api/admin/repasses/:id/pagar — Marcar repasse como pago
+router.patch('/repasses/:id/pagar', async (req, res, next) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from('repasses')
+      .update({ status: 'pago', atualizado_em: new Date().toISOString() })
+      .eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (err) { next(err); }
 });
 
 // =============================================

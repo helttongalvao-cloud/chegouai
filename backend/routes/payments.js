@@ -296,25 +296,20 @@ async function processarPagamentoAprovado(orderId, pagamento) {
     cadastroData: pedido.estabelecimentos.cadastro_data,
   });
 
-  // 3. Registrar repasses (serão processados após entrega)
+  // 3. Registrar repasses — lojista e plataforma criados agora, motoboy ao confirmar entrega
   await supabaseAdmin.from('repasses').insert([
     {
       pedido_id: orderId,
+      estabelecimento_id: pedido.estabelecimento_id,
       tipo: 'lojista',
       valor: split.valorLojista,
       status: 'pendente',
     },
     {
       pedido_id: orderId,
-      tipo: 'motoboy',
-      valor: split.valorMotoboy,
-      status: 'pendente',
-    },
-    {
-      pedido_id: orderId,
       tipo: 'plataforma',
       valor: split.valorPlataforma,
-      status: 'pago', // Comissão já retida no marketplace_fee
+      status: 'pago',
     },
   ]);
 

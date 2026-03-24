@@ -338,13 +338,15 @@ router.patch(
         enviarPush(pedido.cliente_id, 'Chegou Aí', msgStatus[status], { pedidoId: orderId, status });
       }
 
-      // Ao confirmar entrega, marcar repasses como pagos
-      if (status === 'entregue') {
-        await supabaseAdmin
-          .from('repasses')
-          .update({ status: 'pago' })
-          .eq('pedido_id', orderId)
-          .in('tipo', ['lojista', 'motoboy']);
+      // Ao confirmar entrega, criar repasse do motoboy automaticamente
+      if (status === 'entregue' && pedido.motoboy_id) {
+        await supabaseAdmin.from('repasses').insert({
+          pedido_id: orderId,
+          motoboy_id: pedido.motoboy_id,
+          tipo: 'motoboy',
+          valor: pedido.taxa_entrega || 0,
+          status: 'pendente',
+        });
       }
 
       res.json({ message: `Status atualizado para: ${status}`, pedido });
