@@ -209,17 +209,19 @@ router.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 
   try {
-    console.log('[Webhook] Recebido:', JSON.stringify(req.body));
+    console.log('[Webhook] Body:', JSON.stringify(req.body), '| Query:', JSON.stringify(req.query));
 
-    if (!verificarAssinaturaWebhook(req)) {
-      console.warn('[Webhook] Assinatura inválida — headers:', JSON.stringify(req.headers['x-signature']));
+    // MP envia dados no body OU em query params — normalizar ambos
+    const type = req.body.type || req.query.type || req.query.topic;
+    const paymentId = req.body.data?.id || req.query['data.id'] || req.query.id;
+
+    if (!type || !paymentId) {
+      console.warn('[Webhook] Sem type ou paymentId');
       return;
     }
 
-    const { type, data } = req.body;
-
     if (type === 'payment') {
-      const pagamento = await buscarPagamento(data.id);
+      const pagamento = await buscarPagamento(paymentId);
       const orderId = pagamento.externalReference;
 
       if (!orderId) return;
