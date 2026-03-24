@@ -86,6 +86,8 @@ router.get('/pedidos', async (req, res, next) => {
       .order('criado_em', { ascending: false })
       .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
 
+    // Só mostrar pedidos com pagamento aprovado por padrão
+    query = query.eq('pagamento_status', 'aprovado');
     if (status) query = query.eq('status', status);
 
     const { data, error, count } = await query;

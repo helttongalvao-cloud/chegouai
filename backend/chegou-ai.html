@@ -1925,43 +1925,62 @@ async function renderAdmin(secao) {
       var repasses = await apiCall('/api/admin/repasses');
       if(!Array.isArray(repasses)) repasses = [];
       
-      var pendLojas = 0, pendMotos = 0, pagoTotal = 0;
+      // Agrupar por loja e por motoboy
+      var porLoja = {}, porMoto = {}, pagoTotal = 0;
       repasses.forEach(function(r) {
-        if(r.status === 'pago') pagoTotal += r.valor;
-        else if(r.tipo === 'lojista') pendLojas += r.valor;
-        else if(r.tipo === 'motoboy') pendMotos += r.valor;
+        if(r.tipo === 'plataforma') return;
+        if(r.status === 'pago') { pagoTotal += r.valor; return; }
+        if(r.tipo === 'lojista') {
+          var id = r.estabelecimento_id || 'desconhecido';
+          var nome = r.estabelecimentos?.nome || 'Loja';
+          if(!porLoja[id]) porLoja[id] = { nome: nome, total: 0, ids: [] };
+          porLoja[id].total += r.valor;
+          porLoja[id].ids.push(r.id);
+        } else if(r.tipo === 'motoboy') {
+          var id = r.motoboy_id || 'desconhecido';
+          var nome = r.motoboys?.nome || 'Motoboy';
+          if(!porMoto[id]) porMoto[id] = { nome: nome, total: 0, ids: [] };
+          porMoto[id].total += r.valor;
+          porMoto[id].ids.push(r.id);
+        }
       });
+
+      var totalPendLojas = Object.values(porLoja).reduce(function(s,v){ return s+v.total; }, 0);
+      var totalPendMotos = Object.values(porMoto).reduce(function(s,v){ return s+v.total; }, 0);
 
       var resumoHtml =
         '<div class="stats-grid" style="margin-bottom:16px;grid-template-columns:repeat(3,1fr);">' +
-        '<div class="stat-card"><div class="stat-valor" style="color:var(--laranja);">R$ ' + pendLojas.toFixed(2).replace('.',',') + '</div><div class="stat-label">🏪 Pendente lojas</div></div>' +
-        '<div class="stat-card"><div class="stat-valor" style="color:var(--laranja);">R$ ' + pendMotos.toFixed(2).replace('.',',') + '</div><div class="stat-label">🛵 Pendente motoboys</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" style="color:var(--laranja);">R$ ' + totalPendLojas.toFixed(2).replace('.',',') + '</div><div class="stat-label">🏪 A repassar lojas</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" style="color:var(--laranja);">R$ ' + totalPendMotos.toFixed(2).replace('.',',') + '</div><div class="stat-label">🛵 A repassar motoboys</div></div>' +
         '<div class="stat-card"><div class="stat-valor" style="color:var(--verde);">R$ ' + pagoTotal.toFixed(2).replace('.',',') + '</div><div class="stat-label">✅ Já repassado</div></div>' +
         '</div>';
 
-      var visiveis = repasses.filter(function(r){ return r.tipo !== 'plataforma'; });
-      var tabelaHtml;
-      if(visiveis.length === 0) {
-        tabelaHtml = '<div class="tabela"><div class="tabela-row"><div class="info">Nenhum repasse registrado ainda.</div></div></div>';
-      } else {
-        tabelaHtml = '<div class="secao-titulo">Repasses (' + visiveis.length + ')</div><div class="tabela">' +
-          visiveis.map(function(r) {
-            var dest = r.tipo === 'lojista'
-              ? '🏪 ' + (r.estabelecimentos?.nome || 'Loja')
-              : '🛵 ' + (r.motoboys?.nome || 'Motoboy');
-            var statusCor = r.status === 'pendente' ? 'color:var(--laranja)' : 'color:var(--verde)';
-            var statusLabel = r.status === 'pendente' ? '⏳ Pendente' : '✅ Pago';
-            var data = new Date(r.criado_em).toLocaleDateString('pt-BR');
-            var btnPagar = r.status === 'pendente'
-              ? '<button class="btn-acao" onclick="adminPagarRepasse(\'' + r.id + '\',this)" style="padding:5px 10px;font-size:12px;margin-left:8px;">Marcar pago</button>'
-              : '';
-            return '<div class="tabela-row" style="align-items:center;">' +
-              '<div class="info" style="flex:1;"><div class="nome">' + dest + '</div>' +
-              '<div class="sub">' + data + ' — Pedido ' + (r.pedido_id||'').split('-')[0] + ' • <span style="' + statusCor + '">' + statusLabel + '</span></div></div>' +
-              '<div style="display:flex;align-items:center;"><div class="valor">R$ ' + parseFloat(r.valor).toFixed(2).replace('.',',') + '</div>' + btnPagar + '</div>' +
-            '</div>';
-          }).join('') + '</div>';
-      }
+      var lojaRows = Object.entries(porLoja).map(function(kv) {
+        var ids = JSON.stringify(kv[1].ids).replace(/"/g,'&quot;');
+        return '<div class="tabela-row" style="align-items:center;">' +
+          '<div class="info" style="flex:1;"><div class="nome">🏪 ' + kv[1].nome + '</div>' +
+          '<div class="sub">Pendente de repasse</div></div>' +
+          '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<div class="valor" style="color:var(--laranja);">R$ ' + kv[1].total.toFixed(2).replace('.',',') + '</div>' +
+          '<button class="btn-acao" onclick="adminPagarRepasses(' + ids + ',this)" style="padding:5px 10px;font-size:12px;">✅ Marcar pago</button>' +
+          '</div></div>';
+      });
+
+      var motoRows = Object.entries(porMoto).map(function(kv) {
+        var ids = JSON.stringify(kv[1].ids).replace(/"/g,'&quot;');
+        return '<div class="tabela-row" style="align-items:center;">' +
+          '<div class="info" style="flex:1;"><div class="nome">🛵 ' + kv[1].nome + '</div>' +
+          '<div class="sub">Pendente de repasse</div></div>' +
+          '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<div class="valor" style="color:var(--laranja);">R$ ' + kv[1].total.toFixed(2).replace('.',',') + '</div>' +
+          '<button class="btn-acao" onclick="adminPagarRepasses(' + ids + ',this)" style="padding:5px 10px;font-size:12px;">✅ Marcar pago</button>' +
+          '</div></div>';
+      });
+
+      var tabelaHtml = lojaRows.length + motoRows.length === 0
+        ? '<div class="tabela"><div class="tabela-row"><div class="info">Nenhum repasse pendente.</div></div></div>'
+        : '<div class="secao-titulo">Repasses pendentes</div><div class="tabela">' + lojaRows.join('') + motoRows.join('') + '</div>';
+
       el.innerHTML = resumoHtml + tabelaHtml;
     } catch(e) {
       el.innerHTML =
@@ -2035,13 +2054,15 @@ async function renderAdmin(secao) {
 }
 
 // Funções reais para os botões do Admin
-async function adminPagarRepasse(id, btn) {
-  if(!confirm('Confirmar repasse como pago?')) return;
+async function adminPagarRepasses(ids, btn) {
+  if(!confirm('Confirmar que o repasse foi realizado?')) return;
   if(btn) { btn.disabled = true; btn.textContent = '...'; }
   try {
-    await apiCall('/api/admin/repasses/' + id + '/pagar', { method: 'PATCH' });
+    await Promise.all(ids.map(function(id) {
+      return apiCall('/api/admin/repasses/' + id + '/pagar', { method: 'PATCH' });
+    }));
     renderAdmin('repasses');
-  } catch(e) { alert('Erro: ' + e.message); if(btn) { btn.disabled=false; btn.textContent='Marcar pago'; } }
+  } catch(e) { alert('Erro: ' + e.message); if(btn) { btn.disabled=false; btn.textContent='✅ Marcar pago'; } }
 }
 
 async function adminToggleLoja(id) {

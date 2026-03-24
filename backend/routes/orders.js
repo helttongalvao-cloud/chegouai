@@ -230,8 +230,8 @@ router.get('/', requireAuth, async (req, res, next) => {
          if(mtb) query = query.eq('motoboy_id', mtb.id);
       }
     } else {
-      // Cliente normal: vê só os dele
-      query = query.eq('cliente_id', req.user.id);
+      // Cliente normal: vê só os dele com pagamento aprovado
+      query = query.eq('cliente_id', req.user.id).eq('pagamento_status', 'aprovado');
       if (status) query = query.eq('status', status);
     }
 
