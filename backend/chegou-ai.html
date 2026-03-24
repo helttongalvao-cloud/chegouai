@@ -449,6 +449,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="campo" style="margin:0;">
         <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value)">
       </div>
+      <button id="btn-localizacao" onclick="usarLocalizacao()" style="width:100%;margin-top:8px;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📍 Usar minha localização atual</button>
       <label style="display:flex;align-items:center;margin-top:8px;font-size:14px;color:var(--texto);cursor:pointer;">
         <input type="checkbox" id="salvar-endereco" checked style="margin-right:8px;accent-color:var(--verde);">
         Salvar este endereço para a próxima
