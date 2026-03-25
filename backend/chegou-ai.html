@@ -1186,7 +1186,7 @@ function renderEstabelecimentos(cat) {
         '<div class="card-est-nome">' + sanitizar(e.nome) + '</div>' +
         '<div class="card-est-meta">' +
           '<span>' + (e.tempo_entrega || '30-45 min') + '</span>' +
-          '<span>Taxa R$' + parseFloat(e.taxa_entrega || 4).toFixed(2).replace('.',',') + '</span>' +
+          '<span>Frete R$2-R$4</span>' +
           '<span class="' + badge + '">' + status + '</span>' +
         '</div>' +
       '</div>' +
@@ -1257,7 +1257,7 @@ function buscarEst(val) {
         '<div class="card-est-nome">' + sanitizar(e.nome) + '</div>' +
         '<div class="card-est-meta">' +
           '<span>' + (e.tempo_entrega || '30-45 min') + '</span>' +
-          '<span>Taxa R$' + parseFloat(e.taxa_entrega || 4).toFixed(2).replace('.',',') + '</span>' +
+          '<span>Frete R$2-R$4</span>' +
           '<span class="' + badge + '">' + status + '</span>' +
         '</div>' +
       '</div>' +
@@ -1300,7 +1300,7 @@ async function abrirCardapio(id) {
 
     document.getElementById('est-avatar').textContent = estAtual.emoji || '🏪';
     document.getElementById('est-nome-cardapio').textContent = estAtual.nome;
-    var metaTxt = 'Aberto • ' + (estAtual.tempo_entrega || '30-45 min') + ' • Taxa R$' + parseFloat(estAtual.taxa_entrega || 4).toFixed(2).replace('.',',');
+    var metaTxt = 'Aberto • ' + (estAtual.tempo_entrega || '30-45 min') + ' • Frete R$2-R$4';
     if(estAtual.valor_minimo && parseFloat(estAtual.valor_minimo) > 0) {
       metaTxt += ' • Mín. R$' + parseFloat(estAtual.valor_minimo).toFixed(2).replace('.',',');
     }
@@ -1444,7 +1444,6 @@ function abrirModalObservacao(item, idx) {
     overlay = document.createElement('div');
     overlay.id = 'modal-observacao';
     overlay.className = 'modal-overlay';
-    overlay.style.cssText = 'display:flex;';
     overlay.innerHTML =
       '<div class="modal-box" style="max-width:360px;">' +
       '<div class="modal-titulo" id="obs-titulo">Adicionar ao carrinho</div>' +
@@ -1454,12 +1453,12 @@ function abrirModalObservacao(item, idx) {
       '<input type="text" id="obs-input" placeholder="Ex: sem cebola, bem passado..." maxlength="200" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:\'DM Sans\',sans-serif;" oninput="this.value=this.value.replace(/<[^>]*>/g,\'\')">' +
       '</div>' +
       '<button class="btn-principal" id="obs-btn-add" onclick="">Adicionar</button>' +
-      '<button onclick="document.getElementById(\'modal-observacao\').style.display=\'none\'" style="width:100%;background:transparent;border:none;color:var(--texto2);padding:14px;cursor:pointer;font-size:14px;font-family:\'DM Sans\',sans-serif;">Cancelar</button>' +
+      '<button onclick="document.getElementById(\'modal-observacao\').classList.remove(\'aberto\')" style="width:100%;background:transparent;border:none;color:var(--texto2);padding:14px;cursor:pointer;font-size:14px;font-family:\'DM Sans\',sans-serif;">Cancelar</button>' +
       '</div>';
     document.body.appendChild(overlay);
-    overlay.addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
+    overlay.addEventListener('click', function(e){ if(e.target===this) this.classList.remove('aberto'); });
   }
-  overlay.style.display = 'flex';
+  overlay.classList.add('aberto');
   document.getElementById('obs-titulo').textContent = 'Adicionar ao carrinho';
   document.getElementById('obs-nome').textContent = (item.emoji || '🍽️') + ' ' + item.nome + ' — R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',');
   var obsInput = document.getElementById('obs-input');
@@ -1470,7 +1469,7 @@ function abrirModalObservacao(item, idx) {
     var obs = obsInput.value.trim().replace(/<[^>]*>/g,'').substring(0,200);
     carrinho.push({...item, qtd:1, observacao: obs || ''});
     atualizarCarrinho();
-    overlay.style.display = 'none';
+    overlay.classList.remove('aberto');
     // feedback visual
     const btns = document.querySelectorAll('.item-add');
     if(btns[idx]) {
@@ -1892,8 +1891,8 @@ async function renderInfoLoja() {
     '</select></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Tempo médio de entrega</label>' +
     '<input type="text" id="loja-tempo-input" class="modal-campo" style="margin:0;" value="' + (est.tempo_entrega || '25-35 min') + '"></div>' +
-    '<div class="form-grupo" style="margin-top:12px;"><label>Taxa base de entrega (R$)</label>' +
-    '<input type="number" id="loja-taxa-input" class="modal-campo" style="margin:0;" min="2" max="20" step="0.50" value="' + (est.taxa_entrega || '4.00') + '"></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label style="color:var(--texto2);">Taxa de entrega</label>' +
+    '<div style="padding:12px;border-radius:10px;background:var(--cinza2);font-size:13px;color:var(--texto2);">R$ 2,00 – R$ 4,00 · calculada automaticamente por distância</div></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Pedido mínimo (R$)</label>' +
     '<input type="number" id="loja-minimo-input" class="modal-campo" style="margin:0;" min="0" step="0.50" placeholder="0 = sem mínimo" value="' + (est.valor_minimo || '0') + '"></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>WhatsApp para notificações</label>' +
@@ -1930,8 +1929,7 @@ async function salvarInfoLoja() {
   var emoji = document.getElementById('loja-emoji-input') ? document.getElementById('loja-emoji-input').value.trim() : null;
   var cat = document.getElementById('loja-cat-select') ? document.getElementById('loja-cat-select').value : null;
   var tempo = document.getElementById('loja-tempo-input') ? document.getElementById('loja-tempo-input').value.trim() : null;
-  var taxaStr = document.getElementById('loja-taxa-input') ? document.getElementById('loja-taxa-input').value : null;
-  var taxa = taxaStr ? parseFloat(taxaStr) : null;
+  var taxa = null;
   var aberto = document.getElementById('loja-aberta') ? document.getElementById('loja-aberta').checked : null;
   var minimoStr = document.getElementById('loja-minimo-input') ? document.getElementById('loja-minimo-input').value : null;
   var minimo = minimoStr !== null ? parseFloat(minimoStr) : null;
