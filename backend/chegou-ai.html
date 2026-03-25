@@ -2300,12 +2300,16 @@ async function renderAdmin(secao) {
       '<div class="tabela">' +
       (motos.length === 0 ? '<div class="tabela-row"><div class="info">Nenhum motoboy cadastrado.</div></div>' :
       motos.map(function(m) {
-        var btnStatus = m.ativo 
-          ? '<button class="btn-acao secundario" onclick="adminToggleMotoboy(\'' + m.id + '\')" style="margin-left:10px;padding:6px 12px;">Desativar</button>'
-          : '<button class="btn-acao" onclick="adminToggleMotoboy(\'' + m.id + '\')" style="margin-left:10px;padding:6px 12px;background:var(--verde);">Ativar</button>';
+        var btnStatus = m.ativo
+          ? '<button class="btn-acao secundario" onclick="adminToggleMotoboy(\'' + m.id + '\')" style="padding:6px 12px;">Desativar</button>'
+          : '<button class="btn-acao" onclick="adminToggleMotoboy(\'' + m.id + '\')" style="padding:6px 12px;background:var(--verde);">Ativar</button>';
+        var mData = encodeURIComponent(JSON.stringify(m));
         return '<div class="tabela-row" style="align-items:center;">' +
-          '<div class="info"><div class="nome">' + m.nome + (m.disponivel ? ' 🟢' : ' 🔴') + (m.ativo ? '' : ' <i>(Inativo)</i>') + '</div></div>' +
-          '<div>' + btnStatus + '</div>' +
+          '<div class="info"><div class="nome">' + sanitizar(m.nome) + (m.disponivel ? ' 🟢' : ' 🔴') + (m.ativo ? '' : ' <i>(Inativo)</i>') + '</div>' +
+          '<div style="font-size:12px;color:var(--texto2);">' + sanitizar(m.telefone || '') + (m.moto ? ' · ' + sanitizar(m.moto) : '') + '</div></div>' +
+          '<div style="display:flex;gap:6px;">' +
+          '<button class="btn-acao" onclick="adminEditarMotoboy(decodeURIComponent(\'' + mData + '\'))" style="padding:6px 12px;">Editar</button>' +
+          btnStatus + '</div>' +
         '</div>';
       }).join('')) +
       '</div>';
@@ -2364,6 +2368,38 @@ async function adminToggleMotoboy(id) {
   try {
     const res = await apiCall('/api/admin/motoboys/' + id + '/toggle', { method: 'PATCH' });
     alert(res.message);
+    renderAdmin('motoboys');
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+function adminEditarMotoboy(mJson) {
+  var m = typeof mJson === 'string' ? JSON.parse(mJson) : mJson;
+  var html =
+    '<div style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;" id="modal-admin-motoboy">' +
+    '<div style="background:var(--cinza2);border-radius:16px;padding:24px;width:90%;max-width:400px;max-height:90vh;overflow-y:auto;">' +
+    '<h3 style="margin-bottom:16px;">✏️ Editar motoboy</h3>' +
+    '<div class="form-grupo"><label>Nome completo</label><input id="adm-moto-nome" class="modal-campo" style="margin:0;" value="' + sanitizar(m.nome || '') + '"></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>Telefone</label><input id="adm-moto-tel" class="modal-campo" style="margin:0;" placeholder="97999999999" value="' + sanitizar(m.telefone || '') + '" oninput="mascaraTelefone(this)"></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>Moto (modelo/placa)</label><input id="adm-moto-moto" class="modal-campo" style="margin:0;" placeholder="Ex: Honda CG 150 - ABC1234" value="' + sanitizar(m.moto || '') + '"></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>Chave Pix</label><input id="adm-moto-pix" class="modal-campo" style="margin:0;" placeholder="CPF, e-mail, telefone ou chave aleatória" value="' + sanitizar(m.chave_pix || '') + '"></div>' +
+    '<div style="display:flex;gap:8px;margin-top:16px;">' +
+    '<button class="btn-principal" style="flex:1;" onclick="adminSalvarMotoboy(\'' + m.id + '\')">Salvar</button>' +
+    '<button class="btn-acao secundario" style="flex:1;" onclick="document.getElementById(\'modal-admin-motoboy\').remove()">Cancelar</button>' +
+    '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function adminSalvarMotoboy(id) {
+  var body = {
+    nome: document.getElementById('adm-moto-nome').value.trim(),
+    telefone: document.getElementById('adm-moto-tel').value.replace(/\D/g,''),
+    moto: document.getElementById('adm-moto-moto').value.trim(),
+    chave_pix: document.getElementById('adm-moto-pix').value.trim(),
+  };
+  if(!body.nome) return alert('Nome é obrigatório');
+  try {
+    await apiCall('/api/admin/motoboys/' + id, { method: 'PUT', body });
+    document.getElementById('modal-admin-motoboy').remove();
     renderAdmin('motoboys');
   } catch(e) { alert('Erro: ' + e.message); }
 }

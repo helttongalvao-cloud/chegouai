@@ -386,6 +386,26 @@ router.patch('/establishments/:id/toggle', async (req, res, next) => {
   }
 });
 // =============================================
+// PUT /api/admin/motoboys/:id — Editar dados do motoboy
+// =============================================
+router.put('/motoboys/:id', async (req, res, next) => {
+  try {
+    const campos = {};
+    ['nome', 'telefone', 'moto', 'chave_pix'].forEach((k) => {
+      if (req.body[k] !== undefined) campos[k] = req.body[k];
+    });
+    const { data, error } = await supabaseAdmin
+      .from('motoboys')
+      .update(campos)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // PATCH /api/admin/motoboys/:id/toggle — Ativar/desativar motoboy
 // =============================================
 router.patch('/motoboys/:id/toggle', async (req, res, next) => {
