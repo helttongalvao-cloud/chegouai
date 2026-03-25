@@ -146,6 +146,7 @@ router.post(
     body('categoria').isIn(['restaurante', 'mercado', 'farmacia', 'lanche', 'bebida']),
     body('chave_pix').optional().trim(),
     body('mpUserId').optional().trim(),
+    body('whatsapp').optional().trim().matches(/^\d{0,15}$/),
     body('lat').optional().isFloat({ min: -90, max: 90 }),
     body('lng').optional().isFloat({ min: -180, max: 180 }),
   ],
@@ -155,7 +156,7 @@ router.post(
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const { nome, telefone, email, senha, categoria, chave_pix, mpUserId, lat, lng } = req.body;
+    const { nome, telefone, email, senha, categoria, chave_pix, mpUserId, whatsapp, lat, lng } = req.body;
 
     let authUserId = null;
     try {
@@ -201,6 +202,7 @@ router.post(
           nome,
           categoria,
           mp_user_id: chave_pix || mpUserId || null,
+          whatsapp: whatsapp || null,
           cadastro_data: new Date().toISOString(),
           lat: lat || null,
           lng: lng || null,
@@ -274,14 +276,10 @@ router.post(
         userId = authData.user.id;
       }
 
-      // PASSO 2: Atualizar perfil para motoboy
-      // Aguardar um instante para o trigger criar o profile
-      await new Promise(r => setTimeout(r, 500));
-
+      // PASSO 2: Upsert do perfil para motoboy (sem sleep — idempotente)
       const { error: profileErr } = await supabaseAdmin
         .from('profiles')
-        .update({ nome, telefone, email, perfil: 'motoboy' })
-        .eq('id', userId);
+        .upsert({ id: userId, nome, telefone, email, perfil: 'motoboy' });
 
       if (profileErr) {
         console.error('[Admin] Erro update profile:', profileErr.message);
@@ -412,6 +410,75 @@ router.patch('/motoboys/:id/toggle', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// =============================================
+// GET /api/admin/cupons — Listar cupons
+// =============================================
+router.get('/cupons', async (req, res, next) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('cupons')
+      .select('*')
+      .order('criado_em', { ascending: false });
+    if (error) throw error;
+    res.json(data);
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// POST /api/admin/cupons — Criar cupom
+// =============================================
+router.post(
+  '/cupons',
+  [
+    body('codigo').trim().isLength({ min: 2, max: 50 }).withMessage('Código inválido'),
+    body('desconto_tipo').isIn(['percentual', 'fixo']).withMessage('Tipo inválido'),
+    body('desconto_valor').isFloat({ min: 0.01 }).withMessage('Valor inválido'),
+    body('usos_max').optional().isInt({ min: 1 }),
+    body('validade').optional().isISO8601().withMessage('Data inválida'),
+  ],
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+    const { codigo, desconto_tipo, desconto_valor, usos_max, validade } = req.body;
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('cupons')
+        .insert({
+          codigo: codigo.toUpperCase(),
+          desconto_tipo,
+          desconto_valor,
+          usos_max: usos_max || 1,
+          validade: validade || null,
+        })
+        .select()
+        .single();
+      if (error) {
+        if (error.code === '23505') return res.status(409).json({ error: 'Código de cupom já existe' });
+        throw error;
+      }
+      res.status(201).json(data);
+    } catch (err) { next(err); }
+  }
+);
+
+// =============================================
+// PATCH /api/admin/cupons/:id — Ativar/desativar cupom
+// =============================================
+router.patch('/cupons/:id', async (req, res, next) => {
+  try {
+    const { ativo } = req.body;
+    const { data, error } = await supabaseAdmin
+      .from('cupons')
+      .update({ ativo: !!ativo })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

@@ -15,7 +15,7 @@ router.get('/', async (req, res, next) => {
 
     let query = supabaseAdmin
       .from('estabelecimentos')
-      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng')
+      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng, valor_minimo, horarios')
       .eq('ativo', true)
       .order('nome');
 
@@ -49,13 +49,32 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
       .from('estabelecimentos')
       .select(`
         id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng,
-        produtos (id, nome, descricao, preco, emoji, disponivel)
+        valor_minimo, horarios,
+        produtos (id, nome, descricao, preco, emoji, disponivel, imagem_url, categoria)
       `)
       .eq('id', req.params.id)
       .eq('ativo', true)
       .single();
 
     if (error || !est) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
+
+    // Calcular aberto com base em horarios se configurado
+    if (est.horarios && Object.keys(est.horarios).length > 0) {
+      const agora = new Date();
+      const diasMap = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+      const diaKey = diasMap[agora.getDay()];
+      const horDia = est.horarios[diaKey];
+      if (horDia && horDia.abre && horDia.fecha) {
+        const [hA, mA] = horDia.abre.split(':').map(Number);
+        const [hF, mF] = horDia.fecha.split(':').map(Number);
+        const minAtual = agora.getHours() * 60 + agora.getMinutes();
+        const minAbre = hA * 60 + mA;
+        const minFecha = hF * 60 + mF;
+        est.aberto = minAtual >= minAbre && minAtual <= minFecha;
+      } else {
+        est.aberto = false; // dia não configurado = fechado
+      }
+    }
 
     // Filtrar apenas produtos disponíveis
     est.produtos = est.produtos.filter((p) => p.disponivel);
@@ -94,13 +113,14 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
     const pedidosAbertos = await supabaseAdmin
       .from('pedidos')
       .select(`
-        id, status, pagamento_status, total, subtotal, taxa_entrega,
+        id, status, pagamento_status, forma_pagamento, total, subtotal, taxa_entrega,
         endereco_entrega, telefone_cliente, criado_em,
-        itens_pedido (nome, quantidade, preco_unitario),
+        itens_pedido (nome, quantidade, preco_unitario, observacao),
         motoboys (nome, telefone)
       `)
       .eq('estabelecimento_id', est.id)
-      .in('status', ['aceito', 'preparando', 'pronto']) // Exclui pendente = checkout abandonado
+      .in('status', ['pendente', 'aceito', 'preparando', 'pronto'])
+      .eq('pagamento_status', 'aprovado') // Exclui checkouts abandonados
       .order('criado_em', { ascending: true });
 
     const faturamento = pedidosHoje?.reduce((s, p) => s + (p.subtotal || 0), 0) || 0;
@@ -134,8 +154,11 @@ router.put(
     body('categoria').optional().isIn(['restaurante', 'mercado', 'farmacia', 'lanche', 'bebida']),
     body('tempo_entrega').optional().trim().isLength({ max: 30 }).escape(),
     body('taxa_entrega').optional().isFloat({ min: 0, max: 50 }).withMessage('Taxa de entrega inválida'),
+    body('valor_minimo').optional().isFloat({ min: 0 }).withMessage('Valor mínimo inválido'),
     body('aberto').optional().isBoolean(),
     body('mp_user_id').optional().trim().isLength({ max: 50 }),
+    body('whatsapp').optional().trim().matches(/^\d{0,15}$/).withMessage('WhatsApp inválido'),
+    body('horarios').optional().isObject(),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -144,7 +167,7 @@ router.put(
     }
 
     const campos = {};
-    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'aberto', 'mp_user_id'].forEach((key) => {
+    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'valor_minimo', 'aberto', 'mp_user_id', 'whatsapp', 'horarios'].forEach((key) => {
       if (req.body[key] !== undefined) campos[key] = req.body[key];
     });
 
@@ -202,6 +225,8 @@ router.post(
     body('preco').isFloat({ min: 0.01 }).withMessage('Preço inválido'),
     body('emoji').optional().trim().isLength({ max: 10 }),
     body('disponivel').optional().isBoolean(),
+    body('categoria').optional().trim().isLength({ max: 50 }),
+    body('imagem_url').optional().trim().isURL().withMessage('URL de imagem inválida'),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -218,18 +243,22 @@ router.post(
 
       if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
-      const { nome, descricao, preco, emoji, disponivel } = req.body;
+      const { nome, descricao, preco, emoji, disponivel, categoria, imagem_url } = req.body;
+
+      const produtoData = {
+        estabelecimento_id: est.id,
+        nome,
+        descricao: descricao || '',
+        preco: parseFloat(preco),
+        emoji: emoji || '🍽️',
+        disponivel: disponivel !== false,
+      };
+      if (categoria) produtoData.categoria = categoria;
+      if (imagem_url) produtoData.imagem_url = imagem_url;
 
       const { data, error } = await supabaseAdmin
         .from('produtos')
-        .insert({
-          estabelecimento_id: est.id,
-          nome,
-          descricao: descricao || '',
-          preco: parseFloat(preco),
-          emoji: emoji || '🍽️',
-          disponivel: disponivel !== false,
-        })
+        .insert(produtoData)
         .select()
         .single();
 
@@ -262,7 +291,7 @@ router.put(
       if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
       const campos = {};
-      ['nome', 'descricao', 'preco', 'emoji', 'disponivel'].forEach((key) => {
+      ['nome', 'descricao', 'preco', 'emoji', 'disponivel', 'categoria', 'imagem_url'].forEach((key) => {
         if (req.body[key] !== undefined) campos[key] = req.body[key];
       });
 

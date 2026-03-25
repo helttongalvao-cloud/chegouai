@@ -279,6 +279,18 @@ router.get('/status/:pedidoId', requireAuth, [
 // HELPER — Processar pagamento aprovado
 // =============================================
 async function processarPagamentoAprovado(orderId, pagamento) {
+  // 0. Idempotência — não processar se já aprovado
+  const { data: pedidoAtual } = await supabaseAdmin
+    .from('pedidos')
+    .select('pagamento_status')
+    .eq('id', orderId)
+    .single();
+
+  if (!pedidoAtual || pedidoAtual.pagamento_status === 'aprovado') {
+    console.log(`[Webhook] Pedido ${orderId} já processado — ignorando duplicata`);
+    return;
+  }
+
   // 1. Atualizar status do pedido
   const { data: pedido } = await supabaseAdmin
     .from('pedidos')

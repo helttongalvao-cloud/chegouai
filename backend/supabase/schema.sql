@@ -232,3 +232,71 @@ CREATE POLICY "itens_select_cliente" ON public.itens_pedido
 -- Habilitar realtime na tabela pedidos para notificações ao lojista/motoboy
 ALTER PUBLICATION supabase_realtime ADD TABLE public.pedidos;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.repasses;
+
+-- =============================================
+-- MIGRATIONS — novas features
+-- =============================================
+
+-- Produtos: imagem e categoria
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS imagem_url TEXT;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS categoria TEXT DEFAULT 'principal';
+
+-- Itens do pedido: observação do cliente
+ALTER TABLE public.itens_pedido ADD COLUMN IF NOT EXISTS observacao TEXT;
+
+-- Pedidos: tipo, lista de compras, troco, cupom, desconto
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS tipo TEXT DEFAULT 'normal';
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS lista_compras TEXT;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS troco_para NUMERIC(10,2);
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS cupom_codigo TEXT;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS desconto NUMERIC(10,2) DEFAULT 0;
+
+-- Pedidos: ampliar forma_pagamento para dinheiro e maquininha
+ALTER TABLE public.pedidos DROP CONSTRAINT IF EXISTS pedidos_forma_pagamento_check;
+ALTER TABLE public.pedidos ADD CONSTRAINT pedidos_forma_pagamento_check
+  CHECK (forma_pagamento IN ('pix', 'cartao', 'dinheiro', 'maquininha'));
+
+-- Estabelecimentos: valor mínimo, horários, whatsapp
+ALTER TABLE public.estabelecimentos ADD COLUMN IF NOT EXISTS valor_minimo NUMERIC(10,2) DEFAULT 0;
+ALTER TABLE public.estabelecimentos ADD COLUMN IF NOT EXISTS horarios JSONB;
+ALTER TABLE public.estabelecimentos ADD COLUMN IF NOT EXISTS whatsapp TEXT;
+
+-- Motoboys: lat/lng e chave_pix
+ALTER TABLE public.motoboys ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
+ALTER TABLE public.motoboys ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;
+ALTER TABLE public.motoboys ADD COLUMN IF NOT EXISTS chave_pix TEXT;
+
+-- Tabela de avaliações
+CREATE TABLE IF NOT EXISTS public.avaliacoes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pedido_id UUID REFERENCES public.pedidos(id) ON DELETE CASCADE,
+  cliente_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  estabelecimento_id UUID REFERENCES public.estabelecimentos(id) ON DELETE SET NULL,
+  nota INTEGER CHECK (nota BETWEEN 1 AND 5),
+  comentario TEXT,
+  criado_em TIMESTAMPTZ DEFAULT now()
+);
+
+-- Tabela de mensagens/chat
+CREATE TABLE IF NOT EXISTS public.mensagens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pedido_id UUID REFERENCES public.pedidos(id) ON DELETE CASCADE,
+  remetente_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  remetente_tipo TEXT CHECK (remetente_tipo IN ('cliente','estabelecimento')),
+  texto TEXT NOT NULL,
+  lida BOOLEAN DEFAULT false,
+  criado_em TIMESTAMPTZ DEFAULT now()
+);
+
+-- Tabela de cupons de desconto
+CREATE TABLE IF NOT EXISTS public.cupons (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  codigo TEXT UNIQUE NOT NULL,
+  desconto_tipo TEXT CHECK (desconto_tipo IN ('percentual','fixo')),
+  desconto_valor NUMERIC(10,2) NOT NULL,
+  usos_max INTEGER DEFAULT 1,
+  usos_atual INTEGER DEFAULT 0,
+  validade TIMESTAMPTZ,
+  ativo BOOLEAN DEFAULT true,
+  criado_em TIMESTAMPTZ DEFAULT now()
+);

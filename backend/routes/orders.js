@@ -20,6 +20,7 @@ router.post(
       .withMessage('Pedido deve ter pelo menos 1 item'),
     body('itens.*.produtoId').isUUID().withMessage('Produto inválido'),
     body('itens.*.quantidade').isInt({ min: 1 }).withMessage('Quantidade inválida'),
+    body('itens.*.observacao').optional().trim().isLength({ max: 200 }).escape(),
     body('enderecoEntrega')
       .trim()
       .isLength({ min: 5, max: 300 })
@@ -29,8 +30,10 @@ router.post(
       .matches(/^\d{10,11}$/)
       .withMessage('Telefone inválido'),
     body('formaPagamento')
-      .isIn(['pix', 'cartao'])
+      .isIn(['pix', 'cartao', 'dinheiro', 'maquininha'])
       .withMessage('Forma de pagamento inválida'),
+    body('trocoPara').optional().isFloat({ min: 0 }).withMessage('Valor de troco inválido'),
+    body('cupom').optional().trim().isLength({ max: 50 }).escape(),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -38,14 +41,14 @@ router.post(
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const { estabelecimentoId, itens, enderecoEntrega, telefoneCliente, formaPagamento } = req.body;
+    const { estabelecimentoId, itens, enderecoEntrega, telefoneCliente, formaPagamento, trocoPara, cupom } = req.body;
     const clienteId = req.user.id;
 
     try {
       // 1. Validar estabelecimento
       const { data: est, error: estErr } = await supabaseAdmin
         .from('estabelecimentos')
-        .select('id, nome, aberto, taxa_entrega, cadastro_data, ativo, user_id')
+        .select('id, nome, aberto, taxa_entrega, cadastro_data, ativo, user_id, valor_minimo, whatsapp')
         .eq('id', estabelecimentoId)
         .eq('ativo', true)
         .single();
@@ -79,15 +82,24 @@ router.post(
         const produto = produtosMap[item.produtoId];
         const itemTotal = parseFloat((produto.preco * item.quantidade).toFixed(2));
         subtotal += itemTotal;
-        return {
+        const itemObj = {
           produto_id: item.produtoId,
           nome: produto.nome,
           preco_unitario: produto.preco,
           quantidade: item.quantidade,
           subtotal: itemTotal,
         };
+        if (item.observacao) itemObj.observacao = item.observacao;
+        return itemObj;
       });
       subtotal = parseFloat(subtotal.toFixed(2));
+
+      // 3b. Validar valor mínimo
+      if (est.valor_minimo && subtotal < parseFloat(est.valor_minimo)) {
+        return res.status(400).json({
+          error: `Pedido mínimo é R$${parseFloat(est.valor_minimo).toFixed(2).replace('.', ',')}`,
+        });
+      }
 
       // 4. Calcular split (incluindo comissão)
       const split = calcularSplit({
@@ -96,25 +108,69 @@ router.post(
         cadastroData: est.cadastro_data,
       });
 
-      // 5. Criar pedido (Usar a taxa informada pelo cliente, se for menor ou igual à da loja, ou validá-la. Para simplificar no MVP, aceitar a taxa enviada ou fallback)
-      const taxaFinal = req.body.taxaEntrega !== undefined ? parseFloat(req.body.taxaEntrega) : split.taxaEntrega;
-      const totalFinal = parseFloat((subtotal + taxaFinal).toFixed(2));
-      
+      // 4b. Validar e aplicar cupom
+      let desconto = 0;
+      let cupomCodigo = null;
+      if (cupom) {
+        const { data: cupomData, error: cupomErr } = await supabaseAdmin
+          .from('cupons')
+          .select('*')
+          .eq('codigo', cupom.toUpperCase())
+          .eq('ativo', true)
+          .single();
+
+        if (cupomErr || !cupomData) {
+          return res.status(400).json({ error: 'Cupom inválido ou expirado' });
+        }
+        if (cupomData.validade && new Date(cupomData.validade) < new Date()) {
+          return res.status(400).json({ error: 'Cupom expirado' });
+        }
+        if (cupomData.usos_atual >= cupomData.usos_max) {
+          return res.status(400).json({ error: 'Cupom esgotado' });
+        }
+        if (cupomData.desconto_tipo === 'percentual') {
+          desconto = parseFloat((subtotal * cupomData.desconto_valor / 100).toFixed(2));
+        } else {
+          desconto = Math.min(parseFloat(cupomData.desconto_valor), subtotal);
+        }
+        cupomCodigo = cupomData.codigo;
+        // Incrementar uso (não bloqueia em caso de falha)
+        supabaseAdmin.from('cupons').update({ usos_atual: cupomData.usos_atual + 1 }).eq('id', cupomData.id).then(() => {});
+      }
+
+      // 5. Validar e calcular taxa de entrega final
+      let taxaFinal = split.taxaEntrega;
+      if (req.body.taxaEntrega !== undefined) {
+        const taxaCliente = parseFloat(req.body.taxaEntrega);
+        if (isNaN(taxaCliente) || taxaCliente < 2 || taxaCliente > 15) {
+          return res.status(400).json({ error: 'Taxa de entrega inválida (deve ser entre R$2 e R$15)' });
+        }
+        taxaFinal = taxaCliente;
+      }
+      const totalFinal = parseFloat(Math.max(0, subtotal + taxaFinal - desconto).toFixed(2));
+
+      // Para dinheiro/maquininha: pagamento confirmado na entrega
+      const pagamentoNaEntrega = formaPagamento === 'dinheiro' || formaPagamento === 'maquininha';
+
+      const pedidoInsert = {
+        cliente_id: clienteId,
+        estabelecimento_id: estabelecimentoId,
+        status: 'pendente',
+        endereco_entrega: enderecoEntrega,
+        telefone_cliente: telefoneCliente,
+        subtotal,
+        taxa_entrega: taxaFinal,
+        comissao_plataforma: split.valorPlataforma,
+        total: totalFinal,
+        forma_pagamento: formaPagamento,
+        pagamento_status: pagamentoNaEntrega ? 'aprovado' : 'pendente',
+      };
+      if (desconto > 0) { pedidoInsert.desconto = desconto; pedidoInsert.cupom_codigo = cupomCodigo; }
+      if (trocoPara) pedidoInsert.troco_para = trocoPara;
+
       const { data: pedido, error: pedidoErr } = await supabaseAdmin
         .from('pedidos')
-        .insert({
-          cliente_id: clienteId,
-          estabelecimento_id: estabelecimentoId,
-          status: 'pendente',
-          endereco_entrega: enderecoEntrega,
-          telefone_cliente: telefoneCliente,
-          subtotal,
-          taxa_entrega: taxaFinal,
-          comissao_plataforma: split.valorPlataforma,
-          total: totalFinal,
-          forma_pagamento: formaPagamento,
-          pagamento_status: 'pendente',
-        })
+        .insert(pedidoInsert)
         .select()
         .single();
 
@@ -137,11 +193,27 @@ router.post(
         );
       }
 
+      // 8. Link WhatsApp para o lojista (se configurado)
+      let whatsappLink = null;
+      if (est.whatsapp) {
+        const itensTexto = itensPedido.map((i) => `${i.quantidade}x ${i.nome}`).join(', ');
+        const msg = encodeURIComponent(`🔔 Novo pedido!\nTotal: R$ ${totalFinal.toFixed(2)}\nItens: ${itensTexto}\nEntrega: ${enderecoEntrega}`);
+        whatsappLink = `https://wa.me/55${est.whatsapp}?text=${msg}`;
+      }
+
+      const mensagemPagamento = {
+        pix: 'Pedido criado. Gere o QR Code Pix para pagar.',
+        cartao: 'Pedido criado. Redirecione para o checkout de cartão.',
+        dinheiro: 'Pedido confirmado! Pague em dinheiro na entrega.',
+        maquininha: 'Pedido confirmado! Pague na maquininha na entrega.',
+      };
+
       res.status(201).json({
         pedidoId: pedido.id,
         status: pedido.status,
         total: totalFinal,
         subtotal,
+        desconto,
         taxaEntrega: taxaFinal,
         comissao: split.comissao,
         split: {
@@ -150,9 +222,8 @@ router.post(
           plataforma: split.valorPlataforma,
         },
         formaPagamento,
-        mensagem: formaPagamento === 'pix'
-          ? 'Pedido criado. Gere o QR Code Pix para pagar.'
-          : 'Pedido criado. Redirecione para o checkout de cartão.',
+        whatsappLink,
+        mensagem: mensagemPagamento[formaPagamento] || 'Pedido criado.',
       });
     } catch (err) {
       console.error('[Orders] Criar pedido:', err.message);
@@ -160,6 +231,38 @@ router.post(
     }
   }
 );
+
+// =============================================
+// GET /api/orders/cupom/:codigo — Validar cupom
+// =============================================
+router.get('/cupom/:codigo', requireAuth, async (req, res, next) => {
+  try {
+    const subtotal = parseFloat(req.query.subtotal) || 0;
+    const codigo = req.params.codigo.toUpperCase();
+
+    const { data: cupom, error } = await supabaseAdmin
+      .from('cupons')
+      .select('*')
+      .eq('codigo', codigo)
+      .eq('ativo', true)
+      .single();
+
+    if (error || !cupom) return res.status(404).json({ error: 'Cupom não encontrado ou inativo' });
+    if (cupom.validade && new Date(cupom.validade) < new Date()) return res.status(400).json({ error: 'Cupom expirado' });
+    if (cupom.usos_atual >= cupom.usos_max) return res.status(400).json({ error: 'Cupom esgotado' });
+
+    let desconto = 0;
+    if (cupom.desconto_tipo === 'percentual') {
+      desconto = parseFloat((subtotal * cupom.desconto_valor / 100).toFixed(2));
+    } else {
+      desconto = Math.min(parseFloat(cupom.desconto_valor), subtotal);
+    }
+
+    res.json({ codigo: cupom.codigo, desconto_tipo: cupom.desconto_tipo, desconto_valor: cupom.desconto_valor, desconto });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // =============================================
 // GET /api/orders/available — Entregas disponíveis + ativa (motoboy)
@@ -213,8 +316,8 @@ router.get('/', requireAuth, async (req, res, next) => {
       .select(`
         id, status, pagamento_status, total, subtotal, taxa_entrega,
         forma_pagamento, criado_em, endereco_entrega, telefone_cliente,
-        estabelecimentos (nome, emoji),
-        itens_pedido (nome, quantidade, preco_unitario)
+        estabelecimentos (id, nome, emoji),
+        itens_pedido (nome, quantidade, preco_unitario, observacao)
       `)
       .order('criado_em', { ascending: false })
       .limit(50);
@@ -256,7 +359,7 @@ router.get('/:id', requireAuth, [param('id').isUUID()], async (req, res, next) =
       .from('pedidos')
       .select(`
         *,
-        estabelecimentos (nome, emoji, telefone),
+        estabelecimentos (nome, emoji, telefone, user_id),
         itens_pedido (*),
         motoboys (id, nome, telefone, lat, lng)
       `)
@@ -265,11 +368,11 @@ router.get('/:id', requireAuth, [param('id').isUUID()], async (req, res, next) =
 
     if (error || !pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
 
-    // Apenas o próprio cliente ou admin/estabelecimento pode ver
+    // Apenas o próprio cliente, admin, ou o estabelecimento dono do pedido pode ver
     const perfil = req.user.profile.perfil;
     const isOwner = pedido.cliente_id === req.user.id;
     const isAdmin = perfil === 'admin';
-    const isEstabelecimento = perfil === 'estabelecimento';
+    const isEstabelecimento = perfil === 'estabelecimento' && pedido.estabelecimentos?.user_id === req.user.id;
 
     if (!isOwner && !isAdmin && !isEstabelecimento) {
       return res.status(403).json({ error: 'Acesso negado' });
@@ -316,12 +419,23 @@ router.patch(
     }
 
     try {
-      const { data: pedido, error } = await supabaseAdmin
+      // Para estabelecimento, restringir ao próprio pedido
+      let updateQuery = supabaseAdmin
         .from('pedidos')
         .update({ status, atualizado_em: new Date().toISOString() })
-        .eq('id', orderId)
-        .select()
-        .single();
+        .eq('id', orderId);
+
+      if (perfil === 'estabelecimento') {
+        const { data: est } = await supabaseAdmin
+          .from('estabelecimentos')
+          .select('id')
+          .eq('user_id', req.user.id)
+          .single();
+        if (!est) return res.status(403).json({ error: 'Estabelecimento não encontrado' });
+        updateQuery = updateQuery.eq('estabelecimento_id', est.id);
+      }
+
+      const { data: pedido, error } = await updateQuery.select().single();
 
       if (error || !pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
 
@@ -338,15 +452,24 @@ router.patch(
         enviarPush(pedido.cliente_id, 'Chegou Aí', msgStatus[status], { pedidoId: orderId, status });
       }
 
-      // Ao confirmar entrega, criar repasse do motoboy automaticamente
+      // Ao confirmar entrega, criar repasse do motoboy automaticamente (idempotente)
       if (status === 'entregue' && pedido.motoboy_id) {
-        await supabaseAdmin.from('repasses').insert({
-          pedido_id: orderId,
-          motoboy_id: pedido.motoboy_id,
-          tipo: 'motoboy',
-          valor: pedido.taxa_entrega || 0,
-          status: 'pendente',
-        });
+        const { data: repasseExistente } = await supabaseAdmin
+          .from('repasses')
+          .select('id')
+          .eq('pedido_id', orderId)
+          .eq('tipo', 'motoboy')
+          .maybeSingle();
+
+        if (!repasseExistente) {
+          await supabaseAdmin.from('repasses').insert({
+            pedido_id: orderId,
+            motoboy_id: pedido.motoboy_id,
+            tipo: 'motoboy',
+            valor: pedido.taxa_entrega || 0,
+            status: 'pendente',
+          });
+        }
       }
 
       res.json({ message: `Status atualizado para: ${status}`, pedido });
@@ -462,5 +585,49 @@ router.patch('/motoboy/location', requireRole('motoboy'), async (req, res, next)
     next(err);
   }
 });
+
+// =============================================
+// PATCH /api/orders/:id/cancelar — Cliente cancela pedido antes do pagamento
+// =============================================
+router.patch(
+  '/:id/cancelar',
+  requireAuth,
+  [param('id').isUUID()],
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+
+    try {
+      const { data: pedido, error: fetchErr } = await supabaseAdmin
+        .from('pedidos')
+        .select('id, cliente_id, pagamento_status, status')
+        .eq('id', req.params.id)
+        .single();
+
+      if (fetchErr || !pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
+
+      if (pedido.cliente_id !== req.user.id) {
+        return res.status(403).json({ error: 'Acesso negado' });
+      }
+
+      if (pedido.pagamento_status !== 'pendente') {
+        return res.status(400).json({ error: 'Pedido não pode ser cancelado após o pagamento' });
+      }
+
+      const { data: atualizado, error: updateErr } = await supabaseAdmin
+        .from('pedidos')
+        .update({ status: 'cancelado', pagamento_status: 'cancelado', atualizado_em: new Date().toISOString() })
+        .eq('id', req.params.id)
+        .select()
+        .single();
+
+      if (updateErr) throw updateErr;
+
+      res.json({ message: 'Pedido cancelado com sucesso', pedido: atualizado });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 module.exports = router;
