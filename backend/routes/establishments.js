@@ -116,7 +116,8 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         id, status, pagamento_status, forma_pagamento, total, subtotal, taxa_entrega,
         endereco_entrega, telefone_cliente, criado_em,
         itens_pedido (nome, quantidade, preco_unitario, observacao),
-        motoboys (nome, telefone)
+        motoboys (nome, telefone),
+        profiles!pedidos_cliente_id_fkey (nome)
       `)
       .eq('estabelecimento_id', est.id)
       .in('status', ['pendente', 'aceito', 'preparando', 'pronto'])

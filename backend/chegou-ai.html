@@ -482,26 +482,6 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
           </div>
           <div class="radio"></div>
         </div>
-        <div class="opcao-pag" data-tipo="dinheiro" onclick="selecionarPag(this,'dinheiro')">
-          <div class="pag-icon">💵</div>
-          <div class="pag-info">
-            <div class="pag-nome">Dinheiro</div>
-            <div class="pag-desc">Pague na entrega</div>
-          </div>
-          <div class="radio"></div>
-        </div>
-        <div id="campo-troco" style="display:none;margin-top:8px;">
-          <input type="number" id="troco-para" placeholder="Troco para R$ (opcional)" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;" min="0" step="0.01">
-          <div style="font-size:11px;color:var(--texto2);margin-top:4px;">Deixe em branco se não precisar de troco</div>
-        </div>
-        <div class="opcao-pag" data-tipo="maquininha" onclick="selecionarPag(this,'maquininha')">
-          <div class="pag-icon">📱</div>
-          <div class="pag-info">
-            <div class="pag-nome">Maquininha</div>
-            <div class="pag-desc">Débito/crédito na entrega</div>
-          </div>
-          <div class="radio"></div>
-        </div>
       </div>
     </div>
     <div class="secao-checkout">
@@ -673,7 +653,7 @@ var realtimeChannel = null;
 // Token de sessão (gerenciado pelo backend/Supabase)
 var authToken = localStorage.getItem('chegouai_token') || null;
 var currentUser = JSON.parse(localStorage.getItem('chegouai_user') || 'null');
-var pedidoAtualId = null; // ID do pedido criado no backend
+var pedidoAtualId = localStorage.getItem('chegouai_pedido_id') || null;
 
 // Helper para chamadas autenticadas à API
 async function apiCall(path, options) {
@@ -1707,6 +1687,7 @@ async function confirmarPedido() {
     }
 
     pedidoAtualId = pedidoResp.pedidoId;
+    localStorage.setItem('chegouai_pedido_id', pedidoAtualId);
     cupomAplicado = null;
     esconderLoadingPagamento();
 
@@ -2548,13 +2529,20 @@ async function renderMotoboy() {
     // Entrega ativa (a caminho)
     if(ativa) {
       var ganhoAtivo = 'R$ ' + parseFloat(ativa.taxa_entrega || 4).toFixed(2).replace('.',',');
+      var enderecoEnc = encodeURIComponent(ativa.endereco_entrega || '');
+      var gmapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + enderecoEnc + '&travelmode=driving';
+      var wazeUrl = 'https://waze.com/ul?q=' + enderecoEnc + '&navigate=yes';
       html += '<div class="entrega-card" style="border-color:var(--verde);">' +
         '<h4 style="color:var(--verde)">🛵 Entrega em andamento</h4>' +
         '<div class="entrega-info">' +
-          '<div class="entrega-linha"><span class="label">Loja:</span><span class="valor">' + (ativa.estabelecimentos ? ativa.estabelecimentos.nome : '—') + '</span></div>' +
-          '<div class="entrega-linha"><span class="label">Entregue em:</span><span class="valor">' + (ativa.endereco_entrega || '—') + '</span></div>' +
-          '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + ativa.telefone_cliente + '" style="color:var(--verde);text-decoration:none;">' + (ativa.telefone_cliente || '—') + ' 📞</a></span></div>' +
+          '<div class="entrega-linha"><span class="label">Loja:</span><span class="valor">' + sanitizar(ativa.estabelecimentos ? ativa.estabelecimentos.nome : '—') + '</span></div>' +
+          '<div class="entrega-linha"><span class="label">Entregue em:</span><span class="valor">' + sanitizar(ativa.endereco_entrega || '—') + '</span></div>' +
+          '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + ativa.telefone_cliente + '" style="color:var(--verde);text-decoration:none;">' + sanitizar(ativa.telefone_cliente || '—') + ' 📞</a></span></div>' +
           '<div class="entrega-linha"><span class="label">Seu ganho:</span><span class="valor" style="color:var(--verde)">' + ganhoAtivo + '</span></div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
+          '<a href="' + gmapsUrl + '" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;background:#4285F4;color:white;font-size:13px;font-weight:700;text-decoration:none;">🗺️ Google Maps</a>' +
+          '<a href="' + wazeUrl + '" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;background:#33CCFF;color:#1a1a1a;font-size:13px;font-weight:700;text-decoration:none;">📡 Waze</a>' +
         '</div>' +
         '<div class="btns-entrega"><button class="btn-acao" onclick="confirmarEntregaReal(\'' + ativa.id + '\',this)">✅ Confirmar entrega</button></div>' +
       '</div>';
@@ -3015,6 +3003,7 @@ function instalarApp() {
     window.history.replaceState({}, '', '/');
     if(payStatus === 'approved') {
       pedidoAtualId = orderId;
+      localStorage.setItem('chegouai_pedido_id', pedidoAtualId);
       setTimeout(function() { irTela('tela-confirmado'); ultimoStatusConhecido = {}; iniciarPollingPedidos(); }, 500);
     } else if(payStatus === 'failure') {
       setTimeout(function() { alert('Pagamento não aprovado. Tente novamente.'); }, 500);
@@ -3077,7 +3066,8 @@ function iniciarPollingPedidos() {
         pedidos.forEach(function(p) {
           if(!ultimoStatusConhecido[p.id]) {
             ultimoStatusConhecido[p.id] = p.status;
-            showToast('🔔', 'Novo pedido!', 'Pedido de R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') + ' para ' + (p.endereco_entrega || '').substring(0, 40));
+            var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : 'Cliente';
+            showToast('🔔', 'Novo pedido de ' + nomeCliente + '!', 'R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') + ' · ' + (p.endereco_entrega || '').substring(0, 35));
             // Recarregar a tela se estiver no painel
             if(document.getElementById('tela-estabelecimento').classList.contains('ativa')) {
               estNav(document.getElementById('est-nav-pedidos'), 'pedidos');
@@ -3101,6 +3091,7 @@ function iniciarPollingPedidos() {
             'entregue': { icon: '🎉', title: 'Entregue!', msg: 'Seu pedido foi entregue. Bom apetite!' },
           };
           if(msgs[novoStatus]) showToast(msgs[novoStatus].icon, msgs[novoStatus].title, msgs[novoStatus].msg);
+          if(novoStatus === 'entregue') { localStorage.removeItem('chegouai_pedido_id'); }
         }
 
         // Rastreamento GPS:
