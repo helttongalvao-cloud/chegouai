@@ -1256,6 +1256,12 @@ window.addEventListener('DOMContentLoaded', function() {
   if(modalProd) modalProd.addEventListener('click', function(e) {
     if(e.target === this) fecharModalProduto();
   });
+  // Restaurar sessão ao recarregar página
+  if(authToken && currentUser) {
+    ultimoStatusConhecido = {};
+    iniciarPollingPedidos();
+    entrarComo(currentUser.perfil);
+  }
 });
 
 // CARDÁPIO
@@ -3060,62 +3066,69 @@ function iniciarPollingPedidos() {
 
     try {
       if(currentUser.perfil === 'estabelecimento') {
-        // Lojista: verificar novos pedidos via dashboard
         var resp = await apiCall('/api/establishments/me/dashboard');
         var pedidos = Array.isArray(resp.pedidosAbertos) ? resp.pedidosAbertos : [];
+        // Toast para pedidos novos
         pedidos.forEach(function(p) {
           if(!ultimoStatusConhecido[p.id]) {
-            ultimoStatusConhecido[p.id] = p.status;
             var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : 'Cliente';
             showToast('🔔', 'Novo pedido de ' + nomeCliente + '!', 'R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') + ' · ' + (p.endereco_entrega || '').substring(0, 35));
-            // Recarregar a tela se estiver no painel
-            if(document.getElementById('tela-estabelecimento').classList.contains('ativa')) {
-              estNav(document.getElementById('est-nav-pedidos'), 'pedidos');
-            }
           }
         });
+        // Detectar mudanças de status em pedidos existentes e sempre atualizar tela
+        var mudou = pedidos.some(function(p) { return ultimoStatusConhecido[p.id] !== p.status; });
+        pedidos.forEach(function(p) { ultimoStatusConhecido[p.id] = p.status; });
+        if(mudou || pedidos.length !== Object.keys(ultimoStatusConhecido).length) {
+          if(document.getElementById('tela-estabelecimento').classList.contains('ativa')) {
+            estNav(document.querySelector('.est-nav-btn.ativo') || document.getElementById('est-nav-pedidos'), 'pedidos');
+          }
+        }
+
       } else if(currentUser.perfil === 'cliente' && pedidoAtualId) {
-        // Cliente: verificar mudança de status e pegar info completa do pedido para o mapa
         var resp = await apiCall('/api/orders/' + pedidoAtualId);
         var novoStatus = resp.status;
-        
-        // Atualiza UI de status e manda push notification
         if(ultimoStatusConhecido[pedidoAtualId] !== novoStatus) {
           ultimoStatusConhecido[pedidoAtualId] = novoStatus;
           atualizarRastreioPedido(novoStatus);
           var msgs = {
-            'aceito': { icon: '✅', title: 'Pedido aceito!', msg: 'O estabelecimento aceitou seu pedido.' },
-            'preparando': { icon: '👨‍🍳', title: 'Preparando...', msg: 'Seu pedido está sendo preparado.' },
-            'pronto': { icon: '📦', title: 'Pedido pronto!', msg: 'Aguardando motoboy para entrega.' },
-            'coletado': { icon: '🛵', title: 'Saiu para entrega!', msg: 'O motoboy está a caminho.' },
-            'entregue': { icon: '🎉', title: 'Entregue!', msg: 'Seu pedido foi entregue. Bom apetite!' },
+            'aceito':     { icon: '✅', title: 'Pedido aceito!',      msg: 'O estabelecimento aceitou seu pedido.' },
+            'preparando': { icon: '👨‍🍳', title: 'Preparando...',       msg: 'Seu pedido está sendo preparado.' },
+            'pronto':     { icon: '📦', title: 'Pedido pronto!',      msg: 'Aguardando motoboy para entrega.' },
+            'coletado':   { icon: '🛵', title: 'Saiu para entrega!',  msg: 'O motoboy está a caminho.' },
+            'entregue':   { icon: '🎉', title: 'Entregue!',           msg: 'Seu pedido foi entregue. Bom apetite!' },
           };
           if(msgs[novoStatus]) showToast(msgs[novoStatus].icon, msgs[novoStatus].title, msgs[novoStatus].msg);
           if(novoStatus === 'entregue') { localStorage.removeItem('chegouai_pedido_id'); }
         }
-
-        // Rastreamento GPS:
-        if (novoStatus === 'coletado' && resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
+        // Mapa em tempo real
+        if(novoStatus === 'coletado' && resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
           document.getElementById('box-rastreio').style.display = 'block';
           atualizarMapaCliente(resp.motoboys.lat, resp.motoboys.lng, resp.motoboys.nome);
-        } else {
+        } else if(novoStatus !== 'coletado') {
           document.getElementById('box-rastreio').style.display = 'none';
         }
+
       } else if(currentUser.perfil === 'motoboy') {
-        // Motoboy: verificar novos pedidos prontos
-        var resp = await apiCall('/api/orders?status=pronto');
-        var pedidos = Array.isArray(resp) ? resp : [];
-        var novos = pedidos.filter(function(p) { return !ultimoStatusConhecido['moto_' + p.id]; });
-        if(novos.length > 0) {
-          novos.forEach(function(p) { ultimoStatusConhecido['moto_' + p.id] = true; });
-          showToast('🔔', novos.length + ' nova(s) entrega(s)!', 'Há entregas disponíveis para você.');
-          if(document.getElementById('tela-motoboy').classList.contains('ativa')) {
+        // Sempre re-renderizar tela do motoboy se estiver ativa (pega pedidos novos e mudanças)
+        if(document.getElementById('tela-motoboy').classList.contains('ativa')) {
+          var resp = await apiCall('/api/orders/available');
+          var disponiveis = resp.disponiveis || [];
+          var ativa = resp.ativa || null;
+          var novos = disponiveis.filter(function(p) { return !ultimoStatusConhecido['moto_' + p.id]; });
+          if(novos.length > 0) {
+            novos.forEach(function(p) { ultimoStatusConhecido['moto_' + p.id] = true; });
+            showToast('🔔', novos.length + ' nova(s) entrega(s)!', 'Há entregas disponíveis para você.');
+          }
+          // Re-renderizar se houver mudança ou entrega ativa
+          var estadoAtual = JSON.stringify({ ativa: ativa ? ativa.status : null, qtd: disponiveis.length });
+          if(ultimoStatusConhecido['_moto_estado'] !== estadoAtual) {
+            ultimoStatusConhecido['_moto_estado'] = estadoAtual;
             renderMotoboy();
           }
         }
       }
     } catch(e) { /* silencioso */ }
-  }, 15000); // A cada 15 segundos
+  }, 5000); // A cada 5 segundos
 }
 
 // === CANCELAMENTO DE PEDIDO (cliente) ===
