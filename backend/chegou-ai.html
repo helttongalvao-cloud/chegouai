@@ -1422,7 +1422,7 @@ function filtrarProdutos(termo) {
 }
 
 function adicionarItem(idx) {
-  const item = (estAtual.produtos || estAtual.itens || [])[idx];
+  const item = produtosCache[idx];
   const existente = carrinho.find(function(c){ return c.id === item.id && !c.observacao; });
   if(existente) {
     existente.qtd++;
