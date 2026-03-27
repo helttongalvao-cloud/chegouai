@@ -2068,7 +2068,7 @@ function atualizarLabelCardapio(cat) {
 
 async function renderEstabelecimento() {
   var lista = document.getElementById('pedidos-estabelecimento');
-  if(lista) lista.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando pedidos...</div>';
+  if(lista && !lista.firstChild) lista.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando pedidos...</div>';
   try {
     var data = await apiCall('/api/establishments/me/dashboard');
     // Atualizar stats do dashboard
@@ -3043,7 +3043,7 @@ function iniciarPollingPedidos() {
         // Detectar mudanças de status em pedidos existentes e sempre atualizar tela
         var mudou = pedidos.some(function(p) { return ultimoStatusConhecido[p.id] !== p.status; });
         pedidos.forEach(function(p) { ultimoStatusConhecido[p.id] = p.status; });
-        if(mudou || pedidos.length !== Object.keys(ultimoStatusConhecido).length) {
+        if(mudou) {
           if(document.getElementById('tela-estabelecimento').classList.contains('ativa')) {
             estNav(document.querySelector('.est-nav-btn.ativo') || document.getElementById('est-nav-pedidos'), 'pedidos');
           }
@@ -3067,10 +3067,12 @@ function iniciarPollingPedidos() {
         }
         // Mapa em tempo real
         var boxRastreio = document.getElementById('box-rastreio');
-        if(novoStatus === 'coletado' && resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
+        if(novoStatus === 'coletado') {
           if(boxRastreio) boxRastreio.style.display = 'block';
-          atualizarMapaCliente(resp.motoboys.lat, resp.motoboys.lng, resp.motoboys.nome);
-        } else if(novoStatus !== 'coletado') {
+          if(resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
+            atualizarMapaCliente(resp.motoboys.lat, resp.motoboys.lng, resp.motoboys.nome);
+          }
+        } else {
           if(boxRastreio) boxRastreio.style.display = 'none';
         }
         if(novoStatus === 'entregue') { pedidoAtualId = null; }
