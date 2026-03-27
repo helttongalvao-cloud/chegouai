@@ -1742,12 +1742,15 @@ function usarLocalizacao() {
       simularFrete(endInput.value);
     },
     function(err) {
-      btn.textContent = '📡 Usar minha localização atual';
+      btn.textContent = '📍 Usar minha localização atual';
       btn.style.color = 'var(--texto2)';
-      if(err.code === 1) alert('Permissão de localização negada. Digite o endereço manualmente.');
-      else alert('Não foi possível obter a localização. Digite o endereço manualmente.');
+      if (err.code === 1) {
+        showToast('📍', 'Localização bloqueada', 'Permita nas Configurações do celular → Safari/Chrome → Localização.');
+      } else {
+        showToast('📍', 'Localização indisponível', 'Digite o endereço manualmente no campo acima.');
+      }
     },
-    { timeout: 10000 }
+    { timeout: 10000, enableHighAccuracy: false }
   );
 }
 
