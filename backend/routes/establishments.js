@@ -120,8 +120,9 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         profiles!pedidos_cliente_id_fkey (nome)
       `)
       .eq('estabelecimento_id', est.id)
-      .in('status', ['pendente', 'aceito', 'preparando', 'pronto'])
+      .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'entregue'])
       .eq('pagamento_status', 'aprovado') // Exclui checkouts abandonados
+      .gte('criado_em', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString())
       .order('criado_em', { ascending: true });
 
     const faturamento = pedidosHoje?.reduce((s, p) => s + (p.subtotal || 0), 0) || 0;

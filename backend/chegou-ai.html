@@ -197,6 +197,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .badge-novo { background:#FF6D0020; color:var(--laranja); }
 .badge-preparando { background:#00C85320; color:var(--verde); }
 .badge-pronto { background:#2979FF20; color:#2979FF; }
+.badge-coletado { background:#FF6D0020; color:#FF6D00; }
+.badge-entregue { background:#00C85320; color:var(--verde); }
 .pedido-itens { font-size:13px; color:var(--texto2); margin-bottom:10px; line-height:1.6; }
 .pedido-footer { display:flex; justify-content:space-between; align-items:center; }
 .pedido-total { font-size:16px; font-weight:700; color:var(--verde); }
@@ -2089,16 +2091,25 @@ async function renderEstabelecimento() {
     }
     lista.innerHTML = pedidos.map(function(p) {
       var sc = p.status === 'aceito' ? 'badge-novo'
-             : p.status === 'preparando' ? 'badge-preparando' : 'badge-pronto';
+             : p.status === 'preparando' ? 'badge-preparando'
+             : p.status === 'pronto' ? 'badge-pronto'
+             : p.status === 'coletado' ? 'badge-coletado'
+             : p.status === 'entregue' ? 'badge-entregue' : 'badge-pronto';
       var sl = p.status === 'aceito' ? '🔔 Novo'
-             : p.status === 'preparando' ? '👨‍🍳 Preparando' : '✅ Pronto';
+             : p.status === 'preparando' ? '👨‍🍳 Preparando'
+             : p.status === 'pronto' ? '✅ Pronto'
+             : p.status === 'coletado' ? '🛵 Em entrega'
+             : p.status === 'entregue' ? '✅ Entregue' : '✅ Pronto';
+      var isEncerrado = p.status === 'coletado' || p.status === 'entregue';
       var botao = '';
       if(p.status === 'aceito')
         botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'preparando\',this)">Iniciar preparo</button>';
       else if(p.status === 'preparando')
         botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'pronto\',this)">Marcar pronto</button>';
-      else
+      else if(p.status === 'pronto')
         botao = '<button class="btn-acao secundario">Aguardando motoboy</button>';
+      else
+        botao = '';
       var itensTxt = (p.itens_pedido || []).map(function(i){
         var obs = i.observacao ? ' <em style="color:var(--verde);font-size:11px;">(' + sanitizar(i.observacao) + ')</em>' : '';
         return i.quantidade + 'x ' + sanitizar(i.nome) + obs;
@@ -2106,7 +2117,7 @@ async function renderEstabelecimento() {
       var tel = p.telefone_cliente ? '<div class="pedido-endereco">📞 <a href="tel:' + p.telefone_cliente + '" style="color:var(--verde);text-decoration:none;">' + p.telefone_cliente + '</a></div>' : '';
       var pagIcones = { pix:'⚡', cartao:'💳', dinheiro:'💵', maquininha:'📱' };
       var pagBadge = p.forma_pagamento ? '<span style="font-size:11px;color:var(--texto2);margin-left:6px;">' + (pagIcones[p.forma_pagamento] || '') + ' ' + p.forma_pagamento + '</span>' : '';
-      return '<div class="card-pedido">' +
+      return '<div class="card-pedido"' + (isEncerrado ? ' style="opacity:0.65;"' : '') + '>' +
         '<div class="pedido-header"><span class="pedido-num">Pedido #' + p.id.substring(0,8) + '</span>' +
         '<span class="badge-status ' + sc + '">' + sl + '</span></div>' +
         '<div class="pedido-endereco">📍 ' + (p.endereco_entrega || '') + '</div>' +
@@ -2564,6 +2575,9 @@ async function renderMotoboy() {
     }
     html += disponiveis.map(function(p) {
       var ganho = 'R$ ' + parseFloat(p.taxa_entrega || 4).toFixed(2).replace('.',',');
+      var enderecoEnc = encodeURIComponent(p.endereco_entrega || '');
+      var gmapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + enderecoEnc + '&travelmode=driving';
+      var wazeUrl = 'https://waze.com/ul?q=' + enderecoEnc + '&navigate=yes';
       return '<div class="entrega-card">' +
         '<h4>🔔 Entrega disponível!</h4>' +
         '<div class="entrega-info">' +
@@ -2571,6 +2585,10 @@ async function renderMotoboy() {
           '<div class="entrega-linha"><span class="label">Endereço:</span><span class="valor">' + (p.endereco_entrega || '—') + '</span></div>' +
           '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + p.telefone_cliente + '" style="color:var(--verde);text-decoration:none;">' + (p.telefone_cliente || '—') + '</a></span></div>' +
           '<div class="entrega-linha"><span class="label">Seu ganho:</span><span class="valor" style="color:var(--verde)">' + ganho + '</span></div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
+          '<a href="' + gmapsUrl + '" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;background:#4285F4;color:white;font-size:13px;font-weight:700;text-decoration:none;">🗺️ Ver no Maps</a>' +
+          '<a href="' + wazeUrl + '" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;background:#33CCFF;color:#1a1a1a;font-size:13px;font-weight:700;text-decoration:none;">📡 Waze</a>' +
         '</div>' +
         '<div class="btns-entrega"><button class="btn-acao" onclick="aceitarEntregaReal(\'' + p.id + '\',this)">Aceitar entrega</button></div>' +
       '</div>';
@@ -2630,62 +2648,6 @@ function pararRastreio() {
   if (gpsTrackerId !== null && "geolocation" in navigator) {
     navigator.geolocation.clearWatch(gpsTrackerId);
     gpsTrackerId = null;
-  }
-}
-
-async function aceitarEntrega(btn, pedidoId) {
-  btn.disabled = true;
-  btn.textContent = 'Aceitando...';
-  try {
-    await apiCall('/api/orders/' + pedidoId + '/assign-motoboy', { method: 'POST' });
-    var card = btn.closest('.entrega-card');
-    // Buscar detalhes atualizados
-    var p = await apiCall('/api/orders/' + pedidoId);
-    var loja = p.estabelecimentos ? p.estabelecimentos.nome : 'Loja';
-    card.innerHTML =
-      '<h4 style="color:var(--verde)">✅ Entrega aceita!</h4>' +
-      '<div class="entrega-info" style="margin-top:12px;">' +
-        '<div class="entrega-linha"><span class="label">Vá até:</span><span class="valor">' + loja + '</span></div>' +
-        '<div class="entrega-linha"><span class="label">Entregue em:</span><span class="valor">' + (p.endereco_entrega || '') + '</span></div>' +
-        '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + (p.telefone_cliente || '') + '" style="color:var(--verde);text-decoration:none;">' + (p.telefone_cliente || '') + ' 📞</a></span></div>' +
-      '</div>' +
-      '</div>' +
-      '<div class="btns-entrega" style="margin-top:14px;">' +
-        '<button class="btn-acao" onclick="confirmarEntrega(this, \'' + pedidoId + '\')" style="flex:1;">Confirmar entrega realizada</button>' +
-      '</div>';
-    
-    // Liga o envio de coordenadas
-    iniciarRastreio();
-
-  } catch(e) {
-    alert('Erro ao aceitar: ' + e.message);
-    btn.disabled = false;
-    btn.textContent = 'Aceitar entrega';
-  }
-}
-
-async function confirmarEntrega(btn, pedidoId) {
-  btn.disabled = true;
-  btn.textContent = 'Confirmando...';
-  try {
-    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'entregue' } });
-    var card = btn.closest('.entrega-card');
-    card.innerHTML =
-      '<div style="text-align:center;padding:20px;">' +
-        '<div style="font-size:48px;margin-bottom:8px;">🎉</div>' +
-        '<div style="font-weight:700;color:var(--verde)">Entrega concluída!</div>' +
-        '<div style="color:var(--texto2);font-size:13px;margin-top:4px;">Valor adicionado ao seu saldo</div>' +
-      '</div>';
-    
-    // Desliga a transmissão do GPS
-    pararRastreio();
-
-    // Atualizar estatísticas
-    setTimeout(renderMotoboy, 2000);
-  } catch(e) {
-    alert('Erro: ' + e.message);
-    btn.disabled = false;
-    btn.textContent = 'Confirmar entrega realizada';
   }
 }
 
@@ -3104,12 +3066,14 @@ function iniciarPollingPedidos() {
           if(novoStatus === 'entregue') { localStorage.removeItem('chegouai_pedido_id'); }
         }
         // Mapa em tempo real
+        var boxRastreio = document.getElementById('box-rastreio');
         if(novoStatus === 'coletado' && resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
-          document.getElementById('box-rastreio').style.display = 'block';
+          if(boxRastreio) boxRastreio.style.display = 'block';
           atualizarMapaCliente(resp.motoboys.lat, resp.motoboys.lng, resp.motoboys.nome);
         } else if(novoStatus !== 'coletado') {
-          document.getElementById('box-rastreio').style.display = 'none';
+          if(boxRastreio) boxRastreio.style.display = 'none';
         }
+        if(novoStatus === 'entregue') { pedidoAtualId = null; }
 
       } else if(currentUser.perfil === 'motoboy') {
         // Sempre re-renderizar tela do motoboy se estiver ativa (pega pedidos novos e mudanças)
