@@ -549,6 +549,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   <div class="nav-admin" style="padding:12px 20px 0;">
     <div class="nav-btn ativo" id="est-nav-pedidos" onclick="estNav(this,'pedidos')">📋 Pedidos</div>
     <div class="nav-btn" id="est-nav-cardapio" onclick="estNav(this,'cardapio')">🍽️ Cardápio</div>
+    <div class="nav-btn" id="est-nav-relatorio" onclick="estNav(this,'relatorio')">📊 Relatório</div>
     <div class="nav-btn" id="est-nav-loja" onclick="estNav(this,'loja')">⚙️ Minha Loja</div>
   </div>
   <div class="est-content" id="est-conteudo">
@@ -1780,22 +1781,25 @@ async function estNav(btn, secao) {
   document.getElementById('est-conteudo').innerHTML =
     '<div id="est-secao-pedidos" style="display:none;"></div>' +
     '<div id="est-secao-cardapio" style="display:none;"></div>' +
+    '<div id="est-secao-relatorio" style="display:none;"></div>' +
     '<div id="est-secao-loja" style="display:none;"></div>';
 
   const cat = estDataCache?.estabelecimento?.categoria || 'lanche';
   const nomeCardapio = labelCardapio(cat).replace(/^.{2}/,'').trim();
   document.getElementById('est-titulo-header').textContent =
-    secao === 'pedidos' ? 'Pedidos' : secao === 'cardapio' ? nomeCardapio : 'Minha Loja';
+    secao === 'pedidos' ? 'Pedidos' : secao === 'cardapio' ? nomeCardapio : secao === 'relatorio' ? 'Relatório' : 'Minha Loja';
     
   var navCardapio = document.getElementById('est-nav-cardapio');
   if(navCardapio) navCardapio.textContent = labelCardapio(cat);
 
   document.getElementById('est-secao-pedidos').style.display = secao === 'pedidos' ? 'block' : 'none';
   document.getElementById('est-secao-cardapio').style.display = secao === 'cardapio' ? 'block' : 'none';
+  document.getElementById('est-secao-relatorio').style.display = secao === 'relatorio' ? 'block' : 'none';
   document.getElementById('est-secao-loja').style.display = secao === 'loja' ? 'block' : 'none';
 
   if(secao === 'pedidos') renderEstabelecimento();
   if(secao === 'cardapio') renderCardapioEst();
+  if(secao === 'relatorio') renderRelatorio();
   if(secao === 'loja') renderInfoLoja();
 }
 
@@ -1837,6 +1841,45 @@ async function renderCardapioEst() {
     '<button class="btn-principal" onclick="abrirModalProduto()" style="margin-bottom:16px;">+ Adicionar produto</button>' +
     '<div class="secao-titulo" style="font-size:14px;color:var(--texto2);">' + produtos.length + ' produto(s) cadastrado(s)</div>' +
     vazio;
+}
+
+async function renderRelatorio(periodo) {
+  periodo = periodo || '7d';
+  var el = document.getElementById('est-secao-relatorio');
+  if(!el) return;
+  el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando relatório...</div>';
+  try {
+    var data = await apiCall('/api/establishments/me/relatorio?periodo=' + periodo);
+    var btnStyle = function(p) {
+      return 'flex:1;padding:10px;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;font-family:\'DM Sans\',sans-serif;border:1.5px solid ' +
+        (periodo===p ? 'var(--verde);background:var(--verde);color:white;' : 'var(--cinza3);background:var(--cinza2);color:var(--texto);');
+    };
+    var topHtml = data.top_produtos && data.top_produtos.length
+      ? data.top_produtos.map(function(p, i) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--cinza3);">' +
+            '<span style="font-size:14px;">' + (i===0?'🥇':i===1?'🥈':i===2?'🥉':'  ') + ' ' + sanitizar(p.nome) + '</span>' +
+            '<span style="font-weight:700;color:var(--verde);font-size:13px;">' + p.qtd + ' vendidos</span>' +
+          '</div>';
+        }).join('')
+      : '<div style="color:var(--texto2);font-size:13px;padding:10px 0;">Nenhuma venda registrada ainda</div>';
+
+    el.innerHTML =
+      '<div style="display:flex;gap:8px;margin-bottom:20px;">' +
+        '<button onclick="renderRelatorio(\'7d\')" style="' + btnStyle('7d') + '">7 dias</button>' +
+        '<button onclick="renderRelatorio(\'30d\')" style="' + btnStyle('30d') + '">30 dias</button>' +
+        '<button onclick="renderRelatorio(\'90d\')" style="' + btnStyle('90d') + '">90 dias</button>' +
+      '</div>' +
+      '<div class="stats-grid" style="grid-template-columns:1fr 1fr;margin-bottom:20px;">' +
+        '<div class="stat-card"><div class="stat-valor">' + data.total_pedidos + '</div><div class="stat-label">Pedidos recebidos</div></div>' +
+        '<div class="stat-card"><div class="stat-valor">' + data.pedidos_entregues + '</div><div class="stat-label">Entregues</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" style="font-size:18px;">R$ ' + parseFloat(data.faturamento).toFixed(2).replace('.',',') + '</div><div class="stat-label">Faturamento bruto</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" style="font-size:18px;">R$ ' + parseFloat(data.ticket_medio).toFixed(2).replace('.',',') + '</div><div class="stat-label">Ticket médio</div></div>' +
+      '</div>' +
+      '<div class="secao-titulo">🏆 Mais vendidos</div>' +
+      '<div style="background:var(--cinza2);border-radius:12px;padding:4px 14px;">' + topHtml + '</div>';
+  } catch(e) {
+    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar relatório</div>';
+  }
 }
 
 async function renderInfoLoja() {
@@ -2178,7 +2221,12 @@ async function renderEstabelecimento() {
         var obs = i.observacao ? ' <em style="color:var(--verde);font-size:11px;">(' + sanitizar(i.observacao) + ')</em>' : '';
         return i.quantidade + 'x ' + sanitizar(i.nome) + obs;
       }).join('<br>');
-      var tel = p.telefone_cliente ? '<div class="pedido-endereco">📞 <a href="tel:' + p.telefone_cliente + '" style="color:var(--verde);text-decoration:none;">' + p.telefone_cliente + '</a></div>' : '';
+      var telNum = p.telefone_cliente ? p.telefone_cliente.replace(/\D/g,'') : '';
+      var waMsg = encodeURIComponent('Olá! Sou da ' + (data.estabelecimento ? sanitizar(data.estabelecimento.nome) : 'loja') + '. Seu pedido está a caminho! 🛵');
+      var tel = p.telefone_cliente
+        ? '<div class="pedido-endereco" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">📞 <a href="tel:' + p.telefone_cliente + '" style="color:var(--verde);text-decoration:none;">' + p.telefone_cliente + '</a>' +
+          '<a href="https://wa.me/55' + telNum + '?text=' + waMsg + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;background:#25D366;color:white;font-size:11px;font-weight:700;text-decoration:none;">💬 WhatsApp</a></div>'
+        : '';
       var pagIcones = { pix:'⚡', cartao:'💳', dinheiro:'💵', maquininha:'📱' };
       var pagBadge = p.forma_pagamento ? '<span style="font-size:11px;color:var(--texto2);margin-left:6px;">' + (pagIcones[p.forma_pagamento] || '') + ' ' + p.forma_pagamento + '</span>' : '';
       return '<div class="card-pedido"' + (isEncerrado ? ' style="opacity:0.65;"' : '') + '>' +
@@ -2601,7 +2649,57 @@ function aceitarPedidoLoja(btn) {
   btn.onclick = function() { this.textContent = '✅ Pronto para entrega'; this.className = 'btn-acao secundario'; };
 }
 
+// === MAPA IN-APP DO MOTOBOY ===
+var mapMotoboy = null;
+var markerMotoboyMapa = null;
+
+function destruirMapaMotoboy() {
+  if(mapMotoboy) { mapMotoboy.remove(); mapMotoboy = null; markerMotoboyMapa = null; }
+}
+
+function atualizarMapaMotoboy(lat, lng) {
+  if(!mapMotoboy || !markerMotoboyMapa) return;
+  markerMotoboyMapa.setLatLng([lat, lng]);
+  mapMotoboy.panTo([lat, lng]);
+}
+
+function inicializarMapaMotoboy(endereco) {
+  var mapDiv = document.getElementById('mapa-entrega-ativa');
+  if(!mapDiv || mapMotoboy) return;
+  function criar(lat, lng) {
+    if(mapMotoboy) return;
+    mapMotoboy = L.map(mapDiv, { zoomControl: true, attributionControl: false }).setView([lat, lng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapMotoboy);
+    var motoIcon = L.divIcon({
+      className: '',
+      html: '<div style="background:white;border:2.5px solid var(--verde);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.25);">🛵</div>',
+      iconSize: [36,36], iconAnchor: [18,18]
+    });
+    markerMotoboyMapa = L.marker([lat, lng], { icon: motoIcon }).addTo(mapMotoboy).bindPopup('Você está aqui');
+    if(endereco) {
+      fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(endereco + ', Brasil'), { headers: {'Accept-Language':'pt'} })
+        .then(function(r){ return r.json(); })
+        .then(function(res) {
+          if(!res || !res[0]) return;
+          var dLat = parseFloat(res[0].lat), dLng = parseFloat(res[0].lon);
+          var destIcon = L.divIcon({ className:'', html:'<div style="font-size:26px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));">📍</div>', iconSize:[26,32], iconAnchor:[13,32] });
+          var mDest = L.marker([dLat, dLng], { icon: destIcon }).bindPopup('<b>Entregar aqui</b><br><small>' + endereco + '</small>').addTo(mapMotoboy);
+          if(markerMotoboyMapa) mapMotoboy.fitBounds(L.featureGroup([markerMotoboyMapa, mDest]).getBounds().pad(0.25));
+        }).catch(function(){});
+    }
+    setTimeout(function(){ if(mapMotoboy) mapMotoboy.invalidateSize(); }, 300);
+  }
+  if('geolocation' in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      function(pos){ criar(pos.coords.latitude, pos.coords.longitude); },
+      function(){ criar(-7.54, -72.58); },
+      { timeout: 5000, maximumAge: 30000 }
+    );
+  } else { criar(-7.54, -72.58); }
+}
+
 async function renderMotoboy() {
+  destruirMapaMotoboy();
   var el = document.getElementById('entregas-motoboy');
   el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Buscando entregas...</div>';
   try {
@@ -2616,17 +2714,22 @@ async function renderMotoboy() {
       var enderecoEnc = encodeURIComponent(ativa.endereco_entrega || '');
       var gmapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + enderecoEnc + '&travelmode=driving';
       var wazeUrl = 'https://waze.com/ul?q=' + enderecoEnc + '&navigate=yes';
+      var telAtivo = ativa.telefone_cliente ? ativa.telefone_cliente.replace(/\D/g,'') : '';
       html += '<div class="entrega-card" style="border-color:var(--verde);">' +
         '<h4 style="color:var(--verde)">🛵 Entrega em andamento</h4>' +
         '<div class="entrega-info">' +
           '<div class="entrega-linha"><span class="label">Loja:</span><span class="valor">' + sanitizar(ativa.estabelecimentos ? ativa.estabelecimentos.nome : '—') + '</span></div>' +
           '<div class="entrega-linha"><span class="label">Entregue em:</span><span class="valor">' + sanitizar(ativa.endereco_entrega || '—') + '</span></div>' +
-          '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor"><a href="tel:' + ativa.telefone_cliente + '" style="color:var(--verde);text-decoration:none;">' + sanitizar(ativa.telefone_cliente || '—') + ' 📞</a></span></div>' +
+          '<div class="entrega-linha"><span class="label">Tel. cliente:</span><span class="valor" style="display:flex;align-items:center;gap:6px;">' +
+            '<a href="tel:' + ativa.telefone_cliente + '" style="color:var(--verde);text-decoration:none;">' + sanitizar(ativa.telefone_cliente || '—') + ' 📞</a>' +
+            (telAtivo ? '<a href="https://wa.me/55' + telAtivo + '" target="_blank" style="padding:2px 7px;border-radius:5px;background:#25D366;color:white;font-size:11px;font-weight:700;text-decoration:none;">💬</a>' : '') +
+          '</span></div>' +
           '<div class="entrega-linha"><span class="label">Seu ganho:</span><span class="valor" style="color:var(--verde)">' + ganhoAtivo + '</span></div>' +
         '</div>' +
+        '<div id="mapa-entrega-ativa" style="width:100%;height:220px;border-radius:12px;margin:10px 0;overflow:hidden;background:var(--cinza3);"></div>' +
         '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
-          '<a href="' + gmapsUrl + '" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;background:#4285F4;color:white;font-size:13px;font-weight:700;text-decoration:none;">🗺️ Google Maps</a>' +
-          '<a href="' + wazeUrl + '" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;background:#33CCFF;color:#1a1a1a;font-size:13px;font-weight:700;text-decoration:none;">📡 Waze</a>' +
+          '<a href="' + gmapsUrl + '" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;border-radius:10px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto2);font-size:12px;font-weight:600;text-decoration:none;">🗺️ Maps</a>' +
+          '<a href="' + wazeUrl + '" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;border-radius:10px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto2);font-size:12px;font-weight:600;text-decoration:none;">📡 Waze</a>' +
         '</div>' +
         '<div class="btns-entrega"><button class="btn-acao" onclick="confirmarEntregaReal(\'' + ativa.id + '\',this)">✅ Confirmar entrega</button></div>' +
       '</div>';
@@ -2659,6 +2762,7 @@ async function renderMotoboy() {
     }).join('');
 
     el.innerHTML = html;
+    if(ativa) inicializarMapaMotoboy(ativa.endereco_entrega);
   } catch(e) {
     el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao buscar entregas</div>';
   }
@@ -2695,6 +2799,7 @@ function iniciarRastreio() {
   if ("geolocation" in navigator) {
     gpsTrackerId = navigator.geolocation.watchPosition(
       async function(pos) {
+        atualizarMapaMotoboy(pos.coords.latitude, pos.coords.longitude);
         try {
           await apiCall('/api/orders/motoboy/location', {
             method: 'PATCH',

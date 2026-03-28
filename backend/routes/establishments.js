@@ -346,6 +346,51 @@ router.delete(
 );
 
 // =============================================
+// GET /api/establishments/me/relatorio
+// =============================================
+router.get('/me/relatorio', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const periodo = req.query.periodo || '7d';
+    const dias = periodo === '90d' ? 90 : periodo === '30d' ? 30 : 7;
+    const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: est } = await supabaseAdmin
+      .from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+
+    const { data: pedidos } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, subtotal, status, criado_em, itens_pedido(nome, quantidade)')
+      .eq('estabelecimento_id', est.id)
+      .eq('pagamento_status', 'aprovado')
+      .neq('status', 'cancelado')
+      .gte('criado_em', desde);
+
+    const todos = pedidos || [];
+    const entregues = todos.filter(p => p.status === 'entregue');
+    const faturamento = entregues.reduce((s, p) => s + (p.subtotal || 0), 0);
+
+    const contagem = {};
+    todos.forEach(p => {
+      (p.itens_pedido || []).forEach(item => {
+        if (!contagem[item.nome]) contagem[item.nome] = { nome: item.nome, qtd: 0 };
+        contagem[item.nome].qtd += item.quantidade;
+      });
+    });
+    const top_produtos = Object.values(contagem).sort((a, b) => b.qtd - a.qtd).slice(0, 5);
+
+    res.json({
+      periodo: dias,
+      total_pedidos: todos.length,
+      pedidos_entregues: entregues.length,
+      faturamento: parseFloat(faturamento.toFixed(2)),
+      ticket_medio: entregues.length ? parseFloat((faturamento / entregues.length).toFixed(2)) : 0,
+      top_produtos,
+    });
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // POST /api/establishments/me/upload-image
 // =============================================
 router.post('/me/upload-image', requireAuth, requireRole('estabelecimento', 'admin'), async (req, res, next) => {
