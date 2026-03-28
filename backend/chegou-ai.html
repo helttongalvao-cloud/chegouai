@@ -528,10 +528,11 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   
   <div id="box-rastreio" style="display:none; margin-top:20px; text-align:left;">
     <h4 style="margin-bottom:10px; font-size:14px; color:var(--texto2);">📍 Acompanhe o Motoboy</h4>
-    <div id="map" style="width:100%; height:220px; border-radius:12px; background:var(--cinza3); overflow:hidden;"></div>
+    <p id="map-aguardando" style="font-size:13px; color:var(--texto2); text-align:center; padding:16px 0; margin:0;">🛵 Aguardando localização do motoboy...</p>
+    <div id="map" style="width:100%; height:220px; border-radius:12px; background:var(--cinza3); overflow:hidden; display:none;"></div>
   </div>
 
-  <button class="btn-principal mt16" onclick="irHome()" style="width:100%;">Fazer novo pedido</button>
+  <button class="btn-principal mt16" onclick="sairRastreio()" style="width:100%;">Fazer novo pedido</button>
   <div id="btn-cancelar-pedido-wrap" style="display:none;margin-top:12px;">
     <button onclick="cancelarPedidoCliente()" style="width:100%;padding:14px;border-radius:12px;border:1.5px solid #e74c3c;background:transparent;color:#e74c3c;font-size:15px;font-weight:600;cursor:pointer;">Cancelar pedido</button>
   </div>
@@ -1010,7 +1011,7 @@ setTimeout(function(){ irTela('tela-login'); }, 1800);
 function entrarComo(perfil) {
   perfilAtual = perfil;
   pararRealtime();
-  if(perfil === 'cliente') { irHome(); }
+  if(perfil === 'cliente') { irHome(); if(pedidoAtualId) { irTela('tela-confirmado'); } }
   else if(perfil === 'estabelecimento') {
     irTela('tela-estabelecimento');
     setTimeout(function() { renderEstabelecimento(); }, 50);
@@ -3270,14 +3271,26 @@ function iniciarPollingPedidos() {
         // Mapa em tempo real
         var boxRastreio = document.getElementById('box-rastreio');
         if(novoStatus === 'coletado') {
-          if(boxRastreio) boxRastreio.style.display = 'block';
+          if(boxRastreio && boxRastreio.style.display !== 'block') {
+            boxRastreio.style.display = 'block';
+            // Forçar re-layout do Leaflet ao revelar o container
+            if(mapCliente) setTimeout(function() { mapCliente.invalidateSize(); }, 300);
+          }
           if(resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
             atualizarMapaCliente(resp.motoboys.lat, resp.motoboys.lng, resp.motoboys.nome);
           }
         } else {
           if(boxRastreio) boxRastreio.style.display = 'none';
         }
-        if(novoStatus === 'entregue') { pedidoAtualId = null; }
+        if(novoStatus === 'entregue') {
+          pedidoAtualId = null;
+          // Destruir mapa para não reutilizar container na próxima sessão
+          if(mapCliente) { mapCliente.remove(); mapCliente = null; markerMotoboy = null; }
+          var mapDiv2 = document.getElementById('map');
+          var agu2 = document.getElementById('map-aguardando');
+          if(mapDiv2) mapDiv2.style.display = 'none';
+          if(agu2) agu2.style.display = 'block';
+        }
 
       } else if(currentUser.perfil === 'motoboy') {
         // Sempre re-renderizar tela do motoboy se estiver ativa (pega pedidos novos e mudanças)
@@ -3345,7 +3358,25 @@ function atualizarRastreioPedido(status) {
 let mapCliente = null;
 let markerMotoboy = null;
 
+function sairRastreio() {
+  // Limpar pedido ativo e destruir mapa antes de ir para home
+  pedidoAtualId = null;
+  localStorage.removeItem('chegouai_pedido_id');
+  if(mapCliente) { mapCliente.remove(); mapCliente = null; markerMotoboy = null; }
+  var mapDiv = document.getElementById('map');
+  var aguardando = document.getElementById('map-aguardando');
+  if(mapDiv) mapDiv.style.display = 'none';
+  if(aguardando) aguardando.style.display = 'block';
+  irHome();
+}
+
 function atualizarMapaCliente(lat, lng, nomeMoto) {
+  // Mostrar container e esconder mensagem de espera
+  var mapDiv = document.getElementById('map');
+  var aguardando = document.getElementById('map-aguardando');
+  if(mapDiv) mapDiv.style.display = 'block';
+  if(aguardando) aguardando.style.display = 'none';
+
   // Se o mapa não foi criado, inicializa
   if (!mapCliente) {
     mapCliente = L.map('map').setView([lat, lng], 16);
