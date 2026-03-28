@@ -2638,7 +2638,12 @@ function iniciarRastreio() {
           });
         } catch(e) {}
       },
-      function(err) { console.warn("Erro GPS:", err); },
+      function(err) {
+        console.warn("Erro GPS:", err);
+        if(err.code === 1) { // PERMISSION_DENIED
+          showToast('⚠️', 'GPS necessário', 'Ative a localização no navegador para que o cliente acompanhe a entrega.');
+        }
+      },
       { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
     );
   }
@@ -2977,6 +2982,8 @@ function instalarApp() {
       localStorage.setItem('chegouai_pedido_id', pedidoAtualId);
       setTimeout(function() { irTela('tela-confirmado'); ultimoStatusConhecido = {}; iniciarPollingPedidos(); }, 500);
     } else if(payStatus === 'failure') {
+      pedidoAtualId = null;
+      localStorage.removeItem('chegouai_pedido_id');
       setTimeout(function() { alert('Pagamento não aprovado. Tente novamente.'); }, 500);
     }
   }
