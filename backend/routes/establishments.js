@@ -345,4 +345,34 @@ router.delete(
   }
 );
 
+// =============================================
+// POST /api/establishments/me/upload-image
+// =============================================
+router.post('/me/upload-image', requireAuth, requireRole('estabelecimento', 'admin'), async (req, res, next) => {
+  try {
+    const { base64, contentType } = req.body;
+    if (!base64 || !contentType) return res.status(400).json({ error: 'Dados inválidos' });
+
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowed.includes(contentType)) return res.status(400).json({ error: 'Tipo de arquivo não permitido' });
+
+    const ext = contentType === 'image/jpeg' ? 'jpg' : contentType.split('/')[1];
+    const filename = `${req.user.id}_${Date.now()}.${ext}`;
+    const buffer = Buffer.from(base64, 'base64');
+
+    if (buffer.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Imagem muito grande (máx 5MB)' });
+
+    const { error } = await supabaseAdmin.storage
+      .from('produtos')
+      .upload(filename, buffer, { contentType, upsert: true });
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    const { data: { publicUrl } } = supabaseAdmin.storage.from('produtos').getPublicUrl(filename);
+    res.json({ url: publicUrl });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

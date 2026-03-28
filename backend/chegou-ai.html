@@ -768,7 +768,7 @@ function iniciarRealtimeLojista(estId) {
       filter: 'estabelecimento_id=eq.' + estId,
     }, function() {
       // Novo pedido chegou — tocar alerta e re-renderizar
-      try { new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAA==').play(); } catch(e) {}
+      tocarSomNovoPedido();
       renderEstabelecimento();
     })
     .on('postgres_changes', {
@@ -1805,7 +1805,7 @@ async function renderCardapioEst() {
   try {
     var produtos = await apiCall('/api/establishments/me/products');
     cardapioEst = produtos.map(function(p) {
-      return { id: p.id, nome: p.nome, desc: p.descricao || '', preco: parseFloat(p.preco), emoji: p.emoji || '🍽️', disponivel: p.disponivel };
+      return { id: p.id, nome: p.nome, desc: p.descricao || '', preco: parseFloat(p.preco), emoji: p.emoji || '🍽️', disponivel: p.disponivel, imagem_url: p.imagem_url || '', categoria: p.categoria || 'principal' };
     });
   } catch(e) {
     el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar cardápio</div>';
@@ -1815,8 +1815,11 @@ async function renderCardapioEst() {
     var op = p.disponivel ? '1' : '0.4';
     var indisponivel = !p.disponivel ? '<div style="font-size:11px;color:var(--erro);margin-top:2px;">⛔ Indisponível</div>' : '';
     var preco = 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.',',');
+    var thumbHtml = p.imagem_url
+      ? '<img src="' + p.imagem_url + '" style="width:48px;height:48px;border-radius:8px;object-fit:cover;opacity:' + op + '" onerror="this.style.display=\'none\'">'
+      : '<div class="prod-emoji" style="opacity:' + op + '">' + (p.emoji || '🍽️') + '</div>';
     return '<div class="card-produto" data-id="' + p.id + '">' +
-      '<div class="prod-emoji" style="opacity:' + op + '">' + (p.emoji || '🍽️') + '</div>' +
+      thumbHtml +
       '<div class="prod-info">' +
         '<div class="prod-nome">' + p.nome + '</div>' +
         '<div class="prod-desc">' + (p.desc || '') + '</div>' +
@@ -1980,6 +1983,15 @@ function abrirModalProduto(idx) {
     if(catSel) catSel.value = p.categoria || 'principal';
     var imgInput = document.getElementById('prod-imagem');
     if(imgInput) imgInput.value = p.imagem_url || '';
+    var preview = document.getElementById('prod-foto-preview');
+    var previewImg = document.getElementById('prod-foto-img');
+    if(p.imagem_url && preview && previewImg) {
+      previewImg.src = p.imagem_url;
+      preview.style.display = 'block';
+      document.getElementById('prod-foto-label').textContent = '📷 Trocar foto';
+    } else if(preview) {
+      preview.style.display = 'none';
+    }
     emojiSelecionado = p.emoji || '🍽️';
     document.querySelectorAll('.emoji-op').forEach(function(e) {
       e.classList.toggle('selecionado', e.textContent === emojiSelecionado);
@@ -1993,6 +2005,9 @@ function abrirModalProduto(idx) {
     if(catSel) catSel.value = 'principal';
     var imgInput = document.getElementById('prod-imagem');
     if(imgInput) imgInput.value = '';
+    var preview = document.getElementById('prod-foto-preview');
+    if(preview) preview.style.display = 'none';
+    document.getElementById('prod-foto-label').textContent = '📷 Escolher foto do celular ou computador';
     emojiSelecionado = '🍔';
     document.querySelectorAll('.emoji-op').forEach(function(e,i){ e.classList.toggle('selecionado', i===0); });
   }
@@ -2001,6 +2016,55 @@ function abrirModalProduto(idx) {
 
 function fecharModalProduto() {
   document.getElementById('modal-produto').classList.remove('aberto');
+}
+
+function removerFotoProduto() {
+  document.getElementById('prod-imagem').value = '';
+  document.getElementById('prod-foto-preview').style.display = 'none';
+  document.getElementById('prod-foto-img').src = '';
+  document.getElementById('prod-foto-label').textContent = '📷 Escolher foto do celular ou computador';
+  document.getElementById('prod-foto-input').value = '';
+}
+
+function selecionarFotoProduto(input) {
+  var file = input.files[0];
+  if(!file) return;
+  var label = document.getElementById('prod-foto-label');
+
+  // Resize + preview via canvas
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var max = 900;
+      var ratio = Math.min(max / img.width, max / img.height, 1);
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // Preview imediato
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      document.getElementById('prod-foto-img').src = dataUrl;
+      document.getElementById('prod-foto-preview').style.display = 'block';
+      label.textContent = '⏳ Enviando foto...';
+
+      // Upload
+      var base64 = dataUrl.split(',')[1];
+      apiCall('/api/establishments/me/upload-image', {
+        method: 'POST',
+        body: { base64: base64, contentType: 'image/jpeg' }
+      }).then(function(resp) {
+        document.getElementById('prod-imagem').value = resp.url;
+        label.textContent = '✅ Foto enviada';
+      }).catch(function(err) {
+        label.textContent = '❌ Erro — tente novamente';
+        console.error('Upload foto:', err);
+      });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function selecionarEmoji(el, emoji) {
@@ -2829,9 +2893,16 @@ function adminNav(btn, secao) {
       </select>
     </div>
     <div class="form-grupo">
-      <label>Foto do produto (URL)</label>
-      <input type="url" id="prod-imagem" placeholder="https://exemplo.com/foto.jpg">
-      <div style="font-size:11px;color:var(--texto2);margin-top:4px;">Cole o link de uma imagem do produto (opcional)</div>
+      <label>Foto do produto</label>
+      <div id="prod-foto-preview" style="display:none;margin-bottom:10px;position:relative;">
+        <img id="prod-foto-img" style="width:100%;max-height:160px;border-radius:10px;object-fit:cover;">
+        <button type="button" onclick="removerFotoProduto()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;border-radius:6px;color:white;padding:4px 8px;cursor:pointer;font-size:12px;">🗑️ Remover</button>
+      </div>
+      <label for="prod-foto-input" id="prod-foto-label" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;border:1.5px dashed var(--cinza3);background:var(--cinza2);color:var(--texto2);cursor:pointer;font-size:14px;font-family:'DM Sans',sans-serif;">
+        📷 Escolher foto do celular ou computador
+      </label>
+      <input type="file" id="prod-foto-input" accept="image/*" style="display:none" onchange="selecionarFotoProduto(this)">
+      <input type="hidden" id="prod-imagem">
     </div>
     <div class="form-grupo">
       <label>Ícone do produto</label>
@@ -2996,6 +3067,24 @@ function instalarApp() {
 <!-- SISTEMA DE NOTIFICAÇÕES + RASTREIO + SERVICE WORKER -->
 <script>
 // === TOAST NOTIFICATION SYSTEM ===
+function tocarSomNovoPedido() {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.18, 0.36].forEach(function(t) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0, ctx.currentTime + t);
+      gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.25);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.25);
+    });
+  } catch(e) {}
+}
+
 function showToast(icon, title, msg) {
   var container = document.getElementById('toast-container');
   if(!container) return;
@@ -3044,6 +3133,7 @@ function iniciarPollingPedidos() {
         pedidos.forEach(function(p) {
           if(!ultimoStatusConhecido[p.id]) {
             var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : 'Cliente';
+            tocarSomNovoPedido();
             showToast('🔔', 'Novo pedido de ' + nomeCliente + '!', 'R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') + ' · ' + (p.endereco_entrega || '').substring(0, 35));
           }
         });
