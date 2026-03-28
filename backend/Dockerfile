@@ -2,9 +2,6 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Dependências nativas necessárias para web-push e compilação
-RUN apk add --no-cache python3 make g++ libatomic
-
 # Instalar dependências de produção primeiro (aproveita cache de layer)
 COPY package*.json ./
 RUN npm ci --only=production
