@@ -2,7 +2,7 @@
   "name": "Chegou Aí - Delivery Local",
   "short_name": "Chegou Aí",
   "description": "Peça comida, produtos e muito mais dos estabelecimentos da sua cidade.",
-  "start_url": "/",
+  "start_url": "/app",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0D0D0D",

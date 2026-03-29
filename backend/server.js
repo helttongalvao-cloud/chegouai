@@ -103,8 +103,13 @@ app.use(express.static(path.join(__dirname, 'public'), {
   etag: true,
 }));
 
-// Servir o HTML principal (na raiz do projeto)
+// Landing page — página inicial pública
 app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+// PWA — app principal
+app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, 'chegou-ai.html'));
 });
 
