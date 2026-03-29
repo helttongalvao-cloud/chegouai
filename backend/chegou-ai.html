@@ -3093,15 +3093,25 @@ function inicializarMapaMotoboy(endereco) {
     }
     [200, 600, 1200].forEach(function(d){ setTimeout(function(){ if(mapMotoboy) mapMotoboy.invalidateSize(); }, d); });
   }
-  // Iniciar com coordenadas imediatamente usando geocode (sem esperar GPS)
-  if(endereco) {
+  // Iniciar com coordenadas imediatamente
+  // Detectar se o endereço já é uma coord GPS ("Lat: -7.54, Lng: -72.58")
+  var coordMatch = endereco && endereco.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
+  if(coordMatch) {
+    criar(parseFloat(coordMatch[1]), parseFloat(coordMatch[2]));
+    if('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        function(pos) { if(markerMotoboyMapa && mapMotoboy) { markerMotoboyMapa.setLatLng([pos.coords.latitude, pos.coords.longitude]); } },
+        function() {},
+        { timeout: 10000, maximumAge: 30000 }
+      );
+    }
+  } else if(endereco) {
     fetch('/api/geocode?q=' + encodeURIComponent(endereco))
       .then(function(r){ return r.json(); })
       .then(function(res) {
         var lat = (res && res[0]) ? parseFloat(res[0].lat) : -7.54;
         var lng = (res && res[0]) ? parseFloat(res[0].lon) : -72.58;
         criar(lat, lng);
-        // Atualizar marcador com GPS real quando disponível
         if('geolocation' in navigator) {
           navigator.geolocation.getCurrentPosition(
             function(pos) { if(markerMotoboyMapa && mapMotoboy) { markerMotoboyMapa.setLatLng([pos.coords.latitude, pos.coords.longitude]); } },
@@ -3132,9 +3142,6 @@ async function renderMotoboy() {
     // Entrega ativa (a caminho)
     if(ativa) {
       var ganhoAtivo = 'R$ ' + parseFloat(ativa.taxa_entrega || 4).toFixed(2).replace('.',',');
-      var enderecoEnc = encodeURIComponent(ativa.endereco_entrega || '');
-      var gmapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + enderecoEnc + '&travelmode=driving';
-      var wazeUrl = 'https://waze.com/ul?q=' + enderecoEnc + '&navigate=yes';
       var telAtivo = ativa.telefone_cliente ? ativa.telefone_cliente.replace(/\D/g,'') : '';
       html += '<div class="entrega-card" style="border-color:var(--verde);">' +
         '<h4 style="color:var(--verde)">🛵 Entrega em andamento</h4>' +
@@ -3147,8 +3154,8 @@ async function renderMotoboy() {
           '</span></div>' +
           '<div class="entrega-linha"><span class="label">Seu ganho:</span><span class="valor" style="color:var(--verde)">' + ganhoAtivo + '</span></div>' +
         '</div>' +
-        '<div style="width:100%;height:220px;border-radius:12px;margin:10px 0;overflow:hidden;">' +
-          '<div id="mapa-entrega-ativa" style="width:100%;height:100%;background:var(--cinza3);"></div>' +
+        '<div style="width:100%;height:220px;margin:10px 0;position:relative;">' +
+          '<div id="mapa-entrega-ativa" style="width:100%;height:100%;border-radius:12px;background:var(--cinza3);"></div>' +
         '</div>' +
         '<div class="btns-entrega"><button class="btn-acao" onclick="confirmarEntregaReal(\'' + ativa.id + '\',this)">✅ Confirmar entrega</button></div>' +
       '</div>';
@@ -3161,9 +3168,6 @@ async function renderMotoboy() {
     }
     html += disponiveis.map(function(p) {
       var ganho = 'R$ ' + parseFloat(p.taxa_entrega || 4).toFixed(2).replace('.',',');
-      var enderecoEnc = encodeURIComponent(p.endereco_entrega || '');
-      var gmapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + enderecoEnc + '&travelmode=driving';
-      var wazeUrl = 'https://waze.com/ul?q=' + enderecoEnc + '&navigate=yes';
       return '<div class="entrega-card">' +
         '<h4>🔔 Entrega disponível!</h4>' +
         '<div class="entrega-info">' +
@@ -3647,6 +3651,15 @@ let primeiroPolling = true;
 function iniciarPollingPedidos() {
   if(pollingInterval) clearInterval(pollingInterval);
   primeiroPolling = true;
+  // Buscar status imediatamente para cliente (sem aguardar o primeiro ciclo de 5s)
+  if(currentUser && currentUser.perfil === 'cliente' && pedidoAtualId) {
+    apiCall('/api/orders/' + pedidoAtualId).then(function(r) {
+      if(r && r.status && ultimoStatusConhecido[pedidoAtualId] !== r.status) {
+        ultimoStatusConhecido[pedidoAtualId] = r.status;
+        atualizarRastreioPedido(r.status);
+      }
+    }).catch(function(){});
+  }
   pollingInterval = setInterval(async function() {
     if(!authToken || !currentUser) return;
 
