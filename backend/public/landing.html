@@ -4,456 +4,974 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chegou Aí — Delivery em Guajará-AM</title>
-<meta name="description" content="O delivery chegou em Guajará-AM. Peça de restaurantes, mercados e farmácias com rastreio em tempo real.">
+<meta name="description" content="O primeiro delivery 100% guajariense. Peça de restaurantes, mercados e farmácias com rastreio GPS em tempo real.">
 <meta name="theme-color" content="#00C853">
 <meta property="og:title" content="Chegou Aí — Delivery em Guajará-AM">
-<meta property="og:description" content="Peça comida, produtos e muito mais. Rápido, rastreado e com pagamento seguro.">
+<meta property="og:description" content="Pede no app, chega na porta. Restaurantes, mercados e farmácias com rastreio em tempo real.">
 <meta property="og:image" content="/icons/icon-512.png">
+<meta property="og:type" content="website">
 <link rel="icon" href="/icons/icon-192.png">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="canonical" href="https://chegouai.com.br/">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet">
 <style>
+/* ─── RESET & TOKENS ──────────────────────────────────────────── */
 :root {
-  --verde:   #00C853;
-  --verde2:  #00E676;
-  --preto:   #0A0A0A;
-  --cinza1:  #141414;
-  --cinza2:  #1E1E1E;
-  --cinza3:  #2A2A2A;
-  --texto:   #F0F0F0;
-  --texto2:  #999;
+  --g:    #00C853;
+  --g2:   #00E676;
+  --g3:   #69F0AE;
+  --bg:   #080808;
+  --s1:   #111111;
+  --s2:   #1A1A1A;
+  --s3:   #242424;
+  --s4:   #2E2E2E;
+  --t1:   #F2F2F2;
+  --t2:   #AAAAAA;
+  --t3:   #666666;
+  --ora:  #FF6B00;
+  --rox:  #7C3AED;
+  --wa:   #25D366;
+  --r:    24px;
+  --r2:   16px;
+  --r3:   12px;
+  --shadow: 0 24px 64px rgba(0,0,0,.6);
 }
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; font-size:16px; }
+body {
+  background:var(--bg); color:var(--t1);
+  font-family:'DM Sans',system-ui,sans-serif;
+  overflow-x:hidden; line-height:1.5;
+}
+h1,h2,h3,h4,h5,strong { font-family:'Plus Jakarta Sans',system-ui,sans-serif; }
+a { color:inherit; text-decoration:none; }
+img { display:block; max-width:100%; }
 
-* { margin:0; padding:0; box-sizing:border-box; }
-html { scroll-behavior:smooth; }
-body { background:var(--preto); color:var(--texto); font-family:'DM Sans',sans-serif; overflow-x:hidden; }
-h1,h2,h3,h4,h5 { font-family:'Plus Jakarta Sans',sans-serif; }
+/* ─── UTILITY ────────────────────────────────────────────────── */
+.verde { color:var(--g); }
+.container { max-width:1120px; margin:0 auto; padding:0 24px; }
 
-/* ── NAVBAR ── */
+/* ─── ANIMATIONS ─────────────────────────────────────────────── */
+@keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:.5} }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+@keyframes floatB { 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-8px) rotate(-3deg)} }
+@keyframes moto-move { 0%,100%{transform:translateX(0)} 50%{transform:translateX(8px)} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+@keyframes shimmer { from{background-position:200% center} to{background-position:-200% center} }
+@keyframes spin-slow { to{transform:rotate(360deg)} }
+
+.appear {
+  opacity:0; transform:translateY(28px);
+  transition:opacity .6s ease, transform .6s ease;
+}
+.appear.visible { opacity:1; transform:translateY(0); }
+
+/* ─── NAVBAR ─────────────────────────────────────────────────── */
 nav {
-  position:fixed; top:0; left:0; right:0; z-index:100;
-  background:rgba(10,10,10,0.85); backdrop-filter:blur(16px);
-  border-bottom:1px solid #ffffff12;
-  padding:0 24px; height:64px;
+  position:fixed; inset:0 0 auto; z-index:200;
+  height:64px; padding:0 24px;
   display:flex; align-items:center; justify-content:space-between;
+  background:rgba(8,8,8,.85); backdrop-filter:blur(20px) saturate(1.5);
+  border-bottom:1px solid rgba(255,255,255,.07);
+  transition:background .3s;
 }
-.nav-logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
-.nav-logo-icon {
-  width:38px; height:38px; background:var(--preto); border:2px solid var(--verde);
-  border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;
+.nav-logo { display:flex; align-items:center; gap:10px; }
+.nav-icon {
+  width:36px; height:36px; border-radius:10px;
+  background:var(--bg); border:2px solid var(--g);
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; flex-shrink:0;
 }
-.nav-logo-icon span { display:inline-block; filter:hue-rotate(90deg) saturate(1.8); transform:scaleX(-1); }
-.nav-logo-text { font-family:'Plus Jakarta Sans',sans-serif; font-size:17px; font-weight:800; color:var(--texto); }
+.nav-icon span { display:inline-block; filter:hue-rotate(90deg) saturate(1.8); transform:scaleX(-1); }
+.nav-brand { font-size:17px; font-weight:800; letter-spacing:-.3px; }
+.nav-links { display:flex; align-items:center; gap:28px; }
+.nav-links a {
+  font-size:14px; font-weight:500; color:var(--t2);
+  transition:color .2s; white-space:nowrap;
+}
+.nav-links a:hover { color:var(--t1); }
 .nav-cta {
-  background:var(--verde); color:var(--preto); border:none;
-  border-radius:10px; padding:10px 20px; font-size:14px; font-weight:700;
-  font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; text-decoration:none;
-  transition:background 0.2s, transform 0.15s;
+  background:var(--g); color:var(--bg); border-radius:10px;
+  padding:9px 18px; font-size:13px; font-weight:700;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  transition:background .2s, transform .15s;
+  white-space:nowrap;
 }
-.nav-cta:hover { background:var(--verde2); transform:translateY(-1px); }
+.nav-cta:hover { background:var(--g2); transform:translateY(-1px); }
+.nav-menu-btn {
+  display:none; background:none; border:none; color:var(--t1);
+  font-size:22px; cursor:pointer; padding:4px;
+}
 
-/* ── HERO ── */
+/* ─── HERO ───────────────────────────────────────────────────── */
 .hero {
-  min-height:100vh; display:flex; align-items:center; justify-content:center;
-  padding:80px 24px 60px;
-  background: radial-gradient(ellipse 80% 60% at 50% 0%, #00C85318 0%, transparent 70%);
-  text-align:center; flex-direction:column;
+  min-height:100svh; padding:100px 0 64px;
+  display:flex; align-items:center;
+  background:
+    radial-gradient(ellipse 60% 50% at 70% 40%, rgba(0,200,83,.1) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 60% at 10% 80%, rgba(0,200,83,.05) 0%, transparent 60%);
+  overflow:hidden;
+}
+.hero-inner {
+  display:grid; grid-template-columns:1fr 420px;
+  gap:64px; align-items:center;
 }
 .hero-badge {
   display:inline-flex; align-items:center; gap:8px;
-  background:#00C85315; border:1px solid #00C85340; border-radius:100px;
-  padding:6px 16px; font-size:13px; color:var(--verde); font-weight:600;
-  margin-bottom:28px;
+  background:rgba(0,200,83,.1); border:1px solid rgba(0,200,83,.3);
+  border-radius:100px; padding:6px 14px; font-size:13px;
+  color:var(--g); font-weight:600; margin-bottom:24px;
 }
-.hero-badge::before { content:''; width:8px; height:8px; background:var(--verde); border-radius:50%; animation:pulsar 1.5s ease-in-out infinite; }
-@keyframes pulsar { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:0.6} }
+.hero-badge .dot {
+  width:7px; height:7px; background:var(--g); border-radius:50%;
+  animation:pulse 1.8s ease-in-out infinite;
+}
 .hero h1 {
-  font-size:clamp(36px, 8vw, 72px);
-  font-weight:900; line-height:1.05; letter-spacing:-2px;
-  max-width:760px; margin-bottom:20px;
+  font-size:clamp(40px, 6vw, 68px);
+  font-weight:900; line-height:1.04; letter-spacing:-2.5px;
+  margin-bottom:22px;
 }
-.hero h1 span { color:var(--verde); }
-.hero p {
-  font-size:clamp(16px, 2.5vw, 20px); color:var(--texto2); max-width:500px;
-  line-height:1.6; margin-bottom:40px;
+.hero-sub {
+  font-size:clamp(16px,2vw,19px); color:var(--t2);
+  line-height:1.65; max-width:480px; margin-bottom:36px;
 }
-.hero-btns { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-bottom:60px; }
+.hero-btns { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:48px; }
 .btn-primary {
-  background:var(--verde); color:var(--preto); border:none; border-radius:14px;
-  padding:16px 32px; font-size:16px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif;
-  cursor:pointer; text-decoration:none; transition:all 0.2s;
+  background:var(--g); color:var(--bg);
+  border-radius:var(--r2); padding:15px 28px;
+  font-size:15px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif;
   display:inline-flex; align-items:center; gap:8px;
+  transition:all .2s; border:none; cursor:pointer;
 }
-.btn-primary:hover { background:var(--verde2); transform:translateY(-2px); box-shadow:0 12px 32px rgba(0,200,83,0.3); }
-.btn-secondary {
-  background:transparent; color:var(--texto); border:1.5px solid var(--cinza3);
-  border-radius:14px; padding:16px 32px; font-size:16px; font-weight:600;
-  font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; text-decoration:none;
-  transition:all 0.2s; display:inline-flex; align-items:center; gap:8px;
+.btn-primary:hover {
+  background:var(--g2); transform:translateY(-2px);
+  box-shadow:0 12px 32px rgba(0,200,83,.35);
 }
-.btn-secondary:hover { border-color:var(--verde); color:var(--verde); }
-.hero-stats {
-  display:flex; gap:40px; flex-wrap:wrap; justify-content:center;
-  border-top:1px solid var(--cinza2); padding-top:40px; width:100%; max-width:600px;
-}
-.stat { text-align:center; }
-.stat-num { font-family:'Plus Jakarta Sans',sans-serif; font-size:32px; font-weight:800; color:var(--verde); }
-.stat-lbl { font-size:13px; color:var(--texto2); margin-top:4px; }
-
-/* ── SECTION ── */
-section { padding:80px 24px; max-width:1100px; margin:0 auto; }
-.secao-tag {
-  display:inline-flex; align-items:center; gap:6px;
-  background:var(--cinza2); border:1px solid var(--cinza3); border-radius:100px;
-  padding:5px 14px; font-size:12px; color:var(--texto2); font-weight:600;
-  letter-spacing:0.5px; text-transform:uppercase; margin-bottom:16px;
-}
-.secao-titulo { font-size:clamp(28px,5vw,44px); font-weight:800; letter-spacing:-1px; margin-bottom:12px; }
-.secao-sub { font-size:17px; color:var(--texto2); max-width:520px; line-height:1.6; margin-bottom:48px; }
-
-/* ── COMO FUNCIONA ── */
-.steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px; }
-.step-card {
-  background:var(--cinza1); border:1.5px solid var(--cinza2);
-  border-radius:20px; padding:28px;
-  transition:border-color 0.2s, transform 0.2s;
-}
-.step-card:hover { border-color:var(--verde); transform:translateY(-4px); }
-.step-num {
-  width:44px; height:44px; background:#00C85315; border:1.5px solid #00C85340;
-  border-radius:12px; display:flex; align-items:center; justify-content:center;
-  font-family:'Plus Jakarta Sans',sans-serif; font-size:18px; font-weight:800;
-  color:var(--verde); margin-bottom:16px;
-}
-.step-card h3 { font-size:18px; font-weight:700; margin-bottom:8px; }
-.step-card p { font-size:14px; color:var(--texto2); line-height:1.6; }
-.step-icon { font-size:36px; margin-bottom:12px; display:block; }
-
-/* ── PERFIS ── */
-.perfis { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:24px; }
-.perfil-card {
-  border-radius:24px; padding:36px; position:relative; overflow:hidden;
-  transition:transform 0.2s;
-}
-.perfil-card:hover { transform:translateY(-4px); }
-.perfil-card.cliente  { background:linear-gradient(135deg,#001a0d,#003320); border:1.5px solid #00C85330; }
-.perfil-card.lojista  { background:linear-gradient(135deg,#1a0d00,#3d2000); border:1.5px solid #FF6D0030; }
-.perfil-card.motoboy  { background:linear-gradient(135deg,#0d0020,#200040); border:1.5px solid #8B5CF630; }
-.perfil-emoji { font-size:48px; margin-bottom:16px; display:block; }
-.perfil-card h3 { font-size:22px; font-weight:800; margin-bottom:8px; }
-.perfil-card p { font-size:15px; color:var(--texto2); line-height:1.6; margin-bottom:24px; }
-.perfil-card ul { list-style:none; display:flex; flex-direction:column; gap:8px; margin-bottom:28px; }
-.perfil-card ul li { font-size:14px; color:var(--texto2); display:flex; align-items:center; gap:8px; }
-.perfil-card ul li::before { content:'✓'; color:var(--verde); font-weight:700; flex-shrink:0; }
-.perfil-card.lojista ul li::before { content:'✓'; color:#FF6D00; }
-.perfil-card.motoboy ul li::before { content:'✓'; color:#8B5CF6; }
-.btn-perfil {
+.btn-ghost {
+  background:transparent; color:var(--t1);
+  border:1.5px solid var(--s4); border-radius:var(--r2);
+  padding:15px 28px; font-size:15px; font-weight:600;
+  font-family:'Plus Jakarta Sans',sans-serif;
   display:inline-flex; align-items:center; gap:8px;
-  border-radius:12px; padding:13px 22px; font-size:14px; font-weight:700;
-  font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; text-decoration:none;
-  transition:all 0.2s; border:none; width:100%; justify-content:center;
+  transition:all .2s; cursor:pointer;
 }
-.btn-perfil.verde  { background:var(--verde); color:var(--preto); }
-.btn-perfil.verde:hover  { background:var(--verde2); transform:translateY(-1px); }
-.btn-perfil.laranja{ background:#FF6D00; color:white; }
-.btn-perfil.laranja:hover{ background:#FF8C00; transform:translateY(-1px); }
-.btn-perfil.roxo   { background:#8B5CF6; color:white; }
-.btn-perfil.roxo:hover   { background:#9F7AEA; transform:translateY(-1px); }
-
-/* ── FEATURES ── */
-.features { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; }
-.feature {
-  background:var(--cinza1); border:1.5px solid var(--cinza2);
-  border-radius:16px; padding:24px; text-align:center;
-}
-.feature-icon { font-size:32px; margin-bottom:12px; display:block; }
-.feature h4 { font-size:15px; font-weight:700; margin-bottom:6px; }
-.feature p { font-size:13px; color:var(--texto2); line-height:1.5; }
-
-/* ── INSTALAR ── */
-.instalar-section {
-  background:linear-gradient(135deg,#001a0d,#00C85308);
-  border:1.5px solid #00C85325; border-radius:28px;
-  padding:56px 40px; text-align:center; margin:0 auto;
-}
-.instalar-section h2 { font-size:clamp(26px,5vw,40px); font-weight:800; margin-bottom:12px; }
-.instalar-section p { font-size:17px; color:var(--texto2); max-width:480px; margin:0 auto 32px; line-height:1.6; }
-.instalar-steps {
-  display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:32px;
-}
-.inst-step {
-  background:#00C85315; border:1px solid #00C85330; border-radius:12px;
-  padding:10px 16px; font-size:13px; color:var(--verde); font-weight:600;
+.btn-ghost:hover { border-color:var(--g); color:var(--g); }
+.hero-trust { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.trust-item {
   display:flex; align-items:center; gap:6px;
+  font-size:13px; color:var(--t3);
+}
+.trust-item strong { color:var(--t2); font-weight:600; }
+
+/* ─── PHONE MOCKUP ───────────────────────────────────────────── */
+.phone-wrap {
+  position:relative; display:flex;
+  justify-content:center; align-items:center;
+  animation:float 5s ease-in-out infinite;
+}
+.phone-glow {
+  position:absolute; width:300px; height:300px;
+  background:radial-gradient(ellipse, rgba(0,200,83,.2) 0%, transparent 70%);
+  border-radius:50%; pointer-events:none; z-index:0;
+}
+.phone {
+  position:relative; z-index:1;
+  width:248px; background:var(--s1);
+  border-radius:44px; border:7px solid var(--s3);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.06),
+    0 48px 96px rgba(0,0,0,.7),
+    inset 0 1px 0 rgba(255,255,255,.06);
+  overflow:hidden;
+}
+.phone-notch {
+  width:90px; height:22px; background:var(--bg);
+  border-radius:0 0 16px 16px; margin:0 auto;
+}
+.phone-screen { padding:0 0 20px; }
+.p-status {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:6px 16px 10px; font-size:10px; color:var(--t3); font-weight:600;
+}
+.p-header {
+  background:linear-gradient(180deg,#001a0a,var(--s1));
+  padding:10px 14px 14px;
+}
+.p-header-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.p-logo { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; }
+.p-logo-icon { width:22px; height:22px; background:var(--bg); border:1.5px solid var(--g); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; }
+.p-logo-icon span { display:inline-block; filter:hue-rotate(90deg) saturate(1.8); transform:scaleX(-1); }
+.p-loc { font-size:9px; color:var(--t2); background:var(--s2); border-radius:6px; padding:4px 8px; display:flex; align-items:center; gap:4px; }
+.p-search { background:var(--s2); border-radius:8px; padding:7px 10px; font-size:10px; color:var(--t3); display:flex; align-items:center; gap:6px; margin:0 14px 12px; }
+.p-cats { display:flex; gap:6px; padding:0 14px 14px; overflow:hidden; }
+.p-cat {
+  flex:0 0 auto; width:46px; background:var(--s2);
+  border-radius:10px; padding:6px 4px; text-align:center;
+  font-size:14px; display:flex; flex-direction:column; align-items:center; gap:2px;
+  border:1px solid transparent;
+}
+.p-cat span { font-size:8px; color:var(--t3); font-weight:500; }
+.p-cat.on { background:rgba(0,200,83,.12); border-color:rgba(0,200,83,.3); }
+.p-cat.on span { color:var(--g); }
+.p-section-lbl { font-size:9px; font-weight:700; color:var(--t2); padding:0 14px 8px; text-transform:uppercase; letter-spacing:.5px; }
+.p-card { display:flex; gap:8px; align-items:center; padding:8px 14px; transition:background .2s; }
+.p-card:hover { background:var(--s2); }
+.p-card-img { width:40px; height:40px; border-radius:10px; background:var(--s3); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.p-card-name { font-size:11px; font-weight:700; margin-bottom:3px; }
+.p-card-meta { font-size:9px; color:var(--t3); display:flex; align-items:center; gap:4px; }
+.p-card-meta .star { color:#FFD700; }
+.p-track {
+  margin:10px 14px 0;
+  background:linear-gradient(135deg,rgba(0,200,83,.12),rgba(0,200,83,.06));
+  border:1px solid rgba(0,200,83,.25); border-radius:12px; padding:10px;
+}
+.p-track-title { font-size:9px; font-weight:700; color:var(--g); margin-bottom:8px; display:flex; align-items:center; gap:4px; }
+.p-track-bar { background:var(--s2); border-radius:6px; height:4px; overflow:hidden; margin-bottom:6px; }
+.p-track-bar-fill { height:100%; width:65%; background:linear-gradient(90deg,var(--g),var(--g2)); border-radius:6px; }
+.p-track-moto { font-size:16px; display:flex; align-items:center; gap:6px; animation:moto-move 2s ease-in-out infinite; }
+.p-track-eta { font-size:9px; color:var(--t2); font-weight:600; }
+
+/* ─── STATS STRIP ────────────────────────────────────────────── */
+.stats-strip { background:var(--s1); border-top:1px solid var(--s3); border-bottom:1px solid var(--s3); }
+.stats-strip-inner {
+  display:flex; justify-content:space-around; align-items:stretch;
+  max-width:1120px; margin:0 auto;
+}
+.stat-item {
+  flex:1; padding:32px 16px; text-align:center;
+  border-right:1px solid var(--s3); position:relative;
+}
+.stat-item:last-child { border-right:none; }
+.stat-num {
+  font-size:clamp(28px,4vw,44px); font-weight:900;
+  letter-spacing:-1.5px; line-height:1;
+  background:linear-gradient(135deg,var(--g),var(--g3));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  margin-bottom:6px;
+}
+.stat-lbl { font-size:13px; color:var(--t2); line-height:1.4; }
+
+/* ─── SECTION BASE ───────────────────────────────────────────── */
+.section { padding:88px 0; }
+.section-alt { background:var(--s1); }
+.section-tag {
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--s2); border:1px solid var(--s3);
+  border-radius:100px; padding:5px 14px;
+  font-size:11px; font-weight:700; color:var(--t2);
+  letter-spacing:.6px; text-transform:uppercase; margin-bottom:16px;
+}
+.section-h { font-size:clamp(28px,4vw,44px); font-weight:900; letter-spacing:-1.5px; margin-bottom:14px; line-height:1.1; }
+.section-p { font-size:17px; color:var(--t2); max-width:520px; line-height:1.65; margin-bottom:52px; }
+
+/* ─── CATEGORIAS ─────────────────────────────────────────────── */
+.cats-grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+  gap:12px;
+}
+.cat-card {
+  background:var(--s2); border:1.5px solid var(--s3);
+  border-radius:var(--r2); padding:20px 12px;
+  text-align:center; cursor:pointer;
+  transition:border-color .2s, transform .2s, background .2s;
+}
+.cat-card:hover { border-color:var(--g); transform:translateY(-3px); background:rgba(0,200,83,.05); }
+.cat-card .cat-emoji { font-size:32px; margin-bottom:10px; display:block; }
+.cat-card h4 { font-size:13px; font-weight:700; margin-bottom:3px; }
+.cat-card p { font-size:11px; color:var(--t3); }
+
+/* ─── COMO FUNCIONA ──────────────────────────────────────────── */
+.steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:0; position:relative; }
+.steps::after {
+  content:''; position:absolute; top:44px; left:10%; right:10%; height:1px;
+  background:linear-gradient(90deg,transparent,var(--s4) 20%,var(--s4) 80%,transparent);
+  pointer-events:none;
+}
+.step {
+  padding:28px 24px; position:relative; z-index:1;
+}
+.step-num {
+  width:48px; height:48px; border-radius:14px;
+  background:rgba(0,200,83,.12); border:1.5px solid rgba(0,200,83,.3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; font-weight:900; color:var(--g);
+  font-family:'Plus Jakarta Sans',sans-serif;
+  margin-bottom:18px; position:relative;
+}
+.step-num::after {
+  content:''; position:absolute; inset:-4px;
+  border-radius:18px; border:1px solid rgba(0,200,83,.1);
+}
+.step-icon { font-size:24px; position:absolute; top:-8px; right:-8px; background:var(--s1); border-radius:8px; padding:2px; }
+.step h3 { font-size:17px; font-weight:800; margin-bottom:8px; }
+.step p { font-size:14px; color:var(--t2); line-height:1.6; }
+
+/* ─── FEATURES ───────────────────────────────────────────────── */
+.features { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+.feat {
+  background:var(--s1); border:1.5px solid var(--s2);
+  border-radius:var(--r2); padding:24px 20px;
+  transition:border-color .2s, transform .2s;
+}
+.feat:hover { border-color:var(--g); transform:translateY(-3px); }
+.feat-icon { font-size:28px; margin-bottom:14px; }
+.feat h4 { font-size:14px; font-weight:700; margin-bottom:6px; }
+.feat p { font-size:13px; color:var(--t2); line-height:1.55; }
+
+/* ─── PERFIS ─────────────────────────────────────────────────── */
+.perfis { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; }
+.perfil {
+  border-radius:var(--r); padding:36px 32px;
+  position:relative; overflow:hidden;
+  transition:transform .2s;
+}
+.perfil:hover { transform:translateY(-4px); }
+.perfil::before {
+  content:''; position:absolute; inset:0;
+  opacity:.04; pointer-events:none;
+}
+.perfil.cli {
+  background:linear-gradient(145deg,#001208,#002510);
+  border:1.5px solid rgba(0,200,83,.2);
+}
+.perfil.loj {
+  background:linear-gradient(145deg,#1a0800,#2e1400);
+  border:1.5px solid rgba(255,107,0,.2);
+}
+.perfil.mot {
+  background:linear-gradient(145deg,#0d0020,#1a0038);
+  border:1.5px solid rgba(124,58,237,.2);
+}
+.perfil-top { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+.perfil-avatar {
+  width:56px; height:56px; border-radius:16px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:28px; flex-shrink:0;
+}
+.cli .perfil-avatar { background:rgba(0,200,83,.15); }
+.loj .perfil-avatar { background:rgba(255,107,0,.15); }
+.mot .perfil-avatar { background:rgba(124,58,237,.15); }
+.perfil h3 { font-size:20px; font-weight:800; margin-bottom:2px; }
+.perfil-sub { font-size:13px; color:var(--t3); font-weight:500; }
+.perfil-desc { font-size:15px; color:var(--t2); line-height:1.6; margin-bottom:20px; }
+.perfil-list { list-style:none; display:flex; flex-direction:column; gap:9px; margin-bottom:28px; }
+.perfil-list li { font-size:14px; color:var(--t2); display:flex; align-items:flex-start; gap:9px; line-height:1.4; }
+.perfil-list li .chk { flex-shrink:0; margin-top:1px; font-size:13px; }
+.cli .chk::before { content:'✓'; color:var(--g); font-weight:800; }
+.loj .chk::before { content:'✓'; color:var(--ora); font-weight:800; }
+.mot .chk::before { content:'✓'; color:var(--rox); font-weight:800; }
+.btn-perfil {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; border-radius:var(--r3); padding:13px 20px;
+  font-size:14px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif;
+  cursor:pointer; transition:all .2s; border:none;
+}
+.cli .btn-perfil { background:var(--g); color:var(--bg); }
+.cli .btn-perfil:hover { background:var(--g2); transform:translateY(-1px); }
+.loj .btn-perfil { background:var(--ora); color:white; }
+.loj .btn-perfil:hover { background:#FF8C00; transform:translateY(-1px); }
+.mot .btn-perfil { background:var(--rox); color:white; }
+.mot .btn-perfil:hover { background:#8B5CF6; transform:translateY(-1px); }
+
+/* ─── DEPOIMENTO / SOCIAL PROOF ──────────────────────────────── */
+.proof-strip {
+  background:var(--s1); border-top:1px solid var(--s3); border-bottom:1px solid var(--s3);
+  padding:28px 0; overflow:hidden;
+}
+.proof-items {
+  display:flex; gap:40px; align-items:center; justify-content:center; flex-wrap:wrap;
+  max-width:1120px; margin:0 auto; padding:0 24px;
+}
+.proof-item { display:flex; align-items:center; gap:10px; font-size:14px; color:var(--t2); white-space:nowrap; }
+.proof-item .proof-icon { font-size:20px; }
+
+/* ─── INSTALAR ───────────────────────────────────────────────── */
+.install-box {
+  background:linear-gradient(135deg,rgba(0,200,83,.08),rgba(0,230,118,.03));
+  border:1.5px solid rgba(0,200,83,.2); border-radius:28px;
+  padding:64px 48px; display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center;
+}
+.install-phones { display:flex; gap:12px; justify-content:center; align-items:flex-end; }
+.install-phone {
+  background:var(--s2); border:4px solid var(--s3);
+  border-radius:24px; padding:12px 8px; width:100px; text-align:center;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+}
+.install-phone .os { font-size:11px; font-weight:700; color:var(--t2); }
+.install-phone .os-icon { font-size:28px; }
+.install-phone .steps-sm { font-size:9px; color:var(--t3); line-height:1.6; }
+.install-steps-list { display:flex; flex-direction:column; gap:12px; margin:24px 0 32px; }
+.inst-step {
+  display:flex; align-items:center; gap:12px;
+  font-size:15px; color:var(--t1);
+}
+.inst-num {
+  width:28px; height:28px; border-radius:8px;
+  background:rgba(0,200,83,.12); border:1px solid rgba(0,200,83,.3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:800; color:var(--g); flex-shrink:0;
+  font-family:'Plus Jakarta Sans',sans-serif;
 }
 
-/* ── FOOTER ── */
+/* ─── FOOTER ─────────────────────────────────────────────────── */
 footer {
-  background:var(--cinza1); border-top:1px solid var(--cinza2);
-  padding:48px 24px 32px;
+  background:var(--s1); border-top:1px solid var(--s3);
+  padding:56px 24px 32px;
 }
-.footer-inner { max-width:1100px; margin:0 auto; }
-.footer-top { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:32px; margin-bottom:40px; }
-.footer-brand h3 { font-size:22px; font-weight:800; margin-bottom:6px; }
-.footer-brand p { font-size:13px; color:var(--texto2); max-width:260px; line-height:1.6; }
-.footer-links h5 { font-size:13px; font-weight:700; color:var(--texto2); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:12px; }
-.footer-links ul { list-style:none; display:flex; flex-direction:column; gap:8px; }
-.footer-links ul li a { color:var(--texto2); text-decoration:none; font-size:14px; transition:color 0.2s; }
-.footer-links ul li a:hover { color:var(--verde); }
+.footer-inner { max-width:1120px; margin:0 auto; }
+.footer-grid {
+  display:grid; grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:48px; margin-bottom:48px;
+}
+.footer-brand .brand-logo { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.footer-brand h3 { font-size:20px; font-weight:800; }
+.footer-brand p { font-size:13px; color:var(--t3); line-height:1.7; max-width:240px; margin-bottom:16px; }
+.footer-wa-btn {
+  display:inline-flex; align-items:center; gap:7px;
+  background:rgba(37,211,102,.1); border:1px solid rgba(37,211,102,.25);
+  color:var(--wa); border-radius:10px; padding:9px 14px;
+  font-size:13px; font-weight:600; transition:background .2s;
+}
+.footer-wa-btn:hover { background:rgba(37,211,102,.18); }
+.footer-col h5 {
+  font-size:11px; font-weight:700; color:var(--t3);
+  letter-spacing:.8px; text-transform:uppercase; margin-bottom:14px;
+}
+.footer-col ul { list-style:none; display:flex; flex-direction:column; gap:10px; }
+.footer-col ul li a { font-size:14px; color:var(--t2); transition:color .2s; }
+.footer-col ul li a:hover { color:var(--t1); }
 .footer-bottom {
-  border-top:1px solid var(--cinza2); padding-top:24px;
+  border-top:1px solid var(--s3); padding-top:28px;
   display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;
 }
-.footer-bottom p { font-size:13px; color:var(--texto2); }
-.footer-wa {
-  display:inline-flex; align-items:center; gap:6px;
-  background:#25D36615; border:1px solid #25D36630; border-radius:10px;
-  padding:8px 14px; text-decoration:none; color:#25D366; font-size:13px; font-weight:600;
-  transition:background 0.2s;
-}
-.footer-wa:hover { background:#25D36625; }
+.footer-bottom p { font-size:13px; color:var(--t3); }
+.footer-legal { display:flex; gap:20px; }
+.footer-legal a { font-size:12px; color:var(--t3); transition:color .2s; }
+.footer-legal a:hover { color:var(--t2); }
 
-/* ── DIVIDER ── */
-.divider { width:100%; height:1px; background:var(--cinza2); margin:0; }
+/* ─── DIVIDER ────────────────────────────────────────────────── */
+.divider { height:1px; background:var(--s3); }
 
-/* ── RESPONSIVO ── */
-@media (max-width:600px) {
+/* ─── RESPONSIVE ─────────────────────────────────────────────── */
+@media (max-width:900px) {
+  .hero-inner { grid-template-columns:1fr; text-align:center; }
+  .phone-wrap { display:none; }
+  .hero-sub { max-width:100%; margin-left:auto; margin-right:auto; }
+  .hero-trust { justify-content:center; }
+  .hero-btns { justify-content:center; }
+  .steps::after { display:none; }
+  .install-box { grid-template-columns:1fr; text-align:center; padding:40px 28px; }
+  .install-phones { display:none; }
+  .install-steps-list { text-align:left; max-width:340px; margin-left:auto; margin-right:auto; }
+  .footer-grid { grid-template-columns:1fr 1fr; gap:32px; }
+  .stats-strip-inner { flex-wrap:wrap; }
+  .stat-item { border-right:none; border-bottom:1px solid var(--s3); min-width:45%; }
+  .stat-item:last-child { border-bottom:none; }
   nav { padding:0 16px; }
-  .hero { padding:80px 16px 48px; }
-  .hero h1 { letter-spacing:-1px; }
-  section { padding:56px 16px; }
-  .instalar-section { padding:36px 20px; }
-  .footer-top { flex-direction:column; }
-  .perfil-card { padding:28px 24px; }
+  .nav-links { display:none; }
+  .nav-links.open {
+    display:flex; flex-direction:column; position:fixed;
+    inset:64px 0 0; background:var(--bg); padding:24px;
+    z-index:199; gap:0; border-top:1px solid var(--s3);
+  }
+  .nav-links.open a {
+    padding:16px 0; border-bottom:1px solid var(--s3);
+    font-size:16px; color:var(--t1);
+  }
+  .nav-links.open .nav-cta {
+    margin-top:16px; text-align:center; display:block; padding:14px;
+  }
+  .nav-menu-btn { display:block; }
+}
+@media (max-width:600px) {
+  .hero { padding:84px 0 48px; }
+  .container { padding:0 16px; }
+  .section { padding:64px 0; }
+  .perfil { padding:28px 24px; }
+  .footer-grid { grid-template-columns:1fr; gap:28px; }
+  .footer-bottom { flex-direction:column; align-items:flex-start; }
+  .cats-grid { grid-template-columns:repeat(3,1fr); }
+  .hero h1 { letter-spacing:-1.5px; }
 }
 </style>
 </head>
 <body>
 
-<!-- NAVBAR -->
-<nav>
+<!-- ═══ NAVBAR ════════════════════════════════════════════════ -->
+<nav id="nav">
   <a class="nav-logo" href="/">
-    <div class="nav-logo-icon"><span>🛵</span></div>
-    <span class="nav-logo-text">Chegou Aí</span>
+    <div class="nav-icon"><span>🛵</span></div>
+    <span class="nav-brand">Chegou Aí</span>
   </a>
-  <a class="nav-cta" href="/app">Pedir agora →</a>
+  <div class="nav-links" id="nav-links">
+    <a href="#como-funciona">Como funciona</a>
+    <a href="#categorias">O que tem</a>
+    <a href="#perfis">Para lojistas</a>
+    <a href="#perfis">Seja motoboy</a>
+    <a href="/app" class="nav-cta">Pedir agora →</a>
+  </div>
+  <button class="nav-menu-btn" id="menu-btn" aria-label="Menu">☰</button>
 </nav>
 
-<!-- HERO -->
-<section class="hero" style="max-width:100%;padding-top:100px;">
-  <div class="hero-badge">🟢 Disponível em Guajará-AM</div>
-  <h1>O delivery<br>chegou em<br><span>Guajará-AM</span></h1>
-  <p>Peça de restaurantes, mercados e farmácias. Rastreie em tempo real, pague pelo app e receba na sua porta.</p>
-  <div class="hero-btns">
-    <a href="/app" class="btn-primary">🛵 Quero pedir agora</a>
-    <a href="#como-funciona" class="btn-secondary">Como funciona ↓</a>
-  </div>
-  <div class="hero-stats">
-    <div class="stat">
-      <div class="stat-num">🛵</div>
-      <div class="stat-lbl">Motoboys rastreados</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">⚡</div>
-      <div class="stat-lbl">Pagamento via Pix</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">📍</div>
-      <div class="stat-lbl">Entrega em Guajará-AM</div>
-    </div>
-  </div>
-</section>
+<!-- ═══ HERO ══════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-text">
+        <div class="hero-badge appear">
+          <span class="dot"></span>
+          Disponível em Guajará-AM
+        </div>
+        <h1 class="appear" style="transition-delay:.08s">
+          Pede no app,<br>
+          chega na<br>
+          <span class="verde">porta.</span>
+        </h1>
+        <p class="hero-sub appear" style="transition-delay:.16s">
+          O primeiro delivery 100% guajariense. Restaurantes, mercados e farmácias —
+          com rastreio GPS, pagamento seguro e atendimento local.
+        </p>
+        <div class="hero-btns appear" style="transition-delay:.22s">
+          <a href="/app" class="btn-primary">🛵 Quero pedir agora</a>
+          <a href="#como-funciona" class="btn-ghost">Como funciona ↓</a>
+        </div>
+        <div class="hero-trust appear" style="transition-delay:.3s">
+          <div class="trust-item">⚡ <strong>Pix instantâneo</strong></div>
+          <div class="trust-item">📍 <strong>Rastreio ao vivo</strong></div>
+          <div class="trust-item">🔒 <strong>Pagamento seguro</strong></div>
+        </div>
+      </div>
 
-<div class="divider"></div>
-
-<!-- COMO FUNCIONA -->
-<section id="como-funciona">
-  <div class="secao-tag">📖 Simples assim</div>
-  <h2 class="secao-titulo">Como funciona</h2>
-  <p class="secao-sub">Em menos de 5 minutos seu pedido está a caminho.</p>
-  <div class="steps">
-    <div class="step-card">
-      <span class="step-icon">🏪</span>
-      <div class="step-num">1</div>
-      <h3>Escolha o estabelecimento</h3>
-      <p>Veja restaurantes, mercados e farmácias disponíveis na sua área agora.</p>
-    </div>
-    <div class="step-card">
-      <span class="step-icon">🛒</span>
-      <div class="step-num">2</div>
-      <h3>Monte seu pedido</h3>
-      <p>Adicione itens ao carrinho, informe seu endereço e escolha a forma de pagamento.</p>
-    </div>
-    <div class="step-card">
-      <span class="step-icon">⚡</span>
-      <div class="step-num">3</div>
-      <h3>Pague com segurança</h3>
-      <p>Pix instantâneo ou cartão de crédito/débito. Rápido e sem complicação.</p>
-    </div>
-    <div class="step-card">
-      <span class="step-icon">📍</span>
-      <div class="step-num">4</div>
-      <h3>Acompanhe em tempo real</h3>
-      <p>Veja o motoboy no mapa enquanto ele está a caminho da sua casa.</p>
-    </div>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- FEATURES -->
-<section>
-  <div class="secao-tag">✨ Diferenciais</div>
-  <h2 class="secao-titulo">Tudo que você precisa</h2>
-  <p class="secao-sub">Desenvolvido especialmente para Guajará-AM.</p>
-  <div class="features">
-    <div class="feature">
-      <span class="feature-icon">🗺️</span>
-      <h4>Rastreio GPS</h4>
-      <p>Acompanhe o motoboy em tempo real no mapa.</p>
-    </div>
-    <div class="feature">
-      <span class="feature-icon">⚡</span>
-      <h4>Pix instantâneo</h4>
-      <p>Pague em segundos com Pix ou cartão.</p>
-    </div>
-    <div class="feature">
-      <span class="feature-icon">🔔</span>
-      <h4>Notificações</h4>
-      <p>Receba alertas em cada etapa do pedido.</p>
-    </div>
-    <div class="feature">
-      <span class="feature-icon">💬</span>
-      <h4>Fale com a loja</h4>
-      <p>Contato direto via WhatsApp se precisar.</p>
-    </div>
-    <div class="feature">
-      <span class="feature-icon">📱</span>
-      <h4>Instala no celular</h4>
-      <p>Funciona como app, sem precisar de Play Store.</p>
-    </div>
-    <div class="feature">
-      <span class="feature-icon">🛒</span>
-      <h4>Lista de compras</h4>
-      <p>Peça em mercados digitando os itens livremente.</p>
+      <!-- PHONE MOCKUP -->
+      <div class="phone-wrap appear" style="transition-delay:.35s">
+        <div class="phone-glow"></div>
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="p-status">
+              <span>9:41</span>
+              <span style="letter-spacing:2px">●●●</span>
+            </div>
+            <div class="p-header">
+              <div class="p-header-top">
+                <div class="p-logo">
+                  <div class="p-logo-icon"><span>🛵</span></div>
+                  Chegou Aí
+                </div>
+                <div class="p-loc">📍 Centro, Guajará-AM</div>
+              </div>
+              <div class="p-search">🔍 &nbsp;Buscar restaurante ou produto…</div>
+            </div>
+            <div class="p-cats">
+              <div class="p-cat on">🍔<span>Lanches</span></div>
+              <div class="p-cat">🛒<span>Mercado</span></div>
+              <div class="p-cat">💊<span>Farmácia</span></div>
+              <div class="p-cat">🍕<span>Pizza</span></div>
+            </div>
+            <div class="p-section-lbl">Abertos agora</div>
+            <div class="p-card">
+              <div class="p-card-img">🍔</div>
+              <div>
+                <div class="p-card-name">Burger House</div>
+                <div class="p-card-meta"><span class="star">★</span> 4.8 · 20–30 min · Frete grátis</div>
+              </div>
+            </div>
+            <div class="p-card">
+              <div class="p-card-img">🛒</div>
+              <div>
+                <div class="p-card-name">Mercado Central</div>
+                <div class="p-card-meta"><span class="star">★</span> 4.6 · 15–25 min · Frete grátis</div>
+              </div>
+            </div>
+            <div class="p-track">
+              <div class="p-track-title">📍 Seu pedido está a caminho</div>
+              <div class="p-track-bar"><div class="p-track-bar-fill"></div></div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div class="p-track-moto">🛵<span class="p-track-eta" style="font-size:9px;color:var(--t2)">~2 min</span></div>
+                <span style="font-size:9px;color:var(--g);font-weight:700">EM ROTA</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<div class="divider"></div>
-
-<!-- PERFIS -->
-<section id="perfis">
-  <div class="secao-tag">👥 Para todos</div>
-  <h2 class="secao-titulo">Escolha seu perfil</h2>
-  <p class="secao-sub">O Chegou Aí conecta clientes, estabelecimentos e motoboys em um só lugar.</p>
-  <div class="perfis">
-
-    <!-- CLIENTE -->
-    <div class="perfil-card cliente">
-      <span class="perfil-emoji">🛍️</span>
-      <h3>Cliente</h3>
-      <p>Peça do conforto de casa e receba em minutos.</p>
-      <ul>
-        <li>Restaurantes, mercados e farmácias</li>
-        <li>Rastreio do motoboy em tempo real</li>
-        <li>Histórico de pedidos</li>
-        <li>Cupons de desconto</li>
-        <li>Pix, cartão ou na entrega</li>
-      </ul>
-      <a href="/app" class="btn-perfil verde">🛵 Pedir agora</a>
+<!-- ═══ STATS STRIP ═══════════════════════════════════════════ -->
+<div class="stats-strip">
+  <div class="stats-strip-inner">
+    <div class="stat-item appear">
+      <div class="stat-num">100%</div>
+      <div class="stat-lbl">Local e independente<br>feito em Guajará-AM</div>
     </div>
-
-    <!-- LOJISTA -->
-    <div class="perfil-card lojista">
-      <span class="perfil-emoji">🏪</span>
-      <h3>Estabelecimento</h3>
-      <p>Venda mais com um painel completo de gestão.</p>
-      <ul>
-        <li>Painel de pedidos em tempo real</li>
-        <li>Cardápio digital com fotos</li>
-        <li>Relatório financeiro</li>
-        <li>Impressão de comanda</li>
-        <li>Horário de funcionamento automático</li>
-      </ul>
-      <!-- SUBSTITUA 5597XXXXXXXXX PELO SEU WHATSAPP -->
-      <a href="https://wa.me/5597XXXXXXXXX?text=Ol%C3%A1%21+Quero+cadastrar+meu+estabelecimento+no+Chegou+A%C3%AD+%F0%9F%8F%AA" target="_blank" class="btn-perfil laranja">💬 Quero cadastrar minha loja</a>
+    <div class="stat-item appear" style="transition-delay:.08s">
+      <div class="stat-num">3 tipos</div>
+      <div class="stat-lbl">Restaurantes, mercados<br>e farmácias</div>
     </div>
-
-    <!-- MOTOBOY -->
-    <div class="perfil-card motoboy">
-      <span class="perfil-emoji">🛵</span>
-      <h3>Motoboy</h3>
-      <p>Ganhe dinheiro fazendo entregas no seu tempo.</p>
-      <ul>
-        <li>Aceite entregas pelo app</li>
-        <li>Veja o endereço antes de aceitar</li>
-        <li>Navegação integrada no mapa</li>
-        <li>Ganhos transparentes por entrega</li>
-        <li>Sem mensalidade</li>
-      </ul>
-      <!-- SUBSTITUA 5597XXXXXXXXX PELO SEU WHATSAPP -->
-      <a href="https://wa.me/5597XXXXXXXXX?text=Ol%C3%A1%21+Quero+ser+motoboy+no+Chegou+A%C3%AD+%F0%9F%9B%B5" target="_blank" class="btn-perfil roxo">💬 Quero ser motoboy</a>
+    <div class="stat-item appear" style="transition-delay:.16s">
+      <div class="stat-num">GPS</div>
+      <div class="stat-lbl">Rastreio do motoboy<br>em tempo real</div>
     </div>
+    <div class="stat-item appear" style="transition-delay:.24s">
+      <div class="stat-num">Pix+</div>
+      <div class="stat-lbl">Pix, crédito, débito<br>e na entrega</div>
+    </div>
+  </div>
+</div>
 
+<!-- ═══ CATEGORIAS ════════════════════════════════════════════ -->
+<section class="section" id="categorias">
+  <div class="container">
+    <div class="section-tag appear">🏪 O que tem no app</div>
+    <h2 class="section-h appear" style="transition-delay:.06s">Tem de tudo<br>aqui em Guajará</h2>
+    <p class="section-p appear" style="transition-delay:.12s">Restaurantes, mercados, farmácias e muito mais — tudo disponível na palma da sua mão.</p>
+    <div class="cats-grid appear" style="transition-delay:.18s">
+      <a href="/app" class="cat-card">
+        <span class="cat-emoji">🍔</span>
+        <h4>Lanches</h4>
+        <p>Burguer, tapioca e salgados</p>
+      </a>
+      <a href="/app" class="cat-card">
+        <span class="cat-emoji">🛒</span>
+        <h4>Mercado</h4>
+        <p>Lista de compras fácil</p>
+      </a>
+      <a href="/app" class="cat-card">
+        <span class="cat-emoji">💊</span>
+        <h4>Farmácia</h4>
+        <p>Medicamentos e produtos</p>
+      </a>
+      <a href="/app" class="cat-card">
+        <span class="cat-emoji">🍕</span>
+        <h4>Pizzas</h4>
+        <p>Pizzas e esfihas</p>
+      </a>
+      <a href="/app" class="cat-card">
+        <span class="cat-emoji">🥗</span>
+        <h4>Saudável</h4>
+        <p>Marmitas e saladas</p>
+      </a>
+      <a href="/app" class="cat-card">
+        <span class="cat-emoji">☕</span>
+        <h4>Café & Doces</h4>
+        <p>Café, bolos e doces</p>
+      </a>
+      <a href="/app" class="cat-card">
+        <span class="cat-emoji">🐟</span>
+        <h4>Peixes</h4>
+        <p>Peixe frito e grelhado</p>
+      </a>
+      <a href="/app" class="cat-card">
+        <span class="cat-emoji">🍗</span>
+        <h4>Frango</h4>
+        <p>Assado, frito e grelhado</p>
+      </a>
+    </div>
   </div>
 </section>
 
-<div class="divider"></div>
-
-<!-- INSTALAR APP -->
-<section>
-  <div class="instalar-section">
-    <div style="font-size:56px;margin-bottom:16px;">📲</div>
-    <h2>Instale no seu celular</h2>
-    <p>O Chegou Aí funciona como um app — sem precisar baixar da Play Store ou App Store.</p>
-    <div class="instalar-steps">
-      <div class="inst-step">1️⃣ Abra no navegador</div>
-      <div class="inst-step">2️⃣ Toque em "Adicionar à tela inicial"</div>
-      <div class="inst-step">3️⃣ Pronto — é um app!</div>
+<!-- ═══ COMO FUNCIONA ═════════════════════════════════════════ -->
+<section class="section section-alt" id="como-funciona">
+  <div class="container">
+    <div class="section-tag appear">📖 Simples assim</div>
+    <h2 class="section-h appear" style="transition-delay:.06s">Em 4 passos<br>o pedido chega</h2>
+    <p class="section-p appear" style="transition-delay:.12s">Menos de 5 minutos do pedido à confirmação.</p>
+    <div class="steps">
+      <div class="step appear" style="transition-delay:.1s">
+        <div class="step-num">1 <span class="step-icon">🏪</span></div>
+        <h3>Escolha o estabelecimento</h3>
+        <p>Veja restaurantes, mercados e farmácias abertos agora perto de você.</p>
+      </div>
+      <div class="step appear" style="transition-delay:.18s">
+        <div class="step-num">2 <span class="step-icon">🛒</span></div>
+        <h3>Monte seu pedido</h3>
+        <p>Adicione itens ao carrinho ou escreva sua lista de mercado livremente.</p>
+      </div>
+      <div class="step appear" style="transition-delay:.26s">
+        <div class="step-num">3 <span class="step-icon">⚡</span></div>
+        <h3>Pague com segurança</h3>
+        <p>Pix instantâneo, cartão ou dinheiro na entrega — você escolhe.</p>
+      </div>
+      <div class="step appear" style="transition-delay:.34s">
+        <div class="step-num">4 <span class="step-icon">📍</span></div>
+        <h3>Acompanhe em tempo real</h3>
+        <p>Veja o motoboy no mapa ao vivo enquanto ele vem pra sua porta.</p>
+      </div>
     </div>
-    <a href="/app" class="btn-primary" style="font-size:16px;padding:16px 36px;">🚀 Abrir o app</a>
   </div>
 </section>
 
-<!-- FOOTER -->
+<!-- ═══ DIFERENCIAIS ══════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-tag appear">✨ Por que Chegou Aí</div>
+    <h2 class="section-h appear" style="transition-delay:.06s">Feito para<br>Guajará-AM</h2>
+    <p class="section-p appear" style="transition-delay:.12s">Cada detalhe pensado para a nossa cidade. Sem as taxas absurdas dos apps de fora.</p>
+    <div class="features appear" style="transition-delay:.18s">
+      <div class="feat">
+        <div class="feat-icon">🗺️</div>
+        <h4>Rastreio GPS ao vivo</h4>
+        <p>Veja o motoboy se movendo no mapa em tempo real até chegar na sua casa.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">⚡</div>
+        <h4>Pix na hora</h4>
+        <p>Pagamento Pix confirmado em segundos. Sem complicação, sem espera.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🔔</div>
+        <h4>Notificações em cada etapa</h4>
+        <p>Pedido confirmado, saiu pra entrega, chegou — você fica sabendo de tudo.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">💬</div>
+        <h4>Fale direto com a loja</h4>
+        <p>Contato via WhatsApp com o estabelecimento se precisar resolver algo.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🛒</div>
+        <h4>Lista de compras</h4>
+        <p>Nos mercados você pode escrever os itens livremente, como mandar zap.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">📱</div>
+        <h4>PWA — instala no celular</h4>
+        <p>Funciona como app sem precisar da Play Store. Rápido e leve.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SOCIAL PROOF ══════════════════════════════════════════ -->
+<div class="proof-strip">
+  <div class="proof-items">
+    <div class="proof-item"><span class="proof-icon">🔒</span> Pagamento seguro via MercadoPago</div>
+    <div class="proof-item"><span class="proof-icon">📍</span> GPS em tempo real com Leaflet</div>
+    <div class="proof-item"><span class="proof-icon">⚡</span> Pix instantâneo</div>
+    <div class="proof-item"><span class="proof-icon">💳</span> Crédito e débito</div>
+    <div class="proof-item"><span class="proof-icon">🏠</span> 100% feito em Guajará-AM</div>
+  </div>
+</div>
+
+<!-- ═══ PERFIS ════════════════════════════════════════════════ -->
+<section class="section section-alt" id="perfis">
+  <div class="container">
+    <div class="section-tag appear">👥 Para quem é o Chegou Aí</div>
+    <h2 class="section-h appear" style="transition-delay:.06s">Cada um<br>no seu lugar</h2>
+    <p class="section-p appear" style="transition-delay:.12s">Um app. Três perfis. Clientes, estabelecimentos e motoboys unidos em uma única plataforma.</p>
+    <div class="perfis">
+
+      <!-- CLIENTE -->
+      <div class="perfil cli appear" style="transition-delay:.1s">
+        <div class="perfil-top">
+          <div class="perfil-avatar">🛍️</div>
+          <div>
+            <h3>Cliente</h3>
+            <div class="perfil-sub">Você que quer pedir</div>
+          </div>
+        </div>
+        <p class="perfil-desc">Peça do conforto de casa e receba em minutos. Acompanhe tudo em tempo real.</p>
+        <ul class="perfil-list">
+          <li><span class="chk"></span>Restaurantes, mercados e farmácias</li>
+          <li><span class="chk"></span>Rastreio do motoboy ao vivo no mapa</li>
+          <li><span class="chk"></span>Pague via Pix, cartão ou na entrega</li>
+          <li><span class="chk"></span>Histórico de pedidos no app</li>
+          <li><span class="chk"></span>Lista de compras para mercados</li>
+        </ul>
+        <a href="/app" class="btn-perfil">🛵 Quero pedir agora</a>
+      </div>
+
+      <!-- LOJISTA -->
+      <div class="perfil loj appear" style="transition-delay:.18s">
+        <div class="perfil-top">
+          <div class="perfil-avatar">🏪</div>
+          <div>
+            <h3>Estabelecimento</h3>
+            <div class="perfil-sub">Restaurantes, mercados, farmácias</div>
+          </div>
+        </div>
+        <p class="perfil-desc">Venda mais com um painel completo. Gestão de pedidos, cardápio digital e relatório financeiro.</p>
+        <ul class="perfil-list">
+          <li><span class="chk"></span>Painel de pedidos com som de alerta</li>
+          <li><span class="chk"></span>Cardápio digital com fotos</li>
+          <li><span class="chk"></span>Importar produtos via planilha CSV</li>
+          <li><span class="chk"></span>Relatório financeiro completo</li>
+          <li><span class="chk"></span>Horário de funcionamento automático</li>
+          <li><span class="chk"></span>Impressão de comanda no papel</li>
+        </ul>
+        <!-- SUBSTITUA 5597XXXXXXXXX PELO SEU WHATSAPP -->
+        <a href="https://wa.me/5597XXXXXXXXX?text=Ol%C3%A1%21+Quero+cadastrar+meu+estabelecimento+no+Chegou+A%C3%AD+%F0%9F%8F%AA" target="_blank" rel="noopener" class="btn-perfil">
+          💬 Quero cadastrar minha loja
+        </a>
+      </div>
+
+      <!-- MOTOBOY -->
+      <div class="perfil mot appear" style="transition-delay:.26s">
+        <div class="perfil-top">
+          <div class="perfil-avatar">🛵</div>
+          <div>
+            <h3>Motoboy</h3>
+            <div class="perfil-sub">Entregadores autônomos</div>
+          </div>
+        </div>
+        <p class="perfil-desc">Ganhe dinheiro no seu tempo. Aceite as entregas que quiser, quando quiser.</p>
+        <ul class="perfil-list">
+          <li><span class="chk"></span>Veja o endereço antes de aceitar</li>
+          <li><span class="chk"></span>Navegação integrada no mapa</li>
+          <li><span class="chk"></span>Ganhos transparentes por entrega</li>
+          <li><span class="chk"></span>Sem mensalidade nem taxa fixa</li>
+          <li><span class="chk"></span>App leve, funciona no celular simples</li>
+        </ul>
+        <!-- SUBSTITUA 5597XXXXXXXXX PELO SEU WHATSAPP -->
+        <a href="https://wa.me/5597XXXXXXXXX?text=Ol%C3%A1%21+Quero+ser+motoboy+no+Chegou+A%C3%AD+%F0%9F%9B%B5" target="_blank" rel="noopener" class="btn-perfil">
+          💬 Quero ser motoboy
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══ INSTALAR ═══════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="install-box appear">
+      <div>
+        <div class="section-tag">📲 Sem Play Store</div>
+        <h2 class="section-h" style="margin-bottom:10px">Instala em<br>3 segundos</h2>
+        <p style="font-size:16px;color:var(--t2);line-height:1.65;margin-bottom:0">
+          O Chegou Aí é um PWA — funciona como app nativo sem precisar baixar nada da loja.
+          Salva na tela inicial e pronto.
+        </p>
+        <div class="install-steps-list">
+          <div class="inst-step">
+            <div class="inst-num">1</div>
+            Abra essa página no navegador do celular
+          </div>
+          <div class="inst-step">
+            <div class="inst-num">2</div>
+            Toque em <strong>"Adicionar à tela inicial"</strong> (Chrome) ou <strong>"Compartilhar → Adicionar"</strong> (Safari)
+          </div>
+          <div class="inst-step">
+            <div class="inst-num">3</div>
+            Pronto — ícone na tela inicial, abre como app!
+          </div>
+        </div>
+        <a href="/app" class="btn-primary" style="display:inline-flex">
+          🚀 Abrir o app agora
+        </a>
+      </div>
+      <div class="install-phones">
+        <div class="install-phone" style="transform:rotate(-6deg);margin-bottom:24px">
+          <div class="os-icon">🤖</div>
+          <div class="os">Android</div>
+          <div class="steps-sm">Chrome → menu ⋮<br>→ "Adicionar à<br>tela inicial"</div>
+        </div>
+        <div class="install-phone" style="transform:rotate(4deg)">
+          <div class="os-icon">🍎</div>
+          <div class="os">iPhone</div>
+          <div class="steps-sm">Safari →
+          compartilhar<br>→ "Na tela<br>de início"</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ════════════════════════════════════════════════ -->
 <footer>
   <div class="footer-inner">
-    <div class="footer-top">
+    <div class="footer-grid">
+
       <div class="footer-brand">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-          <div class="nav-logo-icon"><span>🛵</span></div>
+        <div class="brand-logo">
+          <div class="nav-icon" style="width:34px;height:34px;font-size:17px"><span>🛵</span></div>
           <h3>Chegou Aí</h3>
         </div>
-        <p>Delivery local em Guajará-AM. Conectamos clientes, estabelecimentos e motoboys.</p>
+        <p>O primeiro delivery 100% guajariense. Conectando clientes, estabelecimentos e motoboys em Guajará-AM.</p>
+        <!-- SUBSTITUA 5597XXXXXXXXX PELO SEU WHATSAPP -->
+        <a href="https://wa.me/5597XXXXXXXXX" target="_blank" rel="noopener" class="footer-wa-btn">
+          💬 Fale conosco no WhatsApp
+        </a>
       </div>
-      <div class="footer-links">
-        <h5>Acesso rápido</h5>
+
+      <div class="footer-col">
+        <h5>App</h5>
         <ul>
           <li><a href="/app">Fazer um pedido</a></li>
+          <li><a href="#categorias">Ver categorias</a></li>
           <li><a href="#como-funciona">Como funciona</a></li>
-          <li><a href="#perfis">Para estabelecimentos</a></li>
-          <li><a href="#perfis">Para motoboys</a></li>
+          <li><a href="#perfis">Perfis</a></li>
         </ul>
       </div>
-      <div class="footer-links">
-        <h5>Contato</h5>
+
+      <div class="footer-col">
+        <h5>Para negócios</h5>
         <ul>
           <!-- SUBSTITUA 5597XXXXXXXXX PELO SEU WHATSAPP -->
-          <li><a href="https://wa.me/5597XXXXXXXXX" target="_blank">💬 WhatsApp</a></li>
-          <li><a href="#perfis">Cadastrar loja</a></li>
-          <li><a href="#perfis">Ser motoboy</a></li>
+          <li><a href="https://wa.me/5597XXXXXXXXX?text=Quero+cadastrar+meu+estabelecimento" target="_blank" rel="noopener">Cadastrar loja</a></li>
+          <li><a href="https://wa.me/5597XXXXXXXXX?text=Quero+ser+motoboy" target="_blank" rel="noopener">Ser motoboy</a></li>
+          <li><a href="#perfis">Para restaurantes</a></li>
+          <li><a href="#perfis">Para mercados</a></li>
         </ul>
       </div>
+
+      <div class="footer-col">
+        <h5>Ajuda</h5>
+        <ul>
+          <!-- SUBSTITUA 5597XXXXXXXXX PELO SEU WHATSAPP -->
+          <li><a href="https://wa.me/5597XXXXXXXXX" target="_blank" rel="noopener">Suporte via WhatsApp</a></li>
+          <li><a href="/app">Entrar no app</a></li>
+        </ul>
+      </div>
+
     </div>
+
     <div class="footer-bottom">
-      <p>© 2025 Chegou Aí · Guajará-AM · Todos os direitos reservados</p>
-      <!-- SUBSTITUA 5597XXXXXXXXX PELO SEU WHATSAPP -->
-      <a href="https://wa.me/5597XXXXXXXXX" target="_blank" class="footer-wa">
-        💬 Fale conosco no WhatsApp
-      </a>
+      <p>© 2025 Chegou Aí · Guajará-AM · CNPJ 00.000.000/0001-00</p>
+      <div class="footer-legal">
+        <a href="#">Termos de uso</a>
+        <a href="#">Privacidade</a>
+      </div>
     </div>
   </div>
 </footer>
 
+<!-- ═══ SCRIPTS ════════════════════════════════════════════════ -->
+<script>
+// Scroll animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.appear').forEach(el => observer.observe(el));
+
+// Mobile menu
+const menuBtn = document.getElementById('menu-btn');
+const navLinks = document.getElementById('nav-links');
+menuBtn.addEventListener('click', () => {
+  navLinks.classList.toggle('open');
+  menuBtn.textContent = navLinks.classList.contains('open') ? '✕' : '☰';
+});
+navLinks.querySelectorAll('a').forEach(a => {
+  a.addEventListener('click', () => {
+    navLinks.classList.remove('open');
+    menuBtn.textContent = '☰';
+  });
+});
+
+// Navbar scroll
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.style.background = window.scrollY > 40
+    ? 'rgba(8,8,8,.97)'
+    : 'rgba(8,8,8,.85)';
+});
+</script>
 </body>
 </html>
