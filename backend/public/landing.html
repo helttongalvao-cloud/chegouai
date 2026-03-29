@@ -89,14 +89,14 @@ nav {
   transition:color .2s; white-space:nowrap;
 }
 .nav-links a:hover { color:var(--t1); }
-.nav-cta {
-  background:var(--g); color:var(--bg); border-radius:10px;
+.nav-links .nav-cta {
+  background:var(--g); color:#000 !important; border-radius:10px;
   padding:9px 18px; font-size:13px; font-weight:700;
   font-family:'Plus Jakarta Sans',sans-serif;
   transition:background .2s, transform .15s;
   white-space:nowrap;
 }
-.nav-cta:hover { background:var(--g2); transform:translateY(-1px); }
+.nav-links .nav-cta:hover { background:var(--g2); transform:translateY(-1px); }
 .nav-menu-btn {
   display:none; background:none; border:none; color:var(--t1);
   font-size:22px; cursor:pointer; padding:4px;
@@ -605,8 +605,8 @@ footer {
       <div class="stat-lbl">Local e independente<br>feito em Guajará-AM</div>
     </div>
     <div class="stat-item appear" style="transition-delay:.08s">
-      <div class="stat-num">3 tipos</div>
-      <div class="stat-lbl">Restaurantes, mercados<br>e farmácias</div>
+      <div class="stat-num">🛵</div>
+      <div class="stat-lbl">Motoboys rastreados<br>em tempo real</div>
     </div>
     <div class="stat-item appear" style="transition-delay:.16s">
       <div class="stat-num">GPS</div>
@@ -622,9 +622,9 @@ footer {
 <!-- ═══ CATEGORIAS ════════════════════════════════════════════ -->
 <section class="section" id="categorias">
   <div class="container">
-    <div class="section-tag appear">🏪 O que tem no app</div>
-    <h2 class="section-h appear" style="transition-delay:.06s">Tem de tudo<br>aqui em Guajará</h2>
-    <p class="section-p appear" style="transition-delay:.12s">Restaurantes, mercados, farmácias e muito mais — tudo disponível na palma da sua mão.</p>
+    <div class="section-tag appear">🏪 O que você pode pedir</div>
+    <h2 class="section-h appear" style="transition-delay:.06s">Explore<br>as categorias</h2>
+    <p class="section-p appear" style="transition-delay:.12s">Restaurantes, mercados, farmácias e muito mais — disponíveis no app.</p>
     <div class="cats-grid appear" style="transition-delay:.18s">
       <a href="/app" class="cat-card">
         <span class="cat-emoji">🍔</span>
@@ -749,7 +749,7 @@ footer {
     <div class="proof-item"><span class="proof-icon">📍</span> GPS em tempo real com Leaflet</div>
     <div class="proof-item"><span class="proof-icon">⚡</span> Pix instantâneo</div>
     <div class="proof-item"><span class="proof-icon">💳</span> Crédito e débito aceitos</div>
-    <div class="proof-item"><span class="proof-icon">🏠</span> 100% feito em Guajará-AM</div>
+    <div class="proof-item"><span class="proof-icon">🛵</span> Rastreio GPS do motoboy</div>
   </div>
 </div>
 
@@ -848,9 +848,15 @@ footer {
             <div class="inst-num">1</div>
             Abra essa página no navegador do celular
           </div>
-          <div class="inst-step">
-            <div class="inst-num">2</div>
-            Toque em <strong>"Adicionar à tela inicial"</strong> (Chrome) ou <strong>"Compartilhar → Adicionar"</strong> (Safari)
+          <div class="inst-step" style="flex-direction:column;align-items:flex-start;gap:6px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="inst-num">2</div>
+              <span>Adicione à tela inicial:</span>
+            </div>
+            <div style="padding-left:40px;display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--t2)">
+              <span>📱 <strong>Android:</strong> menu ⋮ → "Adicionar à tela inicial"</span>
+              <span>🍎 <strong>iPhone:</strong> compartilhar ↑ → "Na tela de início"</span>
+            </div>
           </div>
           <div class="inst-step">
             <div class="inst-num">3</div>
