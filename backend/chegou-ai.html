@@ -2427,6 +2427,8 @@ async function renderEstabelecimento() {
       lista.innerHTML = '<div class="vazio"><div class="vazio-icon">📦</div>Nenhum pedido aberto no momento</div>';
       return;
     }
+    window._pedidosCache = {};
+    pedidos.forEach(function(p){ window._pedidosCache[p.id] = p; });
     lista.innerHTML = pedidos.map(function(p) {
       var sc = p.status === 'aceito' ? 'badge-novo'
              : p.status === 'preparando' ? 'badge-preparando'
@@ -2473,7 +2475,7 @@ async function renderEstabelecimento() {
         '<div class="pedido-itens">' + (itensTxt || '—') + '</div>' +
         '<div class="pedido-footer"><span class="pedido-total">R$ ' + parseFloat(p.total || 0).toFixed(2).replace('.',',') + pagBadge + '</span>' +
         '<div style="display:flex;gap:6px;">' + botao +
-        '<button onclick="imprimirComanda(' + JSON.stringify(p).replace(/</g,'\\u003c') + ')" style="background:var(--cinza3);border:none;border-radius:10px;padding:8px 12px;color:var(--texto);font-size:12px;cursor:pointer;">🖨️</button>' +
+        '<button onclick="imprimirComanda(\'' + p.id + '\')" style="background:var(--cinza3);border:none;border-radius:10px;padding:8px 12px;color:var(--texto);font-size:12px;cursor:pointer;">🖨️</button>' +
         '</div></div>' +
       '</div>';
     }).join('');
@@ -2482,7 +2484,9 @@ async function renderEstabelecimento() {
   }
 }
 
-function imprimirComanda(p) {
+function imprimirComanda(id) {
+  var p = window._pedidosCache && window._pedidosCache[id];
+  if(!p) { alert('Pedido não encontrado. Atualize a tela e tente novamente.'); return; }
   var itensHtml = '';
   if(p.tipo === 'lista' && p.lista_compras) {
     itensHtml = '<div style="white-space:pre-wrap;">' + p.lista_compras + '</div>';
