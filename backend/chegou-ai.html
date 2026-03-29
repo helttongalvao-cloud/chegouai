@@ -920,7 +920,7 @@ async function pagarCartao(pedidoId) {
   document.getElementById('pag-valor').textContent = total;
   document.getElementById('pag-instrucao').textContent = 'Pagamento 100% seguro via Mercado Pago';
   document.getElementById('pag-detalhe').innerHTML =
-    '<div id="cardPaymentBrick_container" style="margin-top:8px;"></div>';
+    '<div id="cardPaymentBrick_container" style="margin-top:8px;min-height:300px;"></div>';
 
   if (cardBrickController) {
     try { cardBrickController.unmount(); } catch(_) {}
