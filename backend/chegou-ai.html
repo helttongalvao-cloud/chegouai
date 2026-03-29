@@ -1086,7 +1086,9 @@ function entrarComo(perfil) {
       apiCall('/api/orders/' + pedidoAtualId).then(function(resp) {
         var statusFinal = ['entregue', 'cancelado'];
         if(resp && resp.status && statusFinal.indexOf(resp.status) === -1) {
+          if(resp.estabelecimentos) estAtual = Object.assign(estAtual || {}, resp.estabelecimentos);
           irTela('tela-confirmado');
+          mostrarWhatsappEstabelecimento();
           ultimoStatusConhecido = {};
           iniciarPollingPedidos();
         } else {

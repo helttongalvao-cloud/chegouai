@@ -359,7 +359,7 @@ router.get('/:id', requireAuth, [param('id').isUUID()], async (req, res, next) =
       .from('pedidos')
       .select(`
         *,
-        estabelecimentos (nome, emoji, telefone, user_id),
+        estabelecimentos (nome, emoji, telefone, whatsapp, user_id),
         itens_pedido (*),
         motoboys (id, nome, telefone, lat, lng)
       `)
