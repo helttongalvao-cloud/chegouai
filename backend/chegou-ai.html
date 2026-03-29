@@ -900,20 +900,91 @@ async function pagarPix(pedidoId) {
 }
 
 // ============================================
-// PAGAMENTO CARTÃO — Checkout Pro MP
+// PAGAMENTO CARTÃO — MP Bricks (in-app, sem redirect)
 // ============================================
+var cardBrickController = null;
+
 async function pagarCartao(pedidoId) {
-  mostrarLoadingPagamento('Preparando checkout...');
+  if (!window.mp) {
+    alert('SDK do Mercado Pago não carregado. Recarregue a página.');
+    return;
+  }
+  var total = document.getElementById('total-valor').textContent;
+  // Converter "R$ 39,90" → número
+  var totalNum = parseFloat(
+    total.replace('R$','').trim().replace(/\./g,'').replace(',','.')
+  ) || 0;
+
+  document.getElementById('modal-pagamento').classList.add('aberto');
+  document.getElementById('pag-tipo').textContent = 'Cartão de crédito';
+  document.getElementById('pag-valor').textContent = total;
+  document.getElementById('pag-instrucao').textContent = 'Pagamento 100% seguro via Mercado Pago';
+  document.getElementById('pag-detalhe').innerHTML =
+    '<div id="cardPaymentBrick_container" style="margin-top:8px;"></div>';
+
+  if (cardBrickController) {
+    try { cardBrickController.unmount(); } catch(_) {}
+    cardBrickController = null;
+  }
+
   try {
-    var resp = await apiCall('/api/payments/cartao', {
-      method: 'POST',
-      body: { pedidoId: pedidoId },
-    });
-    esconderLoadingPagamento();
-    mostrarCheckoutCartao(resp);
+    cardBrickController = await window.mp.bricks().create(
+      'cardPayment',
+      'cardPaymentBrick_container',
+      {
+        initialization: { amount: totalNum },
+        customization: {
+          paymentMethods: { minInstallments: 1, maxInstallments: 12 },
+          visual: {
+            style: { theme: 'dark' },
+            hideFormTitle: true,
+          },
+        },
+        callbacks: {
+          onReady: function() {},
+          onError: function(err) { console.error('[CardBrick]', err); },
+          onSubmit: async function(cardFormData) {
+            mostrarLoadingPagamento('Processando pagamento...');
+            try {
+              var resp = await apiCall('/api/payments/cartao-brick', {
+                method: 'POST',
+                body: {
+                  pedidoId: pedidoId,
+                  token: cardFormData.token,
+                  installments: cardFormData.installments,
+                  paymentMethodId: cardFormData.payment_method_id,
+                  issuerId: cardFormData.issuer_id,
+                  payerCpf: cardFormData.payer && cardFormData.payer.identification
+                    ? cardFormData.payer.identification.number : '',
+                },
+              });
+              esconderLoadingPagamento();
+              if (resp.status === 'approved') {
+                fecharModalPagamento();
+                irTela('tela-confirmado');
+                mostrarWhatsappEstabelecimento();
+                ultimoStatusConhecido = {};
+                iniciarPollingPedidos();
+              } else if (resp.status === 'in_process' || resp.status === 'pending') {
+                document.getElementById('pag-instrucao').textContent =
+                  'Pagamento em análise. Aguardando confirmação...';
+                startPollingPagamento(resp.paymentId);
+              } else {
+                alert('Pagamento recusado. Verifique os dados do cartão e tente novamente.');
+              }
+            } catch(e) {
+              esconderLoadingPagamento();
+              alert('Erro no pagamento: ' + e.message);
+            }
+          },
+        },
+      }
+    );
   } catch(e) {
-    esconderLoadingPagamento();
-    alert('Erro ao abrir checkout: ' + e.message);
+    document.getElementById('pag-detalhe').innerHTML =
+      '<div style="text-align:center;padding:24px;color:var(--texto2);">' +
+      'Erro ao carregar formulário de pagamento.<br>Tente pagar com Pix.</div>';
+    console.error('[CardBrick]', e);
   }
 }
 
@@ -957,22 +1028,6 @@ function mostrarQRCodeReal(pixData) {
 
   // Polling de status a cada 5 segundos
   startPollingPagamento(pixData.paymentId);
-}
-
-// Exibir botão de checkout de cartão
-function mostrarCheckoutCartao(resp) {
-  var total = document.getElementById('total-valor').textContent;
-  document.getElementById('modal-pagamento').classList.add('aberto');
-  document.getElementById('pag-tipo').textContent = 'Cartão';
-  document.getElementById('pag-valor').textContent = total;
-  document.getElementById('pag-instrucao').textContent = 'Você será redirecionado para o checkout seguro';
-  document.getElementById('pag-detalhe').innerHTML =
-    '<div style="background:var(--cinza3);border-radius:12px;padding:20px;text-align:center;margin:12px 0;">' +
-      '<div style="font-size:64px;margin-bottom:8px;">💳</div>' +
-      '<div style="font-size:12px;color:var(--texto2);">Checkout Mercado Pago — 100% seguro</div>' +
-      '<div style="font-size:11px;color:var(--texto2);margin-top:4px;">Split automático entre lojista e motoboy</div>' +
-    '</div>' +
-    '<a href="' + resp.initPoint + '" class="btn-principal" style="display:block;text-align:center;text-decoration:none;" target="_blank">Pagar com cartão</a>';
 }
 
 // Copiar código Pix para clipboard
@@ -1053,6 +1108,10 @@ function confirmarPagamentoSimulado() {
 
 function fecharModalPagamento() {
   document.getElementById('modal-pagamento').classList.remove('aberto');
+  if (cardBrickController) {
+    try { cardBrickController.unmount(); } catch(_) {}
+    cardBrickController = null;
+  }
 }
 // ============================================
 

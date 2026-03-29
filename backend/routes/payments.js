@@ -3,7 +3,7 @@ const { body, param, validationResult } = require('express-validator');
 const { requireAuth } = require('../middleware/auth');
 const { paymentLimiter } = require('../middleware/security');
 const { supabaseAdmin } = require('../config/supabase');
-const { criarPagamentoPix, criarPreferenciaCartao, buscarPagamento, verificarAssinaturaWebhook } = require('../services/mercadopago');
+const { criarPagamentoPix, criarPreferenciaCartao, criarPagamentoCartao, buscarPagamento, verificarAssinaturaWebhook } = require('../services/mercadopago');
 const { calcularSplit } = require('../services/commission');
 
 const router = express.Router();
@@ -195,6 +195,102 @@ router.post(
       });
     } catch (err) {
       console.error('[Cartão]', err.message);
+      next(err);
+    }
+  }
+);
+
+// =============================================
+// POST /api/payments/cartao-brick — Pagamento direto com token MP Bricks
+// =============================================
+router.post(
+  '/cartao-brick',
+  paymentLimiter,
+  requireAuth,
+  [
+    body('pedidoId').isUUID().withMessage('pedidoId inválido'),
+    body('token').notEmpty().withMessage('token obrigatório'),
+    body('installments').isInt({ min: 1, max: 12 }).withMessage('parcelas inválidas'),
+    body('paymentMethodId').notEmpty().withMessage('paymentMethodId obrigatório'),
+  ],
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ error: errors.array()[0].msg });
+    }
+
+    const { pedidoId, token, installments, paymentMethodId, issuerId, payerCpf } = req.body;
+    const user = req.user;
+
+    try {
+      const { data: pedido, error: pedidoErr } = await supabaseAdmin
+        .from('pedidos')
+        .select(`*, estabelecimentos (nome, cadastro_data, mp_user_id)`)
+        .eq('id', pedidoId)
+        .eq('cliente_id', user.id)
+        .eq('pagamento_status', 'pendente')
+        .single();
+
+      if (pedidoErr || !pedido) {
+        return res.status(404).json({ error: 'Pedido não encontrado' });
+      }
+
+      const split = calcularSplit({
+        subtotal: pedido.subtotal,
+        taxaEntrega: pedido.taxa_entrega,
+        cadastroData: pedido.estabelecimentos.cadastro_data,
+      });
+
+      let mpAccessToken = null;
+      let applicationFee = 0;
+      if (pedido.estabelecimentos.mp_user_id && pedido.estabelecimentos.mp_user_id.startsWith('APP_USR-')) {
+        mpAccessToken = pedido.estabelecimentos.mp_user_id.trim();
+        applicationFee = split.valorPlataforma + split.valorMotoboy;
+      }
+
+      const nomeParts = (user.profile.nome || '').split(' ');
+      const payment = await criarPagamentoCartao({
+        total: split.total,
+        token,
+        installments: parseInt(installments, 10),
+        paymentMethodId,
+        issuerId: issuerId || undefined,
+        orderId: pedidoId,
+        storeName: pedido.estabelecimentos.nome,
+        payerEmail: user.email,
+        payerFirstName: nomeParts[0],
+        payerLastName: nomeParts.slice(1).join(' ') || 'Cliente',
+        payerCpf: payerCpf || '00000000000',
+        mpAccessToken,
+        applicationFee,
+      });
+
+      await supabaseAdmin
+        .from('pedidos')
+        .update({
+          mp_payment_id: String(payment.paymentId),
+          comissao_plataforma: split.valorPlataforma,
+          total: split.total,
+          pagamento_status: 'aguardando',
+        })
+        .eq('id', pedidoId);
+
+      if (payment.status === 'approved') {
+        await processarPagamentoAprovado(pedidoId, payment);
+      } else if (['rejected', 'cancelled'].includes(payment.status)) {
+        await supabaseAdmin
+          .from('pedidos')
+          .update({ pagamento_status: 'recusado', status: 'cancelado' })
+          .eq('id', pedidoId);
+      }
+
+      res.json({
+        status: payment.status,
+        statusDetail: payment.statusDetail,
+        paymentId: payment.paymentId,
+      });
+    } catch (err) {
+      console.error('[CartãoBrick]', err.message);
       next(err);
     }
   }

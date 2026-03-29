@@ -170,6 +170,68 @@ async function criarPreferenciaCartao(params) {
 }
 
 // =============================================
+// CARTÃO — Pagamento direto com token (MP Bricks)
+// =============================================
+/**
+ * Cria um pagamento de cartão com token gerado pelo CardPaymentBrick.
+ * Não redireciona o usuário — processamento ocorre dentro do app.
+ */
+async function criarPagamentoCartao(params) {
+  const {
+    total,
+    token,
+    installments,
+    paymentMethodId,
+    issuerId,
+    orderId,
+    storeName,
+    payerEmail,
+    payerFirstName,
+    payerLastName,
+    payerCpf,
+    mpAccessToken,
+    applicationFee,
+  } = params;
+
+  let localPaymentClient = paymentClient;
+  if (mpAccessToken) {
+    const localMpClient = new MercadoPagoConfig({
+      accessToken: mpAccessToken,
+      options: { timeout: 5000 },
+    });
+    localPaymentClient = new Payment(localMpClient);
+  }
+
+  const body = {
+    transaction_amount: total,
+    token,
+    description: `Pedido #${orderId} — ${storeName}`,
+    installments,
+    payment_method_id: paymentMethodId,
+    ...(issuerId && { issuer_id: issuerId }),
+    external_reference: orderId,
+    notification_url: `${process.env.WEBHOOK_URL}/api/payments/webhook`,
+    payer: {
+      email: payerEmail,
+      first_name: payerFirstName,
+      last_name: payerLastName,
+      identification: { type: 'CPF', number: payerCpf },
+    },
+    statement_descriptor: 'CHEGOUAI',
+    metadata: { order_id: orderId, store: storeName },
+    ...(mpAccessToken && applicationFee > 0 && { application_fee: applicationFee }),
+  };
+
+  const response = await localPaymentClient.create({ body });
+
+  return {
+    paymentId: response.id,
+    status: response.status,
+    statusDetail: response.status_detail,
+  };
+}
+
+// =============================================
 // BUSCAR STATUS DO PAGAMENTO
 // =============================================
 async function buscarPagamento(paymentId) {
@@ -240,6 +302,7 @@ function verificarAssinaturaWebhook(req) {
 module.exports = {
   criarPagamentoPix,
   criarPreferenciaCartao,
+  criarPagamentoCartao,
   buscarPagamento,
   verificarAssinaturaWebhook,
 };
