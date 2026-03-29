@@ -882,6 +882,88 @@ function iniciarRealtimeMotoboy() {
 }
 
 // ============================================
+// REALTIME CLIENTE — acompanhar pedido em tempo real
+// ============================================
+var realtimeClienteChannel = null;
+var realtimeGpsChannel = null;
+
+function pararRealtimeCliente() {
+  if(realtimeClienteChannel && supabaseClient) {
+    supabaseClient.removeChannel(realtimeClienteChannel);
+    realtimeClienteChannel = null;
+  }
+  if(realtimeGpsChannel && supabaseClient) {
+    supabaseClient.removeChannel(realtimeGpsChannel);
+    realtimeGpsChannel = null;
+  }
+}
+
+function iniciarRealtimeGps(motoboyId) {
+  if(!supabaseClient || !motoboyId) return;
+  if(realtimeGpsChannel) { supabaseClient.removeChannel(realtimeGpsChannel); realtimeGpsChannel = null; }
+  supabaseClient.realtime.setAuth(authToken);
+  realtimeGpsChannel = supabaseClient
+    .channel('motoboy-gps-' + motoboyId)
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'motoboys',
+      filter: 'id=eq.' + motoboyId,
+    }, function(payload) {
+      if(payload.new && payload.new.lat && payload.new.lng) {
+        atualizarMapaCliente(payload.new.lat, payload.new.lng, payload.new.nome);
+      }
+    })
+    .subscribe();
+}
+
+function iniciarRealtimeCliente(pedidoId) {
+  if(!supabaseClient || !pedidoId) return;
+  pararRealtimeCliente();
+  supabaseClient.realtime.setAuth(authToken);
+  realtimeClienteChannel = supabaseClient
+    .channel('pedido-cliente-' + pedidoId)
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'pedidos',
+      filter: 'id=eq.' + pedidoId,
+    }, function(payload) {
+      if(!payload.new) return;
+      var novoStatus = payload.new.status;
+      if(!novoStatus || ultimoStatusConhecido[pedidoId] === novoStatus) return;
+      ultimoStatusConhecido[pedidoId] = novoStatus;
+      atualizarRastreioPedido(novoStatus);
+      var msgs = {
+        'aceito':     { icon:'✅', title:'Pedido aceito!',      msg:'O estabelecimento confirmou seu pedido.' },
+        'preparando': { icon:'👨‍🍳', title:'Preparando...',       msg:'Seu pedido está sendo preparado.' },
+        'pronto':     { icon:'📦', title:'Pedido pronto!',      msg:'Aguardando motoboy retirar o pedido.' },
+        'coletado':   { icon:'🛵', title:'Saiu para entrega!',  msg:'O motoboy está a caminho.' },
+        'entregue':   { icon:'🎉', title:'Entregue!',           msg:'Seu pedido foi entregue. Bom apetite!' },
+      };
+      if(msgs[novoStatus]) showToast(msgs[novoStatus].icon, msgs[novoStatus].title, msgs[novoStatus].msg);
+      // Mostrar mapa quando motoboy sair
+      if(novoStatus === 'coletado' || novoStatus === 'entregue') {
+        var boxRastreio = document.getElementById('box-rastreio');
+        if(boxRastreio && boxRastreio.style.display !== 'block') {
+          boxRastreio.style.display = 'block';
+          if(mapCliente) [200,600,1200].forEach(function(d){ setTimeout(function(){ if(mapCliente) mapCliente.invalidateSize(); },d); });
+        }
+        if(payload.new.motoboy_id) iniciarRealtimeGps(payload.new.motoboy_id);
+      }
+      if(novoStatus === 'entregue') {
+        localStorage.removeItem('chegouai_pedido_id');
+        pedidoAtualId = null;
+        pararRealtimeCliente();
+        if(mapCliente) { mapCliente.remove(); mapCliente = null; markerMotoboy = null; }
+        var mw = document.getElementById('map-wrap');
+        var md = document.getElementById('map');
+        var ma = document.getElementById('map-aguardando');
+        if(mw) mw.style.display = 'none';
+        if(md) md.style.display = 'none';
+        if(ma) ma.style.display = 'block';
+      }
+    })
+    .subscribe();
+}
+
+// ============================================
 // PAGAMENTO PIX — chamada real ao backend
 // ============================================
 async function pagarPix(pedidoId) {
@@ -1294,6 +1376,7 @@ async function entrar() {
 
 function irLogin() {
   pararRealtime();
+  pararRealtimeCliente();
   if(pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
   authToken = null;
   currentUser = null;
@@ -3183,7 +3266,7 @@ async function renderMotoboy() {
     el.innerHTML = html;
     if(ativa) inicializarMapaMotoboy(ativa.endereco_entrega);
   } catch(e) {
-    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao buscar entregas</div>';
+    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao buscar entregas<br><button onclick="renderMotoboy()" style="margin-top:12px;padding:8px 20px;border-radius:10px;background:var(--verde);color:#000;border:none;font-weight:700;cursor:pointer;">Tentar novamente</button></div>';
   }
 }
 
@@ -3651,14 +3734,19 @@ let primeiroPolling = true;
 function iniciarPollingPedidos() {
   if(pollingInterval) clearInterval(pollingInterval);
   primeiroPolling = true;
-  // Buscar status imediatamente para cliente (sem aguardar o primeiro ciclo de 5s)
+  // Para cliente: busca status imediatamente + inicia Realtime (como Uber)
   if(currentUser && currentUser.perfil === 'cliente' && pedidoAtualId) {
-    apiCall('/api/orders/' + pedidoAtualId).then(function(r) {
-      if(r && r.status && ultimoStatusConhecido[pedidoAtualId] !== r.status) {
-        ultimoStatusConhecido[pedidoAtualId] = r.status;
+    var _pid = pedidoAtualId;
+    apiCall('/api/orders/' + _pid).then(function(r) {
+      if(r && r.status && ultimoStatusConhecido[_pid] !== r.status) {
+        ultimoStatusConhecido[_pid] = r.status;
         atualizarRastreioPedido(r.status);
+        if((r.status === 'coletado' || r.status === 'entregue') && r.motoboys && r.motoboys.id) {
+          iniciarRealtimeGps(r.motoboys.id);
+        }
       }
     }).catch(function(){});
+    iniciarRealtimeCliente(_pid);
   }
   pollingInterval = setInterval(async function() {
     if(!authToken || !currentUser) return;
