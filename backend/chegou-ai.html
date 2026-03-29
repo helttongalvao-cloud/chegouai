@@ -282,7 +282,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .emoji-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-top:8px; }
 .emoji-op { background:var(--cinza3); border:2px solid transparent; border-radius:10px; padding:8px; text-align:center; font-size:22px; cursor:pointer; transition:all 0.15s; }
 .emoji-op.selecionado { border-color:var(--verde); background:#00C85315; }
-.card-produto { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:14px; padding:14px; display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.card-produto { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:14px; padding:14px; display:flex; align-items:center; gap:12px; margin-bottom:10px; position:relative; }
 .card-produto .prod-emoji { font-size:32px; width:52px; height:52px; background:var(--cinza3); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .card-produto .prod-info { flex:1; }
 .card-produto .prod-nome { font-size:15px; font-weight:600; }
@@ -1960,8 +1960,9 @@ function processarArquivoImport(input) {
     try {
       showToast('⏳', 'Importando...', produtos.length + ' produtos sendo cadastrados');
       var resp = await apiCall('/api/establishments/me/products/import', { method: 'POST', body: { produtos: produtos } });
-      showToast('✅', 'Importação concluída!', resp.importados + ' de ' + resp.total + ' produtos importados');
-      renderCardapioEst();
+      window._idsImportados = new Set(resp.ids || []);
+      showToast('✅', 'Importação concluída!', resp.importados + ' de ' + resp.total + ' produtos importados. Adicione as fotos!');
+      renderCardapioEst(true);
     } catch(e) {
       alert('Erro na importação: ' + e.message);
     }
@@ -1970,7 +1971,8 @@ function processarArquivoImport(input) {
   reader.readAsText(file, 'UTF-8');
 }
 
-async function renderCardapioEst() {
+async function renderCardapioEst(manterDestaque) {
+  if(!manterDestaque) window._idsImportados = null;
   var el = document.getElementById('est-secao-cardapio');
   el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando...</div>';
   try {
@@ -1989,7 +1991,13 @@ async function renderCardapioEst() {
     var thumbHtml = p.imagem_url
       ? '<img src="' + p.imagem_url + '" style="width:48px;height:48px;border-radius:8px;object-fit:cover;opacity:' + op + '" onerror="this.style.display=\'none\'">'
       : '<div class="prod-emoji" style="opacity:' + op + '">' + (p.emoji || '🍽️') + '</div>';
-    return '<div class="card-produto" data-id="' + p.id + '">' +
+    var isNovo = window._idsImportados && window._idsImportados.has(p.id);
+    var bordaNova = isNovo ? 'border-color:var(--laranja);' : '';
+    var btnFoto = isNovo && !p.imagem_url
+      ? '<button class="btn-editar" onclick="editarProduto(' + i + ')" style="background:#FF6D0020;color:var(--laranja);border:1px solid var(--laranja);">📷 Adicionar foto</button>'
+      : '<button class="btn-editar" onclick="editarProduto(' + i + ')">✏️ Editar</button>';
+    return '<div class="card-produto" data-id="' + p.id + '" style="' + bordaNova + '">' +
+      (isNovo && !p.imagem_url ? '<div style="position:absolute;top:6px;left:6px;background:var(--laranja);color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;">NOVO</div>' : '') +
       thumbHtml +
       '<div class="prod-info">' +
         '<div class="prod-nome">' + p.nome + '</div>' +
@@ -1998,7 +2006,7 @@ async function renderCardapioEst() {
         indisponivel +
       '</div>' +
       '<div class="prod-acoes">' +
-        '<button class="btn-editar" onclick="editarProduto(' + i + ')">✏️ Editar</button>' +
+        btnFoto +
         '<button class="btn-deletar" onclick="deletarProduto(\'' + p.id + '\')">🗑️ Remover</button>' +
       '</div>' +
     '</div>';

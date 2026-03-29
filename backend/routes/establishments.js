@@ -333,7 +333,7 @@ router.post('/me/products/import', requireRole('estabelecimento'), async (req, r
     const { data, error } = await supabaseAdmin.from('produtos').insert(registros).select('id');
     if (error) throw error;
 
-    res.json({ importados: data.length, total: produtos.length });
+    res.json({ importados: data.length, total: produtos.length, ids: data.map(p => p.id) });
   } catch (err) {
     next(err);
   }
