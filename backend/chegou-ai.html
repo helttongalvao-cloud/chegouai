@@ -345,7 +345,15 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .cat-btn { border-radius:100px; padding:9px 18px; }
 
 /* HOME — cards maiores */
-.card-est-img { height:160px; }
+.card-est-img { height:160px; position:relative; }
+.card-est-img img { width:100%; height:100%; object-fit:cover; display:block; }
+.card-est-placeholder { width:100%; height:160px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
+.card-est-placeholder .pl-emoji { font-size:56px; line-height:1; }
+.card-est-placeholder .pl-inicial {
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+  opacity:0.7;
+}
 .card-est-nome { font-size:17px; }
 .card-est-meta { font-size:12px; }
 
@@ -1192,6 +1200,24 @@ function irLogin() {
   irTela('tela-login');
 }
 
+function cardEstImg(e) {
+  if(e.foto_url) {
+    return '<div class="card-est-img"><img src="' + e.foto_url + '" alt="' + sanitizar(e.nome) + '" loading="lazy"></div>';
+  }
+  var gradientes = {
+    restaurante: 'linear-gradient(135deg,#1a0a00,#3d1a00)',
+    mercado:     'linear-gradient(135deg,#00102a,#002a5c)',
+    farmacia:    'linear-gradient(135deg,#001a14,#003d2e)',
+    lanche:      'linear-gradient(135deg,#1a1200,#3d2d00)',
+  };
+  var bg = gradientes[e.categoria] || 'linear-gradient(135deg,#0d1a0d,#1a3320)';
+  var emoji = e.emoji || '🏪';
+  return '<div class="card-est-placeholder" style="background:' + bg + ';">' +
+    '<div class="pl-emoji">' + emoji + '</div>' +
+    '<div class="pl-inicial">' + sanitizar(e.nome).substring(0,18) + '</div>' +
+  '</div>';
+}
+
 async function irHome() {
   carrinho = [];
   atualizarCarrinho();
@@ -1231,7 +1257,7 @@ function renderEstabelecimentos(cat) {
     var status = e.aberto ? 'Aberto' : 'Fechado';
     var esmaecido = e.aberto ? '' : 'style="opacity: 0.5; filter: grayscale(1);"';
     return '<div class="card-est" onclick="abrirCardapio(\'' + e.id + '\')" ' + esmaecido + '>' +
-      '<div class="card-est-img">' + (e.emoji || '🏪') + '</div>' +
+      cardEstImg(e) +
       '<div class="card-est-info">' +
         '<div class="card-est-nome">' + sanitizar(e.nome) + '</div>' +
         '<div class="card-est-meta">' +
@@ -1302,7 +1328,7 @@ function buscarEst(val) {
     var badge = e.aberto ? 'badge-aberto' : 'badge-fechado';
     var status = e.aberto ? 'Aberto' : 'Fechado';
     return '<div class="card-est" onclick="abrirCardapio(\'' + e.id + '\')">' +
-      '<div class="card-est-img">' + sanitizar(e.emoji || '🏪') + '</div>' +
+      cardEstImg(e) +
       '<div class="card-est-info">' +
         '<div class="card-est-nome">' + sanitizar(e.nome) + '</div>' +
         '<div class="card-est-meta">' +
