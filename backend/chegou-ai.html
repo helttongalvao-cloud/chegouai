@@ -3286,9 +3286,11 @@ function showToast(icon, title, msg) {
 
 // === POLLING DE STATUS DE PEDIDOS (para lojista e cliente) ===
 let ultimoStatusConhecido = {};
+let primeiroPolling = true;
 
 function iniciarPollingPedidos() {
   if(pollingInterval) clearInterval(pollingInterval);
+  primeiroPolling = true;
   pollingInterval = setInterval(async function() {
     if(!authToken || !currentUser) return;
 
@@ -3296,14 +3298,17 @@ function iniciarPollingPedidos() {
       if(currentUser.perfil === 'estabelecimento') {
         var resp = await apiCall('/api/establishments/me/dashboard');
         var pedidos = Array.isArray(resp.pedidosAbertos) ? resp.pedidosAbertos : [];
-        // Toast para pedidos novos
-        pedidos.forEach(function(p) {
-          if(!ultimoStatusConhecido[p.id]) {
-            var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : 'Cliente';
-            tocarSomNovoPedido();
-            showToast('🔔', 'Novo pedido de ' + nomeCliente + '!', 'R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') + ' · ' + (p.endereco_entrega || '').substring(0, 35));
-          }
-        });
+        // Toast para pedidos novos — silencioso na primeira rodada (evita notificar pedidos já conhecidos)
+        if(!primeiroPolling) {
+          pedidos.forEach(function(p) {
+            if(!ultimoStatusConhecido[p.id]) {
+              var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : 'Cliente';
+              tocarSomNovoPedido();
+              showToast('🔔', 'Novo pedido de ' + nomeCliente + '!', 'R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') + ' · ' + (p.endereco_entrega || '').substring(0, 35));
+            }
+          });
+        }
+        primeiroPolling = false;
         // Detectar mudanças de status em pedidos existentes e sempre atualizar tela
         var mudou = pedidos.some(function(p) { return ultimoStatusConhecido[p.id] !== p.status; });
         pedidos.forEach(function(p) { ultimoStatusConhecido[p.id] = p.status; });
