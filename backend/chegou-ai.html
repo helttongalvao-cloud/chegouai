@@ -329,33 +329,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 /* ===== REDESIGN v2 ===== */
 
-/* LOGIN HERO (inspirado 99) */
-#tela-login { background:var(--preto); padding:0; }
-.login-hero {
-  background:var(--verde);
-  padding:56px 24px 60px;
-  display:flex; flex-direction:column; align-items:center; gap:14px;
-  position:relative;
-}
-.login-hero::after {
-  content:''; position:absolute; bottom:-1px; left:0; right:0;
-  height:32px; background:var(--preto); border-radius:28px 28px 0 0;
-}
-.login-hero-logo {
-  width:76px; height:76px; background:var(--preto);
-  border-radius:22px; display:flex; align-items:center; justify-content:center;
-  font-size:38px; box-shadow:0 8px 32px rgba(0,0,0,0.25);
-}
-.login-hero-title {
-  font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:30px; font-weight:800; color:var(--preto);
-  text-align:center; line-height:1.05; letter-spacing:-0.5px;
-}
-.login-hero-sub {
-  font-size:14px; color:rgba(0,0,0,0.55);
-  text-align:center; font-weight:500; margin-top:-4px;
-}
-.login-form-panel { padding:36px 24px 40px; flex:1; display:flex; flex-direction:column; }
+/* LOGIN */
+#tela-login { background:var(--preto); padding:40px 24px; }
 
 /* HOME — saudação */
 .home-greeting {
@@ -383,26 +358,13 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .card-est-skeleton .sk-linha.larga { width:70%; }
 .card-est-skeleton .sk-linha.curta { width:45%; }
 
-/* CONFIRMADO — header verde */
-.confirmado-header {
-  background:var(--verde); width:100%;
-  padding:48px 24px 56px;
-  display:flex; flex-direction:column; align-items:center; gap:8px;
-  position:relative;
-}
-.confirmado-header::after {
-  content:''; position:absolute; bottom:-1px; left:0; right:0;
-  height:32px; background:var(--preto); border-radius:28px 28px 0 0;
-}
-.confirmado-header .conf-icon { font-size:72px; }
-.confirmado-header .conf-titulo {
-  font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:26px; font-weight:800; color:var(--preto); text-align:center;
-}
-.confirmado-header .conf-sub {
-  font-size:14px; color:rgba(0,0,0,0.55); text-align:center; font-weight:500;
-}
-.confirmado-body { padding:32px 24px 40px; width:100%; flex:1; display:flex; flex-direction:column; align-items:center; }
+/* CONFIRMADO */
+#tela-confirmado { background:var(--preto); align-items:center; justify-content:center; text-align:center; padding:40px 24px; }
+.confirmado-icon { font-size:80px; margin-bottom:24px; animation:bounce 0.6s ease; }
+.confirmado-titulo { font-size:28px; font-weight:800; margin-bottom:8px; }
+.confirmado-titulo span { color:var(--verde); }
+.confirmado-sub { color:var(--texto2); font-size:15px; margin-bottom:32px; line-height:1.6; }
+.confirmado-body { width:100%; display:contents; }
 </style>
 </head>
 <body>
@@ -416,12 +378,12 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 <!-- LOGIN -->
 <div class="tela" id="tela-login">
-  <div class="login-hero">
-    <div class="login-hero-logo">🛵</div>
-    <div class="login-hero-title">Chegou Aí</div>
-    <div class="login-hero-sub">Delivery em Guajará-AM</div>
-  </div>
-  <div class="login-form-panel">
+  <div style="padding:0 24px 40px; flex:1; display:flex; flex-direction:column; justify-content:center;">
+    <div style="text-align:center; margin-bottom:40px;">
+      <div class="logo-splash" style="width:90px;height:90px;border-radius:26px;font-size:46px;margin:0 auto 20px;background:var(--preto);border:2.5px solid var(--verde);">🛵</div>
+      <h2 style="font-size:38px;font-weight:800;letter-spacing:-1px;line-height:1.05;">Bem-vindo ao<br><span style="color:var(--verde);">Chegou Aí</span></h2>
+      <p style="color:var(--texto2);margin-top:10px;font-size:15px;">Entre na sua conta para continuar</p>
+    </div>
     <div class="campo">
       <label>E-mail</label>
       <input type="email" placeholder="seu@email.com" id="login-usuario" autocomplete="email">
@@ -431,7 +393,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <input type="password" placeholder="••••••••" id="login-senha">
     </div>
     <button class="btn-principal" onclick="entrar()">Entrar</button>
-    <div class="link-texto" style="margin-top:16px;">
+    <div class="link-texto">
       Não tem conta? <span onclick="irCadastro()">Cadastre-se grátis</span>
     </div>
   </div>
@@ -577,13 +539,11 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 <!-- CONFIRMADO -->
 <div class="tela" id="tela-confirmado">
-  <div class="confirmado-header">
-    <div class="conf-icon">✅</div>
-    <div class="conf-titulo">Pedido confirmado!</div>
-    <div class="conf-sub">Seu pedido foi enviado ao estabelecimento.<br>Acompanhe o status abaixo.</div>
-  </div>
+  <div class="confirmado-icon">✅</div>
+  <div class="confirmado-titulo">Pedido <span>confirmado!</span></div>
+  <div class="confirmado-sub">Seu pedido foi enviado ao estabelecimento.<br>Acompanhe o status abaixo.</div>
   <div class="confirmado-body">
-  <div class="status-track" style="margin-bottom:0;">
+  <div class="status-track">
     <h4>STATUS DO PEDIDO</h4>
     <div class="status-item">
       <div class="status-dot feito"></div>
@@ -1097,7 +1057,23 @@ function entrarComo(perfil) {
     var primeiroNome = currentUser && currentUser.nome ? currentUser.nome.split(' ')[0] : '';
     var el = document.getElementById('home-greeting');
     if(el) el.innerHTML = 'Olá' + (primeiroNome ? ', ' + primeiroNome + '!' : '!') + ' <span>O que vai pedir?</span>';
-    if(pedidoAtualId) { irTela('tela-confirmado'); }
+    if(pedidoAtualId) {
+      // Verificar se o pedido ainda está ativo antes de redirecionar
+      apiCall('/api/orders/' + pedidoAtualId).then(function(resp) {
+        var statusFinal = ['entregue', 'cancelado'];
+        if(resp && resp.status && statusFinal.indexOf(resp.status) === -1) {
+          irTela('tela-confirmado');
+          ultimoStatusConhecido = {};
+          iniciarPollingPedidos();
+        } else {
+          pedidoAtualId = null;
+          localStorage.removeItem('chegouai_pedido_id');
+        }
+      }).catch(function() {
+        pedidoAtualId = null;
+        localStorage.removeItem('chegouai_pedido_id');
+      });
+    }
   }
   else if(perfil === 'estabelecimento') {
     irTela('tela-estabelecimento');
