@@ -2505,9 +2505,11 @@ async function renderEstabelecimento() {
         : '';
       var pagIcones = { pix:'⚡', cartao:'💳', dinheiro:'💵', maquininha:'📱' };
       var pagBadge = p.forma_pagamento ? '<span style="font-size:11px;color:var(--texto2);margin-left:6px;">' + (pagIcones[p.forma_pagamento] || '') + ' ' + p.forma_pagamento + '</span>' : '';
+      var nomeCliente = (p.profiles && p.profiles.nome) ? sanitizar(p.profiles.nome) : '';
       return '<div class="card-pedido"' + (isEncerrado ? ' style="opacity:0.65;"' : '') + '>' +
         '<div class="pedido-header"><span class="pedido-num">Pedido #' + p.id.substring(0,8) + '</span>' +
         '<span class="badge-status ' + sc + '">' + sl + '</span></div>' +
+        (nomeCliente ? '<div class="pedido-endereco" style="font-weight:600;color:var(--texto);">👤 ' + nomeCliente + '</div>' : '') +
         '<div class="pedido-endereco">📍 ' + (p.endereco_entrega || '') + '</div>' +
         tel +
         '<div class="pedido-itens">' + (itensTxt || '—') + '</div>' +
