@@ -610,6 +610,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   </div>
 
   <div id="confirmado-whatsapp" style="width:100%;margin-bottom:8px;"></div>
+  <button onclick="atualizarStatusManual()" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--cinza3);background:transparent;color:var(--texto2);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;" id="btn-atualizar-status">🔄 Atualizar status</button>
   <button class="btn-principal mt16" onclick="sairRastreio()" style="width:100%;">Fazer novo pedido</button>
   <div id="btn-cancelar-pedido-wrap" style="display:none;margin-top:12px;">
     <button onclick="cancelarPedidoCliente()" style="width:100%;padding:14px;border-radius:12px;border:1.5px solid #e74c3c;background:transparent;color:#e74c3c;font-size:15px;font-weight:600;cursor:pointer;">Cancelar pedido</button>
@@ -1985,9 +1986,8 @@ async function confirmarPedido() {
       atualizarCarrinho();
       irTela('tela-confirmado');
       mostrarWhatsappEstabelecimento();
-      if(pedidoResp.whatsappLink) {
-        // Notificação automática já enviada pelo servidor
-      }
+      ultimoStatusConhecido = {};
+      iniciarPollingPedidos();
     } else if(formaPag === 'pix') {
       await pagarPix(pedidoAtualId);
     } else {
@@ -3835,7 +3835,13 @@ function iniciarPollingPedidos() {
           }
         }
       }
-    } catch(e) { /* silencioso */ }
+    } catch(e) {
+      if(e && e.message && e.message.includes('expirada')) {
+        // 401 já tratado no apiCall — não duplicar
+      } else {
+        console.warn('[Polling]', e && e.message);
+      }
+    }
   }, 5000); // A cada 5 segundos
 }
 
@@ -3898,6 +3904,26 @@ function atualizarRastreioPedido(status) {
   // Botão cancelar só quando pendente
   var btnCancelar = document.getElementById('btn-cancelar-pedido-wrap');
   if(btnCancelar) btnCancelar.style.display = (status === 'pendente') ? 'block' : 'none';
+}
+
+// === ATUALIZAR STATUS MANUALMENTE ===
+async function atualizarStatusManual() {
+  if(!pedidoAtualId) return;
+  var btn = document.getElementById('btn-atualizar-status');
+  if(btn) { btn.textContent = '⏳ Verificando...'; btn.disabled = true; }
+  try {
+    var r = await apiCall('/api/orders/' + pedidoAtualId);
+    if(r && r.status) {
+      ultimoStatusConhecido[pedidoAtualId] = r.status;
+      atualizarRastreioPedido(r.status);
+      if((r.status === 'coletado' || r.status === 'entregue') && r.motoboys && r.motoboys.lat) {
+        atualizarMapaCliente(r.motoboys.lat, r.motoboys.lng, r.motoboys.nome);
+      }
+    }
+  } catch(e) {
+    showToast('⚠️', 'Erro ao atualizar', e.message || 'Tente novamente.');
+  }
+  if(btn) { btn.textContent = '🔄 Atualizar status'; btn.disabled = false; }
 }
 
 // === MAPA EM TEMPO REAL (LEAFLET) ===
