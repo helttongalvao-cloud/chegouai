@@ -15,7 +15,7 @@ router.get('/', async (req, res, next) => {
 
     let query = supabaseAdmin
       .from('estabelecimentos')
-      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng, valor_minimo, horarios')
+      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp')
       .eq('ativo', true)
       .order('nome');
 
@@ -31,7 +31,27 @@ router.get('/', async (req, res, next) => {
     const { data, error } = await query;
     if (error) throw error;
 
-    res.json(data);
+    // Calcular aberto dinamicamente com base nos horários configurados
+    const diasMap = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+    const agora = new Date();
+    const diaKey = diasMap[agora.getDay()];
+    const minAtual = agora.getHours() * 60 + agora.getMinutes();
+
+    const resultado = data.map(est => {
+      if (est.horarios && est.horarios[diaKey]) {
+        const h = est.horarios[diaKey];
+        if (h.abre && h.fecha) {
+          const [hA, mA] = h.abre.split(':').map(Number);
+          const [hF, mF] = h.fecha.split(':').map(Number);
+          est.aberto = minAtual >= hA * 60 + mA && minAtual <= hF * 60 + mF;
+        } else {
+          est.aberto = false;
+        }
+      }
+      return est;
+    });
+
+    res.json(resultado);
   } catch (err) {
     next(err);
   }
@@ -49,7 +69,7 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
       .from('estabelecimentos')
       .select(`
         id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng,
-        valor_minimo, horarios,
+        valor_minimo, horarios, foto_url, whatsapp,
         produtos (id, nome, descricao, preco, emoji, disponivel, imagem_url, categoria)
       `)
       .eq('id', req.params.id)
@@ -113,15 +133,15 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
     const pedidosAbertos = await supabaseAdmin
       .from('pedidos')
       .select(`
-        id, status, pagamento_status, forma_pagamento, total, subtotal, taxa_entrega,
-        endereco_entrega, telefone_cliente, criado_em,
+        id, tipo, status, pagamento_status, forma_pagamento, total, subtotal, taxa_entrega,
+        endereco_entrega, telefone_cliente, lista_compras, criado_em,
         itens_pedido (nome, quantidade, preco_unitario, observacao),
         motoboys (nome, telefone),
         profiles!pedidos_cliente_id_fkey (nome)
       `)
       .eq('estabelecimento_id', est.id)
       .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'entregue'])
-      .eq('pagamento_status', 'aprovado') // Exclui checkouts abandonados
+      .or('pagamento_status.eq.aprovado,tipo.eq.lista') // Inclui pedidos de lista mesmo sem pagamento confirmado
       .gte('criado_em', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString())
       .order('criado_em', { ascending: true });
 
@@ -161,6 +181,7 @@ router.put(
     body('mp_user_id').optional().trim().isLength({ max: 50 }),
     body('whatsapp').optional().trim().matches(/^\d{0,15}$/).withMessage('WhatsApp inválido'),
     body('horarios').optional().isObject(),
+    body('foto_url').optional().trim(),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -169,7 +190,7 @@ router.put(
     }
 
     const campos = {};
-    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'valor_minimo', 'aberto', 'mp_user_id', 'whatsapp', 'horarios'].forEach((key) => {
+    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'valor_minimo', 'aberto', 'mp_user_id', 'whatsapp', 'horarios', 'foto_url'].forEach((key) => {
       if (req.body[key] !== undefined) campos[key] = req.body[key];
     });
 
@@ -271,6 +292,52 @@ router.post(
     }
   }
 );
+
+// =============================================
+// POST /api/establishments/me/products/import — Importar produtos via CSV/JSON
+// =============================================
+router.post('/me/products/import', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const { produtos } = req.body;
+    if (!Array.isArray(produtos) || produtos.length === 0) {
+      return res.status(400).json({ error: 'Lista de produtos inválida' });
+    }
+    if (produtos.length > 500) {
+      return res.status(400).json({ error: 'Máximo de 500 produtos por importação' });
+    }
+
+    const { data: est } = await supabaseAdmin
+      .from('estabelecimentos')
+      .select('id')
+      .eq('user_id', req.user.id)
+      .single();
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+
+    const registros = produtos
+      .filter(p => p.nome && p.preco)
+      .map(p => ({
+        estabelecimento_id: est.id,
+        nome: String(p.nome).substring(0, 100),
+        descricao: p.descricao ? String(p.descricao).substring(0, 300) : '',
+        preco: parseFloat(String(p.preco).replace(',', '.')) || 0,
+        emoji: p.emoji ? String(p.emoji).substring(0, 10) : '🍽️',
+        categoria: p.categoria ? String(p.categoria).substring(0, 50) : null,
+        disponivel: true,
+      }))
+      .filter(p => p.preco > 0);
+
+    if (registros.length === 0) {
+      return res.status(400).json({ error: 'Nenhum produto válido encontrado no arquivo' });
+    }
+
+    const { data, error } = await supabaseAdmin.from('produtos').insert(registros).select('id');
+    if (error) throw error;
+
+    res.json({ importados: data.length, total: produtos.length });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // =============================================
 // PUT /api/establishments/me/products/:prodId — Editar produto
