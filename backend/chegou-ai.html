@@ -1381,6 +1381,9 @@ function irLogin() {
   if(pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
   authToken = null;
   currentUser = null;
+  ultimoStatusConhecido = {};
+  localStorage.removeItem('chegouai_pedido_id');
+  pedidoAtualId = null;
   localStorage.removeItem('chegouai_token');
   localStorage.removeItem('chegouai_user');
   irTela('tela-login');
@@ -1995,6 +1998,7 @@ async function confirmarPedido() {
     }
   } catch(e) {
     esconderLoadingPagamento();
+    cupomAplicado = null;
     alert(e.message || 'Erro ao criar pedido. Tente novamente.');
   } finally {
     if(btn) { btn.disabled = false; btn.textContent = 'Confirmar pedido'; }
@@ -3941,6 +3945,8 @@ function sairRastreio() {
   if(mapWrap) mapWrap.style.display = 'none';
   if(mapDiv) mapDiv.style.display = 'none';
   if(aguardando) aguardando.style.display = 'block';
+  pararRealtimeCliente();
+  if(pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
   irHome();
 }
 

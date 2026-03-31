@@ -419,6 +419,17 @@ router.patch(
     }
 
     try {
+      // Para estabelecimento, verificar pedido pago antes de cancelar
+      if (status === 'cancelado' && perfil === 'estabelecimento') {
+        const { data: p } = await supabaseAdmin
+          .from('pedidos')
+          .select('pagamento_status')
+          .eq('id', orderId)
+          .single();
+        if (p?.pagamento_status === 'aprovado')
+          return res.status(400).json({ error: 'Não é possível cancelar pedido já pago' });
+      }
+
       // Para estabelecimento, restringir ao próprio pedido
       let updateQuery = supabaseAdmin
         .from('pedidos')
@@ -433,6 +444,17 @@ router.patch(
           .single();
         if (!est) return res.status(403).json({ error: 'Estabelecimento não encontrado' });
         updateQuery = updateQuery.eq('estabelecimento_id', est.id);
+      }
+
+      // Para motoboy, restringir ao próprio pedido
+      if (perfil === 'motoboy') {
+        const { data: moto } = await supabaseAdmin
+          .from('motoboys')
+          .select('id')
+          .eq('user_id', req.user.id)
+          .single();
+        if (!moto) return res.status(403).json({ error: 'Motoboy não encontrado' });
+        updateQuery = updateQuery.eq('motoboy_id', moto.id);
       }
 
       const { data: pedido, error } = await updateQuery.select().single();

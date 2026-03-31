@@ -94,8 +94,7 @@ router.get('/mercadopago/callback', async (req, res, next) => {
     const { error: dbError } = await supabaseAdmin
       .from(tabela)
       .update({
-        chave_pix: tokens.access_token, // Guardamos o token OAuth na chave pix legada
-        mp_user_id: tokens.user_id.toString()
+        mp_user_id: tokens.access_token
       })
       .eq('user_id', userId);
 
