@@ -4222,6 +4222,13 @@ async function conectarMercadoPago(tipo) {
     const res = await apiCall('/api/oauth/mercadopago/url?tipo=' + tipo + '&id=' + currentUser.id);
     if(res.url && win) {
       win.location.href = res.url;
+      // Detectar fechamento do popup e recarregar painel automaticamente
+      var poll = setInterval(function() {
+        if(win.closed) {
+          clearInterval(poll);
+          if(tipo === 'estabelecimento') renderInfoLoja();
+        }
+      }, 800);
     } else {
       if(win) win.close();
       alert('Não foi possível obter o link de autorização.');
