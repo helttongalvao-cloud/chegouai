@@ -18,9 +18,6 @@
 <meta name="description" content="Delivery rápido em Guajará-AM. Peça de restaurantes, mercados e farmácias.">
 <meta name="robots" content="index, follow">
 
-<!-- Firebase Realtime Database (GPS motoboy) -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 <!-- Leaflet GPS Map -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -796,21 +793,6 @@ async function apiCall(path, options) {
   return data;
 }
 
-// ============================================
-// FIREBASE — GPS em tempo real
-// ============================================
-var firebaseDb = null;
-var firebaseGpsRef = null;
-
-function inicializarFirebase(cfg) {
-  if(!cfg || !cfg.databaseURL) return;
-  try {
-    if(!firebase.apps.length) firebase.initializeApp(cfg);
-    firebaseDb = firebase.database();
-  } catch(e) {
-    console.warn('[Firebase]', e.message);
-  }
-}
 
 // ============================================
 // CARREGAR CONFIGURAÇÃO DO SERVIDOR
@@ -821,7 +803,7 @@ async function inicializarApp() {
     if(cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase) {
       supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
     }
-    if(cfg.firebase) inicializarFirebase(cfg.firebase);
+    if(cfg.taxaCartaoCliente) TAXA_CARTAO_CLIENTE = cfg.taxaCartaoCliente;
   } catch(e) {
     console.warn('[Config] Erro ao carregar config do servidor:', e.message);
   }
@@ -922,32 +904,43 @@ function iniciarRealtimeMotoboy() {
 // REALTIME CLIENTE — acompanhar pedido em tempo real
 // ============================================
 var realtimeClienteChannel = null;
-var realtimeGpsChannel = null; // mantido por compatibilidade (GPS agora usa Firebase)
+var realtimeGpsChannel = null;
 
 function pararRealtimeCliente() {
   if(realtimeClienteChannel && supabaseClient) {
     supabaseClient.removeChannel(realtimeClienteChannel);
     realtimeClienteChannel = null;
   }
-  pararRealtimeGps(); // cancelar listener Firebase GPS
+  pararRealtimeGps();
 }
 
-// GPS via Firebase Realtime Database — substitui Supabase Realtime para GPS
-function iniciarRealtimeGps(pedidoId) {
-  if(!firebaseDb || !pedidoId) return;
-  // Cancelar listener anterior
-  if(firebaseGpsRef) { firebaseGpsRef.off(); firebaseGpsRef = null; }
-  firebaseGpsRef = firebaseDb.ref('gps/' + pedidoId);
-  firebaseGpsRef.on('value', function(snapshot) {
-    var data = snapshot.val();
-    if(data && data.lat && data.lng) {
-      atualizarMapaCliente(data.lat, data.lng, data.nome || '');
-    }
-  });
+// GPS via Supabase Realtime — escuta atualizações de lat/lng do motoboy
+async function iniciarRealtimeGps(pedidoId) {
+  if(!supabaseClient || !pedidoId) return;
+  pararRealtimeGps();
+  // Buscar motoboy_id do pedido
+  var resp = await apiCall('/api/orders/' + pedidoId);
+  var motoboyId = resp && resp.motoboys && resp.motoboys.id;
+  if(!motoboyId) return;
+  supabaseClient.realtime.setAuth(authToken);
+  realtimeGpsChannel = supabaseClient
+    .channel('gps-motoboy-' + motoboyId)
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'motoboys',
+      filter: 'id=eq.' + motoboyId,
+    }, function(payload) {
+      if(payload.new && payload.new.lat && payload.new.lng) {
+        atualizarMapaCliente(payload.new.lat, payload.new.lng, '');
+      }
+    })
+    .subscribe();
 }
 
 function pararRealtimeGps() {
-  if(firebaseGpsRef) { firebaseGpsRef.off(); firebaseGpsRef = null; }
+  if(realtimeGpsChannel && supabaseClient) {
+    supabaseClient.removeChannel(realtimeGpsChannel);
+    realtimeGpsChannel = null;
+  }
 }
 
 function iniciarRealtimeCliente(pedidoId) {
@@ -980,7 +973,7 @@ function iniciarRealtimeCliente(pedidoId) {
           boxRastreio.style.display = 'block';
           if(mapCliente) [200,600,1200].forEach(function(d){ setTimeout(function(){ if(mapCliente) mapCliente.invalidateSize(); },d); });
         }
-        iniciarRealtimeGps(pedidoId); // Firebase — chave é o pedidoId
+        iniciarRealtimeGps(pedidoId);
       }
       if(novoStatus === 'entregue') {
         localStorage.removeItem('chegouai_pedido_id');
@@ -3356,11 +3349,9 @@ function iniciarRastreio(pedidoId) {
         var lat = pos.coords.latitude;
         var lng = pos.coords.longitude;
         atualizarMapaMotoboy(lat, lng);
-        // Escrever no Firebase — cliente recebe em tempo real
-        if (firebaseDb && pedidoId) {
-          firebaseDb.ref('gps/' + pedidoId).set({ lat: lat, lng: lng, ts: Date.now() })
-            .catch(function(e) { console.warn('[Firebase GPS]', e.message); });
-        }
+        // Enviar GPS ao backend → Supabase → cliente recebe via Realtime
+        apiCall('/api/orders/motoboy/location', { method: 'PATCH', body: { lat: lat, lng: lng } })
+          .catch(function(e) { console.warn('[GPS]', e.message); });
       },
       function(err) {
         console.warn('[GPS]', err.message);
@@ -3379,10 +3370,9 @@ function pararRastreio() {
     gpsTrackerId = null;
   }
   liberarWakeLock();
-  // Limpar dados GPS do Firebase ao terminar entrega
-  if (firebaseDb && pedidoAtualId) {
-    firebaseDb.ref('gps/' + pedidoAtualId).remove().catch(function(){});
-  }
+  // Limpar lat/lng ao terminar entrega
+  apiCall('/api/orders/motoboy/location', { method: 'PATCH', body: { lat: null, lng: null } })
+    .catch(function(){});
 }
 
 function recusarEntrega(btn) {
@@ -3806,7 +3796,7 @@ function iniciarPollingPedidos() {
         ultimoStatusConhecido[_pid] = r.status;
         atualizarRastreioPedido(r.status);
         if((r.status === 'coletado' || r.status === 'entregue') && _pid) {
-          iniciarRealtimeGps(_pid); // Firebase usa pedidoId como chave
+          iniciarRealtimeGps(_pid);
         }
       }
     }).catch(function(){});

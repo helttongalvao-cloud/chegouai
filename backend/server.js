@@ -38,7 +38,6 @@ app.use(helmet({
         'https://unpkg.com',
         'https://cdn.jsdelivr.net',
         'https://www.gstatic.com',
-        'https://*.firebaseio.com',
       ],
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: [
@@ -56,10 +55,6 @@ app.use(helmet({
         'https://*.supabase.co',
         'https://sandbox.asaas.com',
         'https://api.asaas.com',
-        'https://*.firebaseio.com',
-        'https://*.firebasedatabase.app',
-        'wss://*.firebaseio.com',
-        'wss://*.firebasedatabase.app',
         'wss://*.supabase.co',
         'https://nominatim.openstreetmap.org',
       ],
@@ -142,14 +137,8 @@ app.get('/api/config', (req, res) => {
   res.json({
     supabaseUrl: process.env.SUPABASE_URL,
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
-    // Firebase (GPS em tempo real)
-    firebase: {
-      apiKey:            process.env.FIREBASE_API_KEY,
-      authDomain:        process.env.FIREBASE_AUTH_DOMAIN,
-      databaseURL:       process.env.FIREBASE_DATABASE_URL,
-      projectId:         process.env.FIREBASE_PROJECT_ID,
-      appId:             process.env.FIREBASE_APP_ID,
-    },
+    // Taxa de conveniência do cartão cobrada do cliente (configurável via Railway)
+    taxaCartaoCliente: parseFloat(process.env.ASAAS_TAXA_CARTAO || '2.99'),
   });
 });
 
