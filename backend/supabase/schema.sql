@@ -216,6 +216,17 @@ CREATE POLICY "motoboys_select_own" ON public.motoboys
     OR auth.uid() IN (SELECT id FROM public.profiles WHERE perfil = 'admin')
   );
 
+-- Cliente pode ver lat/lng do motoboy enquanto pedido está sendo entregue
+CREATE POLICY "motoboys_select_cliente_ativo" ON public.motoboys
+  FOR SELECT USING (
+    id IN (
+      SELECT motoboy_id FROM public.pedidos
+      WHERE cliente_id = auth.uid()
+        AND status = 'coletado'
+        AND motoboy_id IS NOT NULL
+    )
+  );
+
 CREATE POLICY "motoboys_update_own" ON public.motoboys
   FOR UPDATE USING (user_id = auth.uid());
 
@@ -254,6 +265,7 @@ CREATE POLICY "itens_select_cliente" ON public.itens_pedido
 -- Habilitar realtime na tabela pedidos para notificações ao lojista/motoboy
 ALTER PUBLICATION supabase_realtime ADD TABLE public.pedidos;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.repasses;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.motoboys;
 
 -- =============================================
 -- MIGRATIONS — novas features

@@ -387,6 +387,23 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 /* CONFIRMADO */
 #tela-confirmado { background:var(--preto); align-items:center; justify-content:center; text-align:center; padding:40px 24px; }
+#tela-confirmado.modo-rastreio { padding:0; overflow:hidden; position:relative; justify-content:flex-start; }
+#tela-confirmado.modo-rastreio #box-rastreio { position:absolute; inset:0; display:flex !important; flex-direction:column; margin:0; width:100%; z-index:10; }
+#tela-confirmado.modo-rastreio #map-wrap { flex:1; height:auto !important; display:block !important; border-radius:0; }
+#tela-confirmado.modo-rastreio #map { height:100% !important; border-radius:0; }
+#tela-confirmado.modo-rastreio #map-aguardando { flex:1; display:flex; align-items:center; justify-content:center; font-size:15px; }
+#tela-confirmado.modo-rastreio .prog-stepper,
+#tela-confirmado.modo-rastreio .status-card,
+#tela-confirmado.modo-rastreio #btn-atualizar-status,
+#tela-confirmado.modo-rastreio #confirmado-whatsapp,
+#tela-confirmado.modo-rastreio .btn-principal,
+#tela-confirmado.modo-rastreio #btn-cancelar-pedido-wrap { display:none !important; }
+#rastreio-overlay { background:var(--cinza1); border-top-left-radius:20px; border-top-right-radius:20px; box-shadow:0 -4px 24px rgba(0,0,0,0.5); padding:16px 20px 32px; flex-shrink:0; display:none; }
+#rastreio-overlay .drag-handle { width:36px; height:4px; background:var(--cinza3); border-radius:2px; margin:0 auto 16px; }
+#rastreio-motoboy-card { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+#rastreio-motoboy-avatar { width:46px; height:46px; border-radius:50%; background:var(--verde); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+#rastreio-motoboy-nome { font-weight:700; font-size:15px; color:var(--texto); }
+#rastreio-motoboy-sub { font-size:12px; color:var(--texto2); margin-top:2px; }
 .confirmado-icon { font-size:80px; margin-bottom:24px; animation:bounce 0.6s ease; }
 .confirmado-titulo { font-size:28px; font-weight:800; margin-bottom:8px; }
 .confirmado-titulo span { color:var(--verde); }
@@ -602,10 +619,21 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
   <!-- Mapa do motoboy (aparece quando coletado) -->
   <div id="box-rastreio" style="display:none;width:100%;margin-bottom:16px;">
-    <div style="font-size:13px;color:var(--texto2);margin-bottom:8px;font-weight:600;">📍 Motoboy ao vivo</div>
-    <p id="map-aguardando" style="font-size:13px;color:var(--texto2);text-align:center;padding:16px 0;margin:0;">🛵 Aguardando localização...</p>
+    <p id="map-aguardando" style="font-size:13px;color:var(--texto2);text-align:center;padding:16px 0;margin:0;">🛵 Aguardando localização do motoboy...</p>
     <div style="border-radius:14px;overflow:hidden;height:200px;display:none;" id="map-wrap">
       <div id="map" style="width:100%;height:100%;background:var(--cinza3);"></div>
+    </div>
+    <!-- Overlay do modo rastreio full-screen -->
+    <div id="rastreio-overlay">
+      <div class="drag-handle"></div>
+      <div id="rastreio-motoboy-card">
+        <div id="rastreio-motoboy-avatar">🛵</div>
+        <div>
+          <div id="rastreio-motoboy-nome">A caminho...</div>
+          <div id="rastreio-motoboy-sub">Seu pedido está saindo para entrega</div>
+        </div>
+      </div>
+      <button onclick="sairRastreio()" style="width:100%;padding:14px;border-radius:14px;background:var(--cinza3);border:none;color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;">Fazer novo pedido</button>
     </div>
   </div>
 
@@ -3921,6 +3949,18 @@ function atualizarRastreioPedido(status) {
   // Botão cancelar só quando pendente
   var btnCancelar = document.getElementById('btn-cancelar-pedido-wrap');
   if(btnCancelar) btnCancelar.style.display = (status === 'pendente') ? 'block' : 'none';
+
+  // Modo rastreio full-screen quando motoboy saiu
+  var tela = document.getElementById('tela-confirmado');
+  var overlay = document.getElementById('rastreio-overlay');
+  if(status === 'coletado') {
+    if(tela) tela.classList.add('modo-rastreio');
+    if(overlay) overlay.style.display = 'block';
+    setTimeout(function() { if(mapCliente) mapCliente.invalidateSize(); }, 300);
+  } else {
+    if(tela) tela.classList.remove('modo-rastreio');
+    if(overlay) overlay.style.display = 'none';
+  }
 }
 
 // === ATUALIZAR STATUS MANUALMENTE ===
@@ -3994,10 +4034,13 @@ function atualizarMapaCliente(lat, lng, nomeMoto) {
     // Arruma bugs visuais do leaflet escondido
     setTimeout(function() { mapCliente.invalidateSize(); }, 500);
   } else {
-    // Só atualiza a posição e centraliza
     markerMotoboy.setLatLng([lat, lng]);
-    mapCliente.panTo([lat, lng]);
+    mapCliente.setView([lat, lng], 16, { animate: true, duration: 1.0 });
   }
+
+  // Atualizar nome do motoboy no overlay
+  var nomeEl = document.getElementById('rastreio-motoboy-nome');
+  if(nomeEl && nomeMoto) nomeEl.textContent = nomeMoto;
 }
 
 // === INICIAR POLLING AO FAZER LOGIN ===
