@@ -1304,8 +1304,8 @@ function entrarComo(perfil) {
     setTimeout(function() { renderEstabelecimento(); }, 50);
   }
   else if(perfil === 'motoboy') {
-    renderMotoboy();
     irTela('tela-motoboy');
+    renderMotoboy();
     iniciarRealtimeMotoboy();
   }
   else if(perfil === 'admin') { renderAdmin('pedidos'); irTela('tela-admin'); }
@@ -2667,7 +2667,9 @@ async function renderEstabelecimento() {
              : p.status === 'entregue' ? '✅ Entregue' : '✅ Pronto';
       var isEncerrado = p.status === 'coletado' || p.status === 'entregue';
       var botao = '';
-      if(p.status === 'aceito')
+      if(p.status === 'pendente')
+        botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'aceito\',this)">✅ Aceitar pedido</button>';
+      else if(p.status === 'aceito')
         botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'preparando\',this)">Iniciar preparo</button>';
       else if(p.status === 'preparando')
         botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'pronto\',this)">Marcar pronto</button>';
@@ -3779,6 +3781,12 @@ let primeiroPolling = true;
 function iniciarPollingPedidos() {
   if(pollingInterval) clearInterval(pollingInterval);
   primeiroPolling = true;
+  // Para motoboy: renderizar imediatamente ao iniciar (não esperar 5s)
+  if(currentUser && currentUser.perfil === 'motoboy') {
+    setTimeout(function() {
+      if(document.getElementById('tela-motoboy').classList.contains('ativa')) renderMotoboy();
+    }, 300);
+  }
   // Para cliente: busca status imediatamente + inicia Realtime (como Uber)
   if(currentUser && currentUser.perfil === 'cliente' && pedidoAtualId) {
     var _pid = pedidoAtualId;

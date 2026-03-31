@@ -209,6 +209,16 @@ CREATE POLICY "pedidos_select_est" ON public.pedidos
     )
   );
 
+-- pedidos: motoboy vê pedidos prontos disponíveis e os que foram atribuídos a ele
+CREATE POLICY "pedidos_select_motoboy" ON public.pedidos
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND perfil = 'motoboy')
+    AND (
+      (status = 'pronto' AND motoboy_id IS NULL)
+      OR motoboy_id IN (SELECT id FROM public.motoboys WHERE user_id = auth.uid())
+    )
+  );
+
 -- motoboys: motoboy vê/edita apenas o próprio registro; admin vê todos
 CREATE POLICY "motoboys_select_own" ON public.motoboys
   FOR SELECT USING (
