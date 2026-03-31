@@ -528,6 +528,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="total-linha"><span>Subtotal</span><span id="subtotal-valor">R$ 0,00</span></div>
       <div class="total-linha"><span>Taxa de entrega</span><span style="color:var(--verde)" id="taxa-entrega-valor">R$ 3,00</span></div>
       <div style="font-size:11px;color:var(--texto2);margin-top:-6px;margin-bottom:4px;" id="taxa-entrega-info">📍 Até 1,5 km — R$ 3,00 &nbsp;|&nbsp; Acima de 1,5 km — R$ 4,00</div>
+      <div class="total-linha" id="linha-conveniencia" style="display:none;"><span style="color:var(--texto2);">Taxa conveniência (cartão)</span><span id="conveniencia-valor" style="color:var(--texto2);">R$ 0,00</span></div>
       <div class="total-linha destaque"><span>Total</span><span class="valor" id="total-valor">R$ 0,00</span></div>
     </div>
     <div class="secao-checkout">
@@ -1813,7 +1814,11 @@ function simularFrete(endereco) {
 
   document.getElementById('taxa-entrega-valor').textContent = 'R$ ' + taxa.toFixed(2).replace('.',',');
   document.getElementById('taxa-entrega-valor').style.color = 'var(--verde)';
-  document.getElementById('total-valor').textContent = 'R$ ' + (subtotal + taxa).toFixed(2).replace('.',',');
+  var baseTotal = parseFloat((subtotal + taxa).toFixed(2));
+  window._baseTotal = baseTotal;
+  window._conveniencia = 0;
+  document.getElementById('linha-conveniencia').style.display = 'none';
+  document.getElementById('total-valor').textContent = 'R$ ' + baseTotal.toFixed(2).replace('.',',');
   document.getElementById('taxa-entrega-info').textContent = infoTxt + ' — Frete R$ ' + taxa.toFixed(2).replace('.',',');
 }
 
@@ -1866,11 +1871,30 @@ function irCheckout() {
   }, 100);
 }
 
+var TAXA_CARTAO_CLIENTE = parseFloat('2.99'); // % de conveniência cobrado do cliente no cartão
+
 function selecionarPag(el, tipo) {
   document.querySelectorAll('.opcao-pag').forEach(function(o){ o.classList.remove('selecionado'); });
   el.classList.add('selecionado');
   var campTroco = document.getElementById('campo-troco');
   if(campTroco) campTroco.style.display = tipo === 'dinheiro' ? 'block' : 'none';
+  // Mostrar/esconder taxa de conveniência do cartão
+  var linhaConv = document.getElementById('linha-conveniencia');
+  var convEl    = document.getElementById('conveniencia-valor');
+  var totalEl   = document.getElementById('total-valor');
+  if(!linhaConv || !totalEl) return;
+  var baseTotal = window._baseTotal || parseFloat((totalEl.textContent || '0').replace('R$','').trim().replace(/\./g,'').replace(',','.')) || 0;
+  if(tipo === 'cartao') {
+    var conv = parseFloat((baseTotal * TAXA_CARTAO_CLIENTE / 100).toFixed(2));
+    if(convEl) convEl.textContent = 'R$ ' + conv.toFixed(2).replace('.',',');
+    linhaConv.style.display = '';
+    totalEl.textContent = 'R$ ' + (baseTotal + conv).toFixed(2).replace('.',',');
+    window._conveniencia = conv;
+  } else {
+    linhaConv.style.display = 'none';
+    totalEl.textContent = 'R$ ' + baseTotal.toFixed(2).replace('.',',');
+    window._conveniencia = 0;
+  }
 }
 
 var cupomAplicado = null; // { codigo, desconto_tipo, desconto_valor }
