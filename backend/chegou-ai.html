@@ -18,7 +18,9 @@
 <meta name="description" content="Delivery rápido em Guajará-AM. Peça de restaurantes, mercados e farmácias.">
 <meta name="robots" content="index, follow">
 
-<script src="https://sdk.mercadopago.com/js/v2"></script>
+<!-- Firebase Realtime Database (GPS motoboy) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 <!-- Leaflet GPS Map -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -757,7 +759,6 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 // CHEGOU AÍ — CONFIGURAÇÃO E API CLIENT
 // ============================================
 var API_BASE = '';  // Mesmo domínio (backend serve o frontend)
-var MP_PUBLIC_KEY = ''; // Carregado via /api/config
 var supabaseClient = null;
 var realtimeChannel = null;
 
@@ -795,11 +796,18 @@ async function apiCall(path, options) {
 }
 
 // ============================================
-// INICIALIZAR SDK MERCADO PAGO
+// FIREBASE — GPS em tempo real
 // ============================================
-function inicializarMP() {
-  if(window.MercadoPago && MP_PUBLIC_KEY) {
-    window.mp = new window.MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
+var firebaseDb = null;
+var firebaseGpsRef = null;
+
+function inicializarFirebase(cfg) {
+  if(!cfg || !cfg.databaseURL) return;
+  try {
+    if(!firebase.apps.length) firebase.initializeApp(cfg);
+    firebaseDb = firebase.database();
+  } catch(e) {
+    console.warn('[Firebase]', e.message);
   }
 }
 
@@ -809,14 +817,13 @@ function inicializarMP() {
 async function inicializarApp() {
   try {
     var cfg = await fetch('/api/config').then(function(r){ return r.json(); });
-    if(cfg.mpPublicKey) MP_PUBLIC_KEY = cfg.mpPublicKey;
     if(cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase) {
       supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
     }
+    if(cfg.firebase) inicializarFirebase(cfg.firebase);
   } catch(e) {
     console.warn('[Config] Erro ao carregar config do servidor:', e.message);
   }
-  inicializarMP();
 }
 inicializarApp();
 
@@ -914,34 +921,32 @@ function iniciarRealtimeMotoboy() {
 // REALTIME CLIENTE — acompanhar pedido em tempo real
 // ============================================
 var realtimeClienteChannel = null;
-var realtimeGpsChannel = null;
+var realtimeGpsChannel = null; // mantido por compatibilidade (GPS agora usa Firebase)
 
 function pararRealtimeCliente() {
   if(realtimeClienteChannel && supabaseClient) {
     supabaseClient.removeChannel(realtimeClienteChannel);
     realtimeClienteChannel = null;
   }
-  if(realtimeGpsChannel && supabaseClient) {
-    supabaseClient.removeChannel(realtimeGpsChannel);
-    realtimeGpsChannel = null;
-  }
+  pararRealtimeGps(); // cancelar listener Firebase GPS
 }
 
-function iniciarRealtimeGps(motoboyId) {
-  if(!supabaseClient || !motoboyId) return;
-  if(realtimeGpsChannel) { supabaseClient.removeChannel(realtimeGpsChannel); realtimeGpsChannel = null; }
-  supabaseClient.realtime.setAuth(authToken);
-  realtimeGpsChannel = supabaseClient
-    .channel('motoboy-gps-' + motoboyId)
-    .on('postgres_changes', {
-      event: 'UPDATE', schema: 'public', table: 'motoboys',
-      filter: 'id=eq.' + motoboyId,
-    }, function(payload) {
-      if(payload.new && payload.new.lat && payload.new.lng) {
-        atualizarMapaCliente(payload.new.lat, payload.new.lng, payload.new.nome);
-      }
-    })
-    .subscribe();
+// GPS via Firebase Realtime Database — substitui Supabase Realtime para GPS
+function iniciarRealtimeGps(pedidoId) {
+  if(!firebaseDb || !pedidoId) return;
+  // Cancelar listener anterior
+  if(firebaseGpsRef) { firebaseGpsRef.off(); firebaseGpsRef = null; }
+  firebaseGpsRef = firebaseDb.ref('gps/' + pedidoId);
+  firebaseGpsRef.on('value', function(snapshot) {
+    var data = snapshot.val();
+    if(data && data.lat && data.lng) {
+      atualizarMapaCliente(data.lat, data.lng, data.nome || '');
+    }
+  });
+}
+
+function pararRealtimeGps() {
+  if(firebaseGpsRef) { firebaseGpsRef.off(); firebaseGpsRef = null; }
 }
 
 function iniciarRealtimeCliente(pedidoId) {
@@ -974,7 +979,7 @@ function iniciarRealtimeCliente(pedidoId) {
           boxRastreio.style.display = 'block';
           if(mapCliente) [200,600,1200].forEach(function(d){ setTimeout(function(){ if(mapCliente) mapCliente.invalidateSize(); },d); });
         }
-        if(payload.new.motoboy_id) iniciarRealtimeGps(payload.new.motoboy_id);
+        iniciarRealtimeGps(pedidoId); // Firebase — chave é o pedidoId
       }
       if(novoStatus === 'entregue') {
         localStorage.removeItem('chegouai_pedido_id');
@@ -1011,91 +1016,72 @@ async function pagarPix(pedidoId) {
 }
 
 // ============================================
-// PAGAMENTO CARTÃO — MP Bricks (in-app, sem redirect)
+// PAGAMENTO CARTÃO — Checkout transparente Asaas
 // ============================================
-var cardBrickController = null;
-
 async function pagarCartao(pedidoId) {
-  if (!window.mp) {
-    alert('SDK do Mercado Pago não carregado. Recarregue a página.');
-    return;
-  }
   var total = document.getElementById('total-valor').textContent;
-  // Converter "R$ 39,90" → número
-  var totalNum = parseFloat(
-    total.replace('R$','').trim().replace(/\./g,'').replace(',','.')
-  ) || 0;
-
   document.getElementById('modal-pagamento').classList.add('aberto');
   document.getElementById('pag-tipo').textContent = 'Cartão de crédito';
   document.getElementById('pag-valor').textContent = total;
-  document.getElementById('pag-instrucao').textContent = 'Pagamento 100% seguro via Mercado Pago';
+  document.getElementById('pag-instrucao').textContent = 'Pagamento 100% seguro';
   document.getElementById('pag-detalhe').innerHTML =
-    '<div id="cardPaymentBrick_container" style="margin-top:8px;min-height:300px;"></div>';
+    '<form id="form-cartao" onsubmit="submitCartao(event,\'' + pedidoId + '\')" autocomplete="off">' +
+    '<div style="display:grid;gap:10px;margin-top:4px;">' +
+    '<input id="cc-nome" placeholder="Nome no cartão" style="' + _estiloInput() + '" required>' +
+    '<input id="cc-numero" placeholder="Número do cartão" maxlength="19" oninput="mascaraCartao(this)" inputmode="numeric" style="' + _estiloInput() + '" required>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">' +
+      '<input id="cc-mes" placeholder="MM" maxlength="2" inputmode="numeric" style="' + _estiloInput() + '" required>' +
+      '<input id="cc-ano" placeholder="AAAA" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
+      '<input id="cc-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
+    '</div>' +
+    '<input id="cc-cpf" placeholder="CPF do titular (somente números)" maxlength="14" oninput="mascaraCPF(this)" inputmode="numeric" style="' + _estiloInput() + '">' +
+    '<select id="cc-parcelas" style="' + _estiloInput() + '">' +
+      [1,2,3,4,5,6,7,8,9,10,11,12].map(function(n){ return '<option value="'+n+'">'+n+'x sem juros</option>'; }).join('') +
+    '</select>' +
+    '<button type="submit" class="btn-principal" style="margin-top:4px;">💳 Pagar agora</button>' +
+    '</div></form>';
+}
 
-  if (cardBrickController) {
-    try { cardBrickController.unmount(); } catch(_) {}
-    cardBrickController = null;
-  }
+function _estiloInput() {
+  return 'background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;padding:12px;font-size:14px;color:var(--texto);width:100%;box-sizing:border-box;outline:none;';
+}
 
+function mascaraCartao(el) {
+  var v = el.value.replace(/\D/g,'').substring(0,16);
+  el.value = v.replace(/(\d{4})/g,'$1 ').trim();
+}
+
+async function submitCartao(e, pedidoId) {
+  e.preventDefault();
+  var btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = 'Processando...';
   try {
-    cardBrickController = await window.mp.bricks().create(
-      'cardPayment',
-      'cardPaymentBrick_container',
-      {
-        initialization: { amount: totalNum },
-        customization: {
-          paymentMethods: { minInstallments: 1, maxInstallments: 12 },
-          visual: {
-            style: { theme: 'dark' },
-            hideFormTitle: true,
-          },
-        },
-        callbacks: {
-          onReady: function() {},
-          onError: function(err) { console.error('[CardBrick]', err); },
-          onSubmit: async function(cardFormData) {
-            mostrarLoadingPagamento('Processando pagamento...');
-            try {
-              var resp = await apiCall('/api/payments/cartao-brick', {
-                method: 'POST',
-                body: {
-                  pedidoId: pedidoId,
-                  token: cardFormData.token,
-                  installments: cardFormData.installments,
-                  paymentMethodId: cardFormData.payment_method_id,
-                  issuerId: cardFormData.issuer_id,
-                  payerCpf: cardFormData.payer && cardFormData.payer.identification
-                    ? cardFormData.payer.identification.number : '',
-                },
-              });
-              esconderLoadingPagamento();
-              if (resp.status === 'approved') {
-                fecharModalPagamento();
-                irTela('tela-confirmado');
-                mostrarWhatsappEstabelecimento();
-                ultimoStatusConhecido = {};
-                iniciarPollingPedidos();
-              } else if (resp.status === 'in_process' || resp.status === 'pending') {
-                document.getElementById('pag-instrucao').textContent =
-                  'Pagamento em análise. Aguardando confirmação...';
-                startPollingPagamento(resp.paymentId);
-              } else {
-                alert('Pagamento recusado. Verifique os dados do cartão e tente novamente.');
-              }
-            } catch(e) {
-              esconderLoadingPagamento();
-              alert('Erro no pagamento: ' + e.message);
-            }
-          },
-        },
-      }
-    );
-  } catch(e) {
-    document.getElementById('pag-detalhe').innerHTML =
-      '<div style="text-align:center;padding:24px;color:var(--texto2);">' +
-      'Erro ao carregar formulário de pagamento.<br>Tente pagar com Pix.</div>';
-    console.error('[CardBrick]', e);
+    var resp = await apiCall('/api/payments/cartao', {
+      method: 'POST',
+      body: {
+        pedidoId: pedidoId,
+        holderName: document.getElementById('cc-nome').value.trim(),
+        cardNumber: document.getElementById('cc-numero').value.replace(/\D/g,''),
+        expiryMonth: document.getElementById('cc-mes').value.trim(),
+        expiryYear: document.getElementById('cc-ano').value.trim(),
+        ccv: document.getElementById('cc-cvv').value.trim(),
+        cpf: document.getElementById('cc-cpf').value.replace(/\D/g,''),
+        installments: document.getElementById('cc-parcelas').value,
+      },
+    });
+    if (resp.status === 'approved') {
+      fecharModalPagamento();
+      irTela('tela-confirmado');
+      mostrarWhatsappEstabelecimento();
+      ultimoStatusConhecido = {};
+      iniciarPollingPedidos();
+    } else {
+      document.getElementById('pag-instrucao').textContent = 'Aguardando confirmação do pagamento...';
+      startPollingPagamento(resp.chargeId);
+    }
+  } catch(err) {
+    btn.disabled = false; btn.textContent = '💳 Pagar agora';
+    alert('Erro no pagamento: ' + err.message);
   }
 }
 
@@ -1182,20 +1168,7 @@ function startPollingPagamento(paymentId) {
   }, 5000);
 }
 
-function mostrarCheckoutSimulado(pedido) {
-  var total = pedido.subtotal + pedido.taxaEntrega;
-  document.getElementById('modal-pagamento').classList.add('aberto');
-  document.getElementById('pag-tipo').textContent = 'Cartão';
-  document.getElementById('pag-valor').textContent = 'R$ ' + total.toFixed(2).replace('.',',');
-  document.getElementById('pag-instrucao').textContent = 'Insira os dados do seu cartão';
-  document.getElementById('pag-detalhe').innerHTML =
-    '<div style="background:var(--cinza3);border-radius:12px;padding:20px;text-align:center;margin:12px 0;">' +
-      '<div style="font-size:64px;margin-bottom:8px;">💳</div>' +
-      '<div style="font-size:12px;color:var(--texto2);">Checkout Mercado Pago</div>' +
-      '<div style="font-size:11px;color:var(--texto2);margin-top:8px;">(Integração real ativa após configurar chaves MP)</div>' +
-    '</div>' +
-    '<button onclick="confirmarPagamentoSimulado()" class="btn-principal">Simular pagamento aprovado</button>';
-}
+// mostrarCheckoutSimulado removido — substituído pelo checkout transparente Asaas
 
 function mostrarWhatsappEstabelecimento() {
   var el = document.getElementById('confirmado-whatsapp');
@@ -1219,10 +1192,6 @@ function confirmarPagamentoSimulado() {
 
 function fecharModalPagamento() {
   document.getElementById('modal-pagamento').classList.remove('aberto');
-  if (cardBrickController) {
-    try { cardBrickController.unmount(); } catch(_) {}
-    cardBrickController = null;
-  }
 }
 // ============================================
 
@@ -1560,7 +1529,6 @@ function buscarEst(val) {
 
 // Fechar modal clicando fora — executar após DOM carregado
 window.addEventListener('DOMContentLoaded', function() {
-  inicializarMP();
   var modal = document.getElementById('modal-endereco');
   if(modal) modal.addEventListener('click', function(e) {
     if(e.target === this) fecharModal();
@@ -2336,16 +2304,14 @@ async function renderInfoLoja() {
     '</div></div>' +
     '<button class="btn-principal" style="margin-top:16px;" id="btn-salvar-loja" onclick="salvarInfoLoja()">Salvar alterações</button>' +
     '<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--cinza3);">' +
-    '<label style="font-size:13px;font-weight:600;color:var(--texto2);display:block;margin-bottom:8px;">Pagamentos — Mercado Pago</label>' +
-    (est.mp_user_id
-      ? '<div style="display:flex;align-items:center;gap:8px;padding:12px;border-radius:10px;background:rgba(0,200,100,0.08);border:1px solid rgba(0,200,100,0.25);margin-bottom:8px;">' +
+    '<label style="font-size:13px;font-weight:600;color:var(--texto2);display:block;margin-bottom:8px;">Pagamentos — Asaas</label>' +
+    (est.asaas_wallet_id
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:12px;border-radius:10px;background:rgba(0,200,100,0.08);border:1px solid rgba(0,200,100,0.25);">' +
         '<span style="color:#00c864;font-size:18px;">✓</span>' +
-        '<span style="font-size:13px;color:var(--texto);">Conta Mercado Pago conectada</span></div>' +
-        '<button class="btn-principal" style="width:100%;font-size:13px;background:var(--cinza3);color:var(--texto);" onclick="conectarMercadoPago(\'estabelecimento\')">Reconectar conta</button>'
-      : '<div style="display:flex;align-items:center;gap:8px;padding:12px;border-radius:10px;background:rgba(255,180,0,0.08);border:1px solid rgba(255,180,0,0.25);margin-bottom:8px;">' +
+        '<span style="font-size:13px;color:var(--texto);">Repasse configurado — recebe automaticamente após cada pedido</span></div>'
+      : '<div style="display:flex;align-items:center;gap:8px;padding:12px;border-radius:10px;background:rgba(255,180,0,0.08);border:1px solid rgba(255,180,0,0.25);">' +
         '<span style="color:#ffb400;font-size:18px;">!</span>' +
-        '<span style="font-size:13px;color:var(--texto);">Nenhuma conta conectada — pedidos não serão pagos</span></div>' +
-        '<button class="btn-principal" style="width:100%;background:#009ee3;" onclick="conectarMercadoPago(\'estabelecimento\')">Conectar Mercado Pago</button>'
+        '<span style="font-size:13px;color:var(--texto);">Repasse não configurado — entre em contato com o suporte</span></div>'
     ) +
     '</div>' +
     '</div>';
@@ -3333,7 +3299,7 @@ async function aceitarEntregaReal(pedidoId, btn) {
   if(btn) { btn.disabled = true; btn.textContent = 'Aceitando...'; }
   try {
     await apiCall('/api/orders/' + pedidoId + '/assign-motoboy', { method: 'POST' });
-    iniciarRastreio();
+    iniciarRastreio(pedidoId);
     renderMotoboy();
   } catch(e) {
     alert('Erro: ' + e.message);
@@ -3342,27 +3308,43 @@ async function aceitarEntregaReal(pedidoId, btn) {
 }
 
 let gpsTrackerId = null;
+var wakeLock = null;
 
-function iniciarRastreio() {
+// Screen Wake Lock — mantém tela ligada durante entrega (evita GPS parar em segundo plano)
+async function ativarWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', function() { wakeLock = null; });
+    } catch(e) { console.warn('[WakeLock]', e.message); }
+  }
+}
+function liberarWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+
+function iniciarRastreio(pedidoId) {
   if (gpsTrackerId) return;
+  ativarWakeLock();
   if ("geolocation" in navigator) {
     gpsTrackerId = navigator.geolocation.watchPosition(
-      async function(pos) {
-        atualizarMapaMotoboy(pos.coords.latitude, pos.coords.longitude);
-        try {
-          await apiCall('/api/orders/motoboy/location', {
-            method: 'PATCH',
-            body: { lat: pos.coords.latitude, lng: pos.coords.longitude }
-          });
-        } catch(e) {}
-      },
-      function(err) {
-        console.warn("Erro GPS:", err);
-        if(err.code === 1) { // PERMISSION_DENIED
-          showToast('⚠️', 'GPS necessário', 'Ative a localização no navegador para que o cliente acompanhe a entrega.');
+      function(pos) {
+        var lat = pos.coords.latitude;
+        var lng = pos.coords.longitude;
+        atualizarMapaMotoboy(lat, lng);
+        // Escrever no Firebase — cliente recebe em tempo real
+        if (firebaseDb && pedidoId) {
+          firebaseDb.ref('gps/' + pedidoId).set({ lat: lat, lng: lng, ts: Date.now() })
+            .catch(function(e) { console.warn('[Firebase GPS]', e.message); });
         }
       },
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+      function(err) {
+        console.warn('[GPS]', err.message);
+        if (err.code === 1) {
+          showToast('⚠️', 'GPS necessário', 'Ative a localização para o cliente acompanhar a entrega.');
+        }
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
     );
   }
 }
@@ -3371,6 +3353,11 @@ function pararRastreio() {
   if (gpsTrackerId !== null && "geolocation" in navigator) {
     navigator.geolocation.clearWatch(gpsTrackerId);
     gpsTrackerId = null;
+  }
+  liberarWakeLock();
+  // Limpar dados GPS do Firebase ao terminar entrega
+  if (firebaseDb && pedidoAtualId) {
+    firebaseDb.ref('gps/' + pedidoAtualId).remove().catch(function(){});
   }
 }
 
@@ -3794,8 +3781,8 @@ function iniciarPollingPedidos() {
       if(r && r.status && ultimoStatusConhecido[_pid] !== r.status) {
         ultimoStatusConhecido[_pid] = r.status;
         atualizarRastreioPedido(r.status);
-        if((r.status === 'coletado' || r.status === 'entregue') && r.motoboys && r.motoboys.id) {
-          iniciarRealtimeGps(r.motoboys.id);
+        if((r.status === 'coletado' || r.status === 'entregue') && _pid) {
+          iniciarRealtimeGps(_pid); // Firebase usa pedidoId como chave
         }
       }
     }).catch(function(){});

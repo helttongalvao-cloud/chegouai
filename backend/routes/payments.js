@@ -3,357 +3,243 @@ const { body, param, validationResult } = require('express-validator');
 const { requireAuth } = require('../middleware/auth');
 const { paymentLimiter } = require('../middleware/security');
 const { supabaseAdmin } = require('../config/supabase');
-const { criarPagamentoPix, criarPreferenciaCartao, criarPagamentoCartao, buscarPagamento, verificarAssinaturaWebhook } = require('../services/mercadopago');
+const { criarOuBuscarCliente, criarCobrancaPix, criarCobrancaCartao, buscarCobranca, montarSplit, verificarWebhookAsaas } = require('../services/asaas');
 const { calcularSplit } = require('../services/commission');
 
 const router = express.Router();
 
-// =============================================
-// POST /api/payments/pix — Criar pagamento Pix
-// =============================================
-router.post(
-  '/pix',
-  paymentLimiter,
-  requireAuth,
-  [
-    body('pedidoId').isUUID().withMessage('pedidoId inválido'),
-    body('payerCpf')
-      .optional()
-      .matches(/^\d{11}$/)
-      .withMessage('CPF inválido (somente dígitos, 11 caracteres)'),
-  ],
-  async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ error: errors.array()[0].msg });
-    }
+// ─── Helper: buscar pedido pendente do cliente ─────────────────────────────
+async function buscarPedidoPendente(pedidoId, clienteId) {
+  const { data: pedido, error } = await supabaseAdmin
+    .from('pedidos')
+    .select('*, estabelecimentos(nome, asaas_wallet_id)')
+    .eq('id', pedidoId)
+    .eq('cliente_id', clienteId)
+    .eq('pagamento_status', 'pendente')
+    .single();
+  if (error || !pedido) throw Object.assign(new Error('Pedido não encontrado'), { status: 404 });
+  return pedido;
+}
 
-    const { pedidoId, payerCpf } = req.body;
+// ─── Helper: salvar ID da cobrança e atualizar split ──────────────────────
+async function salvarCobranca(pedidoId, chargeId, split) {
+  await supabaseAdmin.from('pedidos').update({
+    asaas_payment_id: chargeId,
+    comissao_plataforma: split.valorPlataforma,
+    total: split.total,
+    pagamento_status: 'aguardando',
+  }).eq('id', pedidoId);
+}
+
+// ─── Helper: processar pagamento aprovado (idempotente) ───────────────────
+async function processarPagamentoAprovado(orderId, chargeId) {
+  const { data: atual } = await supabaseAdmin
+    .from('pedidos').select('pagamento_status').eq('id', orderId).single();
+
+  if (!atual || atual.pagamento_status === 'aprovado') {
+    console.log(`[Asaas] Pedido ${orderId} já processado — ignorando`);
+    return;
+  }
+
+  const { data: pedido } = await supabaseAdmin
+    .from('pedidos')
+    .update({ pagamento_status: 'aprovado', status: 'aceito', asaas_payment_id: chargeId })
+    .eq('id', orderId)
+    .select('subtotal, taxa_entrega, forma_pagamento')
+    .single();
+
+  if (!pedido) return;
+
+  const split = calcularSplit({
+    subtotal: pedido.subtotal,
+    taxaEntrega: pedido.taxa_entrega,
+    formaPagamento: pedido.forma_pagamento,
+  });
+
+  await supabaseAdmin.from('repasses').insert([
+    { pedido_id: orderId, tipo: 'lojista',    valor: split.valorLojista,    status: 'pendente' },
+    { pedido_id: orderId, tipo: 'plataforma', valor: split.valorPlataforma, status: 'pago' },
+  ]);
+
+  console.log(`[Asaas] Pedido ${orderId} aprovado — lojista R$${split.valorLojista}, motoboy R$${split.valorMotoboy}, plataforma R$${split.valorPlataforma}`);
+}
+
+// =============================================
+// POST /api/payments/pix — Gerar QR Code Pix
+// =============================================
+router.post('/pix', paymentLimiter, requireAuth, [
+  body('pedidoId').isUUID().withMessage('pedidoId inválido'),
+  body('cpf').optional().matches(/^\d{11}$/).withMessage('CPF inválido (11 dígitos)'),
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+  try {
+    const { pedidoId, cpf } = req.body;
     const user = req.user;
 
-    try {
-      // Buscar pedido com dados do estabelecimento
-      const { data: pedido, error: pedidoErr } = await supabaseAdmin
-        .from('pedidos')
-        .select(`
-          *,
-          estabelecimentos (nome, cadastro_data, mp_user_id)
-        `)
-        .eq('id', pedidoId)
-        .eq('cliente_id', user.id)
-        .eq('pagamento_status', 'pendente')
-        .single();
+    const pedido = await buscarPedidoPendente(pedidoId, user.id);
+    const split = calcularSplit({
+      subtotal: pedido.subtotal,
+      taxaEntrega: pedido.taxa_entrega,
+      formaPagamento: 'pix',
+    });
 
-      if (pedidoErr || !pedido) {
-        return res.status(404).json({ error: 'Erro DB: ' + (pedidoErr ? pedidoErr.message : 'Pedido nulo') });
-      }
+    const customerId = await criarOuBuscarCliente({
+      nome: user.profile.nome,
+      email: user.email,
+      cpf,
+    });
 
-      // Calcular split
-      const split = calcularSplit({
-        subtotal: pedido.subtotal,
-        taxaEntrega: pedido.taxa_entrega,
-        cadastroData: pedido.estabelecimentos.cadastro_data,
-      });
+    const splitArr = montarSplit({
+      valorLojista: split.valorLojista,
+      walletLojista: pedido.estabelecimentos?.asaas_wallet_id || null,
+      valorMotoboy: 0,    // motoboy recebe após entrega confirmada
+      walletMotoboy: null,
+    });
 
-      // Verifica se a loja cadastrou um Access Token para Split Automático (inicia com APP_USR-)
-      let mpAccessToken = null;
-      let applicationFee = 0;
-      if (pedido.estabelecimentos.mp_user_id && pedido.estabelecimentos.mp_user_id.startsWith('APP_USR-')) {
-        mpAccessToken = pedido.estabelecimentos.mp_user_id.trim();
-        applicationFee = split.valorPlataforma + split.valorMotoboy; // Tudo que não é da loja vai pro app transferir depois
-      }
+    const cobranca = await criarCobrancaPix({
+      total: split.total,
+      orderId: pedidoId,
+      customerId,
+      split: splitArr,
+    });
 
-      // Criar pagamento Pix no MP
-      const pixData = await criarPagamentoPix({
+    await salvarCobranca(pedidoId, cobranca.chargeId, split);
+
+    res.json({
+      paymentId: cobranca.chargeId,
+      qrCode: cobranca.qrCode,
+      qrCodeBase64: cobranca.qrCodeBase64,
+      expiresAt: cobranca.expiresAt,
+      split: {
         total: split.total,
-        orderId: pedidoId,
-        storeName: pedido.estabelecimentos.nome,
-        payerEmail: user.email,
-        payerFirstName: user.profile.nome.split(' ')[0],
-        payerLastName: user.profile.nome.split(' ').slice(1).join(' ') || 'Cliente',
-        payerCpf: payerCpf || '00000000000', // CPF obrigatório pelo MP em produção
-        mpAccessToken,
-        applicationFee,
-      });
-
-      // Salvar mp_payment_id no pedido e comissão calculada
-      await supabaseAdmin
-        .from('pedidos')
-        .update({
-          mp_payment_id: String(pixData.paymentId),
-          comissao_plataforma: split.valorPlataforma,
-          total: split.total,
-          pagamento_status: 'aguardando',
-        })
-        .eq('id', pedidoId);
-
-      res.json({
-        paymentId: pixData.paymentId,
-        qrCode: pixData.qrCode,
-        qrCodeBase64: pixData.qrCodeBase64,
-        ticketUrl: pixData.ticketUrl,
-        expiresAt: pixData.expiresAt,
-        split: {
-          total: split.total,
-          lojista: split.valorLojista,
-          motoboy: split.valorMotoboy,
-          plataforma: split.valorPlataforma,
-          comissao: split.comissao,
-        },
-      });
-    } catch (err) {
-      console.error('[Pix]', err.message);
-      next(err);
-    }
+        lojista: split.valorLojista,
+        motoboy: split.valorMotoboy,
+        plataforma: split.valorPlataforma,
+        taxaGateway: split.taxaGateway,
+        lucroPlataforma: split.lucroPlataforma,
+      },
+    });
+  } catch (err) {
+    console.error('[Pix]', err.message);
+    next(err);
   }
-);
+});
 
 // =============================================
-// POST /api/payments/cartao — Criar preferência cartão
+// POST /api/payments/cartao — Cartão transparente
 // =============================================
-router.post(
-  '/cartao',
-  paymentLimiter,
-  requireAuth,
-  [body('pedidoId').isUUID().withMessage('pedidoId inválido')],
-  async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ error: errors.array()[0].msg });
-    }
+router.post('/cartao', paymentLimiter, requireAuth, [
+  body('pedidoId').isUUID().withMessage('pedidoId inválido'),
+  body('holderName').notEmpty().withMessage('Nome do titular obrigatório'),
+  body('cardNumber').notEmpty().withMessage('Número do cartão obrigatório'),
+  body('expiryMonth').matches(/^\d{2}$/).withMessage('Mês inválido'),
+  body('expiryYear').matches(/^\d{4}$/).withMessage('Ano inválido'),
+  body('ccv').matches(/^\d{3,4}$/).withMessage('CVV inválido'),
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
-    const { pedidoId } = req.body;
+  try {
+    const {
+      pedidoId, holderName, cardNumber, expiryMonth, expiryYear, ccv,
+      cpf, phone, postalCode, installments,
+    } = req.body;
     const user = req.user;
 
-    try {
-      const { data: pedido, error: pedidoErr } = await supabaseAdmin
-        .from('pedidos')
-        .select(`
-          *,
-          itens_pedido (*),
-          estabelecimentos (nome, cadastro_data, mp_user_id)
-        `)
-        .eq('id', pedidoId)
-        .eq('cliente_id', user.id)
-        .eq('pagamento_status', 'pendente')
-        .single();
+    const pedido = await buscarPedidoPendente(pedidoId, user.id);
+    const split = calcularSplit({
+      subtotal: pedido.subtotal,
+      taxaEntrega: pedido.taxa_entrega,
+      formaPagamento: 'cartao',
+    });
 
-      if (pedidoErr || !pedido) {
-        return res.status(404).json({ error: 'Erro DB: ' + (pedidoErr ? pedidoErr.message : 'Pedido nulo') });
-      }
+    const customerId = await criarOuBuscarCliente({
+      nome: user.profile.nome,
+      email: user.email,
+      cpf,
+    });
 
-      const split = calcularSplit({
-        subtotal: pedido.subtotal,
-        taxaEntrega: pedido.taxa_entrega,
-        cadastroData: pedido.estabelecimentos.cadastro_data,
-      });
+    const splitArr = montarSplit({
+      valorLojista: split.valorLojista,
+      walletLojista: pedido.estabelecimentos?.asaas_wallet_id || null,
+      valorMotoboy: 0,
+      walletMotoboy: null,
+    });
 
-      // Sem application_fee para tokens APP_USR manuais no MVP
-      let mpAccessToken = null;
-      if (pedido.estabelecimentos.mp_user_id && pedido.estabelecimentos.mp_user_id.startsWith('APP_USR-')) {
-        mpAccessToken = pedido.estabelecimentos.mp_user_id.trim();
-      }
+    const cobranca = await criarCobrancaCartao({
+      total: split.total,
+      orderId: pedidoId,
+      customerId,
+      creditCard: {
+        holderName,
+        number: cardNumber.replace(/\D/g, ''),
+        expiryMonth,
+        expiryYear,
+        ccv,
+      },
+      creditCardHolderInfo: {
+        name: holderName,
+        email: user.email,
+        cpfCnpj: cpf ? cpf.replace(/\D/g, '') : '00000000000',
+        phone: phone || '',
+        postalCode: postalCode ? postalCode.replace(/\D/g, '') : '00000000',
+      },
+      installments: parseInt(installments || 1),
+      split: splitArr,
+    });
 
-      const preference = await criarPreferenciaCartao({
-        total: split.total,
-        orderId: pedidoId,
-        storeName: pedido.estabelecimentos.nome,
-        items: pedido.itens_pedido.map((i) => ({
-          nome: i.nome,
-          quantidade: i.quantidade,
-          precoUnitario: i.preco_unitario,
-        })),
-        payerEmail: user.email,
-        backUrl: process.env.BASE_URL,
-        mpAccessToken,
-      });
+    await salvarCobranca(pedidoId, cobranca.chargeId, split);
 
-      await supabaseAdmin
-        .from('pedidos')
-        .update({
-          mp_preference_id: preference.preferenceId,
-          comissao_plataforma: split.valorPlataforma,
-          total: split.total,
-          pagamento_status: 'aguardando',
-        })
-        .eq('id', pedidoId);
-
-      const initPoint = process.env.NODE_ENV === 'production'
-        ? preference.initPoint
-        : preference.sandboxInitPoint;
-
-      res.json({
-        preferenceId: preference.preferenceId,
-        initPoint,
-        split: {
-          total: split.total,
-          lojista: split.valorLojista,
-          motoboy: split.valorMotoboy,
-          plataforma: split.valorPlataforma,
-          comissao: split.comissao,
-        },
-      });
-    } catch (err) {
-      console.error('[Cartão]', err.message);
-      next(err);
+    const aprovado = ['CONFIRMED', 'RECEIVED'].includes(cobranca.status);
+    if (aprovado) {
+      await processarPagamentoAprovado(pedidoId, cobranca.chargeId);
     }
+
+    res.json({
+      status: aprovado ? 'approved' : 'pending',
+      chargeId: cobranca.chargeId,
+    });
+  } catch (err) {
+    console.error('[Cartão]', err.message);
+    next(err);
   }
-);
+});
 
 // =============================================
-// POST /api/payments/cartao-brick — Pagamento direto com token MP Bricks
+// POST /api/payments/webhook — Notificações Asaas
 // =============================================
-router.post(
-  '/cartao-brick',
-  paymentLimiter,
-  requireAuth,
-  [
-    body('pedidoId').isUUID().withMessage('pedidoId inválido'),
-    body('token').notEmpty().withMessage('token obrigatório'),
-    body('installments').isInt({ min: 1, max: 12 }).withMessage('parcelas inválidas'),
-    body('paymentMethodId').notEmpty().withMessage('paymentMethodId obrigatório'),
-  ],
-  async (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ error: errors.array()[0].msg });
-    }
-
-    const { pedidoId, token, installments, paymentMethodId, issuerId, payerCpf } = req.body;
-    const user = req.user;
-
-    try {
-      const { data: pedido, error: pedidoErr } = await supabaseAdmin
-        .from('pedidos')
-        .select(`*, estabelecimentos (nome, cadastro_data, mp_user_id)`)
-        .eq('id', pedidoId)
-        .eq('cliente_id', user.id)
-        .eq('pagamento_status', 'pendente')
-        .single();
-
-      if (pedidoErr || !pedido) {
-        return res.status(404).json({ error: 'Pedido não encontrado' });
-      }
-
-      const split = calcularSplit({
-        subtotal: pedido.subtotal,
-        taxaEntrega: pedido.taxa_entrega,
-        cadastroData: pedido.estabelecimentos.cadastro_data,
-      });
-
-      let mpAccessToken = null;
-      let applicationFee = 0;
-      if (pedido.estabelecimentos.mp_user_id && pedido.estabelecimentos.mp_user_id.startsWith('APP_USR-')) {
-        mpAccessToken = pedido.estabelecimentos.mp_user_id.trim();
-        applicationFee = split.valorPlataforma + split.valorMotoboy;
-      }
-
-      const nomeParts = (user.profile.nome || '').split(' ');
-      const payment = await criarPagamentoCartao({
-        total: split.total,
-        token,
-        installments: parseInt(installments, 10),
-        paymentMethodId,
-        issuerId: issuerId || undefined,
-        orderId: pedidoId,
-        storeName: pedido.estabelecimentos.nome,
-        payerEmail: user.email,
-        payerFirstName: nomeParts[0],
-        payerLastName: nomeParts.slice(1).join(' ') || 'Cliente',
-        payerCpf: payerCpf || '00000000000',
-        mpAccessToken,
-        applicationFee,
-      });
-
-      await supabaseAdmin
-        .from('pedidos')
-        .update({
-          mp_payment_id: String(payment.paymentId),
-          comissao_plataforma: split.valorPlataforma,
-          total: split.total,
-          pagamento_status: 'aguardando',
-        })
-        .eq('id', pedidoId);
-
-      if (payment.status === 'approved') {
-        await processarPagamentoAprovado(pedidoId, payment);
-      } else if (['rejected', 'cancelled'].includes(payment.status)) {
-        await supabaseAdmin
-          .from('pedidos')
-          .update({ pagamento_status: 'recusado', status: 'cancelado' })
-          .eq('id', pedidoId);
-      }
-
-      res.json({
-        status: payment.status,
-        statusDetail: payment.statusDetail,
-        paymentId: payment.paymentId,
-      });
-    } catch (err) {
-      console.error('[CartãoBrick]', err.message);
-      next(err);
-    }
-  }
-);
-
-// =============================================
-// POST /api/payments/webhook — Notificações MP
-// =============================================
-// Rota pública (MP não envia token de auth)
 router.post('/webhook', async (req, res) => {
-  // Validar assinatura HMAC antes de qualquer processamento
-  if (!verificarAssinaturaWebhook(req)) {
-    console.warn('[Webhook] Assinatura inválida — requisição ignorada');
+  if (!verificarWebhookAsaas(req)) {
+    console.warn('[Webhook] Token inválido');
     return res.sendStatus(401);
   }
 
-  // Responder 200 imediatamente para o MP não retentar
+  // Responder 200 imediatamente para o Asaas não retentar
   res.sendStatus(200);
 
   try {
-    console.log('[Webhook] Body:', JSON.stringify(req.body), '| Query:', JSON.stringify(req.query));
+    const { event, payment } = req.body;
+    console.log('[Asaas Webhook]', event, payment?.id, 'ref:', payment?.externalReference);
 
-    // MP envia dados no body OU em query params — normalizar ambos
-    const type = req.body.type || req.query.type || req.query.topic;
-    const paymentId = req.body.data?.id || req.query['data.id'] || req.query.id;
+    if (!payment?.externalReference) return;
+    const orderId = payment.externalReference;
 
-    if (!type || !paymentId) {
-      console.warn('[Webhook] Sem type ou paymentId');
-      return;
-    }
-
-    if (type === 'payment') {
-      const pagamento = await buscarPagamento(paymentId);
-      const orderId = pagamento.externalReference;
-
-      if (!orderId) return;
-
-      if (pagamento.status === 'approved') {
-        await processarPagamentoAprovado(orderId, pagamento);
-      } else if (['cancelled', 'rejected'].includes(pagamento.status)) {
-        await supabaseAdmin
-          .from('pedidos')
-          .update({ pagamento_status: 'recusado', status: 'cancelado' })
-          .eq('id', orderId);
-      }
+    if (['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED'].includes(event)) {
+      await processarPagamentoAprovado(orderId, payment.id);
+    } else if (['PAYMENT_OVERDUE', 'PAYMENT_DELETED', 'PAYMENT_REFUNDED'].includes(event)) {
+      await supabaseAdmin.from('pedidos')
+        .update({ pagamento_status: 'cancelado', status: 'cancelado' })
+        .eq('id', orderId);
     }
   } catch (err) {
-    console.error('[Webhook] Erro ao processar:', err.message);
+    console.error('[Webhook Asaas]', err.message);
   }
 });
 
 // =============================================
-// GET /api/payments/callback — Retorno do checkout MP
-// =============================================
-router.get('/callback', (req, res) => {
-  const { status, order } = req.query;
-  // Redirecionar para o app com parâmetros
-  const url = `/?payment_status=${status}&order=${order}`;
-  res.redirect(url);
-});
-
-// =============================================
-// GET /api/payments/status/:pedidoId — Checar status
+// GET /api/payments/status/:pedidoId
 // =============================================
 router.get('/status/:pedidoId', requireAuth, [
   param('pedidoId').isUUID(),
@@ -370,69 +256,10 @@ router.get('/status/:pedidoId', requireAuth, [
       .single();
 
     if (!pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
-
     res.json(pedido);
   } catch (err) {
     next(err);
   }
 });
-
-// =============================================
-// HELPER — Processar pagamento aprovado
-// =============================================
-async function processarPagamentoAprovado(orderId, pagamento) {
-  // 0. Idempotência — não processar se já aprovado
-  const { data: pedidoAtual } = await supabaseAdmin
-    .from('pedidos')
-    .select('pagamento_status')
-    .eq('id', orderId)
-    .single();
-
-  if (!pedidoAtual || pedidoAtual.pagamento_status === 'aprovado') {
-    console.log(`[Webhook] Pedido ${orderId} já processado — ignorando duplicata`);
-    return;
-  }
-
-  // 1. Atualizar status do pedido
-  const { data: pedido } = await supabaseAdmin
-    .from('pedidos')
-    .update({
-      pagamento_status: 'aprovado',
-      status: 'aceito',
-      mp_payment_id: String(pagamento.id),
-    })
-    .eq('id', orderId)
-    .select('*, estabelecimentos(cadastro_data)')
-    .single();
-
-  if (!pedido) return;
-
-  // 2. Calcular split
-  const split = calcularSplit({
-    subtotal: pedido.subtotal,
-    taxaEntrega: pedido.taxa_entrega,
-    cadastroData: pedido.estabelecimentos.cadastro_data,
-  });
-
-  // 3. Registrar repasses — lojista e plataforma criados agora, motoboy ao confirmar entrega
-  await supabaseAdmin.from('repasses').insert([
-    {
-      pedido_id: orderId,
-      estabelecimento_id: pedido.estabelecimento_id,
-      tipo: 'lojista',
-      valor: split.valorLojista,
-      status: 'pendente',
-    },
-    {
-      pedido_id: orderId,
-      tipo: 'plataforma',
-      valor: split.valorPlataforma,
-      status: 'pago',
-    },
-  ]);
-
-  // 4. Notificar estabelecimento via Supabase Realtime (automaticamente via DB)
-  console.log(`[Webhook] Pedido ${orderId} aprovado. Split: lojista R$${split.valorLojista}, motoboy R$${split.valorMotoboy}, plataforma R$${split.valorPlataforma}`);
-}
 
 module.exports = router;

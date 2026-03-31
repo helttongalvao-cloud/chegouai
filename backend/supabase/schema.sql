@@ -305,10 +305,17 @@ ALTER TABLE public.estabelecimentos ADD COLUMN IF NOT EXISTS valor_minimo NUMERI
 ALTER TABLE public.estabelecimentos ADD COLUMN IF NOT EXISTS horarios JSONB;
 ALTER TABLE public.estabelecimentos ADD COLUMN IF NOT EXISTS whatsapp TEXT;
 
--- Motoboys: lat/lng e chave_pix
+-- Motoboys: lat/lng (legado Supabase) e chave_pix
 ALTER TABLE public.motoboys ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
 ALTER TABLE public.motoboys ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;
 ALTER TABLE public.motoboys ADD COLUMN IF NOT EXISTS chave_pix TEXT;
+
+-- Migração: Mercado Pago → Asaas
+-- Pedidos: ID da cobrança Asaas (substitui mp_payment_id e mp_preference_id)
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS asaas_payment_id TEXT;
+
+-- Estabelecimentos: wallet Asaas para split automático (substitui mp_user_id OAuth)
+ALTER TABLE public.estabelecimentos ADD COLUMN IF NOT EXISTS asaas_wallet_id TEXT;
 
 -- Tabela de avaliações
 CREATE TABLE IF NOT EXISTS public.avaliacoes (

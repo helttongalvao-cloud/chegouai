@@ -1,86 +1,76 @@
 /**
- * Modelo progressivo de comissão do Chegou Aí.
+ * Modelo de comissão do Chegou Aí — Taxa fixa de 5%
  *
- * Mês 1:   0%   — Gratuito (boas-vindas)
- * Mês 2-3: 5%   — Fase de crescimento
- * Mês 4+:  8%   — Parceiro consolidado
+ * Regra de repasse:
+ *   - Lojista recebe: subtotal - 5%
+ *   - Motoboy recebe: taxa de entrega integral
+ *   - Plataforma fica com: 5% do subtotal
+ *   - Taxa do gateway (Asaas) é descontada da parte da plataforma
+ *
+ * Exemplo: R$20 lanche + R$4 entrega = R$24 total
+ *   Lojista:    R$19,00 (R$20 - 5%)
+ *   Motoboy:    R$ 4,00 (integral)
+ *   Plataforma: R$ 1,00 (5%) - R$0,90 taxa Asaas = R$0,10 lucro
  */
 
-/**
- * Calcula a comissão baseada na data de cadastro do estabelecimento.
- * @param {Date|string} cadastroData - Data de cadastro do estabelecimento
- * @returns {{ taxa: number, fase: string, descricao: string }}
- */
-function calcularComissao(cadastroData) {
-  const dataBase = new Date(cadastroData);
-  const agora = new Date();
+const COMISSAO_TAXA = 5; // % sobre o subtotal dos produtos
 
-  // Diferença em milissegundos → dias → meses aproximados
-  const diffMs = agora - dataBase;
-  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const mesAtivo = Math.floor(diffDias / 30) + 1; // mês 1, 2, 3...
-
-  if (mesAtivo <= 1) {
-    return {
-      taxa: 0,
-      mesAtivo,
-      fase: 'Gratuito',
-      descricao: 'Mês 1 — Boas-vindas, sem comissão',
-      cor: '#00C853',
-    };
-  }
-
-  if (mesAtivo <= 3) {
-    return {
-      taxa: 5,
-      mesAtivo,
-      fase: 'Fase 2',
-      descricao: `Mês ${mesAtivo} — 5% por pedido`,
-      cor: '#FF6D00',
-    };
-  }
-
-  return {
-    taxa: 8,
-    mesAtivo,
-    fase: 'Parceiro',
-    descricao: `Mês ${mesAtivo} — 8% por pedido`,
-    cor: '#2979FF',
-  };
-}
+// Taxas Asaas (ajuste conforme plano contratado)
+const TAXA_PIX_ASAAS     = parseFloat(process.env.ASAAS_TAXA_PIX     || '0.99'); // R$ fixo por Pix
+const TAXA_CARTAO_PERCENT = parseFloat(process.env.ASAAS_TAXA_CARTAO  || '2.99'); // % sobre total
 
 /**
  * Calcula os valores do split de um pedido.
  *
  * @param {object} params
- * @param {number} params.subtotal         - Valor dos itens (sem taxa de entrega)
- * @param {number} params.taxaEntrega      - Taxa de entrega (vai integralmente ao motoboy)
- * @param {Date}   params.cadastroData     - Data de cadastro do estabelecimento
- * @returns {{
- *   total: number,
- *   valorLojista: number,
- *   valorMotoboy: number,
- *   valorPlataforma: number,
- *   comissao: object
- * }}
+ * @param {number} params.subtotal       - Valor dos produtos (sem entrega)
+ * @param {number} params.taxaEntrega    - Taxa de entrega (vai integral ao motoboy)
+ * @param {string} [params.formaPagamento] - 'pix' | 'cartao' | 'dinheiro' | 'maquininha'
  */
-function calcularSplit(params) {
-  const { subtotal, taxaEntrega, cadastroData } = params;
-  const comissao = calcularComissao(cadastroData);
+function calcularSplit({ subtotal, taxaEntrega, formaPagamento }) {
+  const sub   = parseFloat(subtotal  || 0);
+  const taxa  = parseFloat(taxaEntrega || 0);
+  const total = parseFloat((sub + taxa).toFixed(2));
 
-  const valorPlataforma = parseFloat((subtotal * comissao.taxa / 100).toFixed(2));
-  const valorLojista    = parseFloat((subtotal - valorPlataforma).toFixed(2));
-  const valorMotoboy    = parseFloat(taxaEntrega.toFixed(2));
-  const total           = parseFloat((subtotal + taxaEntrega).toFixed(2));
+  const valorPlataforma = parseFloat((sub * COMISSAO_TAXA / 100).toFixed(2));
+  const valorLojista    = parseFloat((sub - valorPlataforma).toFixed(2));
+  const valorMotoboy    = parseFloat(taxa.toFixed(2));
+
+  // Custo do gateway descontado da parte da plataforma
+  let taxaGateway = 0;
+  if (formaPagamento === 'pix') {
+    taxaGateway = TAXA_PIX_ASAAS;
+  } else if (formaPagamento === 'cartao') {
+    taxaGateway = parseFloat((total * TAXA_CARTAO_PERCENT / 100).toFixed(2));
+  }
+
+  const lucroPlataforma = parseFloat((valorPlataforma - taxaGateway).toFixed(2));
 
   return {
     total,
-    subtotal: parseFloat(subtotal.toFixed(2)),
+    subtotal: parseFloat(sub.toFixed(2)),
     taxaEntrega: valorMotoboy,
     valorLojista,
     valorMotoboy,
     valorPlataforma,
-    comissao,
+    taxaGateway,
+    lucroPlataforma,
+    comissao: {
+      taxa: COMISSAO_TAXA,
+      fase: 'Parceiro',
+      descricao: `${COMISSAO_TAXA}% por pedido`,
+    },
+  };
+}
+
+// Mantém assinatura antiga para compatibilidade
+function calcularComissao() {
+  return {
+    taxa: COMISSAO_TAXA,
+    mesAtivo: null,
+    fase: 'Parceiro',
+    descricao: `${COMISSAO_TAXA}% por pedido`,
+    cor: '#00C853',
   };
 }
 

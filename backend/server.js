@@ -15,7 +15,6 @@ const ordersRoutes = require('./routes/orders');
 const establishmentsRoutes = require('./routes/establishments');
 const adminRoutes = require('./routes/admin');
 const featuresRoutes = require('./routes/features');
-const oauthRoutes = require('./routes/oauth');
 const notificationsRoutes = require('./routes/notifications');
 
 const app = express();
@@ -33,52 +32,38 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: [
         "'self'",
-        "'unsafe-inline'",        // necessário para o HTML monolítico com onclick
-        "'unsafe-eval'",          // necessário para alguns scripts inline
-        'https://sdk.mercadopago.com',
-        'https://secure.mlstatic.com',
-        'https://http2.mlstatic.com',
-        'https://*.mlstatic.com',
+        "'unsafe-inline'",
+        "'unsafe-eval'",
         'https://fonts.googleapis.com',
         'https://unpkg.com',
         'https://cdn.jsdelivr.net',
+        'https://www.gstatic.com',
+        'https://*.firebaseio.com',
       ],
-      scriptSrcAttr: ["'unsafe-inline'"], // permite onclick, oninput etc.
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: [
         "'self'",
         "'unsafe-inline'",
         'https://fonts.googleapis.com',
         'https://unpkg.com',
         'https://cdn.jsdelivr.net',
-        'https://secure.mlstatic.com',
-        'https://http2.mlstatic.com',
-        'https://*.mlstatic.com',
       ],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://unpkg.com', 'https://cdn.jsdelivr.net'],
       imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: [
         "'self'",
         process.env.SUPABASE_URL || 'https://*.supabase.co',
-        'https://api.mercadopago.com',
-        'https://*.mercadopago.com',
-        'https://*.mercadopago.com.br',
-        'https://*.mercadolibre.com',
-        'https://secure.mlstatic.com',
-        'https://http2.mlstatic.com',
-        'https://*.mlstatic.com',
         'https://*.supabase.co',
-        'https://nominatim.openstreetmap.org',
+        'https://sandbox.asaas.com',
+        'https://api.asaas.com',
+        'https://*.firebaseio.com',
+        'https://*.firebasedatabase.app',
+        'wss://*.firebaseio.com',
+        'wss://*.firebasedatabase.app',
         'wss://*.supabase.co',
+        'https://nominatim.openstreetmap.org',
       ],
-      frameSrc: [
-        "'self'",
-        'https://*.mercadopago.com',
-        'https://*.mercadopago.com.br',
-        'https://*.mercadolibre.com',
-        'https://secure.mlstatic.com',
-        'https://http2.mlstatic.com',
-        'https://*.mlstatic.com',
-      ],
+      frameSrc: ["'none'"],
     },
   },
   crossOriginEmbedderPolicy: false,
@@ -147,7 +132,7 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/establishments', establishmentsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/features', featuresRoutes);
-app.use('/api/oauth', oauthRoutes);
+// OAuth MP removido — split via Asaas wallets
 app.use('/api/notifications', notificationsRoutes);
 
 // =============================================
@@ -157,7 +142,14 @@ app.get('/api/config', (req, res) => {
   res.json({
     supabaseUrl: process.env.SUPABASE_URL,
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
-    mpPublicKey: process.env.MP_PUBLIC_KEY,
+    // Firebase (GPS em tempo real)
+    firebase: {
+      apiKey:            process.env.FIREBASE_API_KEY,
+      authDomain:        process.env.FIREBASE_AUTH_DOMAIN,
+      databaseURL:       process.env.FIREBASE_DATABASE_URL,
+      projectId:         process.env.FIREBASE_PROJECT_ID,
+      appId:             process.env.FIREBASE_APP_ID,
+    },
   });
 });
 
