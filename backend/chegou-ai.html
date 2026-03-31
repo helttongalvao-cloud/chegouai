@@ -2307,6 +2307,19 @@ async function renderInfoLoja() {
     '<label for="loja-aberta">Loja aberta para pedidos</label>' +
     '</div></div>' +
     '<button class="btn-principal" style="margin-top:16px;" id="btn-salvar-loja" onclick="salvarInfoLoja()">Salvar alterações</button>' +
+    '<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--cinza3);">' +
+    '<label style="font-size:13px;font-weight:600;color:var(--texto2);display:block;margin-bottom:8px;">Pagamentos — Mercado Pago</label>' +
+    (est.mp_user_id
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:12px;border-radius:10px;background:rgba(0,200,100,0.08);border:1px solid rgba(0,200,100,0.25);margin-bottom:8px;">' +
+        '<span style="color:#00c864;font-size:18px;">✓</span>' +
+        '<span style="font-size:13px;color:var(--texto);">Conta Mercado Pago conectada</span></div>' +
+        '<button class="btn-principal" style="width:100%;font-size:13px;background:var(--cinza3);color:var(--texto);" onclick="conectarMercadoPago(\'estabelecimento\')">Reconectar conta</button>'
+      : '<div style="display:flex;align-items:center;gap:8px;padding:12px;border-radius:10px;background:rgba(255,180,0,0.08);border:1px solid rgba(255,180,0,0.25);margin-bottom:8px;">' +
+        '<span style="color:#ffb400;font-size:18px;">!</span>' +
+        '<span style="font-size:13px;color:var(--texto);">Nenhuma conta conectada — pedidos não serão pagos</span></div>' +
+        '<button class="btn-principal" style="width:100%;background:#009ee3;" onclick="conectarMercadoPago(\'estabelecimento\')">Conectar Mercado Pago</button>'
+    ) +
+    '</div>' +
     '</div>';
 
   var catSelect = document.getElementById('loja-cat-select');
