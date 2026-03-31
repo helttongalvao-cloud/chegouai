@@ -209,6 +209,28 @@ CREATE POLICY "pedidos_select_est" ON public.pedidos
     )
   );
 
+-- motoboys: motoboy vê/edita apenas o próprio registro; admin vê todos
+CREATE POLICY "motoboys_select_own" ON public.motoboys
+  FOR SELECT USING (
+    user_id = auth.uid()
+    OR auth.uid() IN (SELECT id FROM public.profiles WHERE perfil = 'admin')
+  );
+
+CREATE POLICY "motoboys_update_own" ON public.motoboys
+  FOR UPDATE USING (user_id = auth.uid());
+
+-- repasses: motoboy vê os seus; estabelecimento vê os seus; admin vê todos
+CREATE POLICY "repasses_select_own" ON public.repasses
+  FOR SELECT USING (
+    pedido_id IN (
+      SELECT id FROM public.pedidos
+      WHERE
+        motoboy_id IN (SELECT id FROM public.motoboys WHERE user_id = auth.uid())
+        OR estabelecimento_id IN (SELECT id FROM public.estabelecimentos WHERE user_id = auth.uid())
+        OR auth.uid() IN (SELECT id FROM public.profiles WHERE perfil = 'admin')
+    )
+  );
+
 -- itens_pedido: via pedido
 CREATE POLICY "itens_select_cliente" ON public.itens_pedido
   FOR SELECT USING (

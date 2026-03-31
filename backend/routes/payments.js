@@ -301,6 +301,12 @@ router.post(
 // =============================================
 // Rota pública (MP não envia token de auth)
 router.post('/webhook', async (req, res) => {
+  // Validar assinatura HMAC antes de qualquer processamento
+  if (!verificarAssinaturaWebhook(req)) {
+    console.warn('[Webhook] Assinatura inválida — requisição ignorada');
+    return res.sendStatus(401);
+  }
+
   // Responder 200 imediatamente para o MP não retentar
   res.sendStatus(200);
 
