@@ -567,6 +567,10 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
           <div class="radio"></div>
         </div>
       </div>
+      <div id="campo-cpf-pix" style="margin-top:12px;">
+        <input type="text" id="checkout-cpf" placeholder="CPF (obrigatório para Pix)" maxlength="14" inputmode="numeric" oninput="mascaraCPF(this)" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;box-sizing:border-box;">
+        <div style="font-size:11px;color:var(--texto2);margin-top:4px;">Usado apenas para identificar o pagamento. Não armazenamos dados sensíveis.</div>
+      </div>
     </div>
     <div class="secao-checkout">
       <h4>🎟️ Cupom de desconto</h4>
@@ -995,12 +999,26 @@ function iniciarRealtimeCliente(pedidoId) {
 // PAGAMENTO PIX — chamada real ao backend
 // ============================================
 async function pagarPix(pedidoId) {
+  var cpfInput = document.getElementById('checkout-cpf');
+  var cpf = cpfInput ? cpfInput.value.replace(/\D/g,'') : '';
+  if(!cpf && currentUser && currentUser.cpf) cpf = currentUser.cpf.replace(/\D/g,'');
+  if(!cpf || cpf.length !== 11) {
+    alert('Informe seu CPF para gerar o Pix.');
+    if(cpfInput) cpfInput.focus();
+    return;
+  }
   mostrarLoadingPagamento('Gerando QR Code Pix...');
   try {
     var resp = await apiCall('/api/payments/pix', {
       method: 'POST',
-      body: { pedidoId: pedidoId },
+      body: { pedidoId: pedidoId, cpf: cpf },
     });
+    // Salvar CPF no perfil se ainda não estava salvo
+    if(!currentUser.cpf) {
+      apiCall('/api/auth/cpf', { method: 'PATCH', body: { cpf: cpf } })
+        .then(function() { currentUser.cpf = cpf; localStorage.setItem('chegouai_user', JSON.stringify(currentUser)); })
+        .catch(function(){});
+    }
     esconderLoadingPagamento();
     mostrarQRCodeReal(resp);
   } catch(e) {
@@ -1856,7 +1874,14 @@ function irCheckout() {
   }
   
   irTela('tela-checkout');
-  
+
+  // Pré-preencher CPF se já salvo no perfil
+  var cpfEl = document.getElementById('checkout-cpf');
+  if(cpfEl && currentUser && currentUser.cpf) {
+    var c = currentUser.cpf.replace(/\D/g,'');
+    cpfEl.value = c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  }
+
   // Se houver endereço salvo no localStorage/auto-fill, chama o simulador
   setTimeout(function() {
     var eInput = document.getElementById('endereco-entrega').value;
@@ -1888,6 +1913,9 @@ function selecionarPag(el, tipo) {
     totalEl.textContent = 'R$ ' + baseTotal.toFixed(2).replace('.',',');
     window._conveniencia = 0;
   }
+  // Mostrar CPF só para Pix
+  var campoCpf = document.getElementById('campo-cpf-pix');
+  if(campoCpf) campoCpf.style.display = (tipo === 'pix') ? 'block' : 'none';
 }
 
 var cupomAplicado = null; // { codigo, desconto_tipo, desconto_valor }

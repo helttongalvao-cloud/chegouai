@@ -120,7 +120,7 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
     // Buscar perfil
     const { data: profile, error: profileErr } = await supabaseAdmin
       .from('profiles')
-      .select('id, nome, telefone, perfil, ativo')
+      .select('id, nome, telefone, perfil, ativo, cpf')
       .eq('id', data.user.id)
       .single();
 
@@ -152,6 +152,7 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
         nome: profile.nome,
         telefone: profile.telefone,
         perfil: profile.perfil,
+        cpf: profile.cpf || null,
         estabelecimento,
       },
     });
@@ -210,6 +211,21 @@ router.get('/me', requireAuth, (req, res) => {
     email: profile.email,
     perfil: profile.perfil,
   });
+});
+
+// =============================================
+// PATCH /api/auth/cpf — Salvar CPF do usuário
+// =============================================
+router.patch('/cpf', requireAuth, async (req, res, next) => {
+  try {
+    const { cpf } = req.body;
+    const cpfLimpo = (cpf || '').replace(/\D/g, '');
+    if (cpfLimpo.length !== 11) return res.status(400).json({ error: 'CPF inválido' });
+    await supabaseAdmin.from('profiles').update({ cpf: cpfLimpo }).eq('id', req.user.id);
+    res.json({ cpf: cpfLimpo });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;
