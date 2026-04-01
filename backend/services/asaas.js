@@ -40,6 +40,7 @@ function asaasRequest(method, path, body) {
             resolve(parsed);
           }
         } catch (e) {
+          console.error('[Asaas] HTTP', res.statusCode, '| Body:', data.substring(0, 500));
           reject(new Error('[Asaas] Resposta inválida: ' + data.substring(0, 200)));
         }
       });
