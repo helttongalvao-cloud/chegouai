@@ -6,7 +6,7 @@
 const https = require('https');
 
 const ASAAS_BASE = process.env.NODE_ENV === 'production'
-  ? 'https://api.asaas.com/api/v3'
+  ? 'https://www.asaas.com/api/v3'
   : 'https://sandbox.asaas.com/api/v3';
 
 // Helper HTTP simples sem dependência extra (usa apenas Node built-in)
