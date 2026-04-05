@@ -3,6 +3,7 @@ const { body, param, validationResult } = require('express-validator');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { supabaseAdmin } = require('../config/supabase');
 const { calcularSplit } = require('../services/commission');
+const { criarTransferenciaPix } = require('../services/asaas');
 const { enviarPush } = require('./notifications');
 
 const router = express.Router();
@@ -474,23 +475,50 @@ router.patch(
         enviarPush(pedido.cliente_id, 'Chegou Aí', msgStatus[status], { pedidoId: orderId, status });
       }
 
-      // Ao confirmar entrega, criar repasse do motoboy automaticamente (idempotente)
+      // Ao confirmar entrega, repassar taxa de entrega ao motoboy (idempotente)
       if (status === 'entregue' && pedido.motoboy_id) {
         const { data: repasseExistente } = await supabaseAdmin
           .from('repasses')
-          .select('id')
+          .select('id, status')
           .eq('pedido_id', orderId)
           .eq('tipo', 'motoboy')
           .maybeSingle();
+
+        const valorRepasse = parseFloat(pedido.taxa_entrega || 0);
+        const pagamentoDigital = !['dinheiro', 'maquininha'].includes(pedido.forma_pagamento);
 
         if (!repasseExistente) {
           await supabaseAdmin.from('repasses').insert({
             pedido_id: orderId,
             motoboy_id: pedido.motoboy_id,
             tipo: 'motoboy',
-            valor: pedido.taxa_entrega || 0,
+            valor: valorRepasse,
             status: 'pendente',
           });
+        }
+
+        // Transferir via Pix Asaas somente se pagamento digital e motoboy tem chave Pix
+        if (pagamentoDigital && pedido.pagamento_status === 'aprovado' && valorRepasse > 0) {
+          const { data: motoboy } = await supabaseAdmin
+            .from('motoboys')
+            .select('chave_pix')
+            .eq('id', pedido.motoboy_id)
+            .single();
+
+          if (motoboy?.chave_pix) {
+            try {
+              await criarTransferenciaPix(motoboy.chave_pix, valorRepasse);
+              await supabaseAdmin
+                .from('repasses')
+                .update({ status: 'pago', atualizado_em: new Date().toISOString() })
+                .eq('pedido_id', orderId)
+                .eq('tipo', 'motoboy');
+              console.log(`[Repasse] Transferência Pix R$${valorRepasse} → motoboy ${pedido.motoboy_id} OK`);
+            } catch (transErr) {
+              console.error(`[Repasse] Falha na transferência Pix ao motoboy:`, transErr.message);
+              // repasse permanece 'pendente' para reprocessamento manual
+            }
+          }
         }
       }
 

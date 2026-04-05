@@ -171,6 +171,30 @@ function montarSplit({ valorLojista, walletLojista, valorMotoboy, walletMotoboy 
 }
 
 // =============================================
+// TRANSFERÊNCIA PIX — repasse ao motoboy após entrega
+// =============================================
+
+// Detecta o tipo da chave Pix a partir do valor
+function detectarTipoPix(chave) {
+  const k = chave.trim();
+  if (/^\d{11}$/.test(k)) return 'CPF';
+  if (/^\d{14}$/.test(k)) return 'CNPJ';
+  if (k.includes('@')) return 'EMAIL';
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(k)) return 'EVP';
+  return 'PHONE'; // número de celular (DDD + número)
+}
+
+async function criarTransferenciaPix(chavePix, valor) {
+  const pixAddressKeyType = detectarTipoPix(chavePix);
+  return asaasRequest('POST', '/transfers', {
+    value: parseFloat(valor.toFixed(2)),
+    operationType: 'PIX',
+    pixAddressKey: chavePix.trim(),
+    pixAddressKeyType,
+  });
+}
+
+// =============================================
 // WEBHOOK — verificar token do header
 // =============================================
 function verificarWebhookAsaas(req) {
@@ -192,4 +216,5 @@ module.exports = {
   buscarCobranca,
   montarSplit,
   verificarWebhookAsaas,
+  criarTransferenciaPix,
 };
