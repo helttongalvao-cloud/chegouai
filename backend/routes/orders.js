@@ -31,9 +31,8 @@ router.post(
       .matches(/^\d{10,11}$/)
       .withMessage('Telefone inválido'),
     body('formaPagamento')
-      .isIn(['pix', 'cartao', 'dinheiro', 'maquininha'])
+      .isIn(['pix', 'cartao'])
       .withMessage('Forma de pagamento inválida'),
-    body('trocoPara').optional().isFloat({ min: 0 }).withMessage('Valor de troco inválido'),
     body('cupom').optional().trim().isLength({ max: 50 }).escape(),
   ],
   async (req, res, next) => {
@@ -42,7 +41,7 @@ router.post(
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const { estabelecimentoId, itens, enderecoEntrega, telefoneCliente, formaPagamento, trocoPara, cupom } = req.body;
+    const { estabelecimentoId, itens, enderecoEntrega, telefoneCliente, formaPagamento, cupom } = req.body;
     const clienteId = req.user.id;
 
     try {
@@ -150,9 +149,6 @@ router.post(
       }
       const totalFinal = parseFloat(Math.max(0, subtotal + taxaFinal - desconto).toFixed(2));
 
-      // Para dinheiro/maquininha: pagamento confirmado na entrega
-      const pagamentoNaEntrega = formaPagamento === 'dinheiro' || formaPagamento === 'maquininha';
-
       const pedidoInsert = {
         cliente_id: clienteId,
         estabelecimento_id: estabelecimentoId,
@@ -164,10 +160,9 @@ router.post(
         comissao_plataforma: split.valorPlataforma,
         total: totalFinal,
         forma_pagamento: formaPagamento,
-        pagamento_status: pagamentoNaEntrega ? 'aprovado' : 'pendente',
+        pagamento_status: 'pendente',
       };
       if (desconto > 0) { pedidoInsert.desconto = desconto; pedidoInsert.cupom_codigo = cupomCodigo; }
-      if (trocoPara) pedidoInsert.troco_para = trocoPara;
 
       const { data: pedido, error: pedidoErr } = await supabaseAdmin
         .from('pedidos')
@@ -205,8 +200,6 @@ router.post(
       const mensagemPagamento = {
         pix: 'Pedido criado. Gere o QR Code Pix para pagar.',
         cartao: 'Pedido criado. Redirecione para o checkout de cartão.',
-        dinheiro: 'Pedido confirmado! Pague em dinheiro na entrega.',
-        maquininha: 'Pedido confirmado! Pague na maquininha na entrega.',
       };
 
       res.status(201).json({
@@ -485,7 +478,6 @@ router.patch(
           .maybeSingle();
 
         const valorRepasse = parseFloat(pedido.taxa_entrega || 0);
-        const pagamentoDigital = !['dinheiro', 'maquininha'].includes(pedido.forma_pagamento);
 
         if (!repasseExistente) {
           await supabaseAdmin.from('repasses').insert({
@@ -497,8 +489,8 @@ router.patch(
           });
         }
 
-        // Transferir via Pix Asaas somente se pagamento digital e motoboy tem chave Pix
-        if (pagamentoDigital && pedido.pagamento_status === 'aprovado' && valorRepasse > 0) {
+        // Transferir via Pix Asaas se pagamento aprovado e motoboy tem chave Pix
+        if (pedido.pagamento_status === 'aprovado' && valorRepasse > 0) {
           const { data: motoboy } = await supabaseAdmin
             .from('motoboys')
             .select('chave_pix')
