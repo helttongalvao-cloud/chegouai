@@ -3,7 +3,7 @@ const { body, param, validationResult } = require('express-validator');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { supabaseAdmin } = require('../config/supabase');
 const { calcularSplit } = require('../services/commission');
-const { criarTransferenciaPix } = require('../services/asaas');
+const { criarTransferenciaPix } = require('../services/pagarme');
 const { enviarPush } = require('./notifications');
 
 const router = express.Router();
@@ -270,11 +270,15 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
       .eq('user_id', req.user.id)
       .single();
 
+    const selectPedido = 'id, status, total, taxa_entrega, endereco_entrega, telefone_cliente, ' +
+      'estabelecimentos (nome, emoji, endereco, lat, lng), ' +
+      'profiles!pedidos_cliente_id_fkey (nome)';
+
     const [dispRes, ativaRes] = await Promise.all([
       // Pedidos prontos sem motoboy atribuído
       supabaseAdmin
         .from('pedidos')
-        .select('id, status, total, taxa_entrega, endereco_entrega, telefone_cliente, estabelecimentos (nome, emoji)')
+        .select(selectPedido)
         .eq('status', 'pronto')
         .is('motoboy_id', null)
         .order('criado_em', { ascending: true }),
@@ -282,7 +286,7 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
       // Entrega ativa deste motoboy (coletado)
       motoboy ? supabaseAdmin
         .from('pedidos')
-        .select('id, status, total, taxa_entrega, endereco_entrega, telefone_cliente, estabelecimentos (nome, emoji)')
+        .select(selectPedido)
         .eq('status', 'coletado')
         .eq('motoboy_id', motoboy.id)
         .maybeSingle() : Promise.resolve({ data: null }),
@@ -489,7 +493,7 @@ router.patch(
           });
         }
 
-        // Transferir via Pix Asaas se pagamento aprovado e motoboy tem chave Pix
+        // Transferir via Pix Pagar.me se pagamento aprovado e motoboy tem chave Pix
         if (pedido.pagamento_status === 'aprovado' && valorRepasse > 0) {
           const { data: motoboy } = await supabaseAdmin
             .from('motoboys')

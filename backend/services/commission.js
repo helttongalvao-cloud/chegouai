@@ -1,74 +1,75 @@
 /**
- * Modelo de comissão do Chegou Aí — Taxa fixa de 5%
+ * commission.js — Cálculo de split e repasse de taxas (Pagar.me v5 + D+0)
  *
- * Regra de repasse:
- *   - Lojista recebe: subtotal - 5%
- *   - Motoboy recebe: taxa de entrega integral
- *   - Plataforma fica com: 5% do subtotal
- *   - Taxa do cartão (2,99%) é cobrada do CLIENTE como conveniência
- *   - Taxa Pix (R$0,99) é absorvida pela plataforma
+ * Regras de split:
+ *   Lojista:    95% do subtotal dos produtos  (charge_processing_fee: false)
+ *   Motoboy:    100% do frete                 (transferência Pix separada após entrega)
+ *   Plataforma: 5% + diferença de taxa do cartão (charge_processing_fee: true, remainder)
  *
- * Exemplo cartão: R$20 + R$4 entrega
- *   Cliente paga:   R$24,72 (R$24 + 2,99% conveniência)
- *   Lojista:        R$19,00
- *   Motoboy:        R$ 4,00
- *   Plataforma:     R$ 1,00 (5%) — Asaas cobra ~R$0,74 do total, sobra ~R$0,26
- *
- * Exemplo Pix: R$20 + R$4 entrega
- *   Cliente paga:   R$24,00
- *   Lojista:        R$19,00
- *   Motoboy:        R$ 4,00
- *   Plataforma:     R$ 1,00 - R$0,99 Asaas = R$0,01 lucro
+ * Pix:   taxa % absorvida pela plataforma — cliente paga o valor base.
+ * Cartão: taxa gateway + antecipação D+0 repassadas ao cliente via gross-up.
+ *         Fórmula: preco_cliente = valor_base / (1 - taxa_total%) + taxa_fixa
  */
 
 const COMISSAO_TAXA = 5; // % sobre o subtotal dos produtos
 
-// Taxas Asaas (ajuste conforme plano contratado)
-const TAXA_PIX_ASAAS      = parseFloat(process.env.ASAAS_TAXA_PIX    || '0.99'); // R$ fixo por Pix
-const TAXA_CARTAO_PERCENT = parseFloat(process.env.ASAAS_TAXA_CARTAO || '2.99'); // % cobrado do cliente
+// ── Taxas Pagar.me ──────────────────────────────────────────────────────────
+// Configure via variáveis de ambiente conforme seu plano/negociação.
+const TAXA_PIX_PERCENT       = parseFloat(process.env.PAGARME_TAXA_PIX_PERCENT        || '0.99'); // % sobre o total Pix
+const TAXA_CARTAO_PERCENT    = parseFloat(process.env.PAGARME_TAXA_CARTAO_PERCENT     || '3.99'); // % base cartão crédito
+const TAXA_ANTECIP_PERCENT   = parseFloat(process.env.PAGARME_TAXA_ANTECIPACAO_PERCENT || '1.99'); // % antecipação D+0
+const TAXA_FIXA_CARTAO       = parseFloat(process.env.PAGARME_TAXA_FIXA_CARTAO        || '0.70'); // R$ fixo por transação cartão
 
 /**
- * Calcula os valores do split de um pedido.
+ * Calcula os valores de split de um pedido.
  *
  * @param {object} params
  * @param {number} params.subtotal        - Valor dos produtos (sem entrega)
  * @param {number} params.taxaEntrega     - Taxa de entrega (vai integral ao motoboy)
- * @param {string} [params.formaPagamento] - 'pix' | 'cartao' | 'dinheiro' | 'maquininha'
+ * @param {string} [params.formaPagamento] - 'pix' | 'cartao'
+ * @returns {object} Objeto com todos os valores em R$ (2 casas decimais)
  */
 function calcularSplit({ subtotal, taxaEntrega, formaPagamento }) {
-  const sub  = parseFloat(subtotal   || 0);
-  const taxa = parseFloat(taxaEntrega || 0);
-  const baseTotal = parseFloat((sub + taxa).toFixed(2));
+  const sub   = parseFloat(subtotal    || 0);
+  const frete = parseFloat(taxaEntrega || 0);
 
-  // Taxa de conveniência do cartão cobrada do cliente
-  let taxaConveniencia = 0;
-  if (formaPagamento === 'cartao') {
-    taxaConveniencia = parseFloat((baseTotal * TAXA_CARTAO_PERCENT / 100).toFixed(2));
-  }
-
-  // Total que o cliente efetivamente paga
-  const total = parseFloat((baseTotal + taxaConveniencia).toFixed(2));
-
-  // Split baseado nos valores originais (lojista e motoboy não são afetados)
+  // ── Valores de destino (lojista e motoboy não mudam) ──────────────────────
   const valorPlataforma = parseFloat((sub * COMISSAO_TAXA / 100).toFixed(2));
   const valorLojista    = parseFloat((sub - valorPlataforma).toFixed(2));
-  const valorMotoboy    = parseFloat(taxa.toFixed(2));
+  const valorMotoboy    = parseFloat(frete.toFixed(2));
+  const valorBase       = parseFloat((sub + frete).toFixed(2));
 
-  // Custo do Pix absorvido pela plataforma; cartão já foi repassado ao cliente
-  const taxaGateway     = formaPagamento === 'pix' ? TAXA_PIX_ASAAS : 0;
-  const lucroPlataforma = parseFloat((valorPlataforma + taxaConveniencia - taxaGateway).toFixed(2));
+  let total, taxaConveniencia, taxaGateway, lucroPlataforma;
+
+  if (formaPagamento === 'cartao') {
+    // Gross-up: cliente paga o suficiente para cobrir gateway + antecipação D+0
+    const taxaTotalFrac = (TAXA_CARTAO_PERCENT + TAXA_ANTECIP_PERCENT) / 100;
+    const totalBruto    = valorBase / (1 - taxaTotalFrac);
+    total               = parseFloat((totalBruto + TAXA_FIXA_CARTAO).toFixed(2));
+    taxaConveniencia    = parseFloat((total - valorBase).toFixed(2));
+
+    // Custo efetivo do gateway sobre o total cobrado do cliente
+    taxaGateway   = parseFloat((total * taxaTotalFrac + TAXA_FIXA_CARTAO).toFixed(2));
+    lucroPlataforma = parseFloat((valorPlataforma + taxaConveniencia - taxaGateway).toFixed(2));
+  } else {
+    // Pix: cliente paga o valor base; plataforma absorve a taxa percentual
+    total           = valorBase;
+    taxaConveniencia = 0;
+    taxaGateway     = parseFloat((total * TAXA_PIX_PERCENT / 100).toFixed(2));
+    lucroPlataforma  = parseFloat((valorPlataforma - taxaGateway).toFixed(2));
+  }
 
   return {
-    total,           // valor cobrado do cliente (inclui conveniência cartão)
-    baseTotal,       // subtotal + entrega sem conveniência
+    total,            // o que o cliente paga (R$)
+    valorBase,        // subtotal + frete sem markup
     subtotal: parseFloat(sub.toFixed(2)),
     taxaEntrega: valorMotoboy,
-    taxaConveniencia,
-    valorLojista,
-    valorMotoboy,
-    valorPlataforma,
-    taxaGateway,
-    lucroPlataforma,
+    taxaConveniencia, // markup cartão repassado ao cliente
+    valorLojista,     // 95% do subtotal
+    valorMotoboy,     // 100% do frete
+    valorPlataforma,  // 5% do subtotal (antes das taxas)
+    taxaGateway,      // custo do gateway absorvido pela plataforma (Pix) ou cobrado do cliente (cartão)
+    lucroPlataforma,  // receita líquida real da plataforma
     comissao: {
       taxa: COMISSAO_TAXA,
       fase: 'Parceiro',
@@ -77,7 +78,7 @@ function calcularSplit({ subtotal, taxaEntrega, formaPagamento }) {
   };
 }
 
-// Mantém assinatura antiga para compatibilidade
+// Mantém assinatura de compatibilidade usada em algumas rotas
 function calcularComissao() {
   return {
     taxa: COMISSAO_TAXA,

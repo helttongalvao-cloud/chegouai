@@ -16,20 +16,19 @@ const validateRegister = [
     .withMessage('Nome deve ter entre 2 e 100 caracteres')
     .escape(),
   body('telefone')
-    .replace(/\D/g, '')
+    .customSanitizer(v => (v || '').replace(/\D/g, ''))
     .isLength({ min: 10, max: 11 })
     .withMessage('Telefone inválido (DDD + número)'),
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('E-mail inválido'),
   body('senha')
     .isLength({ min: 6 })
     .withMessage('Senha deve ter pelo menos 6 caracteres'),
 ];
 
 const validateLogin = [
-  body('email').isEmail().normalizeEmail().withMessage('E-mail inválido'),
+  body('telefone')
+    .customSanitizer(v => (v || '').replace(/\D/g, ''))
+    .isLength({ min: 10, max: 11 })
+    .withMessage('Telefone inválido'),
   body('senha').notEmpty().withMessage('Senha obrigatória'),
 ];
 
@@ -42,8 +41,10 @@ router.post('/register', validateRegister, async (req, res, next) => {
     return res.status(400).json({ error: errors.array()[0].msg });
   }
 
-  const { nome, telefone, email, senha } = req.body;
-  const telLimpo = telefone.replace(/\D/g, '');
+  const { nome, telefone, senha } = req.body;
+  const telLimpo = (telefone || '').replace(/\D/g, '');
+  // E-mail gerado internamente — usuário não precisa fornecer
+  const emailInterno = `tel_${telLimpo}@chegouai.app`;
 
   try {
     // Verificar telefone duplicado
@@ -57,29 +58,24 @@ router.post('/register', validateRegister, async (req, res, next) => {
       return res.status(409).json({ error: 'Telefone já cadastrado' });
     }
 
-    // Criar usuário no Supabase Auth
+    // Criar usuário no Supabase Auth com e-mail interno
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
+      email: emailInterno,
       password: senha,
-      email_confirm: true, // Confirmar automaticamente em desenvolvimento
+      email_confirm: true,
       user_metadata: { nome, telefone: telLimpo },
     });
 
-    if (authError) {
-      if (authError.message.includes('already registered')) {
-        return res.status(409).json({ error: 'E-mail já cadastrado' });
-      }
-      throw authError;
-    }
+    if (authError) throw authError;
 
-    // Atualizar perfil criado pelo trigger com os dados completos
+    // Atualizar perfil criado pelo trigger
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .upsert({
         id: authData.user.id,
         nome,
         telefone: telLimpo,
-        email,
+        email: emailInterno,
         perfil: 'cliente',
       });
 
@@ -103,18 +99,26 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
     return res.status(400).json({ error: errors.array()[0].msg });
   }
 
-  const { email, senha } = req.body;
+  const { telefone, senha } = req.body;
+  const telLimpo = (telefone || '').replace(/\D/g, '');
 
   try {
-    // Usar supabase auth para login (valida email/senha)
+    // Buscar e-mail interno pelo telefone
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('email')
+      .eq('telefone', telLimpo)
+      .maybeSingle();
+
+    const emailLogin = profile?.email || `tel_${telLimpo}@chegouai.app`;
+
     const { data, error } = await supabaseAdmin.auth.signInWithPassword({
-      email,
+      email: emailLogin,
       password: senha,
     });
 
     if (error) {
-      // Mensagem genérica para não revelar se email existe
-      return res.status(401).json({ error: 'E-mail ou senha incorretos' });
+      return res.status(401).json({ error: 'Telefone ou senha incorretos' });
     }
 
     // Buscar perfil

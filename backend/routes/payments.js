@@ -3,16 +3,22 @@ const { body, param, validationResult } = require('express-validator');
 const { requireAuth } = require('../middleware/auth');
 const { paymentLimiter } = require('../middleware/security');
 const { supabaseAdmin } = require('../config/supabase');
-const { criarOuBuscarCliente, criarCobrancaPix, criarCobrancaCartao, buscarCobranca, montarSplit, verificarWebhookAsaas } = require('../services/asaas');
+const {
+  criarOuBuscarCliente,
+  criarCobrancaPix,
+  criarCobrancaCartao,
+  montarSplitRules,
+  verificarWebhook,
+} = require('../services/pagarme');
 const { calcularSplit } = require('../services/commission');
 
 const router = express.Router();
 
-// ─── Helper: buscar pedido pendente do cliente ─────────────────────────────
+// ─── Helper: buscar pedido pendente do cliente ────────────────────────────
 async function buscarPedidoPendente(pedidoId, clienteId) {
   const { data: pedido, error } = await supabaseAdmin
     .from('pedidos')
-    .select('*, estabelecimentos(nome, asaas_wallet_id)')
+    .select('*, estabelecimentos(nome, pagarme_recipient_id)')
     .eq('id', pedidoId)
     .eq('cliente_id', clienteId)
     .eq('pagamento_status', 'pendente')
@@ -21,29 +27,32 @@ async function buscarPedidoPendente(pedidoId, clienteId) {
   return pedido;
 }
 
-// ─── Helper: salvar ID da cobrança e atualizar split ──────────────────────
-async function salvarCobranca(pedidoId, chargeId, split) {
+// ─── Helper: salvar pagarme_order_id e valores do split ──────────────────
+async function salvarCobranca(pedidoId, pagarmeOrderId, split) {
   await supabaseAdmin.from('pedidos').update({
-    asaas_payment_id: chargeId,
+    pagarme_order_id: pagarmeOrderId,
     comissao_plataforma: split.valorPlataforma,
     total: split.total,
     pagamento_status: 'aguardando',
   }).eq('id', pedidoId);
 }
 
-// ─── Helper: processar pagamento aprovado (idempotente) ───────────────────
-async function processarPagamentoAprovado(orderId, chargeId) {
+// ─── Helper: processar pagamento aprovado (idempotente) ──────────────────
+async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
   const { data: atual } = await supabaseAdmin
-    .from('pedidos').select('pagamento_status').eq('id', orderId).single();
+    .from('pedidos')
+    .select('pagamento_status')
+    .eq('id', orderId)
+    .single();
 
   if (!atual || atual.pagamento_status === 'aprovado') {
-    console.log(`[Asaas] Pedido ${orderId} já processado — ignorando`);
+    console.log(`[Pagar.me] Pedido ${orderId} já processado — ignorando`);
     return;
   }
 
   const { data: pedido } = await supabaseAdmin
     .from('pedidos')
-    .update({ pagamento_status: 'aprovado', status: 'aceito', asaas_payment_id: chargeId })
+    .update({ pagamento_status: 'aprovado', status: 'aceito', pagarme_order_id: pagarmeOrderId })
     .eq('id', orderId)
     .select('subtotal, taxa_entrega, forma_pagamento')
     .single();
@@ -58,10 +67,16 @@ async function processarPagamentoAprovado(orderId, chargeId) {
 
   await supabaseAdmin.from('repasses').insert([
     { pedido_id: orderId, tipo: 'lojista',    valor: split.valorLojista,    status: 'pendente' },
-    { pedido_id: orderId, tipo: 'plataforma', valor: split.valorPlataforma, status: 'pago' },
+    { pedido_id: orderId, tipo: 'motoboy',    valor: split.valorMotoboy,    status: 'pendente' },
+    { pedido_id: orderId, tipo: 'plataforma', valor: split.lucroPlataforma, status: 'pago' },
   ]);
 
-  console.log(`[Asaas] Pedido ${orderId} aprovado — lojista R$${split.valorLojista}, motoboy R$${split.valorMotoboy}, plataforma R$${split.valorPlataforma}`);
+  console.log(
+    `[Pagar.me] Pedido ${orderId} aprovado` +
+    ` — lojista R$${split.valorLojista}` +
+    `, motoboy R$${split.valorMotoboy}` +
+    `, plataforma R$${split.lucroPlataforma}`
+  );
 }
 
 // =============================================
@@ -76,48 +91,46 @@ router.post('/pix', paymentLimiter, requireAuth, [
 
   try {
     const { pedidoId, cpf } = req.body;
-    const user = req.user;
 
-    const pedido = await buscarPedidoPendente(pedidoId, user.id);
-    const split = calcularSplit({
-      subtotal: pedido.subtotal,
-      taxaEntrega: pedido.taxa_entrega,
+    const pedido = await buscarPedidoPendente(pedidoId, req.user.id);
+    const split  = calcularSplit({
+      subtotal:       pedido.subtotal,
+      taxaEntrega:    pedido.taxa_entrega,
       formaPagamento: 'pix',
     });
 
     const customerId = await criarOuBuscarCliente({
-      nome: user.profile.nome,
-      email: user.email,
+      nome:  req.user.profile.nome,
+      email: req.user.email,
       cpf,
     });
 
-    const splitArr = montarSplit({
-      valorLojista: split.valorLojista,
-      walletLojista: pedido.estabelecimentos?.asaas_wallet_id || null,
-      valorMotoboy: 0,    // motoboy recebe após entrega confirmada
-      walletMotoboy: null,
+    // Split: lojista (95% do subtotal, sem taxa) + plataforma (remainder, paga a taxa Pix)
+    const splitRules = montarSplitRules({
+      valorLojista:       split.valorLojista,
+      recipientIdLojista: pedido.estabelecimentos?.pagarme_recipient_id || null,
     });
 
     const cobranca = await criarCobrancaPix({
       total: split.total,
       orderId: pedidoId,
       customerId,
-      split: splitArr,
+      splitRules,
     });
 
-    await salvarCobranca(pedidoId, cobranca.chargeId, split);
+    await salvarCobranca(pedidoId, cobranca.orderId, split);
 
     res.json({
-      paymentId: cobranca.chargeId,
-      qrCode: cobranca.qrCode,
+      paymentId:    cobranca.orderId,
+      qrCode:       cobranca.qrCode,
       qrCodeBase64: cobranca.qrCodeBase64,
-      expiresAt: cobranca.expiresAt,
+      expiresAt:    cobranca.expiresAt,
       split: {
-        total: split.total,
-        lojista: split.valorLojista,
-        motoboy: split.valorMotoboy,
-        plataforma: split.valorPlataforma,
-        taxaGateway: split.taxaGateway,
+        total:           split.total,
+        lojista:         split.valorLojista,
+        motoboy:         split.valorMotoboy,
+        plataforma:      split.valorPlataforma,
+        taxaGateway:     split.taxaGateway,
         lucroPlataforma: split.lucroPlataforma,
       },
     });
@@ -128,7 +141,7 @@ router.post('/pix', paymentLimiter, requireAuth, [
 });
 
 // =============================================
-// POST /api/payments/cartao — Cartão transparente
+// POST /api/payments/cartao — Cartão transparente (com gross-up D+0)
 // =============================================
 router.post('/cartao', paymentLimiter, requireAuth, [
   body('pedidoId').isUUID().withMessage('pedidoId inválido'),
@@ -144,62 +157,69 @@ router.post('/cartao', paymentLimiter, requireAuth, [
   try {
     const {
       pedidoId, holderName, cardNumber, expiryMonth, expiryYear, ccv,
-      cpf, phone, postalCode, installments,
+      cpf, postalCode, installments,
     } = req.body;
-    const user = req.user;
 
-    const pedido = await buscarPedidoPendente(pedidoId, user.id);
+    const pedido = await buscarPedidoPendente(pedidoId, req.user.id);
+
+    // split.total já contém o gross-up (produto + frete + taxas repassadas ao cliente)
     const split = calcularSplit({
-      subtotal: pedido.subtotal,
-      taxaEntrega: pedido.taxa_entrega,
+      subtotal:       pedido.subtotal,
+      taxaEntrega:    pedido.taxa_entrega,
       formaPagamento: 'cartao',
     });
 
     const customerId = await criarOuBuscarCliente({
-      nome: user.profile.nome,
-      email: user.email,
+      nome:  req.user.profile.nome,
+      email: req.user.email,
       cpf,
     });
 
-    const splitArr = montarSplit({
-      valorLojista: split.valorLojista,
-      walletLojista: pedido.estabelecimentos?.asaas_wallet_id || null,
-      valorMotoboy: 0,
-      walletMotoboy: null,
+    // Lojista recebe 95% do subtotal original (sem markup de conveniência)
+    // A taxa e a antecipação são cobradas do saldo da plataforma (charge_processing_fee: true)
+    const splitRules = montarSplitRules({
+      valorLojista:       split.valorLojista,
+      recipientIdLojista: pedido.estabelecimentos?.pagarme_recipient_id || null,
     });
 
     const cobranca = await criarCobrancaCartao({
-      total: split.total,
-      orderId: pedidoId,
+      total:    split.total, // valor gross-up cobrado do cliente
+      orderId:  pedidoId,
       customerId,
       creditCard: {
         holderName,
-        number: cardNumber.replace(/\D/g, ''),
+        number:      cardNumber.replace(/\D/g, ''),
         expiryMonth,
         expiryYear,
         ccv,
       },
-      creditCardHolderInfo: {
-        name: holderName,
-        email: user.email,
-        cpfCnpj: cpf ? cpf.replace(/\D/g, '') : '00000000000',
-        phone: phone || '',
-        postalCode: postalCode ? postalCode.replace(/\D/g, '') : '00000000',
-      },
+      billingAddress: postalCode ? {
+        line_1:   'Endereco nao informado',
+        zip_code: postalCode.replace(/\D/g, ''),
+        city:     'Guajara',
+        state:    'AM',
+        country:  'BR',
+      } : null,
       installments: parseInt(installments || 1),
-      split: splitArr,
+      splitRules,
     });
 
-    await salvarCobranca(pedidoId, cobranca.chargeId, split);
+    await salvarCobranca(pedidoId, cobranca.orderId, split);
 
-    const aprovado = ['CONFIRMED', 'RECEIVED'].includes(cobranca.status);
-    if (aprovado) {
-      await processarPagamentoAprovado(pedidoId, cobranca.chargeId);
-    }
+    const aprovado = cobranca.status === 'CONFIRMED';
+    if (aprovado) await processarPagamentoAprovado(pedidoId, cobranca.orderId);
 
     res.json({
-      status: aprovado ? 'approved' : 'pending',
-      chargeId: cobranca.chargeId,
+      status:  aprovado ? 'approved' : 'pending',
+      orderId: cobranca.orderId,
+      split: {
+        totalCliente:    split.total,
+        valorBase:       split.valorBase,
+        taxaConveniencia: split.taxaConveniencia,
+        lojista:         split.valorLojista,
+        motoboy:         split.valorMotoboy,
+        lucroPlataforma: split.lucroPlataforma,
+      },
     });
   } catch (err) {
     console.error('[Cartão]', err.message);
@@ -208,33 +228,38 @@ router.post('/cartao', paymentLimiter, requireAuth, [
 });
 
 // =============================================
-// POST /api/payments/webhook — Notificações Asaas
+// POST /api/payments/webhook — Notificações Pagar.me
 // =============================================
 router.post('/webhook', async (req, res) => {
-  if (!verificarWebhookAsaas(req)) {
-    console.warn('[Webhook] Token inválido');
+  if (!verificarWebhook(req)) {
+    console.warn('[Webhook] Assinatura inválida');
     return res.sendStatus(401);
   }
 
-  // Responder 200 imediatamente para o Asaas não retentar
-  res.sendStatus(200);
+  res.sendStatus(200); // responde imediatamente
 
   try {
-    const { event, payment } = req.body;
-    console.log('[Asaas Webhook]', event, payment?.id, 'ref:', payment?.externalReference);
+    const { type, data } = req.body;
+    console.log('[Pagar.me Webhook]', type, data?.id);
 
-    if (!payment?.externalReference) return;
-    const orderId = payment.externalReference;
+    if (!data?.id) return;
+    const orderId = data.metadata?.order_id;
 
-    if (['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED'].includes(event)) {
-      await processarPagamentoAprovado(orderId, payment.id);
-    } else if (['PAYMENT_OVERDUE', 'PAYMENT_DELETED', 'PAYMENT_REFUNDED'].includes(event)) {
+    if (type === 'order.paid') {
+      if (!orderId) {
+        console.warn('[Webhook] order.paid sem metadata.order_id:', data.id);
+        return;
+      }
+      await processarPagamentoAprovado(orderId, data.id);
+
+    } else if (['order.canceled', 'order.payment_failed'].includes(type)) {
+      if (!orderId) return;
       await supabaseAdmin.from('pedidos')
         .update({ pagamento_status: 'cancelado', status: 'cancelado' })
         .eq('id', orderId);
     }
   } catch (err) {
-    console.error('[Webhook Asaas]', err.message);
+    console.error('[Webhook Pagar.me]', err.message);
   }
 });
 

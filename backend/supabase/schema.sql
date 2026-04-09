@@ -351,3 +351,29 @@ CREATE TABLE IF NOT EXISTS public.cupons (
   ativo BOOLEAN DEFAULT true,
   criado_em TIMESTAMPTZ DEFAULT now()
 );
+
+-- =============================================
+-- MIGRAÇÃO: Asaas → Pagar.me
+-- =============================================
+-- Pedidos: nova coluna pagarme_order_id (substitui asaas_payment_id)
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS pagarme_order_id TEXT;
+
+-- Estabelecimentos: nova coluna pagarme_recipient_id (substitui asaas_wallet_id)
+ALTER TABLE public.estabelecimentos ADD COLUMN IF NOT EXISTS pagarme_recipient_id TEXT;
+
+-- Copiar dados existentes (se houver) para as novas colunas antes de remover as antigas
+UPDATE public.pedidos SET pagarme_order_id = asaas_payment_id WHERE asaas_payment_id IS NOT NULL AND pagarme_order_id IS NULL;
+UPDATE public.estabelecimentos SET pagarme_recipient_id = asaas_wallet_id WHERE asaas_wallet_id IS NOT NULL AND pagarme_recipient_id IS NULL;
+
+-- Remover colunas antigas (descomente quando pronto para aplicar definitivamente)
+-- ALTER TABLE public.pedidos DROP COLUMN IF EXISTS asaas_payment_id;
+-- ALTER TABLE public.estabelecimentos DROP COLUMN IF EXISTS asaas_wallet_id;
+
+-- =============================================
+-- MIGRAÇÃO: Localização do estabelecimento (para GPS motoboy)
+-- =============================================
+-- Nota: lat e lng já existem da migração de motoboys.
+-- Apenas endereco é novo aqui.
+ALTER TABLE public.estabelecimentos ADD COLUMN IF NOT EXISTS endereco TEXT;
+ALTER TABLE public.estabelecimentos ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
+ALTER TABLE public.estabelecimentos ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;

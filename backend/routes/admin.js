@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const { requireRole } = require('../middleware/auth');
 const { supabaseAdmin } = require('../config/supabase');
 const { calcularComissao } = require('../services/commission');
+const { cadastrarRecebedor } = require('../services/pagarme');
 
 const router = express.Router();
 
@@ -345,7 +346,7 @@ router.post(
 router.put('/establishments/:id', async (req, res, next) => {
   try {
     const campos = {};
-    ['nome', 'categoria', 'tempo_entrega', 'mp_user_id', 'taxa_entrega', 'emoji', 'aberto'].forEach((k) => {
+    ['nome', 'categoria', 'tempo_entrega', 'taxa_entrega', 'emoji', 'aberto', 'whatsapp', 'valor_minimo', 'endereco', 'lat', 'lng'].forEach((k) => {
       if (req.body[k] !== undefined) campos[k] = req.body[k];
     });
     const { data, error } = await supabaseAdmin
@@ -499,6 +500,50 @@ router.patch('/cupons/:id', async (req, res, next) => {
     if (error) throw error;
     res.json(data);
   } catch (err) { next(err); }
+});
+
+// =============================================
+// POST /api/admin/establishments/:id/recipient
+// Cadastrar lojista como recebedor no Pagar.me
+// =============================================
+router.post('/establishments/:id/recipient', [
+  body('nome').notEmpty().withMessage('Nome obrigatório'),
+  body('email').isEmail().withMessage('E-mail inválido'),
+  body('cpf').matches(/^\d{11}$/).withMessage('CPF inválido (11 dígitos)'),
+  body('banco').notEmpty().withMessage('Banco obrigatório'),
+  body('agencia').notEmpty().withMessage('Agência obrigatória'),
+  body('conta').notEmpty().withMessage('Conta obrigatória'),
+  body('tipo_conta').isIn(['checking', 'savings']).withMessage('Tipo de conta inválido'),
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+  try {
+    const { nome, email, cpf, banco, agencia, conta, digito, tipo_conta } = req.body;
+
+    const recipientId = await cadastrarRecebedor({
+      nome,
+      email,
+      cpf,
+      contaBancaria: {
+        holder_name: nome,
+        bank: banco,
+        branch_number: agencia,
+        account_number: conta + (digito ? `-${digito}` : ''),
+        type: tipo_conta, // 'checking' ou 'savings'
+      },
+    });
+
+    await supabaseAdmin
+      .from('estabelecimentos')
+      .update({ pagarme_recipient_id: recipientId })
+      .eq('id', req.params.id);
+
+    res.json({ recipientId, message: 'Recebedor cadastrado com sucesso' });
+  } catch (err) {
+    console.error('[Admin] Cadastrar recebedor:', err.message);
+    next(err);
+  }
 });
 
 module.exports = router;
