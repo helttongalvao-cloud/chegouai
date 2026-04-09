@@ -104,13 +104,13 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
 
   try {
     // Buscar e-mail interno pelo telefone
-    const { data: profile } = await supabaseAdmin
+    const { data: profileEmail } = await supabaseAdmin
       .from('profiles')
       .select('email')
       .eq('telefone', telLimpo)
       .maybeSingle();
 
-    const emailLogin = profile?.email || `tel_${telLimpo}@chegouai.app`;
+    const emailLogin = profileEmail?.email || `tel_${telLimpo}@chegouai.app`;
 
     const { data, error } = await supabaseAdmin.auth.signInWithPassword({
       email: emailLogin,
