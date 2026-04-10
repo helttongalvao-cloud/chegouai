@@ -529,7 +529,7 @@ router.post('/establishments/:id/recipient', [
         holder_name: nome,
         holder_type: 'individual',
         holder_document: cpf,
-        bank: banco,
+        bank: banco.replace(/\D/g, '').replace(/^0+/, '').padStart(3, '0'),
         branch_number: agencia,
         account_number: conta,
         account_check_digit: digito,
