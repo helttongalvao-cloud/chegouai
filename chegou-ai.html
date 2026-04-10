@@ -461,6 +461,13 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div style="font-size:12px;color:var(--texto2);margin-top:8px;">Para o motoboy entrar em contato se precisar</div>
     </div>
     <div class="secao-checkout">
+      <h4>🪪 Seu CPF</h4>
+      <div class="campo" style="margin:0;">
+        <input type="tel" placeholder="000.000.000-00" id="checkout-cpf" style="margin:0;" oninput="mascaraCPF(this)" maxlength="14">
+      </div>
+      <div style="font-size:12px;color:var(--texto2);margin-top:8px;">Obrigatório para pagamentos digitais</div>
+    </div>
+    <div class="secao-checkout">
       <h4>💳 Forma de pagamento</h4>
       <div class="opcoes-pag">
         <div class="opcao-pag selecionado" data-tipo="pix" onclick="selecionarPag(this,'pix')">
@@ -669,12 +676,12 @@ async function inicializarMP() {
 // ============================================
 // PAGAMENTO PIX — chamada real ao backend
 // ============================================
-async function pagarPix(pedidoId) {
+async function pagarPix(pedidoId, cpf) {
   mostrarLoadingPagamento('Gerando QR Code Pix...');
   try {
     var resp = await apiCall('/api/payments/pix', {
       method: 'POST',
-      body: { pedidoId: pedidoId },
+      body: { pedidoId: pedidoId, cpf: cpf },
     });
     esconderLoadingPagamento();
     mostrarQRCodeReal(resp);
@@ -880,6 +887,12 @@ function mascaraTelefone(input) {
   let v = input.value.replace(/\D/g,'');
   if(v.length <= 10) v = v.replace(/(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3');
   else v = v.replace(/(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3');
+  input.value = v;
+}
+
+function mascaraCPF(input) {
+  let v = input.value.replace(/\D/g,'').substring(0, 11);
+  v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/,'$1.$2.$3-$4');
   input.value = v;
 }
 
@@ -1320,9 +1333,11 @@ function selecionarPag(el, tipo) {
 async function confirmarPedido() {
   const end = document.getElementById('endereco-entrega').value.trim();
   const tel = document.getElementById('checkout-telefone').value.replace(/[^0-9]/g,'');
+  const cpf = document.getElementById('checkout-cpf').value.replace(/[^0-9]/g,'');
 
   if(!end) { destacarErro('endereco-entrega'); alert('Informe o endereço de entrega'); return; }
   if(tel.length < 10) { destacarErro('checkout-telefone'); alert('Informe seu telefone para contato'); return; }
+  if(cpf.length !== 11) { destacarErro('checkout-cpf'); alert('Informe seu CPF (11 dígitos)'); return; }
   if(!authToken) { alert('Faça login para continuar'); irTela('tela-login'); return; }
 
   var formaPag = document.querySelector('.opcao-pag.selecionado')?.dataset.tipo || 'pix';
@@ -1365,7 +1380,7 @@ async function confirmarPedido() {
 
     // 2. Processar pagamento conforme forma escolhida
     if(formaPag === 'pix') {
-      await pagarPix(pedidoAtualId);
+      await pagarPix(pedidoAtualId, cpf);
     } else {
       await pagarCartao(pedidoAtualId);
     }
