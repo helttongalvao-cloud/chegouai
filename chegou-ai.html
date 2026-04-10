@@ -725,7 +725,10 @@ function mostrarQRCodeReal(pixData) {
 
   var qrHtml = '';
   if(pixData.qrCodeBase64) {
-    qrHtml = '<img src="data:image/png;base64,' + pixData.qrCodeBase64 + '" style="width:200px;height:200px;border-radius:12px;margin:0 auto;display:block;" alt="QR Code Pix">';
+    var imgSrc = pixData.qrCodeBase64.startsWith('http')
+      ? pixData.qrCodeBase64
+      : 'data:image/png;base64,' + pixData.qrCodeBase64;
+    qrHtml = '<img src="' + imgSrc + '" style="width:200px;height:200px;border-radius:12px;margin:0 auto;display:block;" alt="QR Code Pix">';
   } else {
     qrHtml = '<div style="font-size:64px;text-align:center;">📱</div><div style="font-size:12px;color:var(--texto2);text-align:center;">QR Code indisponível. Use o código copia e cola.</div>';
   }

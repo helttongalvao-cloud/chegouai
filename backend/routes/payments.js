@@ -100,9 +100,10 @@ router.post('/pix', paymentLimiter, requireAuth, [
     });
 
     const customerId = await criarOuBuscarCliente({
-      nome:  req.user.profile.nome,
-      email: req.user.email,
+      nome:     req.user.profile.nome,
+      email:    req.user.email,
       cpf,
+      telefone: pedido.telefone_cliente || req.user.profile.telefone,
     });
 
     // Split: lojista (95% do subtotal, sem taxa) + plataforma (remainder, paga a taxa Pix)
@@ -171,9 +172,10 @@ router.post('/cartao', paymentLimiter, requireAuth, [
     });
 
     const customerId = await criarOuBuscarCliente({
-      nome:  req.user.profile.nome,
-      email: req.user.email,
+      nome:     req.user.profile.nome,
+      email:    req.user.email,
       cpf,
+      telefone: pedido.telefone_cliente || req.user.profile.telefone,
     });
 
     // Lojista recebe 95% do subtotal original (sem markup de conveniência)

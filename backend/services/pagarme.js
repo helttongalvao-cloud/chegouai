@@ -75,8 +75,9 @@ function toCents(valor) {
 // =============================================
 // CLIENTE — criar ou buscar por CPF
 // =============================================
-async function criarOuBuscarCliente({ nome, email, cpf }) {
+async function criarOuBuscarCliente({ nome, email, cpf, telefone }) {
   const doc = cpf ? cpf.replace(/\D/g, '') : null;
+  const tel = telefone ? telefone.replace(/\D/g, '') : null;
 
   if (doc && doc.length === 11) {
     try {
@@ -92,6 +93,15 @@ async function criarOuBuscarCliente({ nome, email, cpf }) {
     type: 'individual',
     ...(email && { email }),
     ...(doc && doc.length === 11 && { document: doc, document_type: 'CPF' }),
+    ...(tel && tel.length >= 10 && {
+      phones: {
+        mobile_phone: {
+          country_code: '55',
+          area_code: tel.substring(0, 2),
+          number: tel.substring(2),
+        },
+      },
+    }),
   });
 
   return novo.id;
