@@ -79,12 +79,32 @@ async function criarOuBuscarCliente({ nome, email, cpf, telefone }) {
   const doc = cpf ? cpf.replace(/\D/g, '') : null;
   const tel = telefone ? telefone.replace(/\D/g, '') : null;
 
+  const phonePayload = tel && tel.length >= 10 ? {
+    phones: {
+      mobile_phone: {
+        country_code: '55',
+        area_code: tel.substring(0, 2),
+        number: tel.substring(2),
+      },
+    },
+  } : null;
+
   if (doc && doc.length === 11) {
     try {
       const res = await pagarmeRequest('GET', `/customers?document=${doc}`);
-      if (res.data?.length > 0) return res.data[0].id;
+      if (res.data?.length > 0) {
+        const cliente = res.data[0];
+        // Se o cliente não tem telefone e temos um, atualiza antes de retornar
+        if (phonePayload && !cliente.phones?.mobile_phone) {
+          await pagarmeRequest('PUT', `/customers/${cliente.id}`, {
+            name: cliente.name,
+            ...phonePayload,
+          });
+        }
+        return cliente.id;
+      }
     } catch (e) {
-      console.warn('[Pagar.me] Busca de cliente falhou:', e.message);
+      console.warn('[Pagar.me] Busca/atualização de cliente falhou:', e.message);
     }
   }
 
@@ -93,15 +113,7 @@ async function criarOuBuscarCliente({ nome, email, cpf, telefone }) {
     type: 'individual',
     ...(email && { email }),
     ...(doc && doc.length === 11 && { document: doc, document_type: 'CPF' }),
-    ...(tel && tel.length >= 10 && {
-      phones: {
-        mobile_phone: {
-          country_code: '55',
-          area_code: tel.substring(0, 2),
-          number: tel.substring(2),
-        },
-      },
-    }),
+    ...(phonePayload || {}),
   });
 
   return novo.id;
