@@ -528,9 +528,11 @@ router.post('/establishments/:id/recipient', [
       contaBancaria: {
         holder_name: nome,
         holder_type: 'individual',
+        holder_document: cpf,
         bank: banco,
         branch_number: agencia,
-        account_number: conta + (digito ? `-${digito}` : ''),
+        account_number: conta,
+        account_check_digit: digito,
         type: tipo_conta, // 'checking' ou 'savings'
       },
     });

@@ -267,7 +267,7 @@ async function cadastrarRecebedor({ nome, email, cpf, contaBancaria }) {
     email,
     description: 'Parceiro Chegou Aí',
     type: 'individual',
-    ...(doc && { document: doc }),
+    ...(doc && { document: doc, document_type: 'CPF' }),
     default_bank_account: contaBancaria,
     // Liquidação diária
     transfer_settings: {
