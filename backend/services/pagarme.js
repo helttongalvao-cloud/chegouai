@@ -164,6 +164,7 @@ async function criarCobrancaPix({ total, orderId, customerId, splitRules }) {
   };
 
   const order  = await pagarmeRequest('POST', '/orders', body);
+  console.log('[Pagar.me Pix] order.charges:', JSON.stringify(order.charges?.[0]?.last_transaction));
   const charge = order.charges?.[0];
   const pix    = charge?.last_transaction;
 
