@@ -182,6 +182,8 @@ router.put(
     body('whatsapp').optional().trim().matches(/^\d{0,15}$/).withMessage('WhatsApp inválido'),
     body('horarios').optional().isObject(),
     body('foto_url').optional().trim(),
+    body('lat').optional().isFloat({ min: -90, max: 90 }),
+    body('lng').optional().isFloat({ min: -180, max: 180 }),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -190,7 +192,7 @@ router.put(
     }
 
     const campos = {};
-    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'valor_minimo', 'aberto', 'mp_user_id', 'whatsapp', 'horarios', 'foto_url'].forEach((key) => {
+    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'valor_minimo', 'aberto', 'mp_user_id', 'whatsapp', 'horarios', 'foto_url', 'lat', 'lng'].forEach((key) => {
       if (req.body[key] !== undefined) campos[key] = req.body[key];
     });
 
