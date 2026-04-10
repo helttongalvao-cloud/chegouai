@@ -144,7 +144,7 @@ function montarSplitRules({ total, valorLojista, recipientIdLojista }) {
       options: {
         charge_processing_fee: false,
         liable: false,
-        charge_remainder: false,
+        charge_remainder_fee: false,
       },
     },
     {
@@ -154,7 +154,7 @@ function montarSplitRules({ total, valorLojista, recipientIdLojista }) {
       options: {
         charge_processing_fee: true,
         liable: true,
-        charge_remainder: true,
+        charge_remainder_fee: true,
       },
     },
   ];
