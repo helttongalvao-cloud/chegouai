@@ -39,7 +39,10 @@ function pagarmeRequest(method, path, body) {
         try {
           const parsed = JSON.parse(data);
           if (res.statusCode >= 400) {
-            const msg = parsed.message || parsed.errors?.[0]?.message || `HTTP ${res.statusCode}`;
+            const detail = Array.isArray(parsed.errors) && parsed.errors.length
+              ? parsed.errors.map(e => e.message || e.parameter_name || JSON.stringify(e)).join('; ')
+              : null;
+            const msg = detail || parsed.message || `HTTP ${res.statusCode}`;
             const err = new Error('[Pagar.me] ' + msg);
             err.status = res.statusCode < 500 ? res.statusCode : 500;
             err.statusCode = res.statusCode;
