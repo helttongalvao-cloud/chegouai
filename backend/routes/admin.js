@@ -537,10 +537,12 @@ router.post('/establishments/:id/recipient', [
       },
     });
 
-    await supabaseAdmin
+    const { error: dbError } = await supabaseAdmin
       .from('estabelecimentos')
       .update({ pagarme_recipient_id: recipientId })
       .eq('id', req.params.id);
+
+    if (dbError) throw new Error('Pagar.me OK mas falha ao salvar no banco: ' + dbError.message);
 
     res.json({ recipientId, message: 'Recebedor cadastrado com sucesso' });
   } catch (err) {
