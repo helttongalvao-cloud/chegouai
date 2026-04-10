@@ -148,7 +148,6 @@ router.post(
         taxaFinal = taxaCliente;
       }
       taxaFinal = Math.round(taxaFinal * 100) / 100; // garantir 2 casas decimais
-      console.log('[Order debug] est.taxa_entrega:', est.taxa_entrega, '| taxaBody:', req.body.taxaEntrega, '| taxaFinal:', taxaFinal, '| subtotal:', subtotal);
       const totalFinal = parseFloat(Math.max(0, subtotal + taxaFinal - desconto).toFixed(2));
 
       const pedidoInsert = {
