@@ -105,16 +105,19 @@ async function criarOuBuscarCliente({ nome, email, cpf }) {
 //   → a taxa do gateway é descontada do saldo da plataforma,
 //     não do lojista.
 // =============================================
-function montarSplitRules({ valorLojista, recipientIdLojista }) {
+function montarSplitRules({ total, valorLojista, recipientIdLojista }) {
   const recipientPlataforma = process.env.PAGARME_RECIPIENT_ID_PLATAFORMA;
 
   // Split só é montado quando ambos os recebedores estão configurados
   if (!recipientIdLojista || !recipientPlataforma || valorLojista <= 0) return [];
 
+  const amountLojista    = toCents(valorLojista);
+  const amountPlataforma = toCents(total) - amountLojista;
+
   return [
     {
       recipient_id: recipientIdLojista,
-      amount: toCents(valorLojista),
+      amount: amountLojista,
       type: 'flat',
       options: {
         charge_processing_fee: false,
@@ -124,6 +127,7 @@ function montarSplitRules({ valorLojista, recipientIdLojista }) {
     },
     {
       recipient_id: recipientPlataforma,
+      amount: amountPlataforma,
       type: 'flat',
       options: {
         charge_processing_fee: true,

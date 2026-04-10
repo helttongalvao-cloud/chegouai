@@ -107,6 +107,7 @@ router.post('/pix', paymentLimiter, requireAuth, [
 
     // Split: lojista (95% do subtotal, sem taxa) + plataforma (remainder, paga a taxa Pix)
     const splitRules = montarSplitRules({
+      total:              split.total,
       valorLojista:       split.valorLojista,
       recipientIdLojista: pedido.estabelecimentos?.pagarme_recipient_id || null,
     });
@@ -178,6 +179,7 @@ router.post('/cartao', paymentLimiter, requireAuth, [
     // Lojista recebe 95% do subtotal original (sem markup de conveniência)
     // A taxa e a antecipação são cobradas do saldo da plataforma (charge_processing_fee: true)
     const splitRules = montarSplitRules({
+      total:              split.total,
       valorLojista:       split.valorLojista,
       recipientIdLojista: pedido.estabelecimentos?.pagarme_recipient_id || null,
     });
