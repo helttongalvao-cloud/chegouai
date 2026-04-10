@@ -1249,9 +1249,8 @@ var clienteLng = null;
 
 // Modelo progressivo de comissão
 function calcularComissao(cadastroMes) {
-  if(cadastroMes <= 1) return { taxa: 0, fase: '🎁 Gratuito', desc: 'Mês 1 — sem comissão', cor: '#00C853' };
-  if(cadastroMes <= 3) return { taxa: 5, fase: '⭐ Fase 2', desc: 'Mês 2-3 — 5% por pedido', cor: '#FF6D00' };
-  return { taxa: 8, fase: '🚀 Parceiro', desc: 'Mês 4+ — 8% por pedido', cor: '#2979FF' };
+  if(cadastroMes <= 3) return { taxa: 5, fase: '⭐ Parceiro', desc: 'Mês 1-3 — 5% por pedido', cor: '#FF6D00' };
+  return { taxa: 8, fase: '🚀 Parceiro Plus', desc: 'Mês 4+ — 8% por pedido', cor: '#2979FF' };
 }
 
 let carrinho = [];

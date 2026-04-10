@@ -15,8 +15,11 @@ router.use(requireRole('admin'));
 // =============================================
 router.get('/dashboard', async (req, res, next) => {
   try {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
+    // Meia-noite no horário de Brasília (UTC-3) = 03:00 UTC
+    const agora = new Date();
+    const hoje = new Date(agora);
+    hoje.setUTCHours(3, 0, 0, 0);
+    if (hoje > agora) hoje.setUTCDate(hoje.getUTCDate() - 1);
 
     // Pedidos de hoje
     const { data: pedidosHoje } = await supabaseAdmin
