@@ -524,7 +524,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div id="resumo-itens"></div>
       <div class="total-linha"><span>Subtotal</span><span id="subtotal-valor">R$ 0,00</span></div>
       <div class="total-linha"><span>Taxa de entrega</span><span style="color:var(--verde)" id="taxa-entrega-valor">R$ 3,00</span></div>
-      <div style="font-size:11px;color:var(--texto2);margin-top:-6px;margin-bottom:4px;" id="taxa-entrega-info">📍 Até 1,5 km — R$ 3,00 &nbsp;|&nbsp; Acima de 1,5 km — R$ 4,00</div>
+      <div style="font-size:11px;color:var(--texto2);margin-top:-6px;margin-bottom:4px;" id="taxa-entrega-info">📍 Até 1 km — R$ 2,00 &nbsp;|&nbsp; Acima de 3 km — R$ 4,00</div>
       <div class="total-linha" id="linha-conveniencia" style="display:none;"><span style="color:var(--texto2);">Taxa conveniência (cartão)</span><span id="conveniencia-valor" style="color:var(--texto2);">R$ 0,00</span></div>
       <div class="total-linha destaque"><span>Total</span><span class="valor" id="total-valor">R$ 0,00</span></div>
     </div>
@@ -1237,10 +1237,10 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Taxa de entrega por distância — R$2 (até 2km) a R$3 (acima de 2km)
+// Taxa de entrega por distância — R$2 (até 1km) a R$4 (acima de 3km)
 function calcularTaxaEntrega(distanciaKm) {
-  var taxa = 2 + (distanciaKm * 0.5);
-  return Math.min(3, Math.max(2, parseFloat(taxa.toFixed(2))));
+  var taxa = 2 + (distanciaKm * 0.67);
+  return Math.min(4, Math.max(2, parseFloat(taxa.toFixed(2))));
 }
 
 // Coordenadas GPS do cliente (capturadas ao usar "minha localização")
