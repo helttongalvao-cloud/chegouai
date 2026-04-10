@@ -93,6 +93,7 @@ router.post('/pix', paymentLimiter, requireAuth, [
     const { pedidoId, cpf } = req.body;
 
     const pedido = await buscarPedidoPendente(pedidoId, req.user.id);
+    console.log('[Pix debug] telefone_cliente:', pedido.telefone_cliente, '| profile.telefone:', req.user.profile?.telefone);
     const split  = calcularSplit({
       subtotal:       pedido.subtotal,
       taxaEntrega:    pedido.taxa_entrega,
