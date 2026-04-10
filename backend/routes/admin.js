@@ -26,7 +26,7 @@ router.get('/dashboard', async (req, res, next) => {
 
     const { data: estabelecimentos } = await supabaseAdmin
       .from('estabelecimentos')
-      .select('id, nome, categoria, aberto, ativo, cadastro_data');
+      .select('id, nome, categoria, aberto, ativo, cadastro_data, pagarme_recipient_id');
 
     const { data: motoboys } = await supabaseAdmin
       .from('motoboys')
