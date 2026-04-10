@@ -41,6 +41,7 @@ function pagarmeRequest(method, path, body) {
           if (res.statusCode >= 400) {
             const msg = parsed.message || parsed.errors?.[0]?.message || `HTTP ${res.statusCode}`;
             const err = new Error('[Pagar.me] ' + msg);
+            err.status = res.statusCode < 500 ? res.statusCode : 500;
             err.statusCode = res.statusCode;
             err.body = parsed;
             reject(err);

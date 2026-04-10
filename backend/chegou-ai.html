@@ -3799,12 +3799,12 @@ async function adminSalvarRecebedor(lojaId) {
       },
     });
     document.getElementById('modal-recebedor').remove();
-    mostrarToast('✅ Recebedor cadastrado no Pagar.me!');
+    showToast('✅', 'Pagar.me', 'Recebedor cadastrado com sucesso!');
     adminDataCache = null;
     renderAdmin('lojas');
   } catch(e) {
     btn.disabled = false; btn.textContent = 'Cadastrar';
-    mostrarToast('❌ Erro: ' + e.message);
+    showToast('❌', 'Erro', e.message);
   }
 }
 
