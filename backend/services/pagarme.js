@@ -106,39 +106,32 @@ async function criarOuBuscarCliente({ nome, email, cpf }) {
 //     não do lojista.
 // =============================================
 function montarSplitRules({ valorLojista, recipientIdLojista }) {
-  const rules = [];
-
   const recipientPlataforma = process.env.PAGARME_RECIPIENT_ID_PLATAFORMA;
 
-  if (recipientIdLojista && valorLojista > 0) {
-    rules.push({
+  // Split só é montado quando ambos os recebedores estão configurados
+  if (!recipientIdLojista || !recipientPlataforma || valorLojista <= 0) return [];
+
+  return [
+    {
       recipient_id: recipientIdLojista,
       amount: toCents(valorLojista),
       type: 'flat',
       options: {
-        charge_processing_fee: false, // taxa fica na plataforma
+        charge_processing_fee: false,
         liable: false,
         charge_remainder: false,
       },
-    });
-  }
-
-  if (recipientPlataforma) {
-    rules.push({
+    },
+    {
       recipient_id: recipientPlataforma,
       type: 'flat',
-      // amount não é necessário com charge_remainder: true
-      // o Pagar.me calcula automaticamente o saldo restante
-      amount: 0,
       options: {
-        charge_processing_fee: true, // plataforma paga a taxa do gateway
+        charge_processing_fee: true,
         liable: true,
-        charge_remainder: true,       // recebe o que sobrar
+        charge_remainder: true,
       },
-    });
-  }
-
-  return rules;
+    },
+  ];
 }
 
 // =============================================
