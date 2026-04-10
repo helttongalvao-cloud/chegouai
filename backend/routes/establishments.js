@@ -274,7 +274,7 @@ router.post(
         estabelecimento_id: est.id,
         nome,
         descricao: descricao || '',
-        preco: parseFloat(preco),
+        preco: Math.round(parseFloat(preco) * 100) / 100,
         emoji: emoji || '🍽️',
         disponivel: disponivel !== false,
       };

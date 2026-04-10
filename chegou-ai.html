@@ -1578,15 +1578,16 @@ async function salvarProduto() {
   const btn = document.querySelector('#modal-produto .btn-principal');
   const nome = sanitizar(document.getElementById('prod-nome').value);
   const descricao = sanitizar(document.getElementById('prod-desc').value);
-  const preco = parseFloat(document.getElementById('prod-preco').value);
+  const precoRaw = parseFloat(document.getElementById('prod-preco').value);
+  const preco = Math.round(precoRaw * 100) / 100; // sempre 2 casas decimais
   const disponivel = document.getElementById('prod-disponivel').checked;
   const idx = parseInt(document.getElementById('produto-idx').value);
-  
+
   if(!nome) { document.getElementById('prod-nome').style.borderColor='var(--erro)'; return; }
   if(isNaN(preco) || preco <= 0) { document.getElementById('prod-preco').style.borderColor='var(--erro)'; return; }
-  
+
   btn.disabled = true; btn.textContent = 'Aguarde...';
-  
+
   const payload = { nome, descricao, preco, emoji: emojiSelecionado, disponivel };
   const produtos = estDataCache?.produtos || [];
   
