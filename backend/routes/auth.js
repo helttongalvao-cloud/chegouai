@@ -41,8 +41,9 @@ router.post('/register', validateRegister, async (req, res, next) => {
     return res.status(400).json({ error: errors.array()[0].msg });
   }
 
-  const { nome, telefone, senha } = req.body;
+  const { nome, telefone, cpf, senha } = req.body;
   const telLimpo = (telefone || '').replace(/\D/g, '');
+  const cpfLimpo = (cpf || '').replace(/\D/g, '');
   // E-mail gerado internamente — usuário não precisa fornecer
   const emailInterno = `tel_${telLimpo}@chegouai.app`;
 
@@ -77,6 +78,7 @@ router.post('/register', validateRegister, async (req, res, next) => {
         telefone: telLimpo,
         email: emailInterno,
         perfil: 'cliente',
+        ...(cpfLimpo.length === 11 && { cpf: cpfLimpo }),
       });
 
     if (profileError) throw profileError;

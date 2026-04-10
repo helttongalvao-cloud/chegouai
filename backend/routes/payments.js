@@ -84,13 +84,12 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
 // =============================================
 router.post('/pix', paymentLimiter, requireAuth, [
   body('pedidoId').isUUID().withMessage('pedidoId inválido'),
-  body('cpf').optional().matches(/^\d{11}$/).withMessage('CPF inválido (11 dígitos)'),
 ], async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
   try {
-    const { pedidoId, cpf } = req.body;
+    const { pedidoId } = req.body;
 
     const pedido = await buscarPedidoPendente(pedidoId, req.user.id);
     const split  = calcularSplit({
@@ -102,7 +101,7 @@ router.post('/pix', paymentLimiter, requireAuth, [
     const customerId = await criarOuBuscarCliente({
       nome:     req.user.profile.nome,
       email:    req.user.email,
-      cpf,
+      cpf:      req.user.profile.cpf,
       telefone: pedido.telefone_cliente || req.user.profile.telefone,
     });
 
@@ -159,7 +158,7 @@ router.post('/cartao', paymentLimiter, requireAuth, [
   try {
     const {
       pedidoId, holderName, cardNumber, expiryMonth, expiryYear, ccv,
-      cpf, postalCode, installments,
+      postalCode, installments,
     } = req.body;
 
     const pedido = await buscarPedidoPendente(pedidoId, req.user.id);
@@ -174,7 +173,7 @@ router.post('/cartao', paymentLimiter, requireAuth, [
     const customerId = await criarOuBuscarCliente({
       nome:     req.user.profile.nome,
       email:    req.user.email,
-      cpf,
+      cpf:      req.user.profile.cpf,
       telefone: pedido.telefone_cliente || req.user.profile.telefone,
     });
 

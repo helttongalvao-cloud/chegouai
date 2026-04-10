@@ -461,13 +461,6 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div style="font-size:12px;color:var(--texto2);margin-top:8px;">Para o motoboy entrar em contato se precisar</div>
     </div>
     <div class="secao-checkout">
-      <h4>🪪 Seu CPF</h4>
-      <div class="campo" style="margin:0;">
-        <input type="tel" placeholder="000.000.000-00" id="checkout-cpf" style="margin:0;" oninput="mascaraCPF(this)" maxlength="14">
-      </div>
-      <div style="font-size:12px;color:var(--texto2);margin-top:8px;">Obrigatório para pagamentos digitais</div>
-    </div>
-    <div class="secao-checkout">
       <h4>💳 Forma de pagamento</h4>
       <div class="opcoes-pag">
         <div class="opcao-pag selecionado" data-tipo="pix" onclick="selecionarPag(this,'pix')">
@@ -676,12 +669,12 @@ async function inicializarMP() {
 // ============================================
 // PAGAMENTO PIX — chamada real ao backend
 // ============================================
-async function pagarPix(pedidoId, cpf) {
+async function pagarPix(pedidoId) {
   mostrarLoadingPagamento('Gerando QR Code Pix...');
   try {
     var resp = await apiCall('/api/payments/pix', {
       method: 'POST',
-      body: { pedidoId: pedidoId, cpf: cpf },
+      body: { pedidoId: pedidoId },
     });
     esconderLoadingPagamento();
     mostrarQRCodeReal(resp);
@@ -899,12 +892,14 @@ function mascaraCPF(input) {
 async function cadastrarCliente() {
   const nome = sanitizar(document.getElementById('cad-nome').value);
   const tel = document.getElementById('cad-telefone').value.replace(/\D/g,'');
+  const cpf = document.getElementById('cad-cpf').value.replace(/\D/g,'');
   const email = document.getElementById('cad-email') ? sanitizar(document.getElementById('cad-email').value) : tel + '@chegouai.app';
   const senha = document.getElementById('cad-senha').value;
   const senha2 = document.getElementById('cad-senha2').value;
 
   if(!nome) { destacarErro('cad-nome'); return; }
   if(tel.length < 10) { destacarErro('cad-telefone'); return; }
+  if(cpf.length !== 11) { destacarErro('cad-cpf'); alert('Informe seu CPF (11 dígitos)'); return; }
   if(senha.length < 6) { destacarErro('cad-senha'); alert('Senha deve ter pelo menos 6 caracteres'); return; }
   if(senha !== senha2) { destacarErro('cad-senha2'); alert('As senhas não coincidem'); return; }
 
@@ -914,7 +909,7 @@ async function cadastrarCliente() {
   try {
     await apiCall('/api/auth/register', {
       method: 'POST',
-      body: { nome, telefone: tel, email, senha },
+      body: { nome, telefone: tel, cpf, email, senha },
     });
     alert('Conta criada com sucesso! Faça login para continuar.');
     irTela('tela-login');
@@ -1333,11 +1328,9 @@ function selecionarPag(el, tipo) {
 async function confirmarPedido() {
   const end = document.getElementById('endereco-entrega').value.trim();
   const tel = document.getElementById('checkout-telefone').value.replace(/[^0-9]/g,'');
-  const cpf = document.getElementById('checkout-cpf').value.replace(/[^0-9]/g,'');
 
   if(!end) { destacarErro('endereco-entrega'); alert('Informe o endereço de entrega'); return; }
   if(tel.length < 10) { destacarErro('checkout-telefone'); alert('Informe seu telefone para contato'); return; }
-  if(cpf.length !== 11) { destacarErro('checkout-cpf'); alert('Informe seu CPF (11 dígitos)'); return; }
   if(!authToken) { alert('Faça login para continuar'); irTela('tela-login'); return; }
 
   var formaPag = document.querySelector('.opcao-pag.selecionado')?.dataset.tipo || 'pix';
@@ -1380,7 +1373,7 @@ async function confirmarPedido() {
 
     // 2. Processar pagamento conforme forma escolhida
     if(formaPag === 'pix') {
-      await pagarPix(pedidoAtualId, cpf);
+      await pagarPix(pedidoAtualId);
     } else {
       await pagarCartao(pedidoAtualId);
     }
@@ -2172,6 +2165,10 @@ function adminNav(btn, secao) {
     <div class="campo">
       <label>Telefone (WhatsApp) *</label>
       <input type="tel" id="cad-telefone" placeholder="(97) 99999-9999" oninput="mascaraTelefone(this)">
+    </div>
+    <div class="campo">
+      <label>CPF *</label>
+      <input type="tel" id="cad-cpf" placeholder="000.000.000-00" oninput="mascaraCPF(this)" maxlength="14">
     </div>
     <div class="campo">
       <label>Senha *</label>
