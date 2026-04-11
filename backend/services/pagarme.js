@@ -315,7 +315,7 @@ async function atualizarTransferenciaRecebedor(recipientId) {
     transfer_settings: {
       transfer_enabled: true,
       transfer_interval: 'daily',
-      transfer_day: 1,
+      transfer_day: 0,
     },
   });
 }
