@@ -3449,6 +3449,37 @@ async function renderMotoboy() {
     var data = await apiCall('/api/orders/available');
     var disponiveis = data.disponiveis || [];
     var ativa = data.ativa || null;
+    var stats = data.stats || {};
+    var historico = data.historico || [];
+
+    // Atualizar cards de stats
+    var elEnt = document.getElementById('moto-entregas');
+    var elGan = document.getElementById('moto-ganhos');
+    if(elEnt) elEnt.textContent = stats.entregasHoje || 0;
+    if(elGan) elGan.textContent = 'R$ ' + (stats.ganhoHoje || 0).toFixed(2).replace('.',',');
+
+    // Histórico de entregas recentes
+    var elHist = document.getElementById('historico-motoboy');
+    if(elHist) {
+      if(historico.length === 0) {
+        elHist.innerHTML = '<div class="vazio" style="padding:16px 0;"><div class="vazio-icon" style="font-size:28px;">📋</div>Nenhuma entrega concluída ainda</div>';
+      } else {
+        elHist.innerHTML = historico.map(function(p) {
+          var data_str = new Date(p.criado_em).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+          var hora_str = new Date(p.criado_em).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--cinza3);">' +
+            '<div>' +
+              '<div style="font-size:13px;font-weight:600;">' + sanitizar((p.estabelecimentos && p.estabelecimentos.nome) || '—') + '</div>' +
+              '<div style="font-size:11px;color:var(--texto2);">' + data_str + ' às ' + hora_str + '</div>' +
+            '</div>' +
+            '<span style="font-size:14px;font-weight:700;color:var(--verde);">R$ ' + parseFloat(p.taxa_entrega || 0).toFixed(2).replace('.',',') + '</span>' +
+          '</div>';
+        }).join('') +
+        '<div style="text-align:center;padding:12px 0;font-size:12px;color:var(--texto2);">' +
+          'Total (' + stats.entregasTotal + ' corridas): <b style="color:var(--verde);">R$ ' + (stats.ganhoTotal || 0).toFixed(2).replace('.',',') + '</b>' +
+        '</div>';
+      }
+    }
 
     // Se não há entrega ativa no backend mas temos fase salva, limpar fase
     if(!ativa && faseEntrega) salvarFaseMotoboy(null, null);

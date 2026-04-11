@@ -275,7 +275,13 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
       'estabelecimentos (nome, emoji, endereco, lat, lng), ' +
       'profiles!pedidos_cliente_id_fkey (nome)';
 
-    const [dispRes, ativaRes] = await Promise.all([
+    // Início do dia em Brasília (UTC-3 = 03:00 UTC)
+    const agora = new Date();
+    const hojeInicio = new Date(agora);
+    hojeInicio.setUTCHours(3, 0, 0, 0);
+    if (hojeInicio > agora) hojeInicio.setUTCDate(hojeInicio.getUTCDate() - 1);
+
+    const [dispRes, ativaRes, histRes] = await Promise.all([
       // Pedidos prontos sem motoboy atribuído
       supabaseAdmin
         .from('pedidos')
@@ -291,11 +297,34 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
         .eq('status', 'coletado')
         .eq('motoboy_id', motoboy.id)
         .maybeSingle() : Promise.resolve({ data: null }),
+
+      // Histórico de entregas do motoboy (últimos 30 dias)
+      motoboy ? supabaseAdmin
+        .from('pedidos')
+        .select('id, taxa_entrega, criado_em, estabelecimentos(nome), profiles!pedidos_cliente_id_fkey(nome)')
+        .eq('status', 'entregue')
+        .eq('motoboy_id', motoboy.id)
+        .order('criado_em', { ascending: false })
+        .limit(20) : Promise.resolve({ data: [] }),
     ]);
+
+    const historico = histRes.data || [];
+    const entregasHoje = historico.filter(p => new Date(p.criado_em) >= hojeInicio).length;
+    const ganhoHoje = historico
+      .filter(p => new Date(p.criado_em) >= hojeInicio)
+      .reduce((s, p) => s + (p.taxa_entrega || 0), 0);
+    const ganhoTotal = historico.reduce((s, p) => s + (p.taxa_entrega || 0), 0);
 
     res.json({
       disponiveis: dispRes.data || [],
       ativa: ativaRes.data || null,
+      stats: {
+        entregasHoje,
+        ganhoHoje: parseFloat(ganhoHoje.toFixed(2)),
+        entregasTotal: historico.length,
+        ganhoTotal: parseFloat(ganhoTotal.toFixed(2)),
+      },
+      historico,
     });
   } catch (err) {
     next(err);
