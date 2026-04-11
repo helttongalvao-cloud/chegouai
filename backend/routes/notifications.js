@@ -1,78 +1,23 @@
 const express = require('express');
-const https = require('https');
-const http = require('http');
-const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
+const webpush = require('web-push');
 const { requireAuth } = require('../middleware/auth');
 const { supabaseAdmin } = require('../config/supabase');
 
 const router = express.Router();
 
-// ============================================================
-// VAPID helpers — implementação com crypto nativo Node.js 18+
-// ============================================================
-
-// Converte base64url para Buffer
-function fromBase64url(str) {
-  return Buffer.from(str.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
-}
-
-// Cria chave privada EC P-256 a partir dos bytes VAPID
-function criarChavePrivadaVapid() {
-  const pubRaw = fromBase64url(process.env.VAPID_PUBLIC_KEY); // 65 bytes: 04 || x || y
-  const x = pubRaw.slice(1, 33).toString('base64url');
-  const y = pubRaw.slice(33, 65).toString('base64url');
-
-  return crypto.createPrivateKey({
-    key: { kty: 'EC', crv: 'P-256', d: process.env.VAPID_PRIVATE_KEY, x, y },
-    format: 'jwk',
-  });
-}
-
-// Gera JWT VAPID para autenticação
-function gerarVapidJwt(endpoint) {
-  const url = new URL(endpoint);
-  const audience = `${url.protocol}//${url.host}`;
-  const privateKey = criarChavePrivadaVapid();
-
-  return jwt.sign(
-    { aud: audience, exp: Math.floor(Date.now() / 1000) + 43200, sub: process.env.VAPID_EMAIL },
-    privateKey,
-    { algorithm: 'ES256' }
+// Configurar VAPID assim que o módulo carrega
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL || 'mailto:contato@chegouai.com.br',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
   );
 }
 
-// Envia push sem payload criptografado (ping — service worker exibe notificação)
-function enviarPushRaw(sub) {
-  return new Promise((resolve) => {
-    try {
-      const endpoint = sub.endpoint;
-      const token = gerarVapidJwt(endpoint);
-      const url = new URL(endpoint);
-      const transport = url.protocol === 'https:' ? https : http;
-
-      const req = transport.request({
-        hostname: url.hostname,
-        port: url.port || (url.protocol === 'https:' ? 443 : 80),
-        path: url.pathname + url.search,
-        method: 'POST',
-        headers: {
-          Authorization: `vapid t=${token},k=${process.env.VAPID_PUBLIC_KEY}`,
-          TTL: '86400',
-          'Content-Length': 0,
-        },
-      }, (res) => resolve(res.statusCode));
-
-      req.on('error', () => resolve(null));
-      req.end();
-    } catch (e) {
-      resolve(null);
-    }
-  });
-}
-
+// =============================================
 // Exportada: enviar push para um user_id
-async function enviarPush(userId, titulo, corpo) {
+// =============================================
+async function enviarPush(userId, titulo, corpo, dados) {
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return;
   try {
     const { data } = await supabaseAdmin
@@ -82,13 +27,18 @@ async function enviarPush(userId, titulo, corpo) {
       .single();
 
     if (!data) return;
-    const sub = JSON.parse(data.subscription);
-    const status = await enviarPushRaw(sub);
 
-    if (status === 410 || status === 404) {
+    const sub = JSON.parse(data.subscription);
+    const payload = JSON.stringify({ titulo, corpo, dados: dados || {} });
+
+    await webpush.sendNotification(sub, payload);
+  } catch (e) {
+    // Subscription expirada — remover
+    if (e.statusCode === 410 || e.statusCode === 404) {
       await supabaseAdmin.from('push_subscriptions').delete().eq('user_id', userId);
     }
-  } catch (e) { /* silencioso */ }
+    // Outros erros: silencioso para não quebrar o fluxo principal
+  }
 }
 
 // GET /api/notifications/vapid-public-key

@@ -502,6 +502,22 @@ router.patch(
         enviarPush(pedido.cliente_id, 'Chegou Aí', msgStatus[status], { pedidoId: orderId, status });
       }
 
+      // Quando pedido fica pronto, notificar todos os motoboys disponíveis
+      if (status === 'pronto') {
+        const { data: motosDisp } = await supabaseAdmin
+          .from('motoboys')
+          .select('user_id')
+          .eq('disponivel', true)
+          .eq('ativo', true);
+
+        if (motosDisp?.length) {
+          const enderecoResumido = (pedido.endereco_entrega || '').substring(0, 40);
+          motosDisp.forEach((m) => {
+            enviarPush(m.user_id, '🛵 Nova entrega disponível!', enderecoResumido || 'Toque para ver detalhes', { pedidoId: orderId });
+          });
+        }
+      }
+
       // Ao confirmar entrega, repassar taxa de entrega ao motoboy (idempotente)
       if (status === 'entregue' && pedido.motoboy_id) {
         const { data: repasseExistente } = await supabaseAdmin
