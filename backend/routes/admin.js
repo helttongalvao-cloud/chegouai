@@ -43,9 +43,16 @@ router.get('/dashboard', async (req, res, next) => {
       .select('id, tipo, valor, status, criado_em, pedidos(id)')
       .eq('status', 'pendente');
 
+    // Comissão real da plataforma nos últimos 7 dias (fonte: repasses tipo=plataforma)
+    const { data: repassesPlataforma } = await supabaseAdmin
+      .from('repasses')
+      .select('valor')
+      .eq('tipo', 'plataforma')
+      .gte('criado_em', semanaAtras.toISOString());
+
     const pedidosAprovados = pedidosHoje?.filter((p) => p.pagamento_status === 'aprovado') || [];
     const totalFaturamento = pedidosAprovados.reduce((s, p) => s + p.total, 0);
-    const totalComissao = pedidosAprovados.reduce((s, p) => s + (p.comissao_plataforma || 0), 0);
+    const totalComissao = (repassesPlataforma || []).reduce((s, r) => s + r.valor, 0);
 
     // Comissão por estabelecimento
     const estComComissao = (estabelecimentos || []).map((e) => ({

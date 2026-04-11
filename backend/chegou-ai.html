@@ -2748,7 +2748,7 @@ async function renderEstabelecimento() {
         '<div class="pedido-endereco">📍 ' + (p.endereco_entrega || '') + '</div>' +
         tel +
         '<div class="pedido-itens">' + (itensTxt || '—') + '</div>' +
-        '<div class="pedido-footer"><span class="pedido-total">R$ ' + (parseFloat(p.subtotal || p.total || 0) * (1 - taxaComissao / 100)).toFixed(2).replace('.',',') + pagBadge + '</span>' +
+        '<div class="pedido-footer"><span class="pedido-total">R$ ' + parseFloat(p.subtotal || p.total || 0).toFixed(2).replace('.',',') + pagBadge + '</span>' +
         '<div style="display:flex;gap:6px;">' + botao +
         '<button onclick="imprimirComanda(\'' + p.id + '\')" style="background:var(--cinza3);border:none;border-radius:10px;padding:8px 12px;color:var(--texto);font-size:12px;cursor:pointer;">🖨️</button>' +
         '</div></div>' +
