@@ -29,15 +29,20 @@ const TAXA_FIXA_CARTAO       = parseFloat(process.env.PAGARME_TAXA_FIXA_CARTAO  
  * @param {string} [params.formaPagamento] - 'pix' | 'cartao'
  * @returns {object} Objeto com todos os valores em R$ (2 casas decimais)
  */
-function calcularSplit({ subtotal, taxaEntrega, formaPagamento }) {
-  const sub   = parseFloat(subtotal    || 0);
-  const frete = parseFloat(taxaEntrega || 0);
+function calcularSplit({ subtotal, taxaEntrega, formaPagamento, tipoEntrega }) {
+  const sub    = parseFloat(subtotal    || 0);
+  const frete  = parseFloat(taxaEntrega || 0);
+  const proprio = tipoEntrega === 'proprio';
 
-  // ── Valores de destino (lojista e motoboy não mudam) ──────────────────────
-  const valorPlataforma = parseFloat((sub * COMISSAO_TAXA / 100).toFixed(2));
-  const valorLojista    = parseFloat((sub - valorPlataforma).toFixed(2));
-  const valorMotoboy    = parseFloat(frete.toFixed(2));
-  const valorBase       = parseFloat((sub + frete).toFixed(2));
+  // ── Valores de destino ────────────────────────────────────────────────────
+  const valorPlataforma     = parseFloat((sub * COMISSAO_TAXA / 100).toFixed(2));
+  const valorLojistaProdutos = parseFloat((sub - valorPlataforma).toFixed(2));
+  // Entrega própria: frete vai para o lojista (motoboy é dele)
+  const valorMotoboy = proprio ? 0 : parseFloat(frete.toFixed(2));
+  const valorLojista = proprio
+    ? parseFloat((valorLojistaProdutos + frete).toFixed(2))
+    : valorLojistaProdutos;
+  const valorBase    = parseFloat((sub + frete).toFixed(2));
 
   let total, taxaConveniencia, taxaGateway, lucroPlataforma;
 

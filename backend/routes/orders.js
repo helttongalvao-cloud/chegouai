@@ -48,7 +48,7 @@ router.post(
       // 1. Validar estabelecimento
       const { data: est, error: estErr } = await supabaseAdmin
         .from('estabelecimentos')
-        .select('id, nome, aberto, taxa_entrega, cadastro_data, ativo, user_id, valor_minimo, whatsapp')
+        .select('id, nome, aberto, taxa_entrega, cadastro_data, ativo, user_id, valor_minimo, whatsapp, tipo_entrega')
         .eq('id', estabelecimentoId)
         .eq('ativo', true)
         .single();
@@ -105,7 +105,7 @@ router.post(
       const split = calcularSplit({
         subtotal,
         taxaEntrega: est.taxa_entrega,
-        cadastroData: est.cadastro_data,
+        tipoEntrega: est.tipo_entrega,
       });
 
       // 4b. Validar e aplicar cupom

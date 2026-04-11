@@ -18,7 +18,7 @@ const router = express.Router();
 async function buscarPedidoPendente(pedidoId, clienteId) {
   const { data: pedido, error } = await supabaseAdmin
     .from('pedidos')
-    .select('*, estabelecimentos(nome, pagarme_recipient_id)')
+    .select('*, estabelecimentos(nome, pagarme_recipient_id, tipo_entrega)')
     .eq('id', pedidoId)
     .eq('cliente_id', clienteId)
     .eq('pagamento_status', 'pendente')
@@ -54,27 +54,32 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
     .from('pedidos')
     .update({ pagamento_status: 'aprovado', status: 'aceito', pagarme_order_id: pagarmeOrderId })
     .eq('id', orderId)
-    .select('subtotal, taxa_entrega, forma_pagamento')
+    .select('subtotal, taxa_entrega, forma_pagamento, estabelecimentos(tipo_entrega)')
     .single();
 
   if (!pedido) return;
 
+  const tipoEntrega = pedido.estabelecimentos?.tipo_entrega || 'app';
   const split = calcularSplit({
     subtotal: pedido.subtotal,
     taxaEntrega: pedido.taxa_entrega,
     formaPagamento: pedido.forma_pagamento,
+    tipoEntrega,
   });
 
-  await supabaseAdmin.from('repasses').insert([
+  const repasses = [
     { pedido_id: orderId, tipo: 'lojista',    valor: split.valorLojista,    status: 'pendente' },
-    { pedido_id: orderId, tipo: 'motoboy',    valor: split.valorMotoboy,    status: 'pendente' },
     { pedido_id: orderId, tipo: 'plataforma', valor: split.valorPlataforma, status: 'pago' },
-  ]);
+  ];
+  if (split.valorMotoboy > 0) {
+    repasses.splice(1, 0, { pedido_id: orderId, tipo: 'motoboy', valor: split.valorMotoboy, status: 'pendente' });
+  }
+  await supabaseAdmin.from('repasses').insert(repasses);
 
   console.log(
     `[Pagar.me] Pedido ${orderId} aprovado` +
     ` — lojista R$${split.valorLojista}` +
-    `, motoboy R$${split.valorMotoboy}` +
+    (split.valorMotoboy > 0 ? `, motoboy R$${split.valorMotoboy}` : ' (entrega própria)') +
     `, plataforma R$${split.valorPlataforma}`
   );
 }
@@ -96,6 +101,7 @@ router.post('/pix', paymentLimiter, requireAuth, [
       subtotal:       pedido.subtotal,
       taxaEntrega:    pedido.taxa_entrega,
       formaPagamento: 'pix',
+      tipoEntrega:    pedido.estabelecimentos?.tipo_entrega,
     });
 
     const customerId = await criarOuBuscarCliente({
@@ -168,6 +174,7 @@ router.post('/cartao', paymentLimiter, requireAuth, [
       subtotal:       pedido.subtotal,
       taxaEntrega:    pedido.taxa_entrega,
       formaPagamento: 'cartao',
+      tipoEntrega:    pedido.estabelecimentos?.tipo_entrega,
     });
 
     const customerId = await criarOuBuscarCliente({
