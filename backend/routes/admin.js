@@ -15,17 +15,20 @@ router.use(requireRole('admin'));
 // =============================================
 router.get('/dashboard', async (req, res, next) => {
   try {
-    // Meia-noite no horário de Brasília (UTC-3) = 03:00 UTC
+    // Início da semana corrente (últimos 7 dias) em Brasília (UTC-3)
     const agora = new Date();
+    const semanaAtras = new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Meia-noite de hoje (Brasília)
     const hoje = new Date(agora);
     hoje.setUTCHours(3, 0, 0, 0);
     if (hoje > agora) hoje.setUTCDate(hoje.getUTCDate() - 1);
 
-    // Pedidos de hoje
+    // Pedidos dos últimos 7 dias
     const { data: pedidosHoje } = await supabaseAdmin
       .from('pedidos')
-      .select('id, total, comissao_plataforma, status, pagamento_status')
-      .gte('criado_em', hoje.toISOString());
+      .select('id, total, comissao_plataforma, status, pagamento_status, criado_em')
+      .gte('criado_em', semanaAtras.toISOString());
 
     const { data: estabelecimentos } = await supabaseAdmin
       .from('estabelecimentos')

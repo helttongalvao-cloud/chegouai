@@ -311,16 +311,12 @@ async function cadastrarRecebedor({ nome, email, cpf, contaBancaria }) {
 // ATUALIZAR CONFIGURAÇÕES DE TRANSFERÊNCIA DO RECIPIENT
 // =============================================
 async function atualizarTransferenciaRecebedor(recipientId) {
-  return pagarmeRequest('PUT', `/recipients/${recipientId}`, {
+  return pagarmeRequest('PATCH', `/recipients/${recipientId}`, {
     transfer_settings: {
       transfer_enabled: true,
       transfer_interval: 'daily',
-      transfer_day: 0,
+      transfer_day: 1,
     },
-    automatic_anticipation_enabled: true,
-    automatic_anticipation_type: 'full',
-    automatic_anticipation_volume_percentage: '100',
-    anticipation_delay: 0,
   });
 }
 
