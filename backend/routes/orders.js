@@ -422,7 +422,7 @@ router.patch(
   [
     param('id').isUUID(),
     body('status')
-      .isIn(['aceito', 'preparando', 'pronto', 'coletado', 'entregue', 'cancelado'])
+      .isIn(['aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue', 'cancelado'])
       .withMessage('Status inválido'),
   ],
   async (req, res, next) => {
@@ -437,9 +437,9 @@ router.patch(
 
     // Mapeamento de quem pode fazer qual transição
     const transicoesPermitidas = {
-      estabelecimento: ['aceito', 'preparando', 'pronto', 'cancelado'],
+      estabelecimento: ['aceito', 'preparando', 'pronto', 'saiu_para_entrega', 'entregue', 'cancelado'],
       motoboy: ['coletado', 'entregue'],
-      admin: ['aceito', 'preparando', 'pronto', 'coletado', 'entregue', 'cancelado'],
+      admin: ['aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue', 'cancelado'],
     };
 
     if (!transicoesPermitidas[perfil]?.includes(status)) {
@@ -493,8 +493,9 @@ router.patch(
       const msgStatus = {
         aceito: '✅ Pedido aceito! A loja está preparando.',
         preparando: '👨‍🍳 Seu pedido está sendo preparado.',
-        pronto: '📦 Pedido pronto! Aguardando motoboy.',
+        pronto: '📦 Pedido pronto! Aguardando entrega.',
         coletado: '🛵 Motoboy a caminho! Acompanhe no app.',
+        saiu_para_entrega: '🛵 Pedido saiu para entrega! Confirme quando chegar.',
         entregue: '🎉 Pedido entregue! Bom apetite.',
         cancelado: '❌ Seu pedido foi cancelado.',
       };
@@ -623,6 +624,73 @@ router.post(
   }
 );
 // =============================================
+// POST /api/orders/bulk-assign — Motoboy aceita múltiplos pedidos da mesma loja
+// =============================================
+router.post(
+  '/bulk-assign',
+  requireRole('motoboy'),
+  [body('pedidoIds').isArray({ min: 1, max: 10 }).withMessage('Selecione entre 1 e 10 pedidos')],
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+    try {
+      const { pedidoIds } = req.body;
+
+      const { data: motoboy } = await supabaseAdmin
+        .from('motoboys')
+        .select('id')
+        .eq('user_id', req.user.id)
+        .single();
+      if (!motoboy) return res.status(404).json({ error: 'Motoboy não encontrado' });
+
+      // Validar que todos são UUIDs
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!pedidoIds.every((id) => uuidRegex.test(id))) {
+        return res.status(400).json({ error: 'IDs inválidos' });
+      }
+
+      // Verificar que todos estão prontos e são da mesma loja
+      const { data: pedidos } = await supabaseAdmin
+        .from('pedidos')
+        .select('id, estabelecimento_id, status, cliente_id, endereco_entrega')
+        .in('id', pedidoIds)
+        .eq('status', 'pronto')
+        .is('motoboy_id', null);
+
+      if (!pedidos || pedidos.length !== pedidoIds.length) {
+        return res.status(400).json({ error: 'Um ou mais pedidos não estão prontos ou já foram atribuídos' });
+      }
+
+      const lojas = [...new Set(pedidos.map((p) => p.estabelecimento_id))];
+      if (lojas.length > 1) {
+        return res.status(400).json({ error: 'Só é possível aceitar pedidos da mesma loja por vez' });
+      }
+
+      // Atribuir todos de uma vez
+      const { error } = await supabaseAdmin
+        .from('pedidos')
+        .update({ motoboy_id: motoboy.id, status: 'coletado' })
+        .in('id', pedidoIds);
+
+      if (error) throw error;
+
+      // Notificar clientes
+      pedidos.forEach((p) => {
+        if (p.cliente_id) {
+          enviarPush(p.cliente_id, 'Chegou Aí', '🛵 Motoboy a caminho! Acompanhe no app.', { pedidoId: p.id, status: 'coletado' });
+        }
+      });
+
+      res.json({
+        message: `${pedidos.length} pedido(s) aceito(s)`,
+        pedidos: pedidos.map((p) => ({ id: p.id, endereco: p.endereco_entrega })),
+      });
+    } catch (err) { next(err); }
+  }
+);
+
+// =============================================
 // PATCH /api/orders/motoboy/disponibilidade — Motoboy altera disponibilidade
 // =============================================
 router.patch(
@@ -721,5 +789,29 @@ router.patch(
     }
   }
 );
+
+// =============================================
+// POST /api/orders/:id/confirmar-recebimento
+// Cliente confirma que recebeu o pedido (entrega própria do lojista)
+// =============================================
+router.post('/:id/confirmar-recebimento', requireAuth, [param('id').isUUID()], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+
+  try {
+    const { data: pedido, error } = await supabaseAdmin
+      .from('pedidos')
+      .update({ status: 'entregue', atualizado_em: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .eq('cliente_id', req.user.id)
+      .eq('status', 'saiu_para_entrega')
+      .select()
+      .single();
+
+    if (error || !pedido) return res.status(400).json({ error: 'Pedido não encontrado ou não está em trânsito' });
+
+    res.json({ message: 'Recebimento confirmado!', pedido });
+  } catch (err) { next(err); }
+});
 
 module.exports = router;

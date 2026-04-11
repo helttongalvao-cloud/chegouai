@@ -16,6 +16,7 @@ const establishmentsRoutes = require('./routes/establishments');
 const adminRoutes = require('./routes/admin');
 const featuresRoutes = require('./routes/features');
 const notificationsRoutes = require('./routes/notifications');
+const mesaRoutes = require('./routes/mesa');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -112,6 +113,11 @@ app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, 'chegou-ai.html'));
 });
 
+// Mesa — cardápio público via QR Code (sem login)
+app.get('/mesa', (req, res) => {
+  res.sendFile(path.join(__dirname, 'chegou-ai.html'));
+});
+
 // =============================================
 // RATE LIMITING global
 // =============================================
@@ -128,6 +134,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/features', featuresRoutes);
 // OAuth MP removido — split via Asaas wallets
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/mesa', mesaRoutes);
 
 // =============================================
 // CONFIG PÚBLICA — Expõe chaves seguras ao frontend

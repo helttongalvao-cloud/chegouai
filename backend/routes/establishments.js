@@ -133,14 +133,15 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
     const pedidosAbertos = await supabaseAdmin
       .from('pedidos')
       .select(`
-        id, tipo, status, pagamento_status, forma_pagamento, total, subtotal, taxa_entrega,
+        id, tipo, tipo_pedido, numero_mesa, nome_cliente_mesa, status, pagamento_status,
+        forma_pagamento, total, subtotal, taxa_entrega,
         endereco_entrega, telefone_cliente, lista_compras, criado_em,
         itens_pedido (nome, quantidade, preco_unitario, observacao),
         motoboys (nome, telefone),
         profiles!pedidos_cliente_id_fkey (nome)
       `)
       .eq('estabelecimento_id', est.id)
-      .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'entregue'])
+      .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue'])
       .or('pagamento_status.eq.aprovado,tipo.eq.lista') // Inclui pedidos de lista mesmo sem pagamento confirmado
       .gte('criado_em', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString())
       .order('criado_em', { ascending: true });

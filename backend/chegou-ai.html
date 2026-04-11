@@ -648,11 +648,45 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   </div>
 
   <div id="confirmado-whatsapp" style="width:100%;margin-bottom:8px;"></div>
+  <div id="btn-confirmar-recebimento-wrap" style="display:none;margin-bottom:12px;">
+    <button onclick="confirmarRecebimento()" style="width:100%;padding:14px;border-radius:12px;background:var(--verde);border:none;color:var(--preto);font-size:15px;font-weight:700;cursor:pointer;">✅ Confirmar recebimento</button>
+    <p style="font-size:12px;color:var(--texto2);text-align:center;margin-top:6px;">Toque quando o entregador chegar</p>
+  </div>
   <button onclick="atualizarStatusManual()" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--cinza3);background:transparent;color:var(--texto2);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;" id="btn-atualizar-status">🔄 Atualizar status</button>
   <button class="btn-principal mt16" onclick="sairRastreio()" style="width:100%;">Fazer novo pedido</button>
   <div id="btn-cancelar-pedido-wrap" style="display:none;margin-top:12px;">
     <button onclick="cancelarPedidoCliente()" style="width:100%;padding:14px;border-radius:12px;border:1.5px solid #e74c3c;background:transparent;color:#e74c3c;font-size:15px;font-weight:600;cursor:pointer;">Cancelar pedido</button>
   </div>
+</div>
+
+<!-- MESA — QR Code cardápio público sem login -->
+<div class="tela" id="tela-mesa">
+  <div class="header">
+    <div class="header-logo"><div class="logo-mini"><span>🛵</span></div><h3>Chegou Aí</h3></div>
+  </div>
+  <div class="conteudo" id="mesa-conteudo" style="padding-bottom:120px;">
+    <div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando cardápio...</div>
+  </div>
+  <!-- Carrinho flutuante -->
+  <div class="carrinho-float oculto" id="mesa-carrinho-float" onclick="mesaAbrirCheckout()" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:100;background:var(--verde);color:var(--preto);padding:16px 32px;border-radius:20px;font-weight:700;font-size:16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,200,83,0.4);cursor:pointer;white-space:nowrap;">
+    <span id="mesa-carrinho-qtd-badge" style="background:var(--preto);color:var(--verde);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">0</span>
+    Ver carrinho — <span id="mesa-carrinho-total-badge">R$ 0,00</span>
+  </div>
+</div>
+
+<!-- MESA CHECKOUT -->
+<div class="tela" id="tela-mesa-checkout">
+  <div class="header">
+    <button onclick="irTela('tela-mesa')" style="background:none;border:none;color:var(--texto);font-size:22px;cursor:pointer;padding:0 8px 0 0;">←</button>
+    <h3>Confirmar pedido</h3>
+  </div>
+  <div class="conteudo" id="mesa-checkout-conteudo"></div>
+</div>
+
+<!-- MESA PIX -->
+<div class="tela" id="tela-mesa-pix">
+  <div class="header"><div class="header-logo"><div class="logo-mini"><span>🛵</span></div><h3>Chegou Aí</h3></div></div>
+  <div class="conteudo" id="mesa-pix-conteudo" style="align-items:center;text-align:center;"></div>
 </div>
 
 <!-- ESTABELECIMENTO -->
@@ -1252,7 +1286,16 @@ function irTela(id) {
   document.querySelectorAll('.tela').forEach(function(t){ t.classList.remove('ativa'); });
   document.getElementById(id).classList.add('ativa');
 }// SPLASH
-setTimeout(function(){ irTela('tela-login'); }, 1800);
+setTimeout(function(){
+  // Modo mesa: /mesa?loja=ID&mesa=N — não requer login
+  var params = new URLSearchParams(window.location.search);
+  var lojaParam = params.get('loja');
+  if(window.location.pathname === '/mesa' && lojaParam) {
+    iniciarModoMesa(lojaParam, params.get('mesa') || '');
+  } else {
+    irTela('tela-login');
+  }
+}, 1800);
 
 
 
@@ -2392,6 +2435,11 @@ async function renderInfoLoja() {
         '<span style="font-size:13px;color:var(--texto);">Recebedor não configurado — entre em contato com o suporte para cadastrar como recipient Pagar.me</span></div>'
     ) +
     '</div>' +
+    '<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--cinza3);">' +
+    '<label style="font-size:13px;font-weight:600;color:var(--texto2);display:block;margin-bottom:8px;">QR Code — Pedido na Mesa</label>' +
+    '<p style="font-size:12px;color:var(--texto2);margin:0 0 10px;">Clientes escaneiam e pedem direto pelo celular, sem login.</p>' +
+    '<button onclick="mostrarQRCodeMesa(\'' + est.id + '\')" style="width:100%;padding:12px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;">🔲 Ver QR Code da Loja</button>' +
+    '</div>' +
     '</div>';
 
   var catSelect = document.getElementById('loja-cat-select');
@@ -2720,7 +2768,11 @@ async function renderEstabelecimento() {
       else if(p.status === 'preparando')
         botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'pronto\',this)">Marcar pronto</button>';
       else if(p.status === 'pronto')
-        botao = '<button class="btn-acao secundario">Aguardando motoboy</button>';
+        botao = p.tipo_entrega === 'proprio'
+          ? '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'saiu_para_entrega\',this)">🛵 Saiu para entrega</button>'
+          : '<button class="btn-acao secundario">Aguardando motoboy</button>';
+      else if(p.status === 'saiu_para_entrega')
+        botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'entregue\',this)">✅ Confirmar entrega</button>';
       else
         botao = '';
       var itensTxt = '';
@@ -2740,12 +2792,17 @@ async function renderEstabelecimento() {
         : '';
       var pagIcones = { pix:'⚡', cartao:'💳' };
       var pagBadge = p.forma_pagamento ? '<span style="font-size:11px;color:var(--texto2);margin-left:6px;">' + (pagIcones[p.forma_pagamento] || '') + ' ' + p.forma_pagamento + '</span>' : '';
-      var nomeCliente = (p.profiles && p.profiles.nome) ? sanitizar(p.profiles.nome) : '';
+      var nomeCliente = p.tipo_pedido === 'mesa'
+        ? (p.nome_cliente_mesa || 'Cliente')
+        : ((p.profiles && p.profiles.nome) ? sanitizar(p.profiles.nome) : '');
+      var mesaTag = p.tipo_pedido === 'mesa'
+        ? '<span style="background:#FF6D0020;color:#FF6D00;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:6px;">🪑 ' + (p.numero_mesa ? 'Mesa ' + p.numero_mesa : 'Salão') + '</span>'
+        : '';
       return '<div class="card-pedido"' + (isEncerrado ? ' style="opacity:0.65;"' : '') + '>' +
-        '<div class="pedido-header"><span class="pedido-num">Pedido #' + p.id.substring(0,8) + '</span>' +
+        '<div class="pedido-header"><span class="pedido-num">Pedido #' + p.id.substring(0,8) + mesaTag + '</span>' +
         '<span class="badge-status ' + sc + '">' + sl + '</span></div>' +
         (nomeCliente ? '<div class="pedido-endereco" style="font-weight:600;color:var(--texto);">👤 ' + nomeCliente + '</div>' : '') +
-        '<div class="pedido-endereco">📍 ' + (p.endereco_entrega || '') + '</div>' +
+        (p.tipo_pedido !== 'mesa' ? '<div class="pedido-endereco">📍 ' + (p.endereco_entrega || '') + '</div>' : '') +
         tel +
         '<div class="pedido-itens">' + (itensTxt || '—') + '</div>' +
         '<div class="pedido-footer"><span class="pedido-total">R$ ' + parseFloat(p.subtotal || (p.total - (p.taxa_entrega || 0)) || 0).toFixed(2).replace('.',',') + pagBadge + '</span>' +
@@ -3517,9 +3574,13 @@ async function renderMotoboy() {
             '<div class="entrega-linha"><span class="label">👤 Cliente:</span><span class="valor">' + sanitizar(nomeCliente) + '</span></div>' +
             '<div class="entrega-linha"><span class="label">📍 Entregar em:</span><span class="valor" style="font-size:12px;">' + sanitizar(p.endereco_entrega || '—') + '</span></div>' +
           '</div>' +
-          '<div class="btns-entrega"><button class="btn-acao" onclick="aceitarEntregaReal(\'' + p.id + '\',this)">Aceitar entrega</button></div>' +
+          '<div class="btns-entrega" style="display:flex;gap:8px;align-items:center;">' +
+            '<input type="checkbox" id="sel-' + p.id + '" onchange="togglePedidoMotoboy(\'' + p.id + '\',this)" style="width:20px;height:20px;accent-color:var(--verde);cursor:pointer;" title="Selecionar para aceitar junto">' +
+            '<button class="btn-acao" style="flex:1;" onclick="aceitarEntregaReal(\'' + p.id + '\',this)">Aceitar entrega</button>' +
+          '</div>' +
         '</div>';
-      }).join('');
+      }).join('') +
+      '<button id="btn-aceitar-multiplos" onclick="aceitarMultiplosPedidos()" style="display:none;width:100%;padding:14px;border-radius:14px;background:var(--verde);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">Aceitar pedidos selecionados 🛵</button>';
     }
 
     el.innerHTML = html;
@@ -4274,13 +4335,17 @@ function iniciarPollingPedidos() {
           ultimoStatusConhecido[pedidoAtualId] = novoStatus;
           atualizarRastreioPedido(novoStatus);
           var msgs = {
-            'aceito':     { icon: '✅', title: 'Pedido aceito!',      msg: 'O estabelecimento aceitou seu pedido.' },
-            'preparando': { icon: '👨‍🍳', title: 'Preparando...',       msg: 'Seu pedido está sendo preparado.' },
-            'pronto':     { icon: '📦', title: 'Pedido pronto!',      msg: 'Aguardando motoboy para entrega.' },
-            'coletado':   { icon: '🛵', title: 'Saiu para entrega!',  msg: 'O motoboy está a caminho.' },
-            'entregue':   { icon: '🎉', title: 'Entregue!',           msg: 'Seu pedido foi entregue. Bom apetite!' },
+            'aceito':              { icon: '✅', title: 'Pedido aceito!',        msg: 'O estabelecimento aceitou seu pedido.' },
+            'preparando':          { icon: '👨‍🍳', title: 'Preparando...',         msg: 'Seu pedido está sendo preparado.' },
+            'pronto':              { icon: '📦', title: 'Pedido pronto!',        msg: 'Aguardando entrega.' },
+            'coletado':            { icon: '🛵', title: 'Saiu para entrega!',    msg: 'O motoboy está a caminho.' },
+            'saiu_para_entrega':   { icon: '🛵', title: 'Saiu para entrega!',    msg: 'Confirme quando chegar.' },
+            'entregue':            { icon: '🎉', title: 'Entregue!',             msg: 'Seu pedido foi entregue. Bom apetite!' },
           };
           if(msgs[novoStatus]) showToast(msgs[novoStatus].icon, msgs[novoStatus].title, msgs[novoStatus].msg);
+          // Botão confirmar recebimento (entrega própria)
+          var btnConf = document.getElementById('btn-confirmar-recebimento-wrap');
+          if(btnConf) btnConf.style.display = novoStatus === 'saiu_para_entrega' ? 'block' : 'none';
           if(novoStatus === 'entregue') { localStorage.removeItem('chegouai_pedido_id'); }
         }
         // Mapa em tempo real
@@ -4354,11 +4419,11 @@ async function cancelarPedidoCliente() {
 
 // === RASTREIO DO PEDIDO (stepper visual para o cliente) ===
 function atualizarRastreioPedido(status) {
-  var etapas = ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'entregue'];
+  var etapas = ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue'];
   var idx = etapas.indexOf(status);
   if(idx === -1) idx = 0;
   // Mapear status → step visual (0-3)
-  var stepMap = [0, 0, 1, 2, 2, 3];
+  var stepMap = [0, 0, 1, 2, 2, 2, 3];
   var step = stepMap[Math.min(idx, stepMap.length - 1)];
 
   // Atualizar steps e conectores
@@ -4379,9 +4444,10 @@ function atualizarRastreioPedido(status) {
     'pendente':   { icon:'⏳', titulo:'Pedido recebido!',       sub:'Aguardando o estabelecimento confirmar...', cls:'' },
     'aceito':     { icon:'✅', titulo:'Pedido aceito!',          sub:'O estabelecimento confirmou seu pedido.',  cls:'' },
     'preparando': { icon:'👨‍🍳', titulo:'Preparando...',           sub:'Seu pedido está sendo preparado.',        cls:'' },
-    'pronto':     { icon:'📦', titulo:'Pronto para entrega!',   sub:'Aguardando motoboy retirar o pedido.',    cls:'' },
-    'coletado':   { icon:'🛵', titulo:'Motoboy a caminho!',     sub:'O motoboy está indo até você.',            cls:'coletado' },
-    'entregue':   { icon:'🎉', titulo:'Pedido entregue!',       sub:'Bom apetite! Obrigado por usar o Chegou Aí.', cls:'entregue' },
+    'pronto':            { icon:'📦', titulo:'Pronto para entrega!',   sub:'Aguardando entrega.',                      cls:'' },
+    'coletado':          { icon:'🛵', titulo:'Motoboy a caminho!',     sub:'O motoboy está indo até você.',            cls:'coletado' },
+    'saiu_para_entrega': { icon:'🛵', titulo:'Saiu para entrega!',     sub:'Toque em "Confirmar recebimento" quando chegar.', cls:'coletado' },
+    'entregue':          { icon:'🎉', titulo:'Pedido entregue!',       sub:'Bom apetite! Obrigado por usar o Chegou Aí.', cls:'entregue' },
   }[status] || { icon:'⏳', titulo:'Pedido recebido!', sub:'Aguardando confirmação...', cls:'' };
 
   var card = document.getElementById('confirmado-status-card');
@@ -4732,6 +4798,264 @@ if ('serviceWorker' in navigator) {
   }).catch(function(e) {
     console.log('SW falhou:', e);
   });
+}
+
+// ============================================================
+// MODO MESA — QR Code salão (sem login)
+// ============================================================
+var mesaLojaId = null, mesaNumero = '', mesaCarrinho = [], mesaToken = null, mesaPedidoId = null, mesaPollingInterval = null;
+
+async function iniciarModoMesa(lojaId, mesa) {
+  mesaLojaId = lojaId;
+  mesaNumero = mesa;
+  irTela('tela-mesa');
+  var el = document.getElementById('mesa-conteudo');
+  try {
+    var resp = await fetch(API_BASE + '/api/mesa/' + lojaId);
+    var data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Erro');
+    var est = data.estabelecimento;
+    var produtos = data.produtos || [];
+
+    // Agrupar por categoria
+    var grupos = {};
+    produtos.forEach(function(p) {
+      var cat = p.categoria || 'outros';
+      if(!grupos[cat]) grupos[cat] = [];
+      grupos[cat].push(p);
+    });
+
+    var html = '<div style="padding-bottom:8px;">' +
+      '<div style="text-align:center;padding:20px 0 12px;">' +
+      '<div style="font-size:48px;">' + (est.emoji || '🍽️') + '</div>' +
+      '<h2 style="margin:8px 0 4px;">' + est.nome + '</h2>' +
+      (mesaNumero ? '<div style="background:var(--verde);color:var(--preto);display:inline-block;padding:4px 14px;border-radius:20px;font-weight:700;font-size:14px;">Mesa ' + mesaNumero + '</div>' : '') +
+      '</div>';
+
+    Object.keys(grupos).forEach(function(cat) {
+      html += '<div class="secao-titulo" style="text-transform:capitalize;">' + cat + '</div>';
+      grupos[cat].forEach(function(p) {
+        html += '<div class="card-produto" onclick="mesaAdicionarItem(' + JSON.stringify(p).replace(/'/g,"&#39;") + ')" style="cursor:pointer;">' +
+          '<div class="prod-info"><div class="prod-nome">' + p.nome + '</div>' +
+          (p.descricao ? '<div class="prod-desc">' + p.descricao + '</div>' : '') +
+          '<div class="prod-preco">R$ ' + parseFloat(p.preco).toFixed(2).replace('.',',') + '</div></div>' +
+          (p.foto_url ? '<img src="' + p.foto_url + '" style="width:72px;height:72px;border-radius:10px;object-fit:cover;flex-shrink:0;">' : '') +
+          '</div>';
+      });
+    });
+
+    html += '</div>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>' + e.message + '</div>';
+  }
+}
+
+function mesaAdicionarItem(produto) {
+  var existing = mesaCarrinho.find(function(i){ return i.id === produto.id; });
+  if(existing) { existing.qtd++; }
+  else { mesaCarrinho.push({ id: produto.id, nome: produto.nome, preco: produto.preco, qtd: 1 }); }
+  mesaAtualizarBadge();
+  showToast('✅', produto.nome, 'Adicionado ao carrinho');
+}
+
+function mesaAtualizarBadge() {
+  var qtd = mesaCarrinho.reduce(function(s,i){ return s + i.qtd; }, 0);
+  var total = mesaCarrinho.reduce(function(s,i){ return s + i.preco * i.qtd; }, 0);
+  var badge = document.getElementById('mesa-carrinho-qtd-badge');
+  var totalBadge = document.getElementById('mesa-carrinho-total-badge');
+  var float = document.getElementById('mesa-carrinho-float');
+  if(badge) badge.textContent = qtd;
+  if(totalBadge) totalBadge.textContent = 'R$ ' + total.toFixed(2).replace('.',',');
+  if(float) float.classList.toggle('oculto', qtd === 0);
+}
+
+function mesaAbrirCheckout() {
+  if(mesaCarrinho.length === 0) return;
+  var total = mesaCarrinho.reduce(function(s,i){ return s + i.preco * i.qtd; }, 0);
+  var el = document.getElementById('mesa-checkout-conteudo');
+  var html = '<div style="padding:16px 0;">' +
+    '<div class="secao-titulo">Seu pedido</div>' +
+    '<div style="background:var(--cinza2);border-radius:14px;padding:16px;margin-bottom:16px;">';
+  mesaCarrinho.forEach(function(item) {
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--cinza3);">' +
+      '<div>' +
+      '<span style="font-weight:600;">' + item.nome + '</span>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;">' +
+      '<button onclick="mesaAlterarQtd(\'' + item.id + '\',-1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--cinza3);background:none;color:var(--texto);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>' +
+      '<span id="mesa-qtd-' + item.id + '">' + item.qtd + '</span>' +
+      '<button onclick="mesaAlterarQtd(\'' + item.id + '\',1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--cinza3);background:none;color:var(--texto);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>' +
+      '</div></div>' +
+      '<span style="font-weight:700;">R$ ' + (item.preco * item.qtd).toFixed(2).replace('.',',') + '</span></div>';
+  });
+  html += '</div>' +
+    '<div class="form-grupo"><label>Seu nome (opcional)</label><input type="text" id="mesa-nome" placeholder="Como prefere ser chamado?" style="width:100%;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:12px;padding:14px;color:var(--texto);font-size:15px;"></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>Número da mesa (opcional)</label><input type="text" id="mesa-num" value="' + mesaNumero + '" placeholder="Ex: 5" style="width:100%;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:12px;padding:14px;color:var(--texto);font-size:15px;"></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>Telefone (para Pix)</label><input type="tel" id="mesa-tel" placeholder="(69) 99999-9999" style="width:100%;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:12px;padding:14px;color:var(--texto);font-size:15px;" maxlength="11" oninput="this.value=this.value.replace(/\\D/g,\'\')"></div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;font-weight:700;font-size:18px;border-top:1px solid var(--cinza3);margin-top:16px;"><span>Total</span><span>R$ ' + total.toFixed(2).replace('.',',') + '</span></div>' +
+    '<button class="btn-principal" onclick="mesaFinalizarPedido()" style="width:100%;margin-top:8px;">Pagar com Pix 💚</button>' +
+    '</div>';
+  el.innerHTML = html;
+  irTela('tela-mesa-checkout');
+}
+
+function mesaAlterarQtd(prodId, delta) {
+  var item = mesaCarrinho.find(function(i){ return i.id === prodId; });
+  if(!item) return;
+  item.qtd += delta;
+  if(item.qtd <= 0) mesaCarrinho = mesaCarrinho.filter(function(i){ return i.id !== prodId; });
+  mesaAtualizarBadge();
+  mesaAbrirCheckout(); // re-render
+}
+
+async function mesaFinalizarPedido() {
+  var nome = (document.getElementById('mesa-nome') || {}).value || '';
+  var mesa = (document.getElementById('mesa-num') || {}).value || mesaNumero;
+  var tel = (document.getElementById('mesa-tel') || {}).value || '';
+
+  if(mesaCarrinho.length === 0) return showToast('⚠️', 'Carrinho vazio', 'Adicione itens primeiro');
+
+  try {
+    var resp = await fetch(API_BASE + '/api/mesa/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lojaId: mesaLojaId,
+        itens: mesaCarrinho.map(function(i){ return { produtoId: i.id, quantidade: i.qtd }; }),
+        numeroMesa: mesa || undefined,
+        nomeCliente: nome || undefined,
+        telefone: tel || undefined,
+      }),
+    });
+    var data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Erro ao criar pedido');
+
+    mesaPedidoId = data.pedidoId;
+    mesaToken = data.mesaToken;
+
+    // Gerar Pix
+    var pixResp = await fetch(API_BASE + '/api/mesa/pix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pedidoId: mesaPedidoId, mesaToken, nomeCliente: nome || undefined, telefone: tel || undefined }),
+    });
+    var pixData = await pixResp.json();
+    if(!pixResp.ok) throw new Error(pixData.error || 'Erro ao gerar Pix');
+
+    mesaMostrarPix(pixData, data.total, data.mesa);
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
+  }
+}
+
+function mesaMostrarPix(pixData, total, mesaLabel) {
+  irTela('tela-mesa-pix');
+  var el = document.getElementById('mesa-pix-conteudo');
+  var qrUrl = pixData.qrCodeBase64 || (pixData.qrCode ? 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(pixData.qrCode) : '');
+  el.innerHTML = '<div style="padding:24px 0;">' +
+    '<div style="font-size:48px;margin-bottom:8px;">💚</div>' +
+    '<h2 style="margin-bottom:4px;">Pague via Pix</h2>' +
+    '<p style="color:var(--texto2);font-size:14px;margin-bottom:20px;">' + mesaLabel + ' — R$ ' + parseFloat(total).toFixed(2).replace('.',',') + '</p>' +
+    (qrUrl ? '<img src="' + qrUrl + '" style="width:200px;height:200px;border-radius:12px;margin-bottom:16px;">' : '') +
+    (pixData.qrCode ? '<div style="background:var(--cinza2);border-radius:12px;padding:12px;margin-bottom:16px;word-break:break-all;font-size:11px;font-family:monospace;">' + pixData.qrCode + '</div>' +
+    '<button onclick="navigator.clipboard.writeText(\'' + pixData.qrCode.replace(/'/g,"\\'") + '\').then(function(){ showToast(\'✅\',\'Copiado!\',\'Cole no app do banco\'); })" style="width:100%;padding:14px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;margin-bottom:12px;">📋 Copiar código Pix</button>' : '') +
+    '<p style="font-size:12px;color:var(--texto2);">Aguardando pagamento...</p>' +
+    '<div id="mesa-pix-status" style="margin-top:12px;"></div>' +
+    '</div>';
+  mesaIniciarPolling();
+}
+
+function mesaIniciarPolling() {
+  if(mesaPollingInterval) clearInterval(mesaPollingInterval);
+  mesaPollingInterval = setInterval(async function() {
+    try {
+      var resp = await fetch(API_BASE + '/api/mesa/status/' + mesaPedidoId + '?token=' + encodeURIComponent(mesaToken));
+      var data = await resp.json();
+      if(data.pagamento_status === 'aprovado') {
+        clearInterval(mesaPollingInterval);
+        document.getElementById('mesa-pix-status').innerHTML = '<div style="background:rgba(0,200,83,0.1);border:1px solid var(--verde);border-radius:12px;padding:16px;font-weight:700;color:var(--verde);">✅ Pagamento confirmado! Seu pedido está sendo preparado.</div>';
+        mesaCarrinho = [];
+        mesaAtualizarBadge();
+      }
+    } catch(e) {}
+  }, 4000);
+}
+
+// ============================================================
+// QR CODE DA MESA — Lojista gera e imprime
+// ============================================================
+function mostrarQRCodeMesa(lojaId) {
+  var baseUrl = window.location.origin + '/mesa?loja=' + lojaId;
+  var qrApiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(baseUrl);
+
+  var modal = document.createElement('div');
+  modal.id = 'modal-qrcode';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = '<div style="background:var(--cinza2);border-radius:20px;padding:28px;width:100%;max-width:360px;text-align:center;">' +
+    '<h3 style="margin:0 0 4px;">QR Code da Mesa</h3>' +
+    '<p style="font-size:13px;color:var(--texto2);margin:0 0 20px;">Imprima e coloque em cada mesa</p>' +
+    '<div style="background:#fff;border-radius:12px;padding:12px;display:inline-block;margin-bottom:16px;">' +
+    '<img src="' + qrApiUrl + '" style="width:200px;height:200px;display:block;">' +
+    '</div>' +
+    '<p style="font-size:11px;color:var(--texto2);word-break:break-all;margin-bottom:16px;">' + baseUrl + '</p>' +
+    '<div style="display:flex;gap:8px;">' +
+    '<button onclick="window.open(\'' + qrApiUrl + '\',\'_blank\')" style="flex:1;padding:12px;border-radius:12px;background:var(--verde);border:none;color:#000;font-weight:700;cursor:pointer;">⬇️ Baixar</button>' +
+    '<button onclick="document.getElementById(\'modal-qrcode\').remove()" style="flex:1;padding:12px;border-radius:12px;background:var(--cinza3);border:none;color:var(--texto);font-weight:600;cursor:pointer;">Fechar</button>' +
+    '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+}
+
+// ============================================================
+// CONFIRMAR RECEBIMENTO — Entrega própria
+// ============================================================
+async function confirmarRecebimento() {
+  if(!pedidoAtualId) return;
+  try {
+    await apiCall('/api/orders/' + pedidoAtualId + '/confirmar-recebimento', { method: 'POST' });
+    showToast('🎉', 'Recebido!', 'Obrigado pela confirmação');
+    document.getElementById('btn-confirmar-recebimento-wrap').style.display = 'none';
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
+  }
+}
+
+// ============================================================
+// MÚLTIPLOS PEDIDOS — Motoboy aceita vários da mesma loja
+// ============================================================
+var pedidosSelecionados = {};
+
+function togglePedidoMotoboy(pedidoId, checkbox) {
+  if(checkbox.checked) { pedidosSelecionados[pedidoId] = true; }
+  else { delete pedidosSelecionados[pedidoId]; }
+  var ids = Object.keys(pedidosSelecionados);
+  var btn = document.getElementById('btn-aceitar-multiplos');
+  if(btn) {
+    btn.style.display = ids.length > 1 ? 'block' : 'none';
+    btn.textContent = 'Aceitar ' + ids.length + ' pedidos juntos 🛵';
+  }
+}
+
+async function aceitarMultiplosPedidos() {
+  var ids = Object.keys(pedidosSelecionados);
+  if(ids.length < 2) return;
+  try {
+    var resp = await apiCall('/api/orders/bulk-assign', {
+      method: 'POST',
+      body: { pedidoIds: ids },
+    });
+    showToast('✅', 'Pedidos aceitos!', resp.message);
+    pedidosSelecionados = {};
+    // Mostrar endereços no Google Maps
+    resp.pedidos.forEach(function(p, i) {
+      setTimeout(function() {
+        window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.endereco), '_blank');
+      }, i * 500);
+    });
+    if(typeof carregarPedidosMotoboy === 'function') carregarPedidosMotoboy();
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
+  }
 }
 </script>
 
