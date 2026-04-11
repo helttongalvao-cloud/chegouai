@@ -2699,6 +2699,7 @@ async function renderEstabelecimento() {
     }
     window._pedidosCache = {};
     pedidos.forEach(function(p){ window._pedidosCache[p.id] = p; });
+    var taxaComissao = (data.comissao && data.comissao.taxa) ? data.comissao.taxa : 5;
     lista.innerHTML = pedidos.map(function(p) {
       var sc = p.status === 'aceito' ? 'badge-novo'
              : p.status === 'preparando' ? 'badge-preparando'
@@ -2747,7 +2748,7 @@ async function renderEstabelecimento() {
         '<div class="pedido-endereco">📍 ' + (p.endereco_entrega || '') + '</div>' +
         tel +
         '<div class="pedido-itens">' + (itensTxt || '—') + '</div>' +
-        '<div class="pedido-footer"><span class="pedido-total">R$ ' + parseFloat(p.subtotal || p.total || 0).toFixed(2).replace('.',',') + pagBadge + '</span>' +
+        '<div class="pedido-footer"><span class="pedido-total">R$ ' + (parseFloat(p.subtotal || p.total || 0) * (1 - taxaComissao / 100)).toFixed(2).replace('.',',') + pagBadge + '</span>' +
         '<div style="display:flex;gap:6px;">' + botao +
         '<button onclick="imprimirComanda(\'' + p.id + '\')" style="background:var(--cinza3);border:none;border-radius:10px;padding:8px 12px;color:var(--texto);font-size:12px;cursor:pointer;">🖨️</button>' +
         '</div></div>' +
@@ -2846,7 +2847,7 @@ async function renderAdmin(secao) {
         adminDataCache.pedidos = pedReq.pedidos;
       } else {
         var dashReq = await apiCall('/api/admin/dashboard');
-        adminDataCache = dashReq;
+        adminDataCache = Object.assign({}, adminDataCache || {}, dashReq);
       }
     } catch(e) {
       el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar dados do Admin: ' + e.message + '</div>';
@@ -2971,7 +2972,8 @@ async function renderAdmin(secao) {
           ? '<button class="btn-acao secundario" onclick="adminToggleLoja(\'' + e.id + '\')" style="margin-left:6px;padding:6px 10px;">Desativar</button>'
           : '<button class="btn-acao" onclick="adminToggleLoja(\'' + e.id + '\')" style="margin-left:6px;padding:6px 10px;background:var(--verde);">Ativar</button>';
         var btnRecebedor = e.pagarme_recipient_id
-          ? '<span style="font-size:11px;color:#00c864;padding:4px 8px;border-radius:8px;background:rgba(0,200,100,0.1);">✓ Pagar.me</span>'
+          ? '<span style="font-size:11px;color:#00c864;padding:4px 8px;border-radius:8px;background:rgba(0,200,100,0.1);">✓ Pagar.me</span>' +
+            '<button class="btn-acao" onclick="adminAtivarTransferencia(\'' + e.id + '\',this)" style="padding:4px 8px;font-size:11px;background:var(--cinza3);">💸 Auto-transfer</button>'
           : '<button class="btn-acao" onclick="adminCadastrarRecebedor(\'' + e.id + '\',\'' + sanitizar(e.nome) + '\')" style="padding:6px 10px;background:#ff6d00;">+ Pagar.me</button>';
         return '<div class="tabela-row" style="align-items:center;">' +
           '<div class="info" style="flex:1;"><div class="nome">' + e.nome + (e.ativo ? '' : ' <i>(Inativo)</i>') + '</div><div class="sub">' + (c.descricao || '') + '</div></div>' +
@@ -3010,7 +3012,7 @@ async function renderAdmin(secao) {
         '<div class="campo"><label>Nome da loja</label><input type="text" id="new-loja-nome" placeholder="Ex: Pizzaria do Marcos"></div>' +
         '<div class="campo"><label>Telefone</label><input type="tel" id="new-loja-tel" placeholder="(97) 99999-9999" oninput="mascaraTelefone(this)"></div>' +
         '<div class="campo"><label>E-mail de acesso</label><input type="email" id="new-loja-email" placeholder="loja@email.com"></div>' +
-        '<div class="campo"><label>Token MP ou Chave Pix</label><input type="text" id="new-loja-pix" placeholder="APP_USR-... ou Pix Aleatório" title="Cole o Access Token do Mercado Pago do lojista"></div>' +
+        '<div class="campo"><label>Chave Pix (opcional)</label><input type="text" id="new-loja-pix" placeholder="CPF, e-mail, telefone ou chave aleatória"></div>' +
         '<div class="campo"><label>Categoria</label><select id="new-loja-cat" style="width:100%;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:16px 18px;color:var(--texto);font-size:16px;"><option value="lanche">Lanchonete</option><option value="restaurante">Restaurante</option><option value="mercado">Mercado</option><option value="farmacia">Farmácia</option></select></div>' +
         '<div class="campo"><label>Endereço da loja (para calcular frete)</label>' +
           '<input type="text" id="new-loja-endereco" placeholder="Ex: Rua das Flores, 123, Guajará-AM" oninput="geocodificarLoja()">' +
@@ -3025,7 +3027,7 @@ async function renderAdmin(secao) {
         '<div class="campo"><label>Nome completo</label><input type="text" id="new-moto-nome" placeholder="Ex: Carlos Silva"></div>' +
         '<div class="campo"><label>Telefone</label><input type="tel" id="new-moto-tel" placeholder="(97) 99999-9999" oninput="mascaraTelefone(this)"></div>' +
         '<div class="campo"><label>E-mail de acesso</label><input type="email" id="new-moto-email" placeholder="motoboy@email.com"></div>' +
-        '<div class="campo"><label>Token MP ou Chave Pix</label><input type="text" id="new-moto-pix" placeholder="APP_USR-... ou Pix Aleatório" title="Cole o Access Token do Mercado Pago do motoboy"></div>' +
+        '<div class="campo"><label>Chave Pix (para repasse)</label><input type="text" id="new-moto-pix" placeholder="CPF, e-mail, telefone ou chave aleatória"></div>' +
         '<div class="campo"><label>Moto (modelo/placa)</label><input type="text" id="new-moto-moto" placeholder="Ex: Honda CG 150 - ABC1234"></div>' +
         '<div class="campo"><label>Senha de acesso</label><input type="password" id="new-moto-senha" placeholder="Senha (mínimo 6 chars)"></div>' +
         '<button class="btn-principal" id="btn-cad-moto" onclick="cadastrarMotoboy()">Cadastrar motoboy</button>' +
@@ -3793,6 +3795,19 @@ async function toggleCupom(id, ativo, btn) {
 }
 
 // ADMIN
+async function adminAtivarTransferencia(lojaId, btn) {
+  if(!confirm('Ativar transferência automática diária para esta loja?')) return;
+  if(btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    var r = await apiCall('/api/admin/establishments/' + lojaId + '/recipient/transfer', { method: 'PATCH', body: {} });
+    showToast('✅', 'Transferência automática', r.message || 'Ativada com sucesso!');
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
+  } finally {
+    if(btn) { btn.disabled = false; btn.textContent = '💸 Auto-transfer'; }
+  }
+}
+
 function adminCadastrarRecebedor(lojaId, lojaNome) {
   var html =
     '<div id="modal-recebedor" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;">' +

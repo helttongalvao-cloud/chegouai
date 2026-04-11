@@ -3,7 +3,7 @@ const { body, validationResult } = require('express-validator');
 const { requireRole } = require('../middleware/auth');
 const { supabaseAdmin } = require('../config/supabase');
 const { calcularComissao } = require('../services/commission');
-const { cadastrarRecebedor } = require('../services/pagarme');
+const { cadastrarRecebedor, atualizarTransferenciaRecebedor } = require('../services/pagarme');
 
 const router = express.Router();
 
@@ -52,7 +52,7 @@ router.get('/dashboard', async (req, res, next) => {
 
     res.json({
       stats: {
-        pedidosHoje: pedidosHoje?.length || 0,
+        pedidosHoje: pedidosAprovados.length,
         pedidosAprovados: pedidosAprovados.length,
         faturamentoHoje: parseFloat(totalFaturamento.toFixed(2)),
         comissaoHoje: parseFloat(totalComissao.toFixed(2)),
@@ -550,6 +550,30 @@ router.post('/establishments/:id/recipient', [
     res.json({ recipientId, message: 'Recebedor cadastrado com sucesso' });
   } catch (err) {
     console.error('[Admin] Cadastrar recebedor:', err.message);
+    next(err);
+  }
+});
+
+// =============================================
+// PATCH /api/admin/establishments/:id/recipient/transfer
+// Ativar transferência automática diária para recipient existente
+// =============================================
+router.patch('/establishments/:id/recipient/transfer', async (req, res, next) => {
+  try {
+    const { data: est } = await supabaseAdmin
+      .from('estabelecimentos')
+      .select('pagarme_recipient_id, nome')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!est?.pagarme_recipient_id) {
+      return res.status(400).json({ error: 'Loja não tem recipient Pagar.me cadastrado' });
+    }
+
+    await atualizarTransferenciaRecebedor(est.pagarme_recipient_id);
+    res.json({ ok: true, message: `Transferência automática ativada para ${est.nome}` });
+  } catch (err) {
+    console.error('[Admin] Atualizar transferência recipient:', err.message);
     next(err);
   }
 });

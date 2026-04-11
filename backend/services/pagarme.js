@@ -308,6 +308,23 @@ async function cadastrarRecebedor({ nome, email, cpf, contaBancaria }) {
 }
 
 // =============================================
+// ATUALIZAR CONFIGURAÇÕES DE TRANSFERÊNCIA DO RECIPIENT
+// =============================================
+async function atualizarTransferenciaRecebedor(recipientId) {
+  return pagarmeRequest('PUT', `/recipients/${recipientId}`, {
+    transfer_settings: {
+      transfer_enabled: true,
+      transfer_interval: 'daily',
+      transfer_day: 0,
+    },
+    automatic_anticipation_enabled: true,
+    automatic_anticipation_type: 'full',
+    automatic_anticipation_volume_percentage: '100',
+    anticipation_delay: 0,
+  });
+}
+
+// =============================================
 // TRANSFERÊNCIA PIX — repasse ao motoboy após entrega confirmada
 // =============================================
 function detectarTipoPix(chave) {
@@ -363,6 +380,7 @@ module.exports = {
   buscarPedido,
   montarSplitRules,
   cadastrarRecebedor,
+  atualizarTransferenciaRecebedor,
   criarTransferenciaPix,
   verificarWebhook,
 };
