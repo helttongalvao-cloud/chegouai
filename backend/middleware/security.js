@@ -8,7 +8,7 @@ const slowDown = require('express-slow-down');
 // Limite geral para a API
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 200,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Muitas requisições. Tente novamente em 15 minutos.' },

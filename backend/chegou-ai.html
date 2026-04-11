@@ -2747,7 +2747,7 @@ async function renderEstabelecimento() {
         '<div class="pedido-endereco">📍 ' + (p.endereco_entrega || '') + '</div>' +
         tel +
         '<div class="pedido-itens">' + (itensTxt || '—') + '</div>' +
-        '<div class="pedido-footer"><span class="pedido-total">R$ ' + parseFloat(p.total || 0).toFixed(2).replace('.',',') + pagBadge + '</span>' +
+        '<div class="pedido-footer"><span class="pedido-total">R$ ' + parseFloat(p.subtotal || p.total || 0).toFixed(2).replace('.',',') + pagBadge + '</span>' +
         '<div style="display:flex;gap:6px;">' + botao +
         '<button onclick="imprimirComanda(\'' + p.id + '\')" style="background:var(--cinza3);border:none;border-radius:10px;padding:8px 12px;color:var(--texto);font-size:12px;cursor:pointer;">🖨️</button>' +
         '</div></div>' +
@@ -3663,6 +3663,7 @@ function liberarWakeLock() {
   if (wakeLock) { wakeLock.release(); wakeLock = null; }
 }
 
+var _ultimoEnvioGps = 0;
 function iniciarRastreio(pedidoId) {
   if (gpsTrackerId) return;
   ativarWakeLock();
@@ -3672,7 +3673,10 @@ function iniciarRastreio(pedidoId) {
         var lat = pos.coords.latitude;
         var lng = pos.coords.longitude;
         atualizarMapaMotoboy(lat, lng);
-        // Enviar GPS ao backend → Supabase → cliente recebe via Realtime
+        // Enviar GPS ao backend no máx a cada 10s (evitar saturar rate limit)
+        var agora = Date.now();
+        if (agora - _ultimoEnvioGps < 10000) return;
+        _ultimoEnvioGps = agora;
         apiCall('/api/orders/motoboy/location', { method: 'PATCH', body: { lat: lat, lng: lng } })
           .catch(function(e) { console.warn('[GPS]', e.message); });
       },
@@ -3682,7 +3686,7 @@ function iniciarRastreio(pedidoId) {
           showToast('⚠️', 'GPS necessário', 'Ative a localização para o cliente acompanhar a entrega.');
         }
       },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
     );
   }
 }
