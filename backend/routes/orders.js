@@ -458,10 +458,18 @@ router.patch(
           return res.status(400).json({ error: 'Não é possível cancelar pedido já pago' });
       }
 
+      // Campos extras para o update
+      const updateFields = { status, atualizado_em: new Date().toISOString() };
+
+      // Se marcando saiu_para_entrega com motoboy próprio, salvar o vínculo
+      if (status === 'saiu_para_entrega' && req.body.motoboyProprioId) {
+        updateFields.motoboy_proprio_id = req.body.motoboyProprioId;
+      }
+
       // Para estabelecimento, restringir ao próprio pedido
       let updateQuery = supabaseAdmin
         .from('pedidos')
-        .update({ status, atualizado_em: new Date().toISOString() })
+        .update(updateFields)
         .eq('id', orderId);
 
       if (perfil === 'estabelecimento') {

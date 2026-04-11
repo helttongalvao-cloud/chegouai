@@ -701,6 +701,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   <div class="nav-admin" style="padding:12px 20px 0;">
     <div class="nav-btn ativo" id="est-nav-pedidos" onclick="estNav(this,'pedidos')">📋 Pedidos</div>
     <div class="nav-btn" id="est-nav-cardapio" onclick="estNav(this,'cardapio')">🍽️ Cardápio</div>
+    <div class="nav-btn" id="est-nav-repasses" onclick="estNav(this,'repasses')">💸 Repasses</div>
     <div class="nav-btn" id="est-nav-relatorio" onclick="estNav(this,'relatorio')">📊 Relatório</div>
     <div class="nav-btn" id="est-nav-loja" onclick="estNav(this,'loja')">⚙️ Minha Loja</div>
   </div>
@@ -714,6 +715,11 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="pedidos-lista" id="pedidos-estabelecimento"></div>
     </div>
     <div id="est-secao-cardapio" style="display:none;"></div>
+    <div id="est-secao-repasses" style="display:none;">
+      <div class="secao-titulo">💸 Repasses — Motoboys Próprios</div>
+      <div id="repasses-conteudo"><div style="text-align:center;padding:40px;color:var(--texto2);">Carregando...</div></div>
+    </div>
+    <div id="est-secao-relatorio" style="display:none;"></div>
     <div id="est-secao-loja" style="display:none;"></div>
   </div>
 </div>
@@ -2177,21 +2183,26 @@ async function estNav(btn, secao) {
   document.getElementById('est-conteudo').innerHTML =
     '<div id="est-secao-pedidos" style="display:none;"></div>' +
     '<div id="est-secao-cardapio" style="display:none;"></div>' +
+    '<div id="est-secao-repasses" style="display:none;">' +
+      '<div class="secao-titulo">💸 Repasses — Motoboys Próprios</div>' +
+      '<div id="repasses-conteudo"><div style="text-align:center;padding:40px;color:var(--texto2);">Carregando...</div></div>' +
+    '</div>' +
     '<div id="est-secao-relatorio" style="display:none;"></div>' +
     '<div id="est-secao-loja" style="display:none;"></div>';
 
   const cat = estDataCache?.estabelecimento?.categoria || 'lanche';
-  const nomeCardapio = labelCardapio(cat).replace(/^.{2}/,'').trim();
   var navCardapio = document.getElementById('est-nav-cardapio');
   if(navCardapio) navCardapio.textContent = labelCardapio(cat);
 
   document.getElementById('est-secao-pedidos').style.display = secao === 'pedidos' ? 'block' : 'none';
   document.getElementById('est-secao-cardapio').style.display = secao === 'cardapio' ? 'block' : 'none';
+  document.getElementById('est-secao-repasses').style.display = secao === 'repasses' ? 'block' : 'none';
   document.getElementById('est-secao-relatorio').style.display = secao === 'relatorio' ? 'block' : 'none';
   document.getElementById('est-secao-loja').style.display = secao === 'loja' ? 'block' : 'none';
 
   if(secao === 'pedidos') renderEstabelecimento();
   if(secao === 'cardapio') renderCardapioEst();
+  if(secao === 'repasses') renderRepasses();
   if(secao === 'relatorio') renderRelatorio();
   if(secao === 'loja') renderInfoLoja();
 }
@@ -2440,6 +2451,21 @@ async function renderInfoLoja() {
     '<p style="font-size:12px;color:var(--texto2);margin:0 0 10px;">Clientes escaneiam e pedem direto pelo celular, sem login.</p>' +
     '<button onclick="mostrarQRCodeMesa(\'' + est.id + '\')" style="width:100%;padding:12px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;">🔲 Ver QR Code da Loja</button>' +
     '</div>' +
+    '<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--cinza3);">' +
+    '<label style="font-size:13px;font-weight:600;color:var(--texto2);display:block;margin-bottom:8px;">Tipo de entrega</label>' +
+    '<div style="display:flex;gap:8px;margin-bottom:16px;">' +
+    '<button id="btn-entrega-app" onclick="alterarTipoEntrega(\'app\')" style="flex:1;padding:10px;border-radius:10px;border:2px solid ' + (est.tipo_entrega !== 'proprio' ? 'var(--verde)' : 'var(--cinza3)') + ';background:' + (est.tipo_entrega !== 'proprio' ? 'rgba(0,200,100,0.1)' : 'none') + ';color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">🛵 Motoboys do app</button>' +
+    '<button id="btn-entrega-proprio" onclick="alterarTipoEntrega(\'proprio\')" style="flex:1;padding:10px;border-radius:10px;border:2px solid ' + (est.tipo_entrega === 'proprio' ? 'var(--verde)' : 'var(--cinza3)') + ';background:' + (est.tipo_entrega === 'proprio' ? 'rgba(0,200,100,0.1)' : 'none') + ';color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">🏪 Entrega própria</button>' +
+    '</div>' +
+    '<div id="secao-motoboys-proprios" style="' + (est.tipo_entrega === 'proprio' ? '' : 'display:none;') + '">' +
+    '<label style="font-size:13px;font-weight:600;color:var(--texto2);display:block;margin-bottom:8px;">Seus motoboys</label>' +
+    '<div id="lista-motoboys-proprios"></div>' +
+    '<div style="display:flex;gap:8px;margin-top:8px;">' +
+    '<input id="input-novo-motoboy" type="text" placeholder="Nome do motoboy" maxlength="80" style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;">' +
+    '<button onclick="adicionarMotoboyProprio()" style="padding:10px 16px;border-radius:10px;background:var(--verde);border:none;color:#000;font-weight:700;cursor:pointer;">+ Adicionar</button>' +
+    '</div>' +
+    '</div>' +
+    '</div>' +
     '</div>';
 
   var catSelect = document.getElementById('loja-cat-select');
@@ -2450,6 +2476,9 @@ async function renderInfoLoja() {
       if(btn) btn.textContent = labelCardapio(this.value);
     });
   }
+
+  // Carregar motoboys se entrega própria estiver ativa
+  if(est.tipo_entrega === 'proprio') carregarMotoboysProprios();
 }
 
 function selecionarFotoLoja(input) {
@@ -2769,7 +2798,7 @@ async function renderEstabelecimento() {
         botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'pronto\',this)">Marcar pronto</button>';
       else if(p.status === 'pronto')
         botao = p.tipo_entrega === 'proprio'
-          ? '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'saiu_para_entrega\',this)">🛵 Saiu para entrega</button>'
+          ? '<button class="btn-acao" onclick="selecionarMotoboyEntrega(\'' + p.id + '\')">🛵 Saiu para entrega</button>'
           : '<button class="btn-acao secundario">Aguardando motoboy</button>';
       else if(p.status === 'saiu_para_entrega')
         botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'entregue\',this)">✅ Confirmar entrega</button>';
@@ -5004,6 +5033,172 @@ function mostrarQRCodeMesa(lojaId) {
     '</div>' +
     '</div>';
   document.body.appendChild(modal);
+}
+
+// ============================================================
+// TIPO DE ENTREGA — toggle nas configurações
+// ============================================================
+async function alterarTipoEntrega(tipo) {
+  try {
+    await apiCall('/api/establishments/me/tipo-entrega', { method: 'PATCH', body: JSON.stringify({ tipo_entrega: tipo }) });
+    // Atualizar visual dos botões
+    var app = document.getElementById('btn-entrega-app');
+    var proprio = document.getElementById('btn-entrega-proprio');
+    var secao = document.getElementById('secao-motoboys-proprios');
+    if(app && proprio) {
+      var ativo = 'border:2px solid var(--verde);background:rgba(0,200,100,0.1);';
+      var inativo = 'border:2px solid var(--cinza3);background:none;';
+      app.style.cssText = app.style.cssText.replace(/border:[^;]+;background:[^;]+;/, tipo === 'app' ? ativo : inativo);
+      proprio.style.cssText = proprio.style.cssText.replace(/border:[^;]+;background:[^;]+;/, tipo === 'proprio' ? ativo : inativo);
+    }
+    if(secao) secao.style.display = tipo === 'proprio' ? 'block' : 'none';
+    if(tipo === 'proprio') carregarMotoboysProprios();
+    showToast('✅', 'Salvo', tipo === 'proprio' ? 'Entrega própria ativada' : 'Motoboys do app ativados');
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
+  }
+}
+
+// ============================================================
+// MOTOBOYS PRÓPRIOS — CRUD nas configurações
+// ============================================================
+async function carregarMotoboysProprios() {
+  var lista = document.getElementById('lista-motoboys-proprios');
+  if(!lista) return;
+  try {
+    var motoboys = await apiCall('/api/establishments/me/motoboys');
+    if(!motoboys.length) {
+      lista.innerHTML = '<p style="font-size:13px;color:var(--texto2);margin:0 0 8px;">Nenhum motoboy cadastrado ainda.</p>';
+      return;
+    }
+    lista.innerHTML = motoboys.map(function(m) {
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:10px;background:var(--cinza2);border:1px solid var(--cinza3);margin-bottom:6px;">' +
+        '<span style="font-size:14px;">🛵 ' + sanitizar(m.nome) + '</span>' +
+        '<button onclick="removerMotoboyProprio(\'' + m.id + '\',this)" style="background:none;border:none;color:#ff4444;font-size:18px;cursor:pointer;padding:0 4px;">×</button>' +
+        '</div>';
+    }).join('');
+  } catch(e) {
+    if(lista) lista.innerHTML = '<p style="font-size:12px;color:#ff4444;">Erro ao carregar</p>';
+  }
+}
+
+async function adicionarMotoboyProprio() {
+  var input = document.getElementById('input-novo-motoboy');
+  var nome = (input?.value || '').trim();
+  if(nome.length < 2) { showToast('❌', 'Nome inválido', 'Digite pelo menos 2 caracteres'); return; }
+  try {
+    await apiCall('/api/establishments/me/motoboys', { method: 'POST', body: JSON.stringify({ nome }) });
+    if(input) input.value = '';
+    carregarMotoboysProprios();
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
+  }
+}
+
+async function removerMotoboyProprio(id, btn) {
+  if(!confirm('Remover este motoboy?')) return;
+  try {
+    await apiCall('/api/establishments/me/motoboys/' + id, { method: 'DELETE' });
+    carregarMotoboysProprios();
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
+  }
+}
+
+// ============================================================
+// SELECIONAR MOTOBOY — modal ao clicar "Saiu para entrega"
+// ============================================================
+async function selecionarMotoboyEntrega(pedidoId) {
+  var motoboys = [];
+  try { motoboys = await apiCall('/api/establishments/me/motoboys'); } catch(e) {}
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+
+  var opcoes = motoboys.length
+    ? motoboys.map(function(m) {
+        return '<button onclick="confirmarSaidaEntrega(\'' + pedidoId + '\',\'' + m.id + '\',\'' + sanitizar(m.nome) + '\')" ' +
+          'style="width:100%;padding:14px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:15px;font-weight:600;cursor:pointer;text-align:left;margin-bottom:8px;">' +
+          '🛵 ' + sanitizar(m.nome) + '</button>';
+      }).join('')
+    : '<p style="color:var(--texto2);font-size:14px;text-align:center;">Nenhum motoboy cadastrado.<br>Cadastre em ⚙️ Minha Loja.</p>';
+
+  modal.innerHTML = '<div style="background:var(--cinza1);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;">' +
+    '<h3 style="margin:0 0 16px;">Quem vai entregar?</h3>' +
+    opcoes +
+    '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="width:100%;padding:12px;border-radius:12px;background:var(--cinza3);border:none;color:var(--texto);font-weight:600;cursor:pointer;margin-top:4px;">Cancelar</button>' +
+    '</div>';
+
+  document.body.appendChild(modal);
+}
+
+async function confirmarSaidaEntrega(pedidoId, motoboyId, motoboyNome) {
+  document.querySelector('div[style*="fixed"][style*="9999"]')?.remove();
+  try {
+    await apiCall('/api/orders/' + pedidoId + '/status', {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'saiu_para_entrega', motoboyProprioId: motoboyId }),
+    });
+    showToast('🛵', 'Saiu!', motoboyNome + ' está a caminho');
+    renderEstabelecimento();
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
+  }
+}
+
+// ============================================================
+// REPASSES — painel de motoboys próprios
+// ============================================================
+async function renderRepasses() {
+  var el = document.getElementById('repasses-conteudo');
+  if(!el) return;
+  try {
+    var grupos = await apiCall('/api/establishments/me/repasses-motoboys');
+    if(!grupos.length) {
+      el.innerHTML = '<div style="text-align:center;padding:48px 20px;">' +
+        '<div style="font-size:48px;margin-bottom:12px;">🛵</div>' +
+        '<div style="font-size:15px;font-weight:600;margin-bottom:6px;">Nenhum repasse pendente</div>' +
+        '<div style="font-size:13px;color:var(--texto2);">Os repasses aparecerão aqui quando pedidos com entrega própria forem entregues.</div>' +
+        '</div>';
+      return;
+    }
+    el.innerHTML = grupos.map(function(g) {
+      var temPendente = g.pendente > 0;
+      return '<div style="background:var(--cinza2);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--cinza3);">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
+        '<div style="font-size:16px;font-weight:700;">🛵 ' + sanitizar(g.nome) + '</div>' +
+        (temPendente ? '<span style="background:rgba(255,180,0,0.15);color:#ffb400;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;">PENDENTE</span>' : '<span style="background:rgba(0,200,100,0.15);color:var(--verde);font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;">EM DIA</span>') +
+        '</div>' +
+        '<div style="display:flex;gap:12px;margin-bottom:' + (temPendente ? '12px' : '0') + ';">' +
+        '<div style="flex:1;background:var(--cinza1);border-radius:10px;padding:10px;text-align:center;">' +
+        '<div style="font-size:18px;font-weight:700;color:#ffb400;">R$ ' + g.pendente.toFixed(2).replace('.',',') + '</div>' +
+        '<div style="font-size:11px;color:var(--texto2);">A pagar</div>' +
+        '</div>' +
+        '<div style="flex:1;background:var(--cinza1);border-radius:10px;padding:10px;text-align:center;">' +
+        '<div style="font-size:18px;font-weight:700;color:var(--verde);">R$ ' + g.pago.toFixed(2).replace('.',',') + '</div>' +
+        '<div style="font-size:11px;color:var(--texto2);">Já pago</div>' +
+        '</div>' +
+        '</div>' +
+        (temPendente ? '<button onclick="pagarRepasse(\'' + g.id + '\',\'' + sanitizar(g.nome) + '\',this)" style="width:100%;padding:12px;border-radius:10px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">✅ Marcar R$ ' + g.pendente.toFixed(2).replace('.',',') + ' como pago</button>' : '') +
+        '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:#ff4444;padding:20px;text-align:center;">Erro ao carregar repasses</div>';
+  }
+}
+
+async function pagarRepasse(motoboyId, nome, btn) {
+  if(!confirm('Confirmar pagamento de ' + nome + '? Isso marcará todas as entregas pendentes como pagas.')) return;
+  btn.disabled = true;
+  btn.textContent = 'Processando...';
+  try {
+    await apiCall('/api/establishments/me/repasses-motoboys/pagar', { method: 'POST', body: JSON.stringify({ motoboyId }) });
+    showToast('✅', 'Pago!', nome + ' marcado como pago');
+    renderRepasses();
+  } catch(e) {
+    btn.disabled = false;
+    showToast('❌', 'Erro', e.message);
+  }
 }
 
 // ============================================================

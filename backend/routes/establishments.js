@@ -490,4 +490,118 @@ router.post('/me/upload-image', requireAuth, requireRole('estabelecimento', 'adm
   }
 });
 
+// =============================================
+// MOTOBOYS PRÓPRIOS
+// =============================================
+
+router.get('/me/motoboys', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
+    const { data } = await supabaseAdmin.from('motoboys_proprios').select('id, nome').eq('estabelecimento_id', est.id).eq('ativo', true).order('nome');
+    res.json(data || []);
+  } catch (err) { next(err); }
+});
+
+router.post('/me/motoboys', requireRole('estabelecimento'), [
+  body('nome').trim().isLength({ min: 2, max: 80 }).escape().withMessage('Nome inválido'),
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
+    const { data, error } = await supabaseAdmin.from('motoboys_proprios').insert({ estabelecimento_id: est.id, nome: req.body.nome }).select().single();
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (err) { next(err); }
+});
+
+router.delete('/me/motoboys/:id', requireRole('estabelecimento'), [param('id').isUUID()], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
+    await supabaseAdmin.from('motoboys_proprios').update({ ativo: false }).eq('id', req.params.id).eq('estabelecimento_id', est.id);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// TIPO DE ENTREGA
+// =============================================
+
+router.patch('/me/tipo-entrega', requireRole('estabelecimento'), [
+  body('tipo_entrega').isIn(['app', 'proprio']).withMessage('Tipo inválido'),
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+  try {
+    const { error } = await supabaseAdmin.from('estabelecimentos').update({ tipo_entrega: req.body.tipo_entrega }).eq('user_id', req.user.id);
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// REPASSES MOTOBOYS PRÓPRIOS
+// =============================================
+
+router.get('/me/repasses-motoboys', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
+
+    const { data: pedidos } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, taxa_entrega, motoboy_repasse_pago, motoboys_proprios(id, nome)')
+      .eq('estabelecimento_id', est.id)
+      .eq('status', 'entregue')
+      .not('motoboy_proprio_id', 'is', null);
+
+    // Agrupar por motoboy
+    const grupos = {};
+    (pedidos || []).forEach((p) => {
+      const mb = p.motoboys_proprios;
+      if (!mb) return;
+      if (!grupos[mb.id]) grupos[mb.id] = { id: mb.id, nome: mb.nome, pendente: 0, pago: 0, pedidosPendentes: [] };
+      const frete = parseFloat(p.taxa_entrega || 0);
+      if (p.motoboy_repasse_pago) {
+        grupos[mb.id].pago += frete;
+      } else {
+        grupos[mb.id].pendente += frete;
+        grupos[mb.id].pedidosPendentes.push(p.id);
+      }
+    });
+
+    const resultado = Object.values(grupos).map((g) => ({
+      ...g,
+      pendente: parseFloat(g.pendente.toFixed(2)),
+      pago: parseFloat(g.pago.toFixed(2)),
+    }));
+
+    res.json(resultado);
+  } catch (err) { next(err); }
+});
+
+router.post('/me/repasses-motoboys/pagar', requireRole('estabelecimento'), [
+  body('motoboyId').isUUID().withMessage('ID inválido'),
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
+
+    await supabaseAdmin.from('pedidos')
+      .update({ motoboy_repasse_pago: true })
+      .eq('estabelecimento_id', est.id)
+      .eq('motoboy_proprio_id', req.body.motoboyId)
+      .eq('motoboy_repasse_pago', false);
+
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
