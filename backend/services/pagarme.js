@@ -309,9 +309,17 @@ async function cadastrarRecebedor({ nome, email, cpf, contaBancaria }) {
 
 // =============================================
 // ATUALIZAR CONFIGURAÇÕES DE TRANSFERÊNCIA DO RECIPIENT
+// GET atual → PUT completo (Pagar.me v5 não aceita PATCH nesse endpoint)
 // =============================================
 async function atualizarTransferenciaRecebedor(recipientId) {
-  return pagarmeRequest('PATCH', `/recipients/${recipientId}`, {
+  const atual = await pagarmeRequest('GET', `/recipients/${recipientId}`);
+
+  return pagarmeRequest('PUT', `/recipients/${recipientId}`, {
+    name: atual.name,
+    email: atual.email,
+    description: atual.description || 'Parceiro Chegou Aí',
+    type: atual.type || 'individual',
+    ...(atual.document && { document: atual.document, document_type: atual.document_type || 'CPF' }),
     transfer_settings: {
       transfer_enabled: true,
       transfer_interval: 'daily',
