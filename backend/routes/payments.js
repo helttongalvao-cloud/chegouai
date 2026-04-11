@@ -68,14 +68,14 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
   await supabaseAdmin.from('repasses').insert([
     { pedido_id: orderId, tipo: 'lojista',    valor: split.valorLojista,    status: 'pendente' },
     { pedido_id: orderId, tipo: 'motoboy',    valor: split.valorMotoboy,    status: 'pendente' },
-    { pedido_id: orderId, tipo: 'plataforma', valor: split.lucroPlataforma, status: 'pago' },
+    { pedido_id: orderId, tipo: 'plataforma', valor: split.valorPlataforma, status: 'pago' },
   ]);
 
   console.log(
     `[Pagar.me] Pedido ${orderId} aprovado` +
     ` — lojista R$${split.valorLojista}` +
     `, motoboy R$${split.valorMotoboy}` +
-    `, plataforma R$${split.lucroPlataforma}`
+    `, plataforma R$${split.valorPlataforma}`
   );
 }
 
