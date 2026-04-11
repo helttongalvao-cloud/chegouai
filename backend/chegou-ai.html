@@ -4693,31 +4693,6 @@ var _finalizarPedidoOriginal = typeof finalizarPedido === 'function' ? finalizar
   }
 })();
 
-// === INTEGRAÇÃO OAUTH MERCADO PAGO ===
-async function conectarMercadoPago(tipo) {
-  if(!currentUser) return alert('Faça login primeiro.');
-  // Abrir janela ANTES do await para não ser bloqueada como popup pelo browser
-  const win = window.open('', '_blank', 'width=520,height=720');
-  try {
-    const res = await apiCall('/api/oauth/mercadopago/url?tipo=' + tipo + '&id=' + currentUser.id);
-    if(res.url && win) {
-      win.location.href = res.url;
-      // Detectar fechamento do popup e recarregar painel automaticamente
-      var poll = setInterval(function() {
-        if(win.closed) {
-          clearInterval(poll);
-          if(tipo === 'estabelecimento') renderInfoLoja();
-        }
-      }, 800);
-    } else {
-      if(win) win.close();
-      alert('Não foi possível obter o link de autorização.');
-    }
-  } catch (e) {
-    if(win) win.close();
-    alert('Erro ao gerar link do Mercado Pago: ' + e.message);
-  }
-}
 
 // === REGISTRAR SERVICE WORKER ===
 if ('serviceWorker' in navigator) {
