@@ -53,23 +53,40 @@ self.addEventListener('push', (e) => {
   let data = {};
   try { data = e.data ? e.data.json() : {}; } catch (_) { data = { titulo: 'Chegou Aí', corpo: e.data ? e.data.text() : '' }; }
 
+  const dados = data.dados || {};
+  const tag = dados.pedidoId ? 'pedido-' + dados.pedidoId : 'chegouai-' + Date.now();
+
   e.waitUntil(
     self.registration.showNotification(data.titulo || 'Chegou Aí', {
       body: data.corpo || '',
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
-      data: data.dados || {},
-      vibrate: [200, 100, 200],
+      data: dados,
+      tag,
+      renotify: true,
+      requireInteraction: true,       // fica na tela até o usuário dispensar
+      vibrate: [300, 100, 300, 100, 300],
+      silent: false,
     })
   );
 });
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
+  const dados = e.notification.data || {};
+  const url = dados.pedidoId ? '/app?pedido=' + dados.pedidoId : '/app';
+
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
-      if (cs.length > 0) { cs[0].focus(); return; }
-      return clients.openWindow('/');
+      // Se já tem janela aberta, focar e navegar
+      for (var i = 0; i < cs.length; i++) {
+        if (cs[i].url.includes(self.location.origin)) {
+          cs[i].focus();
+          cs[i].postMessage({ type: 'NOTIF_CLICK', pedidoId: dados.pedidoId });
+          return;
+        }
+      }
+      return clients.openWindow(url);
     })
   );
 });

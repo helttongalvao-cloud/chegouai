@@ -4172,6 +4172,22 @@ if('serviceWorker' in navigator) {
       .then(function(reg) { console.log('[SW] Registrado:', reg.scope); })
       .catch(function(err) { console.error('[SW] Erro:', err); });
   });
+
+  // Ao clicar na notificação, o SW envia mensagem para abrir o pedido
+  navigator.serviceWorker.addEventListener('message', function(event) {
+    if(event.data && event.data.type === 'NOTIF_CLICK' && event.data.pedidoId) {
+      var pedidoId = event.data.pedidoId;
+      // Se for cliente com esse pedido aberto, atualizar rastreio
+      if(currentUser && currentUser.perfil === 'cliente') {
+        pedidoAtualId = pedidoId;
+        localStorage.setItem('chegouai_pedido_id', pedidoId);
+        irTela('tela-rastreio');
+        atualizarRastreioPedido(pedidoId);
+      } else if(currentUser && currentUser.perfil === 'estabelecimento') {
+        estNav(document.getElementById('est-nav-pedidos'), 'pedidos');
+      }
+    }
+  });
 }
 
 // ============================================

@@ -31,7 +31,7 @@ async function enviarPush(userId, titulo, corpo, dados) {
     const sub = JSON.parse(data.subscription);
     const payload = JSON.stringify({ titulo, corpo, dados: dados || {} });
 
-    await webpush.sendNotification(sub, payload);
+    await webpush.sendNotification(sub, payload, { urgency: 'high', TTL: 3600 });
   } catch (e) {
     // Subscription expirada — remover
     if (e.statusCode === 410 || e.statusCode === 404) {

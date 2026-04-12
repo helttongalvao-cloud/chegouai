@@ -498,17 +498,26 @@ router.patch(
       if (error || !pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
 
       // Notificar cliente sobre mudança de status
-      const msgStatus = {
-        aceito: '✅ Pedido aceito! A loja está preparando.',
-        preparando: '👨‍🍳 Seu pedido está sendo preparado.',
-        pronto: '📦 Pedido pronto! Aguardando entrega.',
-        coletado: '🛵 Motoboy a caminho! Acompanhe no app.',
-        saiu_para_entrega: '🛵 Pedido saiu para entrega! Confirme quando chegar.',
-        entregue: '🎉 Pedido entregue! Bom apetite.',
-        cancelado: '❌ Seu pedido foi cancelado.',
+      const tituloStatus = {
+        aceito:            '✅ Pedido confirmado!',
+        preparando:        '👨‍🍳 Preparando seu pedido',
+        pronto:            '📦 Pedido pronto!',
+        coletado:          '🛵 Saiu para entrega!',
+        saiu_para_entrega: '🛵 Saiu para entrega!',
+        entregue:          '🎉 Pedido entregue!',
+        cancelado:         '❌ Pedido cancelado',
       };
-      if (pedido.cliente_id && msgStatus[status]) {
-        enviarPush(pedido.cliente_id, 'Chegou Aí', msgStatus[status], { pedidoId: orderId, status });
+      const corpStatus = {
+        aceito:            'A loja aceitou seu pedido e já começou a preparar.',
+        preparando:        'Seu pedido está sendo preparado com cuidado.',
+        pronto:            'Seu pedido está pronto e aguardando o motoboy.',
+        coletado:          'O motoboy pegou seu pedido. Toque para acompanhar.',
+        saiu_para_entrega: 'Seu pedido está a caminho. Toque para acompanhar.',
+        entregue:          'Seu pedido chegou! Bom apetite 😋',
+        cancelado:         'Infelizmente seu pedido foi cancelado.',
+      };
+      if (pedido.cliente_id && tituloStatus[status]) {
+        enviarPush(pedido.cliente_id, tituloStatus[status], corpStatus[status], { pedidoId: orderId, status });
       }
 
       // Quando pedido fica pronto, notificar todos os motoboys disponíveis
