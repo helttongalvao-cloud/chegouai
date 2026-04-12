@@ -2215,11 +2215,15 @@ async function estNav(btn, secao) {
 
 function abrirImportarCSV() {
   var info = '📥 IMPORTAR PRODUTOS VIA PLANILHA\n\n' +
-    'O arquivo CSV deve ter as colunas:\n' +
-    '  nome, preco, descricao (opcional), categoria (opcional), emoji (opcional)\n\n' +
-    'Exemplo de linha:\n' +
-    '  Arroz 5kg,12.90,Tipo 1 extra,Grãos,🌾\n\n' +
-    'Dica: exporte sua planilha do Excel ou Google Sheets como CSV (separado por vírgula).';
+    'Colunas do CSV:\n' +
+    '  nome, preco — obrigatórias\n' +
+    '  descricao, categoria, emoji — opcionais\n' +
+    '  foto_url — opcional (link direto da foto, ex: https://...)\n\n' +
+    'Exemplo:\n' +
+    '  nome,preco,descricao,categoria,foto_url\n' +
+    '  Arroz 5kg,12.90,Tipo 1,Grãos,https://link-da-foto.jpg\n\n' +
+    'Dica: suba as fotos no Google Drive, clique em "Compartilhar" → "Copiar link" e cole na coluna foto_url.\n\n' +
+    'Exporte do Excel/Google Sheets como CSV (separado por vírgula).';
   if(confirm(info + '\n\nContinuar?')) {
     document.getElementById('csv-import-input').click();
   }
@@ -2241,6 +2245,7 @@ function processarArquivoImport(input) {
     var idxDesc  = cabecalho.findIndex(function(c){ return c.includes('desc'); });
     var idxCat   = cabecalho.findIndex(function(c){ return c.includes('categ'); });
     var idxEmoji = cabecalho.findIndex(function(c){ return c.includes('emoji'); });
+    var idxFoto  = cabecalho.findIndex(function(c){ return c.includes('foto') || c.includes('imagem') || c.includes('image') || c.includes('url'); });
 
     if(idxNome === -1 || idxPreco === -1) {
       alert('Colunas "nome" e "preco" são obrigatórias no cabeçalho.\n\nColunas encontradas: ' + cabecalho.join(', '));
@@ -2255,6 +2260,7 @@ function processarArquivoImport(input) {
       if(idxDesc >= 0 && cols[idxDesc]) p.descricao = cols[idxDesc];
       if(idxCat >= 0 && cols[idxCat]) p.categoria = cols[idxCat];
       if(idxEmoji >= 0 && cols[idxEmoji]) p.emoji = cols[idxEmoji];
+      if(idxFoto >= 0 && cols[idxFoto] && cols[idxFoto].startsWith('http')) p.foto_url = cols[idxFoto];
       produtos.push(p);
     }
 
@@ -2265,7 +2271,9 @@ function processarArquivoImport(input) {
       showToast('⏳', 'Importando...', produtos.length + ' produtos sendo cadastrados');
       var resp = await apiCall('/api/establishments/me/products/import', { method: 'POST', body: { produtos: produtos } });
       window._idsImportados = new Set(resp.ids || []);
-      showToast('✅', 'Importação concluída!', resp.importados + ' de ' + resp.total + ' produtos importados. Adicione as fotos!');
+      var comFoto = produtos.filter(function(p){ return p.foto_url; }).length;
+      var msgFoto = comFoto > 0 ? comFoto + ' com foto.' : 'Adicione as fotos depois.';
+      showToast('✅', 'Importação concluída!', resp.importados + ' produtos importados. ' + msgFoto);
       renderCardapioEst(true);
     } catch(e) {
       alert('Erro na importação: ' + e.message);

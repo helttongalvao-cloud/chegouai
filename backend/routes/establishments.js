@@ -318,15 +318,21 @@ router.post('/me/products/import', requireRole('estabelecimento'), async (req, r
 
     const registros = produtos
       .filter(p => p.nome && p.preco)
-      .map(p => ({
-        estabelecimento_id: est.id,
-        nome: String(p.nome).substring(0, 100),
-        descricao: p.descricao ? String(p.descricao).substring(0, 300) : '',
-        preco: parseFloat(String(p.preco).replace(',', '.')) || 0,
-        emoji: p.emoji ? String(p.emoji).substring(0, 10) : '🍽️',
-        categoria: p.categoria ? String(p.categoria).substring(0, 50) : null,
-        disponivel: true,
-      }))
+      .map(p => {
+        const reg = {
+          estabelecimento_id: est.id,
+          nome: String(p.nome).substring(0, 100),
+          descricao: p.descricao ? String(p.descricao).substring(0, 300) : '',
+          preco: parseFloat(String(p.preco).replace(',', '.')) || 0,
+          emoji: p.emoji ? String(p.emoji).substring(0, 10) : '🍽️',
+          categoria: p.categoria ? String(p.categoria).substring(0, 50) : null,
+          disponivel: true,
+        };
+        if (p.foto_url && String(p.foto_url).startsWith('http')) {
+          reg.imagem_url = String(p.foto_url).substring(0, 500);
+        }
+        return reg;
+      })
       .filter(p => p.preco > 0);
 
     if (registros.length === 0) {
