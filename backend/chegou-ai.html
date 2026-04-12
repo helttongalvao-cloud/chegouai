@@ -1701,7 +1701,13 @@ var categoriaLabels = {
 
 function renderProdutos(produtos) {
   var lista = document.getElementById('lista-itens');
-  if(!produtos.length) { lista.innerHTML = '<div class="vazio"><div class="vazio-icon">🍽️</div>Cardápio vazio</div>'; return; }
+  if(!produtos.length) {
+    var cat = estAtual && estAtual.categoria;
+    var vazioIcon = cat === 'mercado' ? '🛒' : cat === 'farmacia' ? '💊' : '🍽️';
+    var vazioTxt  = cat === 'mercado' ? 'Nenhum produto disponível' : cat === 'farmacia' ? 'Nenhum medicamento disponível' : 'Cardápio vazio';
+    lista.innerHTML = '<div class="vazio"><div class="vazio-icon">' + vazioIcon + '</div>' + vazioTxt + '</div>';
+    return;
+  }
 
   // Manter índice original para adicionarItem (usa produtosCache)
   var produtosComIdx = produtos.map(function(p) {
@@ -2309,7 +2315,10 @@ async function renderCardapioEst(manterDestaque) {
       '</div>' +
     '</div>';
   }).join('');
-  var vazio = produtos.length ? itensHtml : '<div class="vazio"><div class="vazio-icon">🍽️</div>Nenhum produto cadastrado ainda</div>';
+  var catEst = estDataCache?.estabelecimento?.categoria;
+  var vazioIconEst = catEst === 'mercado' ? '🛒' : catEst === 'farmacia' ? '💊' : '🍽️';
+  var vazioTxtEst  = catEst === 'mercado' ? 'Nenhum produto cadastrado ainda' : catEst === 'farmacia' ? 'Nenhum medicamento cadastrado ainda' : 'Nenhum item no cardápio ainda';
+  var vazio = produtos.length ? itensHtml : '<div class="vazio"><div class="vazio-icon">' + vazioIconEst + '</div>' + vazioTxtEst + '</div>';
   el.innerHTML =
     '<div style="display:flex;gap:10px;margin-bottom:16px;">' +
       '<button class="btn-principal" onclick="abrirModalProduto()" style="flex:1;">+ Adicionar produto</button>' +
@@ -2579,10 +2588,11 @@ async function salvarInfoLoja() {
     await apiCall('/api/establishments/me', { method: 'PUT', body });
     var navBtn = document.getElementById('est-nav-cardapio');
     if(navBtn && cat) navBtn.textContent = labelCardapio(cat);
-    alert('Alterações salvas com sucesso!');
-  } catch(e) {
-    alert('Erro ao salvar: ' + e.message);
     if(btn) { btn.disabled = false; btn.textContent = 'Salvar alterações'; }
+    showToast('✅', 'Salvo!', 'Alterações salvas com sucesso');
+  } catch(e) {
+    if(btn) { btn.disabled = false; btn.textContent = 'Salvar alterações'; }
+    showToast('❌', 'Erro ao salvar', e.message);
   }
 }
 let emojiSelecionado = '🍔';
