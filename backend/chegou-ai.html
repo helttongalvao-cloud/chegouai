@@ -1702,22 +1702,9 @@ async function abrirCardapio(id) {
       }
     } catch(e) {}
 
-    // Verificar se é mercado/farmácia → mostrar campo de lista de compras
+    // Lista de compras removida da tela do cliente — exibe só produtos
     var areaLista = document.getElementById('area-lista-compras');
-    var cat = estAtual.categoria;
-    if(cat === 'mercado' || cat === 'farmacia') {
-      areaLista.style.display = 'block';
-      areaLista.innerHTML =
-        '<div style="background:var(--cinza2);border:1.5px solid var(--verde);border-radius:14px;padding:16px;margin-bottom:16px;">' +
-        '<h4 style="font-size:14px;margin-bottom:8px;">📝 Enviar lista de compras</h4>' +
-        '<p style="font-size:12px;color:var(--texto2);margin-bottom:10px;">Escreva o que precisa e o ' + (cat === 'farmacia' ? 'farmacêutico' : 'mercado') + ' vai separar para você!</p>' +
-        '<textarea id="textarea-lista" placeholder="Ex:\n1 arroz 5kg\n2 leite integral\n1 detergente\n..." style="width:100%;min-height:120px;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:14px;font-family:\'DM Sans\',sans-serif;resize:vertical;"></textarea>' +
-        '<button class="btn-principal" onclick="enviarListaCompras()" style="margin-top:10px;width:100%;">Enviar lista</button>' +
-        '</div>' +
-        '<div class="secao-titulo" style="font-size:13px;">Ou escolha dos produtos cadastrados:</div>';
-    } else {
-      areaLista.style.display = 'none';
-    }
+    if(areaLista) areaLista.style.display = 'none';
 
     // Salvar produtos para busca
     produtosCache = (estAtual.produtos || []).filter(function(p) { return p.disponivel !== false; });
@@ -4382,15 +4369,18 @@ function instalarApp() {
 
 // Exibir botão 📲 no header quando não está instalado
 function atualizarBtnInstalar() {
-  var mostrar = !isStandalone && (deferredInstallPrompt || isIOS);
+  // Mostrar sempre que não estiver instalado (Android ou iOS)
+  var mostrar = !isStandalone;
   ['btn-instalar-home','btn-instalar-est','btn-instalar-moto'].forEach(function(id) {
     var btn = document.getElementById(id);
     if(btn) btn.style.display = mostrar ? '' : 'none';
   });
 }
+// Exibir botão imediatamente se não instalado
+atualizarBtnInstalar();
 // Exibir banner automaticamente para iOS não-instalado (com delay após o splash)
 if(isIOS && !isStandalone && !bannerDispensado) {
-  setTimeout(function() { mostrarBannerInstall('ios'); atualizarBtnInstalar(); }, 4000);
+  setTimeout(function() { mostrarBannerInstall('ios'); }, 4000);
 }
 // Para Android o beforeinstallprompt já chama mostrarBannerInstall e atualizarBtnInstalar abaixo
 
