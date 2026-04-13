@@ -55,4 +55,27 @@ function requireRole(...roles) {
   ];
 }
 
-module.exports = { requireAuth, requireRole };
+/**
+ * Auth opcional: se tiver token válido, popula req.user. Senão, req.user = null.
+ * Usado em rotas que aceitam tanto usuários logados quanto convidados (guest).
+ */
+async function optionalAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    req.user = null;
+    return next();
+  }
+  const token = authHeader.slice(7);
+  try {
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !user) { req.user = null; return next(); }
+    const { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('id', user.id).single();
+    req.user = profile ? { ...user, profile } : null;
+    next();
+  } catch {
+    req.user = null;
+    next();
+  }
+}
+
+module.exports = { requireAuth, requireRole, optionalAuth };

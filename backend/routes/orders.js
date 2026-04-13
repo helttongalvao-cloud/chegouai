@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, param, validationResult } = require('express-validator');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { requireAuth, requireRole, optionalAuth } = require('../middleware/auth');
 const { supabaseAdmin } = require('../config/supabase');
 const { calcularSplit } = require('../services/commission');
 const { criarTransferenciaPix } = require('../services/pagarme');
@@ -13,7 +13,7 @@ const router = express.Router();
 // =============================================
 router.post(
   '/',
-  requireAuth,
+  optionalAuth,
   [
     body('estabelecimentoId').isUUID().withMessage('Estabelecimento inválido'),
     body('itens')
@@ -41,8 +41,17 @@ router.post(
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const { estabelecimentoId, itens, enderecoEntrega, telefoneCliente, formaPagamento, cupom } = req.body;
-    const clienteId = req.user.id;
+    const { estabelecimentoId, itens, enderecoEntrega, telefoneCliente, formaPagamento, cupom,
+            guestNome, guestCpf } = req.body;
+    const clienteId = req.user ? req.user.id : null;
+
+    // Validação extra para guest
+    if (!req.user) {
+      const nome = (guestNome || '').trim();
+      if (nome.length < 2 || nome.length > 80) {
+        return res.status(400).json({ error: 'Informe seu nome completo' });
+      }
+    }
 
     try {
       // 1. Validar estabelecimento
@@ -151,7 +160,7 @@ router.post(
       const totalFinal = parseFloat(Math.max(0, subtotal + taxaFinal - desconto).toFixed(2));
 
       const pedidoInsert = {
-        cliente_id: clienteId,
+        cliente_id: clienteId || null,
         estabelecimento_id: estabelecimentoId,
         status: 'pendente',
         endereco_entrega: enderecoEntrega,
@@ -164,6 +173,11 @@ router.post(
         pagamento_status: 'pendente',
       };
       if (desconto > 0) { pedidoInsert.desconto = desconto; pedidoInsert.cupom_codigo = cupomCodigo; }
+      if (!req.user) {
+        pedidoInsert.guest_nome = (guestNome || '').trim();
+        if (guestCpf) pedidoInsert.guest_cpf = guestCpf.replace(/\D/g, '');
+        pedidoInsert.guest_telefone = telefoneCliente;
+      }
 
       const { data: pedido, error: pedidoErr } = await supabaseAdmin
         .from('pedidos')
@@ -378,7 +392,7 @@ router.get('/', requireAuth, async (req, res, next) => {
 // =============================================
 // GET /api/orders/:id — Detalhes de um pedido
 // =============================================
-router.get('/:id', requireAuth, [param('id').isUUID()], async (req, res, next) => {
+router.get('/:id', optionalAuth, [param('id').isUUID()], async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
 
@@ -396,14 +410,19 @@ router.get('/:id', requireAuth, [param('id').isUUID()], async (req, res, next) =
 
     if (error || !pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
 
-    // Apenas o próprio cliente, admin, ou o estabelecimento dono do pedido pode ver
-    const perfil = req.user.profile.perfil;
-    const isOwner = pedido.cliente_id === req.user.id;
-    const isAdmin = perfil === 'admin';
-    const isEstabelecimento = perfil === 'estabelecimento' && pedido.estabelecimentos?.user_id === req.user.id;
-
-    if (!isOwner && !isAdmin && !isEstabelecimento) {
-      return res.status(403).json({ error: 'Acesso negado' });
+    if (req.user) {
+      const perfil = req.user.profile.perfil;
+      const isOwner = pedido.cliente_id === req.user.id;
+      const isAdmin = perfil === 'admin';
+      const isEstabelecimento = perfil === 'estabelecimento' && pedido.estabelecimentos?.user_id === req.user.id;
+      if (!isOwner && !isAdmin && !isEstabelecimento) {
+        return res.status(403).json({ error: 'Acesso negado' });
+      }
+    } else {
+      // Guest: só pode ver pedidos sem cliente_id (UUID é indevinhável)
+      if (pedido.cliente_id !== null) {
+        return res.status(403).json({ error: 'Acesso negado' });
+      }
     }
 
     res.json(pedido);

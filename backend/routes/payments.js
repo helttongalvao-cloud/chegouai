@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, param, validationResult } = require('express-validator');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { paymentLimiter } = require('../middleware/security');
 const { supabaseAdmin } = require('../config/supabase');
 const {
@@ -16,13 +16,19 @@ const router = express.Router();
 
 // ─── Helper: buscar pedido pendente do cliente ────────────────────────────
 async function buscarPedidoPendente(pedidoId, clienteId) {
-  const { data: pedido, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('pedidos')
     .select('*, estabelecimentos(nome, pagarme_recipient_id, tipo_entrega)')
     .eq('id', pedidoId)
-    .eq('cliente_id', clienteId)
-    .eq('pagamento_status', 'pendente')
-    .single();
+    .eq('pagamento_status', 'pendente');
+
+  if (clienteId) {
+    query = query.eq('cliente_id', clienteId);
+  } else {
+    query = query.is('cliente_id', null);
+  }
+
+  const { data: pedido, error } = await query.single();
   if (error || !pedido) throw Object.assign(new Error('Pedido não encontrado'), { status: 404 });
   return pedido;
 }
@@ -87,7 +93,7 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
 // =============================================
 // POST /api/payments/pix — Gerar QR Code Pix
 // =============================================
-router.post('/pix', paymentLimiter, requireAuth, [
+router.post('/pix', paymentLimiter, optionalAuth, [
   body('pedidoId').isUUID().withMessage('pedidoId inválido'),
 ], async (req, res, next) => {
   const errors = validationResult(req);
@@ -96,7 +102,7 @@ router.post('/pix', paymentLimiter, requireAuth, [
   try {
     const { pedidoId } = req.body;
 
-    const pedido = await buscarPedidoPendente(pedidoId, req.user.id);
+    const pedido = await buscarPedidoPendente(pedidoId, req.user?.id || null);
     const split  = calcularSplit({
       subtotal:       pedido.subtotal,
       taxaEntrega:    pedido.taxa_entrega,
@@ -104,11 +110,12 @@ router.post('/pix', paymentLimiter, requireAuth, [
       tipoEntrega:    pedido.estabelecimentos?.tipo_entrega,
     });
 
+    const guestTel = (pedido.guest_telefone || pedido.telefone_cliente || '').replace(/\D/g, '');
     const customerId = await criarOuBuscarCliente({
-      nome:     req.user.profile.nome,
-      email:    req.user.email,
-      cpf:      req.user.profile.cpf,
-      telefone: pedido.telefone_cliente || req.user.profile.telefone,
+      nome:     req.user ? req.user.profile.nome     : pedido.guest_nome,
+      email:    req.user ? req.user.email            : `${guestTel}@guest.chegouai.com.br`,
+      cpf:      req.user ? req.user.profile.cpf      : pedido.guest_cpf,
+      telefone: req.user ? (pedido.telefone_cliente || req.user.profile.telefone) : guestTel,
     });
 
     // Split: lojista (95% do subtotal, sem taxa) + plataforma (remainder, paga a taxa Pix)
@@ -150,7 +157,7 @@ router.post('/pix', paymentLimiter, requireAuth, [
 // =============================================
 // POST /api/payments/cartao — Cartão transparente (com gross-up D+0)
 // =============================================
-router.post('/cartao', paymentLimiter, requireAuth, [
+router.post('/cartao', paymentLimiter, optionalAuth, [
   body('pedidoId').isUUID().withMessage('pedidoId inválido'),
   body('holderName').notEmpty().withMessage('Nome do titular obrigatório'),
   body('cardNumber').notEmpty().withMessage('Número do cartão obrigatório'),
@@ -167,7 +174,7 @@ router.post('/cartao', paymentLimiter, requireAuth, [
       postalCode, installments,
     } = req.body;
 
-    const pedido = await buscarPedidoPendente(pedidoId, req.user.id);
+    const pedido = await buscarPedidoPendente(pedidoId, req.user?.id || null);
 
     // split.total já contém o gross-up (produto + frete + taxas repassadas ao cliente)
     const split = calcularSplit({
@@ -177,11 +184,12 @@ router.post('/cartao', paymentLimiter, requireAuth, [
       tipoEntrega:    pedido.estabelecimentos?.tipo_entrega,
     });
 
+    const guestTel = (pedido.guest_telefone || pedido.telefone_cliente || '').replace(/\D/g, '');
     const customerId = await criarOuBuscarCliente({
-      nome:     req.user.profile.nome,
-      email:    req.user.email,
-      cpf:      req.user.profile.cpf,
-      telefone: pedido.telefone_cliente || req.user.profile.telefone,
+      nome:     req.user ? req.user.profile.nome     : pedido.guest_nome,
+      email:    req.user ? req.user.email            : `${guestTel}@guest.chegouai.com.br`,
+      cpf:      req.user ? req.user.profile.cpf      : pedido.guest_cpf,
+      telefone: req.user ? (pedido.telefone_cliente || req.user.profile.telefone) : guestTel,
     });
 
     // Lojista recebe 95% do subtotal original (sem markup de conveniência)

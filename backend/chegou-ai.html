@@ -52,6 +52,25 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 @keyframes toastIn { from { opacity:0; transform:translateX(100px); } to { opacity:1; transform:translateX(0); } }
 @keyframes toastOut { from { opacity:1; } to { opacity:0; transform:translateY(-20px); } }
 
+/* BANNER INSTALAR APP */
+#install-banner { position:fixed; bottom:0; left:0; right:0; z-index:9998; background:var(--cinza1); border-top:1.5px solid var(--cinza3); padding:16px 20px 24px; display:none; flex-direction:column; gap:12px; animation: bannerUp 0.35s ease; box-shadow:0 -8px 32px rgba(0,0,0,0.5); }
+#install-banner.visivel { display:flex; }
+@keyframes bannerUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.banner-row { display:flex; align-items:center; gap:14px; }
+.banner-icon { font-size:36px; flex-shrink:0; }
+.banner-texto { flex:1; }
+.banner-texto strong { font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:700; display:block; }
+.banner-texto span { font-size:13px; color:var(--texto2); margin-top:2px; display:block; line-height:1.4; }
+.banner-btns { display:flex; gap:10px; }
+.banner-btn-instalar { flex:1; background:var(--verde); color:var(--preto); border:none; border-radius:12px; padding:13px; font-size:14px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; }
+.banner-btn-fechar { background:var(--cinza3); color:var(--texto2); border:none; border-radius:12px; padding:13px 18px; font-size:13px; cursor:pointer; }
+/* Instruções iOS (mostradas dentro do banner) */
+#ios-instrucoes { display:none; background:var(--cinza2); border-radius:14px; padding:14px 16px; }
+#ios-instrucoes.visivel { display:block; }
+.ios-passo { display:flex; align-items:flex-start; gap:10px; font-size:13px; color:var(--texto2); margin-bottom:8px; line-height:1.4; }
+.ios-passo:last-child { margin-bottom:0; }
+.ios-passo strong { color:var(--texto); }
+
 /* TELAS */
 .tela { display:none; min-height:100vh; flex-direction:column; }
 .tela.ativa { display:flex; }
@@ -441,6 +460,9 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <div class="link-texto">
       Não tem conta? <span onclick="irCadastro()">Cadastre-se grátis</span>
     </div>
+    <div style="text-align:center;margin-top:20px;">
+      <span onclick="continuarSemConta()" style="color:var(--texto2);font-size:14px;cursor:pointer;border-bottom:1px dashed var(--cinza4);padding-bottom:2px;">Pedir sem cadastro →</span>
+    </div>
   </div>
 </div>
 
@@ -452,6 +474,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <h3>Chegou Aí</h3>
     </div>
     <button class="header-acao" onclick="irLogin()" style="margin-left:8px;">Sair</button>
+    <div class="btn-icone" id="btn-instalar-home" onclick="instalarApp()" title="Instalar app" style="display:none;">📲</div>
     <div class="btn-icone" onclick="abrirHistorico()">👤</div>
   </div>
   <div class="home-greeting" id="home-greeting">Olá! <span>O que vai pedir?</span></div>
@@ -546,6 +569,12 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         Salvar este endereço para a próxima
       </label>
     </div>
+    <div class="secao-checkout" id="secao-guest-nome" style="display:none;">
+      <h4>👤 Seu nome</h4>
+      <div class="campo" style="margin:0;">
+        <input type="text" placeholder="Nome completo" id="checkout-guest-nome" style="margin:0;" autocomplete="name">
+      </div>
+    </div>
     <div class="secao-checkout">
       <h4>📱 Seu telefone</h4>
       <div class="campo" style="margin:0;">
@@ -578,7 +607,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <div style="font-size:11px;color:var(--texto2);margin-top:4px;">Usado apenas para identificar o pagamento. Não armazenamos dados sensíveis.</div>
       </div>
     </div>
-    <div class="secao-checkout">
+    <div class="secao-checkout" id="secao-cupom">
       <h4>🎟️ Cupom de desconto</h4>
       <div style="display:flex;gap:8px;">
         <input type="text" id="cupom-input" placeholder="Digite o código do cupom" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;text-transform:uppercase;">
@@ -697,6 +726,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <h3>Chegou Aí</h3>
     </div>
     <button class="header-acao" onclick="irLogin()">Sair</button>
+    <div class="btn-icone" id="btn-instalar-est" onclick="instalarApp()" title="Instalar app" style="display:none;">📲</div>
   </div>
   <div class="nav-admin" style="padding:12px 20px 0;">
     <div class="nav-btn ativo" id="est-nav-pedidos" onclick="estNav(this,'pedidos')">📋 Pedidos</div>
@@ -732,6 +762,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <h3>Chegou Aí</h3>
     </div>
     <button class="header-acao" onclick="irLogin()">Sair</button>
+    <div class="btn-icone" id="btn-instalar-moto" onclick="instalarApp()" title="Instalar app" style="display:none;">📲</div>
   </div>
   <div class="motoboy-content">
     <div class="status-toggle">
@@ -1347,8 +1378,11 @@ function entrarComo(perfil) {
 }
 
 function irCadastro() { irTela('tela-cadastro'); }
-// Função de perfil (futuramente será implementada)
-// irLogin definida abaixo com limpeza de sessão
+
+function continuarSemConta() {
+  irTela('tela-home');
+  carregarEstabelecimentos();
+}
 
 // HOME
 // Variáveis legadas (removidas — tudo agora vem da API)
@@ -1612,6 +1646,12 @@ window.addEventListener('DOMContentLoaded', function() {
     ultimoStatusConhecido = {};
     iniciarPollingPedidos();
     entrarComo(currentUser.perfil);
+  } else if(!authToken && pedidoAtualId) {
+    // Guest com pedido ativo: ir direto para rastreio
+    ultimoStatusConhecido = {};
+    irTela('tela-confirmado');
+    iniciarPollingPedidos();
+    iniciarRastreio(pedidoAtualId);
   }
 });
 
@@ -1946,6 +1986,20 @@ function irCheckout() {
 
   irTela('tela-checkout');
 
+  // Mostrar campo nome e esconder cupom para guest
+  var secaoGuest = document.getElementById('secao-guest-nome');
+  var secaoCupom = document.getElementById('secao-cupom');
+  if(secaoGuest) secaoGuest.style.display = !authToken ? '' : 'none';
+  if(secaoCupom) secaoCupom.style.display = !authToken ? 'none' : '';
+  // Pré-preencher telefone se já logado
+  if(authToken && currentUser && currentUser.telefone) {
+    var telEl = document.getElementById('checkout-telefone');
+    if(telEl && !telEl.value) {
+      var t = currentUser.telefone.replace(/\D/g,'');
+      telEl.value = t.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
+    }
+  }
+
   // Pré-preencher CPF se já salvo no perfil
   var cpfEl = document.getElementById('checkout-cpf');
   if(cpfEl && currentUser && currentUser.cpf) {
@@ -1982,9 +2036,11 @@ function selecionarPag(el, tipo) {
     totalEl.textContent = 'R$ ' + baseTotal.toFixed(2).replace('.',',');
     window._conveniencia = 0;
   }
-  // Mostrar CPF só para Pix
+  // Mostrar CPF para Pix sempre; para Cartão só se guest
   var campoCpf = document.getElementById('campo-cpf-pix');
-  if(campoCpf) campoCpf.style.display = (tipo === 'pix') ? 'block' : 'none';
+  if(campoCpf) campoCpf.style.display = (tipo === 'pix' || (!authToken && tipo === 'cartao')) ? 'block' : 'none';
+  var cpfPlaceholder = document.getElementById('checkout-cpf');
+  if(cpfPlaceholder) cpfPlaceholder.placeholder = tipo === 'pix' ? 'CPF (obrigatório para Pix)' : 'CPF (obrigatório para Cartão)';
 }
 
 var cupomAplicado = null; // { codigo, desconto_tipo, desconto_valor }
@@ -2031,10 +2087,18 @@ function usarEnderecoSalvo(end) {
 async function confirmarPedido() {
   const end = document.getElementById('endereco-entrega').value.trim();
   const tel = document.getElementById('checkout-telefone').value.replace(/[^0-9]/g,'');
+  const isGuest = !authToken;
 
   if(!end) { destacarErro('endereco-entrega'); alert('Informe o endereço de entrega'); return; }
   if(tel.length < 10) { destacarErro('checkout-telefone'); alert('Informe seu telefone para contato'); return; }
-  if(!authToken) { alert('Faça login para continuar'); irTela('tela-login'); return; }
+
+  // Validações adicionais para guest
+  var guestNome = '';
+  var guestCpf = '';
+  if(isGuest) {
+    guestNome = (document.getElementById('checkout-guest-nome')?.value || '').trim();
+    if(guestNome.length < 2) { alert('Informe seu nome completo'); return; }
+  }
 
   // Validar valor mínimo
   var subtotal = carrinho.reduce(function(s,i){ return s + i.preco * i.qtd; }, 0);
@@ -2067,6 +2131,11 @@ async function confirmarPedido() {
       taxaEntrega: window.taxaEntregaSimulada,
     };
     if(cupomAplicado) bodyPedido.cupom = cupomAplicado.codigo;
+    if(isGuest) {
+      bodyPedido.guestNome = guestNome;
+      guestCpf = (document.getElementById('checkout-cpf')?.value || '').replace(/\D/g,'');
+      if(guestCpf) bodyPedido.guestCpf = guestCpf;
+    }
 
     // 1. Criar pedido no backend
     var pedidoResp = await apiCall('/api/orders', { method: 'POST', body: bodyPedido });
@@ -3084,7 +3153,9 @@ async function renderAdmin(secao) {
           '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">' +
           btnRecebedor +
           '<button class="btn-acao" onclick="adminEditarLoja(' + JSON.stringify(e).replace(/"/g,'&quot;') + ')" style="padding:6px 10px;">✏️ Editar</button>' +
-          btnStatus + '</div>' +
+          btnStatus +
+          '<button class="btn-acao" onclick="adminExcluirLoja(\'' + e.id + '\',\'' + sanitizar(e.nome) + '\')" style="padding:6px 10px;background:var(--erro);color:#fff;margin-left:6px;">🗑️</button>' +
+          '</div>' +
         '</div>';
       }).join('')) +
       '</div>';
@@ -3154,7 +3225,18 @@ async function adminPagarRepasses(ids, btn) {
 async function adminToggleLoja(id) {
   try {
     const res = await apiCall('/api/admin/establishments/' + id + '/toggle', { method: 'PATCH' });
-    alert(res.message);
+    showToast(res.ativo ? '✅' : '🔴', res.message, '');
+    adminDataCache = null;
+    renderAdmin('lojas');
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function adminExcluirLoja(id, nome) {
+  if(!confirm('Excluir "' + nome + '" permanentemente?\n\nEssa ação não pode ser desfeita.')) return;
+  try {
+    await apiCall('/api/admin/establishments/' + id, { method: 'DELETE' });
+    showToast('🗑️', 'Loja excluída', nome);
+    adminDataCache = null;
     renderAdmin('lojas');
   } catch(e) { alert('Erro: ' + e.message); }
 }
@@ -4227,23 +4309,88 @@ if('serviceWorker' in navigator) {
 // Prompt de instalação PWA ("Adicionar à tela inicial")
 // ============================================
 var deferredInstallPrompt = null;
+
+// Detecta se já está instalado como PWA
+var isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  || window.navigator.standalone === true;
+
+// Detecta iOS
+var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+
+// Já dispensou antes?
+var bannerDispensado = localStorage.getItem('chegouai_install_dispensado');
+
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   deferredInstallPrompt = e;
-  // Mostrar botão de instalação se quiser (por enquanto silencioso)
+  atualizarBtnInstalar();
+  if(!isStandalone && !bannerDispensado) mostrarBannerInstall('android');
 });
 
-function instalarApp() {
+// Detecta instalação concluída (Android)
+window.addEventListener('appinstalled', function() {
+  deferredInstallPrompt = null;
+  fecharBannerInstall(true);
+});
+
+function mostrarBannerInstall(tipo) {
+  var banner = document.getElementById('install-banner');
+  if(!banner) return;
+  if(tipo === 'ios') {
+    document.getElementById('ios-instrucoes').classList.add('visivel');
+    document.getElementById('banner-btn-acao').textContent = 'Entendi ✓';
+    document.getElementById('banner-subtexto').textContent = 'Siga os passos abaixo para instalar no Safari:';
+  } else {
+    document.getElementById('ios-instrucoes').classList.remove('visivel');
+    document.getElementById('banner-btn-acao').textContent = 'Instalar agora';
+    document.getElementById('banner-subtexto').textContent = 'Adicione à tela inicial para receber notificações e usar offline.';
+  }
+  banner.classList.add('visivel');
+}
+
+function fecharBannerInstall(permanente) {
+  var banner = document.getElementById('install-banner');
+  if(banner) banner.classList.remove('visivel');
+  if(permanente) localStorage.setItem('chegouai_install_dispensado', '1');
+}
+
+function clicarBannerInstall() {
   if(deferredInstallPrompt) {
     deferredInstallPrompt.prompt();
     deferredInstallPrompt.userChoice.then(function(choice) {
-      if(choice.outcome === 'accepted') console.log('[PWA] App instalado');
+      if(choice.outcome === 'accepted') fecharBannerInstall(true);
       deferredInstallPrompt = null;
     });
   } else {
-    alert('Para instalar: use o menu do navegador → "Adicionar à tela inicial"');
+    // iOS ou Chrome sem prompt: fechar banner
+    fecharBannerInstall(false);
   }
 }
+
+function instalarApp() {
+  if(isStandalone) { showToast('✅','Já instalado','O app já está na sua tela inicial!'); return; }
+  if(deferredInstallPrompt) {
+    mostrarBannerInstall('android');
+  } else if(isIOS) {
+    mostrarBannerInstall('ios');
+  } else {
+    showToast('📲','Instalar app','Abra o menu do navegador e toque em "Adicionar à tela inicial".');
+  }
+}
+
+// Exibir botão 📲 no header quando não está instalado
+function atualizarBtnInstalar() {
+  var mostrar = !isStandalone && (deferredInstallPrompt || isIOS);
+  ['btn-instalar-home','btn-instalar-est','btn-instalar-moto'].forEach(function(id) {
+    var btn = document.getElementById(id);
+    if(btn) btn.style.display = mostrar ? '' : 'none';
+  });
+}
+// Exibir banner automaticamente para iOS não-instalado (com delay após o splash)
+if(isIOS && !isStandalone && !bannerDispensado) {
+  setTimeout(function() { mostrarBannerInstall('ios'); atualizarBtnInstalar(); }, 4000);
+}
+// Para Android o beforeinstallprompt já chama mostrarBannerInstall e atualizarBtnInstalar abaixo
 
 // Verificar retorno do callback de pagamento por cartão
 (function verificarCallbackPagamento() {
@@ -4268,6 +4415,26 @@ function instalarApp() {
 
 <!-- TOAST NOTIFICATIONS CONTAINER -->
 <div id="toast-container"></div>
+
+<!-- BANNER: INSTALAR APP -->
+<div id="install-banner">
+  <div class="banner-row">
+    <div class="banner-icon">📲</div>
+    <div class="banner-texto">
+      <strong>Instale o Chegou Aí</strong>
+      <span id="banner-subtexto">Adicione à tela inicial para receber notificações e usar offline.</span>
+    </div>
+    <button class="banner-btn-fechar" onclick="fecharBannerInstall()">✕</button>
+  </div>
+  <div id="ios-instrucoes">
+    <div class="ios-passo">1️⃣ <span>Toque no ícone <strong>Compartilhar</strong> ⬆️ na barra inferior do Safari</span></div>
+    <div class="ios-passo">2️⃣ <span>Role para baixo e toque em <strong>"Adicionar à Tela de Início"</strong> ＋</span></div>
+    <div class="ios-passo">3️⃣ <span>Toque em <strong>Adicionar</strong> no canto superior direito</span></div>
+  </div>
+  <div class="banner-btns">
+    <button class="banner-btn-instalar" id="banner-btn-acao" onclick="clicarBannerInstall()">Instalar agora</button>
+  </div>
+</div>
 
 <!-- SISTEMA DE NOTIFICAÇÕES + RASTREIO + SERVICE WORKER -->
 <script>
@@ -4338,8 +4505,8 @@ function iniciarPollingPedidos() {
       if(document.getElementById('tela-motoboy').classList.contains('ativa')) renderMotoboy();
     }, 300);
   }
-  // Para cliente: busca status imediatamente + inicia Realtime (como Uber)
-  if(currentUser && currentUser.perfil === 'cliente' && pedidoAtualId) {
+  // Para cliente (logado ou guest): busca status imediatamente
+  if((!currentUser || currentUser.perfil === 'cliente') && pedidoAtualId) {
     var _pid = pedidoAtualId;
     apiCall('/api/orders/' + _pid).then(function(r) {
       if(r && r.endereco_entrega && !pedidoEntregaLat) {
@@ -4360,6 +4527,28 @@ function iniciarPollingPedidos() {
     iniciarRealtimeCliente(_pid);
   }
   pollingInterval = setInterval(async function() {
+    // Guest rastreando pedido: continua polling mesmo sem login
+    if(!authToken && pedidoAtualId) {
+      try {
+        var resp = await apiCall('/api/orders/' + pedidoAtualId);
+        var novoStatus = resp.status;
+        if(ultimoStatusConhecido[pedidoAtualId] !== novoStatus) {
+          ultimoStatusConhecido[pedidoAtualId] = novoStatus;
+          atualizarRastreioPedido(novoStatus);
+          var msgs = {
+            'aceito':            { icon: '✅', title: 'Pedido aceito!',     msg: 'O estabelecimento aceitou seu pedido.' },
+            'preparando':        { icon: '👨‍🍳', title: 'Preparando...',      msg: 'Seu pedido está sendo preparado.' },
+            'pronto':            { icon: '📦', title: 'Pedido pronto!',     msg: 'Aguardando entrega.' },
+            'coletado':          { icon: '🛵', title: 'Saiu para entrega!', msg: 'O motoboy está a caminho.' },
+            'saiu_para_entrega': { icon: '🛵', title: 'Saiu para entrega!', msg: 'Confirme quando chegar.' },
+            'entregue':          { icon: '🎉', title: 'Entregue!',          msg: 'Bom apetite!' },
+          };
+          if(msgs[novoStatus]) showToast(msgs[novoStatus].icon, msgs[novoStatus].title, msgs[novoStatus].msg);
+          if(novoStatus === 'entregue') localStorage.removeItem('chegouai_pedido_id');
+        }
+      } catch(e) {}
+      return;
+    }
     if(!authToken || !currentUser) return;
 
     try {

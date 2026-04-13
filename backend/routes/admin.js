@@ -394,6 +394,23 @@ router.patch('/establishments/:id/toggle', async (req, res, next) => {
   }
 });
 // =============================================
+// DELETE /api/admin/establishments/:id — Excluir loja permanentemente
+// =============================================
+router.delete('/establishments/:id', async (req, res, next) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from('estabelecimentos')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+    res.json({ ok: true, message: 'Loja excluída com sucesso' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// =============================================
 // PUT /api/admin/motoboys/:id — Editar dados do motoboy
 // =============================================
 router.put('/motoboys/:id', async (req, res, next) => {
