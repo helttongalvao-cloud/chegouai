@@ -110,6 +110,7 @@ app.get('/', (req, res) => {
 
 // PWA — app principal
 app.get('/app', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
   res.sendFile(path.join(__dirname, 'chegou-ai.html'));
 });
 
