@@ -64,12 +64,13 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .banner-btns { display:flex; gap:10px; }
 .banner-btn-instalar { flex:1; background:var(--verde); color:var(--preto); border:none; border-radius:12px; padding:13px; font-size:14px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; }
 .banner-btn-fechar { background:var(--cinza3); color:var(--texto2); border:none; border-radius:12px; padding:13px 18px; font-size:13px; cursor:pointer; }
-/* Instruções iOS (mostradas dentro do banner) */
-#ios-instrucoes { display:none; background:var(--cinza2); border-radius:14px; padding:14px 16px; }
-#ios-instrucoes.visivel { display:block; }
+/* Instruções iOS / Android (mostradas dentro do banner) */
+#ios-instrucoes, #android-instrucoes { display:none; background:var(--cinza2); border-radius:14px; padding:14px 16px; }
+#ios-instrucoes.visivel, #android-instrucoes.visivel { display:block; }
 .ios-passo { display:flex; align-items:flex-start; gap:10px; font-size:13px; color:var(--texto2); margin-bottom:8px; line-height:1.4; }
 .ios-passo:last-child { margin-bottom:0; }
 .ios-passo strong { color:var(--texto); }
+.banner-btn-compartilhar { flex:1; background:var(--cinza3); color:var(--texto); border:none; border-radius:12px; padding:13px; font-size:14px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; }
 
 /* TELAS */
 .tela { display:none; min-height:100vh; flex-direction:column; }
@@ -4303,8 +4304,9 @@ var deferredInstallPrompt = null;
 var isStandalone = window.matchMedia('(display-mode: standalone)').matches
   || window.navigator.standalone === true;
 
-// Detecta iOS
+// Detecta iOS e Android
 var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+var isAndroid = /android/i.test(navigator.userAgent);
 
 // Já dispensou antes?
 var bannerDispensado = localStorage.getItem('chegouai_install_dispensado');
@@ -4325,12 +4327,17 @@ window.addEventListener('appinstalled', function() {
 function mostrarBannerInstall(tipo) {
   var banner = document.getElementById('install-banner');
   if(!banner) return;
+  document.getElementById('ios-instrucoes').classList.remove('visivel');
+  document.getElementById('android-instrucoes').classList.remove('visivel');
   if(tipo === 'ios') {
     document.getElementById('ios-instrucoes').classList.add('visivel');
     document.getElementById('banner-btn-acao').textContent = 'Entendi ✓';
     document.getElementById('banner-subtexto').textContent = 'Siga os passos abaixo para instalar no Safari:';
+  } else if(tipo === 'android-manual') {
+    document.getElementById('android-instrucoes').classList.add('visivel');
+    document.getElementById('banner-btn-acao').textContent = 'Entendi ✓';
+    document.getElementById('banner-subtexto').textContent = 'Siga os passos abaixo para instalar no Chrome:';
   } else {
-    document.getElementById('ios-instrucoes').classList.remove('visivel');
     document.getElementById('banner-btn-acao').textContent = 'Instalar agora';
     document.getElementById('banner-subtexto').textContent = 'Adicione à tela inicial para receber notificações e usar offline.';
   }
@@ -4362,8 +4369,27 @@ function instalarApp() {
     mostrarBannerInstall('android');
   } else if(isIOS) {
     mostrarBannerInstall('ios');
+  } else if(isAndroid) {
+    mostrarBannerInstall('android-manual');
   } else {
-    showToast('📲','Instalar app','Abra o menu do navegador e toque em "Adicionar à tela inicial".');
+    mostrarBannerInstall('android-manual');
+  }
+}
+
+function compartilharAppLink() {
+  var url = window.location.origin || window.location.href.split('?')[0];
+  var texto = 'Baixe o Chegou Aí — delivery de Guajará-Mirim!';
+  if(navigator.share) {
+    navigator.share({ title: 'Chegou Aí', text: texto, url: url }).catch(function(){});
+  } else {
+    // Fallback: copiar link
+    var el = document.createElement('input');
+    el.value = url;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    showToast('📋','Link copiado!','Cole e envie para quem quiser baixar o app.');
   }
 }
 
@@ -4382,7 +4408,12 @@ atualizarBtnInstalar();
 if(isIOS && !isStandalone && !bannerDispensado) {
   setTimeout(function() { mostrarBannerInstall('ios'); }, 4000);
 }
-// Para Android o beforeinstallprompt já chama mostrarBannerInstall e atualizarBtnInstalar abaixo
+// Android sem prompt nativo: mostrar instruções manuais após delay
+if(isAndroid && !isStandalone && !bannerDispensado && !deferredInstallPrompt) {
+  setTimeout(function() {
+    if(!deferredInstallPrompt) mostrarBannerInstall('android-manual');
+  }, 5000);
+}
 
 // Verificar retorno do callback de pagamento por cartão
 (function verificarCallbackPagamento() {
@@ -4423,8 +4454,14 @@ if(isIOS && !isStandalone && !bannerDispensado) {
     <div class="ios-passo">2️⃣ <span>Role para baixo e toque em <strong>"Adicionar à Tela de Início"</strong> ＋</span></div>
     <div class="ios-passo">3️⃣ <span>Toque em <strong>Adicionar</strong> no canto superior direito</span></div>
   </div>
+  <div id="android-instrucoes">
+    <div class="ios-passo">1️⃣ <span>Toque nos <strong>três pontos ⋮</strong> no canto superior direito do Chrome</span></div>
+    <div class="ios-passo">2️⃣ <span>Toque em <strong>"Adicionar à tela inicial"</strong></span></div>
+    <div class="ios-passo">3️⃣ <span>Toque em <strong>Adicionar</strong> para confirmar</span></div>
+  </div>
   <div class="banner-btns">
     <button class="banner-btn-instalar" id="banner-btn-acao" onclick="clicarBannerInstall()">Instalar agora</button>
+    <button class="banner-btn-compartilhar" onclick="compartilharAppLink()">📤 Compartilhar</button>
   </div>
 </div>
 
