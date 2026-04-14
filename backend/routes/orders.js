@@ -281,7 +281,7 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
     // Buscar ID do motoboy logado
     const { data: motoboy } = await supabaseAdmin
       .from('motoboys')
-      .select('id')
+      .select('id, disponivel')
       .eq('user_id', req.user.id)
       .single();
 
@@ -332,6 +332,7 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
     res.json({
       disponiveis: dispRes.data || [],
       ativa: ativaRes.data || null,
+      disponivel: motoboy ? motoboy.disponivel : null,
       stats: {
         entregasHoje,
         ganhoHoje: parseFloat(ganhoHoje.toFixed(2)),

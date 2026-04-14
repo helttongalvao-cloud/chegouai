@@ -3644,6 +3644,13 @@ async function renderMotoboy() {
     var stats = data.stats || {};
     var historico = data.historico || [];
 
+    // Sincronizar toggle com estado real do banco
+    if(data.disponivel !== null && data.disponivel !== undefined) {
+      statusAtivo = data.disponivel;
+      var toggle = document.getElementById('toggle-motoboy');
+      if(toggle) toggle.classList.toggle('ativo', statusAtivo);
+    }
+
     // Atualizar cards de stats
     var elEnt = document.getElementById('moto-entregas');
     var elGan = document.getElementById('moto-ganhos');
