@@ -68,7 +68,12 @@ app.use(helmet({
 // CORS
 // =============================================
 const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.FRONTEND_URL].filter(Boolean)
+  ? [
+      process.env.FRONTEND_URL,
+      'https://chegouaiapp.com.br',
+      'https://www.chegouaiapp.com.br',
+      'https://chegouai-production.up.railway.app',
+    ].filter(Boolean)
   : [
       process.env.FRONTEND_URL || 'http://localhost:3000',
       'http://localhost:3000',
