@@ -285,7 +285,7 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
       .eq('user_id', req.user.id)
       .single();
 
-    const selectPedido = 'id, status, total, taxa_entrega, endereco_entrega, telefone_cliente, ' +
+    const selectPedido = 'id, status, total, taxa_entrega, endereco_entrega, telefone_cliente, guest_nome, ' +
       'estabelecimentos (nome, emoji, endereco, lat, lng), ' +
       'profiles!pedidos_cliente_id_fkey (nome)';
 

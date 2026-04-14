@@ -135,7 +135,7 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
       .select(`
         id, tipo, tipo_pedido, numero_mesa, nome_cliente_mesa, status, pagamento_status,
         forma_pagamento, total, subtotal, taxa_entrega,
-        endereco_entrega, telefone_cliente, lista_compras, criado_em,
+        endereco_entrega, telefone_cliente, lista_compras, criado_em, guest_nome,
         itens_pedido (nome, quantidade, preco_unitario, observacao),
         motoboys (nome, telefone),
         profiles!pedidos_cliente_id_fkey (nome)

@@ -2906,7 +2906,7 @@ async function renderEstabelecimento() {
       var pagBadge = p.forma_pagamento ? '<span style="font-size:11px;color:var(--texto2);margin-left:6px;">' + (pagIcones[p.forma_pagamento] || '') + ' ' + p.forma_pagamento + '</span>' : '';
       var nomeCliente = p.tipo_pedido === 'mesa'
         ? (p.nome_cliente_mesa || 'Cliente')
-        : ((p.profiles && p.profiles.nome) ? sanitizar(p.profiles.nome) : '');
+        : ((p.profiles && p.profiles.nome) ? sanitizar(p.profiles.nome) : sanitizar(p.guest_nome || ''));
       var mesaTag = p.tipo_pedido === 'mesa'
         ? '<span style="background:#FF6D0020;color:#FF6D00;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:6px;">🪑 ' + (p.numero_mesa ? 'Mesa ' + p.numero_mesa : 'Salão') + '</span>'
         : '';
@@ -3744,7 +3744,7 @@ async function renderMotoboy() {
 function renderFaseEntrega(pedido, fase) {
   var ganho = 'R$ ' + parseFloat(pedido.taxa_entrega || 4).toFixed(2).replace('.',',');
   var nomeLoja = pedido.estabelecimentos ? pedido.estabelecimentos.nome : '—';
-  var nomeCliente = pedido.profiles ? pedido.profiles.nome : '—';
+  var nomeCliente = (pedido.profiles && pedido.profiles.nome) ? pedido.profiles.nome : (pedido.guest_nome || '—');
   var telAtivo = pedido.telefone_cliente ? pedido.telefone_cliente.replace(/\D/g,'') : '';
   var codigo = codigoPedido(pedido.id);
 
@@ -4596,7 +4596,12 @@ function iniciarPollingPedidos() {
             'entregue':          { icon: '🎉', title: 'Entregue!',          msg: 'Bom apetite!' },
           };
           if(msgs[novoStatus]) showToast(msgs[novoStatus].icon, msgs[novoStatus].title, msgs[novoStatus].msg);
-          if(novoStatus === 'entregue') localStorage.removeItem('chegouai_pedido_id');
+          if(novoStatus === 'coletado' || novoStatus === 'saiu_para_entrega') iniciarRealtimeGps(pedidoAtualId);
+          if(novoStatus === 'entregue') { pararRealtimeGps(); localStorage.removeItem('chegouai_pedido_id'); }
+        }
+        // Atualizar mapa com posição do motoboy
+        if(resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
+          atualizarMapaCliente(resp.motoboys.lat, resp.motoboys.lng, resp.motoboys.nome);
         }
       } catch(e) {}
       return;
@@ -4611,7 +4616,7 @@ function iniciarPollingPedidos() {
         if(!primeiroPolling) {
           pedidos.forEach(function(p) {
             if(!ultimoStatusConhecido[p.id]) {
-              var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : 'Cliente';
+              var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : (p.guest_nome || 'Cliente');
               tocarSomNovoPedido();
               showToast('🔔', 'Novo pedido de ' + nomeCliente + '!', 'R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') + ' · ' + (p.endereco_entrega || '').substring(0, 35));
             }
