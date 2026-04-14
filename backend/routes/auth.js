@@ -120,7 +120,7 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
     });
 
     if (error) {
-      return res.status(401).json({ error: 'Telefone ou senha incorretos' });
+      return res.status(400).json({ error: 'Telefone ou senha incorretos' });
     }
 
     // Buscar perfil
@@ -131,7 +131,7 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
       .single();
 
     if (profileErr || !profile) {
-      return res.status(401).json({ error: 'Perfil não encontrado' });
+      return res.status(400).json({ error: 'Perfil não encontrado' });
     }
 
     if (!profile.ativo) {
