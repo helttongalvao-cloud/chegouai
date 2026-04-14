@@ -363,8 +363,8 @@ function verificarWebhook(req) {
   const senha   = process.env.PAGARME_WEBHOOK_PASS;
 
   if (!usuario || !senha) {
-    console.warn('[Pagar.me Webhook] Credenciais não configuradas — aceitando sem verificação');
-    return true;
+    console.error('[Pagar.me Webhook] ERRO: PAGARME_WEBHOOK_USER/PASS não configurados — rejeitando request');
+    return false;
   }
 
   const authHeader = req.headers['authorization'];

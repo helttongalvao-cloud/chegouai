@@ -1327,6 +1327,11 @@ let perfilAtual = 'cliente';
 
 
 function irTela(id) {
+  // Se saindo da tela de acompanhamento e não há pedido ativo, parar GPS
+  var telaAtiva = document.querySelector('.tela.ativa');
+  if(telaAtiva && telaAtiva.id === 'tela-confirmado' && id !== 'tela-confirmado') {
+    pararRealtimeGps();
+  }
   document.querySelectorAll('.tela').forEach(function(t){ t.classList.remove('ativa'); });
   document.getElementById(id).classList.add('ativa');
 }// SPLASH
