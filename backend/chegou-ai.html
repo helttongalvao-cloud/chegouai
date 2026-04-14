@@ -1004,39 +1004,37 @@ function pararRealtimeCliente() {
   pararRealtimeGps();
 }
 
-// GPS via Supabase Realtime — escuta atualizações de lat/lng do motoboy
+// GPS via polling da API — funciona para clientes logados e convidados
+var gpsPollingInterval = null;
+
 async function iniciarRealtimeGps(pedidoId) {
-  if(!supabaseClient || !pedidoId) return;
+  if(!pedidoId) return;
   pararRealtimeGps();
-  // Buscar motoboy_id do pedido e coords do endereço de entrega
-  var resp = await apiCall('/api/orders/' + pedidoId);
-  var motoboyId = resp && resp.motoboys && resp.motoboys.id;
-  if(!motoboyId) return;
-  // Parsear coords de entrega se ainda não tiver
-  if(resp.endereco_entrega && !pedidoEntregaLat) {
-    var cm = resp.endereco_entrega.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
-    if(cm) { pedidoEntregaLat = parseFloat(cm[1]); pedidoEntregaLng = parseFloat(cm[2]); }
-  }
-  // Mostrar posição atual imediatamente
-  if(resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
-    atualizarMapaCliente(resp.motoboys.lat, resp.motoboys.lng, resp.motoboys.nome);
-  }
-  var motoboyNome = (resp.motoboys && resp.motoboys.nome) || '';
-  supabaseClient.realtime.setAuth(authToken);
-  realtimeGpsChannel = supabaseClient
-    .channel('gps-motoboy-' + motoboyId)
-    .on('postgres_changes', {
-      event: 'UPDATE', schema: 'public', table: 'motoboys',
-      filter: 'id=eq.' + motoboyId,
-    }, function(payload) {
-      if(payload.new && payload.new.lat && payload.new.lng) {
-        atualizarMapaCliente(payload.new.lat, payload.new.lng, motoboyNome);
+
+  async function buscarGps() {
+    try {
+      var resp = await apiCall('/api/orders/' + pedidoId);
+      if(!resp) return;
+      // Parsear coords de entrega se ainda não tiver
+      if(resp.endereco_entrega && !pedidoEntregaLat) {
+        var cm = resp.endereco_entrega.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
+        if(cm) { pedidoEntregaLat = parseFloat(cm[1]); pedidoEntregaLng = parseFloat(cm[2]); }
       }
-    })
-    .subscribe();
+      // Atualizar mapa se motoboy tem localização
+      if(resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
+        atualizarMapaCliente(resp.motoboys.lat, resp.motoboys.lng, resp.motoboys.nome);
+      }
+      // Parar polling se entregue
+      if(resp.status === 'entregue') pararRealtimeGps();
+    } catch(e) { /* silencioso */ }
+  }
+
+  await buscarGps(); // imediato
+  gpsPollingInterval = setInterval(buscarGps, 5000); // a cada 5s
 }
 
 function pararRealtimeGps() {
+  if(gpsPollingInterval) { clearInterval(gpsPollingInterval); gpsPollingInterval = null; }
   if(realtimeGpsChannel && supabaseClient) {
     supabaseClient.removeChannel(realtimeGpsChannel);
     realtimeGpsChannel = null;
