@@ -3171,7 +3171,9 @@ async function renderAdmin(secao) {
           '<div style="font-size:12px;color:var(--texto2);">' + sanitizar(m.telefone || '') + (m.moto ? ' · ' + sanitizar(m.moto) : '') + '</div></div>' +
           '<div style="display:flex;gap:6px;">' +
           '<button class="btn-acao" onclick="adminEditarMotoboy(decodeURIComponent(\'' + mData + '\'))" style="padding:6px 12px;">Editar</button>' +
-          btnStatus + '</div>' +
+          btnStatus +
+          '<button class="btn-deletar" onclick="adminExcluirMotoboy(\'' + m.id + '\',\'' + sanitizar(m.nome) + '\')" style="padding:6px 12px;">Excluir</button>' +
+          '</div>' +
         '</div>';
       }).join('')) +
       '</div>';
@@ -3275,6 +3277,14 @@ async function adminSalvarMotoboy(id) {
     document.getElementById('modal-admin-motoboy').remove();
     renderAdmin('motoboys');
   } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function adminExcluirMotoboy(id, nome) {
+  if(!confirm('Excluir motoboy "' + nome + '" permanentemente? Esta ação não pode ser desfeita.')) return;
+  try {
+    await apiCall('/api/admin/motoboys/' + id, { method: 'DELETE' });
+    renderAdmin('motoboys');
+  } catch(e) { alert('Erro ao excluir: ' + e.message); }
 }
 
 function adminEditarLoja(e) {

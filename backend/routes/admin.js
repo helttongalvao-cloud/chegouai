@@ -458,6 +458,39 @@ router.patch('/motoboys/:id/toggle', async (req, res, next) => {
 });
 
 // =============================================
+// DELETE /api/admin/motoboys/:id — Excluir motoboy
+// =============================================
+router.delete('/motoboys/:id', async (req, res, next) => {
+  try {
+    const { data: motoboy } = await supabaseAdmin
+      .from('motoboys')
+      .select('id, user_id')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!motoboy) return res.status(404).json({ error: 'Motoboy não encontrado' });
+
+    // Remover registro na tabela motoboys
+    const { error } = await supabaseAdmin
+      .from('motoboys')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+
+    // Remover perfil e usuário do Auth (se tiver user_id)
+    if (motoboy.user_id) {
+      await supabaseAdmin.from('profiles').delete().eq('id', motoboy.user_id);
+      await supabaseAdmin.auth.admin.deleteUser(motoboy.user_id);
+    }
+
+    res.json({ message: 'Motoboy excluído com sucesso' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// =============================================
 // GET /api/admin/cupons — Listar cupons
 // =============================================
 router.get('/cupons', async (req, res, next) => {
