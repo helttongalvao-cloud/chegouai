@@ -985,6 +985,25 @@ window.addEventListener('scroll', () => {
     ? 'rgba(8,8,8,.97)'
     : 'rgba(8,8,8,.85)';
 });
+
+// ── Detecção Instagram / Facebook WebView ───────────────────
+(function() {
+  var ua = navigator.userAgent || '';
+  var isInstagram = ua.indexOf('Instagram') > -1;
+  var isFacebook = ua.indexOf('FBAN') > -1 || ua.indexOf('FBAV') > -1;
+  if (!isInstagram && !isFacebook) return;
+
+  var isIOS = /iphone|ipad|ipod/i.test(ua);
+  var instrucao = isIOS
+    ? 'Toque em <strong>···</strong> no canto inferior direito e selecione <strong>"Abrir no Safari"</strong> para instalar o app.'
+    : 'Toque em <strong>⋮</strong> no canto superior direito e selecione <strong>"Abrir no Chrome"</strong> para instalar o app.';
+
+  var banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#00c853;color:#000;padding:14px 16px;font-size:14px;line-height:1.5;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.3)';
+  banner.innerHTML = '📲 ' + instrucao +
+    ' <button onclick="this.parentElement.remove()" style="margin-left:12px;background:rgba(0,0,0,0.15);border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;color:#000">✕</button>';
+  document.body.prepend(banner);
+})();
 </script>
 </body>
 </html>
