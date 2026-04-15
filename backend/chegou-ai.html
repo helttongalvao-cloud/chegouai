@@ -1662,8 +1662,7 @@ window.addEventListener('DOMContentLoaded', function() {
     // Guest com pedido ativo: ir direto para rastreio
     ultimoStatusConhecido = {};
     irTela('tela-confirmado');
-    iniciarPollingPedidos();
-    iniciarRastreio(pedidoAtualId);
+    iniciarPollingPedidos(); // o polling já chama iniciarRealtimeGps quando status = coletado
   }
 });
 
