@@ -3079,13 +3079,15 @@ async function renderAdmin(secao) {
         if(r.tipo === 'lojista') {
           var id = r.estabelecimento_id || 'desconhecido';
           var nome = r.estabelecimentos?.nome || 'Loja';
-          if(!porLoja[id]) porLoja[id] = { nome: nome, total: 0, ids: [] };
+          var pix = r.estabelecimentos?.mp_user_id || '';
+          if(!porLoja[id]) porLoja[id] = { nome: nome, chave_pix: pix, total: 0, ids: [] };
           porLoja[id].total += r.valor;
           porLoja[id].ids.push(r.id);
         } else if(r.tipo === 'motoboy') {
           var id = r.motoboy_id || 'desconhecido';
           var nome = r.motoboys?.nome || 'Motoboy';
-          if(!porMoto[id]) porMoto[id] = { nome: nome, total: 0, ids: [] };
+          var pix = r.motoboys?.chave_pix || '';
+          if(!porMoto[id]) porMoto[id] = { nome: nome, chave_pix: pix, total: 0, ids: [] };
           porMoto[id].total += r.valor;
           porMoto[id].ids.push(r.id);
         }
@@ -3103,24 +3105,32 @@ async function renderAdmin(secao) {
 
       var lojaRows = Object.entries(porLoja).map(function(kv) {
         var ids = JSON.stringify(kv[1].ids).replace(/"/g,'&quot;');
-        return '<div class="tabela-row" style="align-items:center;">' +
-          '<div class="info" style="flex:1;"><div class="nome">🏪 ' + kv[1].nome + '</div>' +
-          '<div class="sub">Pendente de repasse</div></div>' +
+        var pix = kv[1].chave_pix || '';
+        var pixHtml = pix
+          ? '<div style="font-size:11px;color:var(--texto2);margin-top:2px;">Pix: <b style="color:var(--verde);">' + sanitizar(pix) + '</b> <button onclick="navigator.clipboard.writeText(\'' + pix + '\');showToast(\'📋\',\'Copiado!\',\'Chave Pix copiada.\')" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--verde);">📋</button></div>'
+          : '<div style="font-size:11px;color:var(--erro);">⚠️ Sem chave Pix cadastrada</div>';
+        return '<div class="tabela-row" style="flex-direction:column;align-items:flex-start;gap:8px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;">' +
+          '<div class="info"><div class="nome">🏪 ' + kv[1].nome + '</div>' + pixHtml + '</div>' +
           '<div style="display:flex;align-items:center;gap:8px;">' +
-          '<div class="valor" style="color:var(--laranja);">R$ ' + kv[1].total.toFixed(2).replace('.',',') + '</div>' +
+          '<div class="valor" style="color:var(--laranja);font-size:18px;font-weight:700;">R$ ' + kv[1].total.toFixed(2).replace('.',',') + '</div>' +
           '<button class="btn-acao" onclick="adminPagarRepasses(' + ids + ',this)" style="padding:5px 10px;font-size:12px;">✅ Marcar pago</button>' +
-          '</div></div>';
+          '</div></div></div>';
       });
 
       var motoRows = Object.entries(porMoto).map(function(kv) {
         var ids = JSON.stringify(kv[1].ids).replace(/"/g,'&quot;');
-        return '<div class="tabela-row" style="align-items:center;">' +
-          '<div class="info" style="flex:1;"><div class="nome">🛵 ' + kv[1].nome + '</div>' +
-          '<div class="sub">Pendente de repasse</div></div>' +
+        var pix = kv[1].chave_pix || '';
+        var pixHtml = pix
+          ? '<div style="font-size:11px;color:var(--texto2);margin-top:2px;">Pix: <b style="color:var(--verde);">' + sanitizar(pix) + '</b> <button onclick="navigator.clipboard.writeText(\'' + pix + '\');showToast(\'📋\',\'Copiado!\',\'Chave Pix copiada.\')" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--verde);">📋</button></div>'
+          : '<div style="font-size:11px;color:var(--erro);">⚠️ Sem chave Pix cadastrada</div>';
+        return '<div class="tabela-row" style="flex-direction:column;align-items:flex-start;gap:8px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;width:100%;">' +
+          '<div class="info"><div class="nome">🛵 ' + kv[1].nome + '</div>' + pixHtml + '</div>' +
           '<div style="display:flex;align-items:center;gap:8px;">' +
-          '<div class="valor" style="color:var(--laranja);">R$ ' + kv[1].total.toFixed(2).replace('.',',') + '</div>' +
+          '<div class="valor" style="color:var(--laranja);font-size:18px;font-weight:700;">R$ ' + kv[1].total.toFixed(2).replace('.',',') + '</div>' +
           '<button class="btn-acao" onclick="adminPagarRepasses(' + ids + ',this)" style="padding:5px 10px;font-size:12px;">✅ Marcar pago</button>' +
-          '</div></div>';
+          '</div></div></div>';
       });
 
       var tabelaHtml = lojaRows.length + motoRows.length === 0

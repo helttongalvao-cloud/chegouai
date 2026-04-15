@@ -116,8 +116,8 @@ router.get('/repasses', async (req, res, next) => {
       .from('repasses')
       .select(`
         *,
-        estabelecimentos (id, nome),
-        motoboys (id, nome, telefone),
+        estabelecimentos (id, nome, mp_user_id),
+        motoboys (id, nome, telefone, chave_pix),
         pedidos (id, total, subtotal, taxa_entrega, criado_em)
       `)
       .order('criado_em', { ascending: false });
