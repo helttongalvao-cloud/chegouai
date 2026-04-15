@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { supabaseAdmin } = require('../config/supabase');
+const { supabaseAdmin, supabaseAnon } = require('../config/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { authSlowDown } = require('../middleware/security');
 
@@ -114,7 +114,9 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
 
     const emailLogin = profileEmail?.email || `tel_${telLimpo}@chegouai.app`;
 
-    const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+    // Usar supabaseAnon para sign-in — evita que o JWT do usuário
+    // contamine o supabaseAdmin e quebre queries de DB com RLS ativo
+    const { data, error } = await supabaseAnon.auth.signInWithPassword({
       email: emailLogin,
       password: senha,
     });
