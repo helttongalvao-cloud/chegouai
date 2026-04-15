@@ -554,6 +554,65 @@ router.patch('/me/tipo-entrega', requireRole('estabelecimento'), [
 // REPASSES MOTOBOYS PRÓPRIOS
 // =============================================
 
+// =============================================
+// GET /api/establishments/me/extrato-repasse
+// Extrato semanal do lojista com breakdown financeiro
+// =============================================
+router.get('/me/extrato-repasse', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const { data: est } = await supabaseAdmin
+      .from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+
+    const COMISSAO = 0.05; // 5%
+    const periodo = req.query.periodo || '7d';
+    const dias = periodo === '30d' ? 30 : periodo === '14d' ? 14 : 7;
+    const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: pedidos } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, subtotal, total, taxa_entrega, status, pagamento_status, criado_em, forma_pagamento, itens_pedido(nome, quantidade, preco_unitario)')
+      .eq('estabelecimento_id', est.id)
+      .eq('pagamento_status', 'aprovado')
+      .neq('status', 'cancelado')
+      .gte('criado_em', desde)
+      .order('criado_em', { ascending: false });
+
+    const lista = (pedidos || []).map(p => {
+      const subtotal = parseFloat(p.subtotal || 0);
+      const desconto = parseFloat((subtotal * COMISSAO).toFixed(2));
+      const liquido  = parseFloat((subtotal - desconto).toFixed(2));
+      return {
+        id: p.id,
+        data: p.criado_em,
+        status: p.status,
+        forma_pagamento: p.forma_pagamento,
+        subtotal,
+        desconto,
+        liquido,
+        itens: p.itens_pedido || [],
+      };
+    });
+
+    const totalBruto   = lista.reduce((s, p) => s + p.subtotal, 0);
+    const totalDesconto = lista.reduce((s, p) => s + p.desconto, 0);
+    const totalLiquido = lista.reduce((s, p) => s + p.liquido, 0);
+
+    res.json({
+      periodo: dias,
+      comissao_pct: COMISSAO * 100,
+      pedidos: lista,
+      resumo: {
+        total_pedidos: lista.length,
+        total_bruto:   parseFloat(totalBruto.toFixed(2)),
+        total_desconto: parseFloat(totalDesconto.toFixed(2)),
+        total_liquido: parseFloat(totalLiquido.toFixed(2)),
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+// =============================================
 router.get('/me/repasses-motoboys', requireRole('estabelecimento'), async (req, res, next) => {
   try {
     const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();

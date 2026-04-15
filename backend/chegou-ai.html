@@ -5479,36 +5479,81 @@ async function confirmarSaidaEntrega(pedidoId, motoboyId, motoboyNome) {
 async function renderRepasses() {
   var el = document.getElementById('repasses-conteudo');
   if(!el) return;
+  el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando...</div>';
   try {
-    var grupos = await apiCall('/api/establishments/me/repasses-motoboys');
-    if(!grupos.length) {
-      el.innerHTML = '<div style="text-align:center;padding:48px 20px;">' +
-        '<div style="font-size:48px;margin-bottom:12px;">🛵</div>' +
-        '<div style="font-size:15px;font-weight:600;margin-bottom:6px;">Nenhum repasse pendente</div>' +
-        '<div style="font-size:13px;color:var(--texto2);">Os repasses aparecerão aqui quando pedidos com entrega própria forem entregues.</div>' +
-        '</div>';
-      return;
+    var periodo = '7d';
+    var extrato = await apiCall('/api/establishments/me/extrato-repasse?periodo=' + periodo);
+    var grupos  = await apiCall('/api/establishments/me/repasses-motoboys');
+
+    // ── RESUMO FINANCEIRO ──────────────────────────────────
+    var r = extrato.resumo || {};
+    var resumoHtml =
+      '<div style="background:var(--cinza2);border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid var(--cinza3);">' +
+        '<div style="font-size:15px;font-weight:700;margin-bottom:12px;">📊 Seu extrato — últimos 7 dias</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">' +
+          '<div style="background:var(--cinza1);border-radius:10px;padding:10px;text-align:center;">' +
+            '<div style="font-size:16px;font-weight:700;">R$ ' + (r.total_bruto||0).toFixed(2).replace('.',',') + '</div>' +
+            '<div style="font-size:10px;color:var(--texto2);">Vendas brutas</div>' +
+          '</div>' +
+          '<div style="background:var(--cinza1);border-radius:10px;padding:10px;text-align:center;">' +
+            '<div style="font-size:16px;font-weight:700;color:var(--erro);">- R$ ' + (r.total_desconto||0).toFixed(2).replace('.',',') + '</div>' +
+            '<div style="font-size:10px;color:var(--texto2);">' + (extrato.comissao_pct||5) + '% plataforma</div>' +
+          '</div>' +
+          '<div style="background:rgba(0,200,83,0.1);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--verde);">' +
+            '<div style="font-size:16px;font-weight:700;color:var(--verde);">R$ ' + (r.total_liquido||0).toFixed(2).replace('.',',') + '</div>' +
+            '<div style="font-size:10px;color:var(--verde);">Você recebe</div>' +
+          '</div>' +
+        '</div>' +
+
+        // Detalhamento por pedido
+        (extrato.pedidos && extrato.pedidos.length > 0 ?
+          '<div style="font-size:12px;font-weight:600;color:var(--texto2);margin-bottom:8px;">PEDIDOS NO PERÍODO</div>' +
+          '<div style="display:flex;flex-direction:column;gap:6px;">' +
+          extrato.pedidos.map(function(p) {
+            var data = new Date(p.data).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+            var hora = new Date(p.data).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+            var pagIcone = p.forma_pagamento === 'pix' ? '⚡' : '💳';
+            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--cinza3);">' +
+              '<div>' +
+                '<div style="font-size:12px;font-weight:600;">' + data + ' às ' + hora + ' ' + pagIcone + '</div>' +
+                '<div style="font-size:11px;color:var(--texto2);">Bruto: R$ ' + p.subtotal.toFixed(2).replace('.',',') + ' &nbsp;·&nbsp; Taxa: <span style="color:var(--erro);">-R$ ' + p.desconto.toFixed(2).replace('.',',') + '</span></div>' +
+              '</div>' +
+              '<div style="font-size:14px;font-weight:700;color:var(--verde);">R$ ' + p.liquido.toFixed(2).replace('.',',') + '</div>' +
+            '</div>';
+          }).join('') +
+          '</div>'
+          : '<div style="text-align:center;font-size:13px;color:var(--texto2);padding:12px 0;">Nenhum pedido no período</div>'
+        ) +
+      '</div>';
+
+    // ── REPASSES DE MOTOBOYS PRÓPRIOS ──────────────────────
+    var motosHtml = '';
+    if(grupos && grupos.length) {
+      motosHtml =
+        '<div style="font-size:13px;font-weight:700;margin-bottom:8px;">🛵 Repasses — Motoboys próprios</div>' +
+        grupos.map(function(g) {
+          var temPendente = g.pendente > 0;
+          return '<div style="background:var(--cinza2);border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid var(--cinza3);">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
+              '<div style="font-size:15px;font-weight:700;">🛵 ' + sanitizar(g.nome) + '</div>' +
+              (temPendente ? '<span style="background:rgba(255,180,0,0.15);color:#ffb400;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;">PENDENTE</span>' : '<span style="background:rgba(0,200,100,0.15);color:var(--verde);font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;">EM DIA</span>') +
+            '</div>' +
+            '<div style="display:flex;gap:10px;margin-bottom:' + (temPendente ? '10px' : '0') + ';">' +
+              '<div style="flex:1;background:var(--cinza1);border-radius:10px;padding:10px;text-align:center;">' +
+                '<div style="font-size:16px;font-weight:700;color:#ffb400;">R$ ' + g.pendente.toFixed(2).replace('.',',') + '</div>' +
+                '<div style="font-size:11px;color:var(--texto2);">A pagar</div>' +
+              '</div>' +
+              '<div style="flex:1;background:var(--cinza1);border-radius:10px;padding:10px;text-align:center;">' +
+                '<div style="font-size:16px;font-weight:700;color:var(--verde);">R$ ' + g.pago.toFixed(2).replace('.',',') + '</div>' +
+                '<div style="font-size:11px;color:var(--texto2);">Já pago</div>' +
+              '</div>' +
+            '</div>' +
+            (temPendente ? '<button onclick="pagarRepasse(\'' + g.id + '\',\'' + sanitizar(g.nome) + '\',this)" style="width:100%;padding:12px;border-radius:10px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">✅ Marcar R$ ' + g.pendente.toFixed(2).replace('.',',') + ' como pago</button>' : '') +
+          '</div>';
+        }).join('');
     }
-    el.innerHTML = grupos.map(function(g) {
-      var temPendente = g.pendente > 0;
-      return '<div style="background:var(--cinza2);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--cinza3);">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
-        '<div style="font-size:16px;font-weight:700;">🛵 ' + sanitizar(g.nome) + '</div>' +
-        (temPendente ? '<span style="background:rgba(255,180,0,0.15);color:#ffb400;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;">PENDENTE</span>' : '<span style="background:rgba(0,200,100,0.15);color:var(--verde);font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;">EM DIA</span>') +
-        '</div>' +
-        '<div style="display:flex;gap:12px;margin-bottom:' + (temPendente ? '12px' : '0') + ';">' +
-        '<div style="flex:1;background:var(--cinza1);border-radius:10px;padding:10px;text-align:center;">' +
-        '<div style="font-size:18px;font-weight:700;color:#ffb400;">R$ ' + g.pendente.toFixed(2).replace('.',',') + '</div>' +
-        '<div style="font-size:11px;color:var(--texto2);">A pagar</div>' +
-        '</div>' +
-        '<div style="flex:1;background:var(--cinza1);border-radius:10px;padding:10px;text-align:center;">' +
-        '<div style="font-size:18px;font-weight:700;color:var(--verde);">R$ ' + g.pago.toFixed(2).replace('.',',') + '</div>' +
-        '<div style="font-size:11px;color:var(--texto2);">Já pago</div>' +
-        '</div>' +
-        '</div>' +
-        (temPendente ? '<button onclick="pagarRepasse(\'' + g.id + '\',\'' + sanitizar(g.nome) + '\',this)" style="width:100%;padding:12px;border-radius:10px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">✅ Marcar R$ ' + g.pendente.toFixed(2).replace('.',',') + ' como pago</button>' : '') +
-        '</div>';
-    }).join('');
+
+    el.innerHTML = resumoHtml + motosHtml;
   } catch(e) {
     el.innerHTML = '<div style="color:#ff4444;padding:20px;text-align:center;">Erro ao carregar repasses</div>';
   }
