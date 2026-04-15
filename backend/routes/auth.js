@@ -120,6 +120,7 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
     });
 
     if (error) {
+      console.error('[Auth/login] Supabase signInWithPassword error:', error.message, '| email:', emailLogin);
       return res.status(400).json({ error: 'Telefone ou senha incorretos' });
     }
 
