@@ -136,8 +136,10 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         id, tipo, tipo_pedido, numero_mesa, nome_cliente_mesa, status, pagamento_status,
         forma_pagamento, total, subtotal, taxa_entrega,
         endereco_entrega, telefone_cliente, lista_compras, criado_em, guest_nome,
+        motoboy_proprio_id,
         itens_pedido (nome, quantidade, preco_unitario, observacao),
         motoboys (nome, telefone),
+        motoboys_proprios (id, nome),
         profiles!pedidos_cliente_id_fkey (nome)
       `)
       .eq('estabelecimento_id', est.id)
@@ -561,17 +563,18 @@ router.patch('/me/tipo-entrega', requireRole('estabelecimento'), [
 router.get('/me/extrato-repasse', requireRole('estabelecimento'), async (req, res, next) => {
   try {
     const { data: est } = await supabaseAdmin
-      .from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+      .from('estabelecimentos').select('id, tipo_entrega').eq('user_id', req.user.id).single();
     if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
     const COMISSAO = 0.05; // 5%
     const periodo = req.query.periodo || '7d';
     const dias = periodo === '30d' ? 30 : periodo === '14d' ? 14 : 7;
     const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString();
+    const temMotoboyProprio = est.tipo_entrega === 'proprio';
 
     const { data: pedidos } = await supabaseAdmin
       .from('pedidos')
-      .select('id, subtotal, total, taxa_entrega, status, pagamento_status, criado_em, forma_pagamento, itens_pedido(nome, quantidade, preco_unitario)')
+      .select('id, subtotal, total, taxa_entrega, status, pagamento_status, criado_em, forma_pagamento, motoboy_proprio_id, motoboys_proprios(id, nome), itens_pedido(nome, quantidade, preco_unitario)')
       .eq('estabelecimento_id', est.id)
       .eq('pagamento_status', 'aprovado')
       .neq('status', 'cancelado')
@@ -580,34 +583,72 @@ router.get('/me/extrato-repasse', requireRole('estabelecimento'), async (req, re
 
     const lista = (pedidos || []).map(p => {
       const subtotal = parseFloat(p.subtotal || 0);
+      const taxa     = parseFloat(p.taxa_entrega || 0);
       const desconto = parseFloat((subtotal * COMISSAO).toFixed(2));
-      const liquido  = parseFloat((subtotal - desconto).toFixed(2));
+      // Motoboy próprio: lojista recebe 95% subtotal + taxa_entrega (paga o motoboy com a taxa)
+      // Motoboy do app: lojista recebe somente 95% subtotal
+      const liquido  = temMotoboyProprio
+        ? parseFloat((subtotal - desconto + taxa).toFixed(2))
+        : parseFloat((subtotal - desconto).toFixed(2));
       return {
         id: p.id,
         data: p.criado_em,
         status: p.status,
         forma_pagamento: p.forma_pagamento,
         subtotal,
+        taxa_entrega: taxa,
         desconto,
         liquido,
+        motoboy_proprio: p.motoboys_proprios || null,
         itens: p.itens_pedido || [],
       };
     });
 
-    const totalBruto   = lista.reduce((s, p) => s + p.subtotal, 0);
+    const totalBruto    = lista.reduce((s, p) => s + p.subtotal, 0);
     const totalDesconto = lista.reduce((s, p) => s + p.desconto, 0);
-    const totalLiquido = lista.reduce((s, p) => s + p.liquido, 0);
+    const totalLiquido  = lista.reduce((s, p) => s + p.liquido, 0);
+
+    // Breakdown por motoboy próprio (apenas se tipo_entrega === 'proprio')
+    let motoboyBreakdown = null;
+    if (temMotoboyProprio) {
+      const mbMap = {};
+      lista.forEach(p => {
+        if (!p.motoboy_proprio) return;
+        const id = p.motoboy_proprio.id;
+        if (!mbMap[id]) mbMap[id] = { id, nome: p.motoboy_proprio.nome, entregas: 0, total: 0, fretes: [] };
+        mbMap[id].entregas++;
+        mbMap[id].total += p.taxa_entrega;
+        mbMap[id].fretes.push(p.taxa_entrega);
+      });
+      motoboyBreakdown = Object.values(mbMap).map(m => ({
+        id: m.id,
+        nome: m.nome,
+        entregas: m.entregas,
+        total: parseFloat(m.total.toFixed(2)),
+        fretes: m.fretes,
+      }));
+    }
+
+    const totalMotoboysPagar = motoboyBreakdown
+      ? motoboyBreakdown.reduce((s, m) => s + m.total, 0)
+      : 0;
 
     res.json({
       periodo: dias,
+      tipo_entrega: est.tipo_entrega,
       comissao_pct: COMISSAO * 100,
       pedidos: lista,
       resumo: {
-        total_pedidos: lista.length,
-        total_bruto:   parseFloat(totalBruto.toFixed(2)),
+        total_pedidos:  lista.length,
+        total_bruto:    parseFloat(totalBruto.toFixed(2)),
         total_desconto: parseFloat(totalDesconto.toFixed(2)),
-        total_liquido: parseFloat(totalLiquido.toFixed(2)),
+        total_liquido:  parseFloat(totalLiquido.toFixed(2)),
+        ...(temMotoboyProprio && {
+          total_motoboys_pagar: parseFloat(totalMotoboysPagar.toFixed(2)),
+          lucro_liquido: parseFloat((totalLiquido - totalMotoboysPagar).toFixed(2)),
+        }),
       },
+      motoboys_breakdown: motoboyBreakdown,
     });
   } catch (err) { next(err); }
 });

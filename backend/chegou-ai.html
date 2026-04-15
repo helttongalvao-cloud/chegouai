@@ -831,6 +831,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div style="display:flex;flex-direction:column;gap:8px;" id="admin-fases"></div>
     </div>
     <div class="nav-admin">
+      <div class="nav-btn" onclick="adminNav(this,'monitor')" style="color:#ff4444;border-color:#ff444440;">🔴 Monitor</div>
       <div class="nav-btn ativo" onclick="adminNav(this,'pedidos')">Pedidos</div>
       <div class="nav-btn" onclick="adminNav(this,'repasses')">Repasses</div>
       <div class="nav-btn" onclick="adminNav(this,'lojas')">Estabelecimentos</div>
@@ -1064,8 +1065,8 @@ function iniciarRealtimeCliente(pedidoId) {
         'entregue':   { icon:'🎉', title:'Entregue!',           msg:'Seu pedido foi entregue. Bom apetite!' },
       };
       if(msgs[novoStatus]) showToast(msgs[novoStatus].icon, msgs[novoStatus].title, msgs[novoStatus].msg);
-      // Mostrar mapa quando motoboy sair
-      if(novoStatus === 'coletado' || novoStatus === 'entregue') {
+      // Mostrar mapa quando motoboy sair (coletado OU saiu_para_entrega)
+      if(novoStatus === 'coletado' || novoStatus === 'saiu_para_entrega' || novoStatus === 'entregue') {
         var boxRastreio = document.getElementById('box-rastreio');
         if(boxRastreio && boxRastreio.style.display !== 'block') {
           boxRastreio.style.display = 'block';
@@ -1331,6 +1332,10 @@ function irTela(id) {
   var telaAtiva = document.querySelector('.tela.ativa');
   if(telaAtiva && telaAtiva.id === 'tela-confirmado' && id !== 'tela-confirmado') {
     pararRealtimeGps();
+  }
+  // Parar monitor ao sair da tela admin
+  if(telaAtiva && telaAtiva.id === 'tela-admin' && id !== 'tela-admin') {
+    if(adminMonitorTimer) { clearInterval(adminMonitorTimer); adminMonitorTimer = null; }
   }
   document.querySelectorAll('.tela').forEach(function(t){ t.classList.remove('ativa'); });
   document.getElementById(id).classList.add('ativa');
@@ -2914,10 +2919,16 @@ async function renderEstabelecimento() {
       var mesaTag = p.tipo_pedido === 'mesa'
         ? '<span style="background:#FF6D0020;color:#FF6D00;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:6px;">🪑 ' + (p.numero_mesa ? 'Mesa ' + p.numero_mesa : 'Salão') + '</span>'
         : '';
+      var motoboyProprioTag = '';
+      if(p.motoboys_proprios && p.motoboys_proprios.nome) {
+        var corMoto = (p.status === 'saiu_para_entrega' || p.status === 'coletado') ? 'var(--verde)' : '#ffb400';
+        motoboyProprioTag = '<div class="pedido-endereco" style="font-weight:600;color:' + corMoto + ';">🛵 ' + sanitizar(p.motoboys_proprios.nome) + '</div>';
+      }
       return '<div class="card-pedido"' + (isEncerrado ? ' style="opacity:0.65;"' : '') + '>' +
         '<div class="pedido-header"><span class="pedido-num">Pedido #' + p.id.substring(0,8) + mesaTag + '</span>' +
         '<span class="badge-status ' + sc + '">' + sl + '</span></div>' +
         (nomeCliente ? '<div class="pedido-endereco" style="font-weight:600;color:var(--texto);">👤 ' + nomeCliente + '</div>' : '') +
+        motoboyProprioTag +
         (p.tipo_pedido !== 'mesa' ? '<div class="pedido-endereco">📍 ' + (p.endereco_entrega || '') + '</div>' : '') +
         tel +
         '<div class="pedido-itens">' + (itensTxt || '—') + '</div>' +
@@ -3004,10 +3015,16 @@ async function atualizarStatusPedido(pedidoId, novoStatus, btn) {
 let adminDataCache = null;
 
 // ADMIN — renderizar seções
+var adminMonitorTimer = null;
+
 async function renderAdmin(secao) {
   var el = document.getElementById('admin-conteudo');
   if(!el) return;
 
+  // Parar monitor anterior ao mudar de aba
+  if(adminMonitorTimer) { clearInterval(adminMonitorTimer); adminMonitorTimer = null; }
+
+  if(secao === 'monitor') { await renderAdminMonitor(); return; }
   if(secao === 'cupons') { renderAdminCupons(); return; }
 
   if (secao !== 'cadastrar') {
@@ -3978,6 +3995,118 @@ async function alternarStatus() {
   }
 }
 
+// ============================================================
+// ADMIN MONITOR — Tempo real
+// ============================================================
+var STATUS_MONITOR = {
+  pendente:          { label: 'Aguardando',   cor: '#ffb400' },
+  aprovado:          { label: 'Aprovado',     cor: '#00aaff' },
+  preparando:        { label: 'Preparando',   cor: '#ff8c00' },
+  pronto:            { label: 'Pronto',       cor: '#aa44ff' },
+  coletado:          { label: 'Coletado',     cor: '#00ccff' },
+  saiu_para_entrega: { label: 'A caminho',    cor: '#00C853' },
+};
+
+async function renderAdminMonitor() {
+  var el = document.getElementById('admin-conteudo');
+  if(!el) return;
+
+  async function atualizar() {
+    try {
+      var data = await apiCall('/api/admin/monitor');
+      var peds = data.pedidos_ativos || [];
+      var motos = data.motoboys || [];
+      var agora = new Date();
+
+      // ── MOTOBOYS ──────────────────────────────────────────
+      var motosHtml = motos.map(function(m) {
+        var temGps = m.lat && m.lng;
+        var dispCor = m.disponivel ? '#00C853' : '#ff4444';
+        var dispLabel = m.disponivel ? 'Disponível' : 'Ocupado';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--cinza3);">' +
+          '<div style="display:flex;align-items:center;gap:10px;">' +
+            '<div style="width:36px;height:36px;border-radius:50%;background:var(--cinza3);display:flex;align-items:center;justify-content:center;font-size:18px;">🛵</div>' +
+            '<div>' +
+              '<div style="font-size:13px;font-weight:700;">' + sanitizar(m.nome) + '</div>' +
+              '<div style="font-size:11px;color:' + dispCor + ';font-weight:600;">' + dispLabel + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="text-align:right;">' +
+            (temGps
+              ? '<div style="font-size:11px;color:var(--verde);">📍 GPS ativo</div>' +
+                '<div style="font-size:10px;color:var(--texto2);">' + parseFloat(m.lat).toFixed(4) + ', ' + parseFloat(m.lng).toFixed(4) + '</div>'
+              : '<div style="font-size:11px;color:var(--texto2);">Sem GPS</div>'
+            ) +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      // ── PEDIDOS ATIVOS ──────────────────────────────────────
+      var pedsHtml = peds.length === 0
+        ? '<div style="text-align:center;padding:24px;color:var(--texto2);font-size:14px;">Nenhum pedido ativo no momento</div>'
+        : peds.map(function(p) {
+            var st = STATUS_MONITOR[p.status] || { label: p.status, cor: '#888' };
+            var elapsed = Math.floor((agora - new Date(p.criado_em)) / 60000);
+            var elapsedStr = elapsed < 60 ? elapsed + ' min' : Math.floor(elapsed/60) + 'h ' + (elapsed%60) + 'min';
+            var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : (p.guest_nome || 'Visitante');
+            var nomeMotoboy = p.motoboys ? p.motoboys.nome : '—';
+            var temGpsMoto = p.motoboys && p.motoboys.lat && p.motoboys.lng;
+            var pagIcone = p.forma_pagamento === 'pix' ? '⚡ Pix' : '💳 Cartão';
+            return '<div style="background:var(--cinza2);border-radius:14px;padding:14px;margin-bottom:10px;border:1.5px solid var(--cinza3);">' +
+              '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">' +
+                '<div>' +
+                  '<div style="font-size:13px;font-weight:700;">' + sanitizar(p.estabelecimentos?.nome || 'Loja') + '</div>' +
+                  '<div style="font-size:11px;color:var(--texto2);">Cliente: ' + sanitizar(nomeCliente) + ' · ' + pagIcone + '</div>' +
+                '</div>' +
+                '<div style="text-align:right;">' +
+                  '<div style="font-size:15px;font-weight:800;color:var(--verde);">R$ ' + parseFloat(p.total||0).toFixed(2).replace('.',',') + '</div>' +
+                  '<div style="font-size:11px;color:var(--texto2);">⏱ ' + elapsedStr + '</div>' +
+                '</div>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;">' +
+                '<div style="display:flex;align-items:center;gap:8px;">' +
+                  '<span style="background:' + st.cor + '22;color:' + st.cor + ';font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid ' + st.cor + '44;">' + st.label + '</span>' +
+                '</div>' +
+                '<div style="font-size:12px;color:var(--texto2);">' +
+                  '🛵 ' + sanitizar(nomeMotoboy) +
+                  (temGpsMoto ? ' <span style="color:var(--verde);">📍</span>' : '') +
+                '</div>' +
+              '</div>' +
+            '</div>';
+          }).join('');
+
+      var hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      el.innerHTML =
+        // Header
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+          '<div>' +
+            '<div style="font-size:16px;font-weight:800;">🔴 Monitor ao vivo</div>' +
+            '<div style="font-size:11px;color:var(--texto2);">Atualizado às ' + hora + ' · a cada 15s</div>' +
+          '</div>' +
+          '<div style="background:#ff444422;border:1px solid #ff444444;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:#ff4444;">' + peds.length + ' ativo' + (peds.length !== 1 ? 's' : '') + '</div>' +
+        '</div>' +
+
+        // Motoboys
+        '<div style="background:var(--cinza2);border-radius:14px;padding:14px;margin-bottom:16px;border:1px solid var(--cinza3);">' +
+          '<div style="font-size:13px;font-weight:700;margin-bottom:8px;">🛵 Motoboys (' + motos.length + ')</div>' +
+          (motosHtml || '<div style="font-size:13px;color:var(--texto2);">Nenhum motoboy cadastrado</div>') +
+        '</div>' +
+
+        // Pedidos ativos
+        '<div style="font-size:13px;font-weight:700;margin-bottom:10px;">📋 Pedidos ativos</div>' +
+        pedsHtml;
+
+    } catch(e) {
+      if(el) el.innerHTML = '<div style="color:#ff4444;padding:20px;text-align:center;">Erro ao carregar monitor: ' + e.message + '</div>';
+    }
+  }
+
+  el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Iniciando monitor...</div>';
+  await atualizar();
+  adminMonitorTimer = setInterval(atualizar, 15000);
+}
+
 // ADMIN CUPONS
 async function renderAdminCupons() {
   var el = document.getElementById('admin-conteudo');
@@ -4506,6 +4635,9 @@ if(isAndroid && !isStandalone && !bannerDispensado && !deferredInstallPrompt) {
 <script>
 // === TOAST NOTIFICATION SYSTEM ===
 async function tocarSomNovoPedido() {
+  // Vibração — 3 pulsos (Android)
+  if(navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]);
+
   try {
     var ctx = new (window.AudioContext || window.webkitAudioContext)();
     await ctx.resume();
@@ -4523,7 +4655,47 @@ async function tocarSomNovoPedido() {
       osc.start(ctx.currentTime + t);
       osc.stop(ctx.currentTime + t + 0.22);
     });
+    setTimeout(function() { ctx.close(); }, 1500);
   } catch(e) {}
+}
+
+// ============================================================
+// ALERTA SONORO + VIBRAÇÃO — novo pedido para o motoboy
+// ============================================================
+function alertarNovoPedido() {
+  // Vibração: padrão de urgência (3 pulsos)
+  if(navigator.vibrate) {
+    navigator.vibrate([300, 150, 300, 150, 300]);
+  }
+
+  // Som via Web Audio API (sem arquivo externo)
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function beep(freq, start, duration, vol) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, ctx.currentTime + start);
+      gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + start + 0.01);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + duration);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + duration + 0.05);
+    }
+
+    // 3 bips crescentes — chamativo mas não irritante
+    beep(880, 0.0,  0.18, 0.8);
+    beep(880, 0.22, 0.18, 0.8);
+    beep(1100, 0.44, 0.30, 1.0);
+
+    // Fechar contexto após tocar
+    setTimeout(function() { ctx.close(); }, 1200);
+  } catch(e) {
+    console.warn('[Alerta] Web Audio não suportado:', e.message);
+  }
 }
 
 function showToast(icon, title, msg) {
@@ -4673,7 +4845,8 @@ function iniciarPollingPedidos() {
         }
         // Mapa em tempo real
         var boxRastreio = document.getElementById('box-rastreio');
-        if(novoStatus === 'coletado' || novoStatus === 'entregue') {
+        var statusComGps = novoStatus === 'coletado' || novoStatus === 'saiu_para_entrega' || novoStatus === 'entregue';
+        if(statusComGps) {
           if(boxRastreio && boxRastreio.style.display !== 'block') {
             boxRastreio.style.display = 'block';
             if(mapCliente) [200, 600, 1200].forEach(function(d){ setTimeout(function(){ if(mapCliente) mapCliente.invalidateSize(); }, d); });
@@ -4681,6 +4854,8 @@ function iniciarPollingPedidos() {
           if(resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
             atualizarMapaCliente(resp.motoboys.lat, resp.motoboys.lng, resp.motoboys.nome);
           }
+          // Iniciar GPS polling se ainda não iniciou
+          if(!gpsPollingInterval && pedidoAtualId) iniciarRealtimeGps(pedidoAtualId);
         } else {
           if(boxRastreio) boxRastreio.style.display = 'none';
         }
@@ -4705,7 +4880,8 @@ function iniciarPollingPedidos() {
           var novos = disponiveis.filter(function(p) { return !ultimoStatusConhecido['moto_' + p.id]; });
           if(novos.length > 0) {
             novos.forEach(function(p) { ultimoStatusConhecido['moto_' + p.id] = true; });
-            showToast('🔔', novos.length + ' nova(s) entrega(s)!', 'Há entregas disponíveis para você.');
+            alertarNovoPedido();
+            showToast('🔔', novos.length + ' nova(s) entrega' + (novos.length > 1 ? 's' : '') + '!', 'Novo pedido disponível para você.');
           }
           // Re-renderizar se houver mudança ou entrega ativa
           var estadoAtual = JSON.stringify({ ativa: ativa ? ativa.status : null, qtd: disponiveis.length });
@@ -4786,12 +4962,15 @@ function atualizarRastreioPedido(status) {
   var btnCancelar = document.getElementById('btn-cancelar-pedido-wrap');
   if(btnCancelar) btnCancelar.style.display = (status === 'pendente') ? 'block' : 'none';
 
-  // Modo rastreio full-screen quando motoboy saiu
+  // Modo rastreio full-screen quando motoboy saiu (coletado OU saiu_para_entrega)
   var tela = document.getElementById('tela-confirmado');
   var overlay = document.getElementById('rastreio-overlay');
-  if(status === 'coletado') {
+  var modoRastreioAtivo = (status === 'coletado' || status === 'saiu_para_entrega');
+  if(modoRastreioAtivo) {
     if(tela) tela.classList.add('modo-rastreio');
     if(overlay) overlay.style.display = 'block';
+    var boxRastreioAR = document.getElementById('box-rastreio');
+    if(boxRastreioAR) boxRastreioAR.style.display = 'block';
     setTimeout(function() { if(mapCliente) mapCliente.invalidateSize(); }, 300);
   } else {
     if(tela) tela.classList.remove('modo-rastreio');
@@ -5485,8 +5664,12 @@ async function renderRepasses() {
     var extrato = await apiCall('/api/establishments/me/extrato-repasse?periodo=' + periodo);
     var grupos  = await apiCall('/api/establishments/me/repasses-motoboys');
 
-    // ── RESUMO FINANCEIRO ──────────────────────────────────
     var r = extrato.resumo || {};
+    var temMotoboyProprio = extrato.tipo_entrega === 'proprio';
+
+    // ── RESUMO FINANCEIRO ──────────────────────────────────
+    // Linha "você recebe": inclui taxa_entrega quando motoboy próprio
+    var labelLiquido = temMotoboyProprio ? 'Da plataforma' : 'Você recebe';
     var resumoHtml =
       '<div style="background:var(--cinza2);border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid var(--cinza3);">' +
         '<div style="font-size:15px;font-weight:700;margin-bottom:12px;">📊 Seu extrato — últimos 7 dias</div>' +
@@ -5501,9 +5684,32 @@ async function renderRepasses() {
           '</div>' +
           '<div style="background:rgba(0,200,83,0.1);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--verde);">' +
             '<div style="font-size:16px;font-weight:700;color:var(--verde);">R$ ' + (r.total_liquido||0).toFixed(2).replace('.',',') + '</div>' +
-            '<div style="font-size:10px;color:var(--verde);">Você recebe</div>' +
+            '<div style="font-size:10px;color:var(--verde);">' + labelLiquido + '</div>' +
           '</div>' +
         '</div>' +
+
+        // Bloco de motoboys próprios no resumo
+        (temMotoboyProprio && extrato.motoboys_breakdown && extrato.motoboys_breakdown.length > 0 ?
+          '<div style="background:rgba(255,180,0,0.08);border:1px solid rgba(255,180,0,0.3);border-radius:10px;padding:12px;margin-bottom:12px;">' +
+            '<div style="font-size:12px;font-weight:700;color:#ffb400;margin-bottom:8px;">⚠️ REPASSES QUE VOCÊ DEVE AOS SEUS MOTOBOYS</div>' +
+            extrato.motoboys_breakdown.map(function(m) {
+              var fretesStr = m.fretes.map(function(f){ return 'R$ ' + f.toFixed(2).replace('.',','); }).join(' + ');
+              return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,180,0,0.2);">' +
+                '<div>' +
+                  '<div style="font-size:12px;font-weight:600;">🛵 ' + sanitizar(m.nome) + '</div>' +
+                  '<div style="font-size:11px;color:var(--texto2);">' + m.entregas + ' entrega' + (m.entregas>1?'s':'') + ' · ' + fretesStr + '</div>' +
+                '</div>' +
+                '<div style="font-size:14px;font-weight:700;color:#ffb400;">R$ ' + m.total.toFixed(2).replace('.',',') + '</div>' +
+              '</div>';
+            }).join('') +
+            '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;margin-top:4px;">' +
+              '<div style="font-size:13px;font-weight:700;">💰 Seu lucro líquido real</div>' +
+              '<div style="font-size:16px;font-weight:700;color:var(--verde);">R$ ' + (r.lucro_liquido||0).toFixed(2).replace('.',',') + '</div>' +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--texto2);margin-top:4px;">R$ ' + (r.total_liquido||0).toFixed(2).replace('.',',') + ' da plataforma - R$ ' + (r.total_motoboys_pagar||0).toFixed(2).replace('.',',') + ' motoboys = R$ ' + (r.lucro_liquido||0).toFixed(2).replace('.',',') + '</div>' +
+          '</div>'
+          : ''
+        ) +
 
         // Detalhamento por pedido
         (extrato.pedidos && extrato.pedidos.length > 0 ?
@@ -5513,10 +5719,15 @@ async function renderRepasses() {
             var data = new Date(p.data).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
             var hora = new Date(p.data).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
             var pagIcone = p.forma_pagamento === 'pix' ? '⚡' : '💳';
+            var detalhe = temMotoboyProprio
+              ? 'Bruto: R$ ' + p.subtotal.toFixed(2).replace('.',',') + ' &nbsp;·&nbsp; -' + (extrato.comissao_pct||5) + '%: <span style="color:var(--erro);">-R$ ' + p.desconto.toFixed(2).replace('.',',') + '</span> &nbsp;·&nbsp; Frete: +R$ ' + (p.taxa_entrega||0).toFixed(2).replace('.',','): 'Bruto: R$ ' + p.subtotal.toFixed(2).replace('.',',') + ' &nbsp;·&nbsp; Taxa: <span style="color:var(--erro);">-R$ ' + p.desconto.toFixed(2).replace('.',',') + '</span>';
+            var motoboyTag = (temMotoboyProprio && p.motoboy_proprio)
+              ? ' <span style="font-size:10px;background:rgba(255,180,0,0.15);color:#ffb400;padding:1px 5px;border-radius:10px;">🛵 ' + sanitizar(p.motoboy_proprio.nome) + '</span>'
+              : '';
             return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--cinza3);">' +
               '<div>' +
-                '<div style="font-size:12px;font-weight:600;">' + data + ' às ' + hora + ' ' + pagIcone + '</div>' +
-                '<div style="font-size:11px;color:var(--texto2);">Bruto: R$ ' + p.subtotal.toFixed(2).replace('.',',') + ' &nbsp;·&nbsp; Taxa: <span style="color:var(--erro);">-R$ ' + p.desconto.toFixed(2).replace('.',',') + '</span></div>' +
+                '<div style="font-size:12px;font-weight:600;">' + data + ' às ' + hora + ' ' + pagIcone + motoboyTag + '</div>' +
+                '<div style="font-size:11px;color:var(--texto2);">' + detalhe + '</div>' +
               '</div>' +
               '<div style="font-size:14px;font-weight:700;color:var(--verde);">R$ ' + p.liquido.toFixed(2).replace('.',',') + '</div>' +
             '</div>';

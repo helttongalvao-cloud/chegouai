@@ -142,6 +142,43 @@ router.patch('/repasses/:id/pagar', async (req, res, next) => {
 });
 
 // =============================================
+// GET /api/admin/monitor — Monitoramento em tempo real
+// Pedidos ativos + GPS de todos os motoboys
+// =============================================
+router.get('/monitor', async (req, res, next) => {
+  try {
+    const statusAtivos = ['pendente', 'aprovado', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega'];
+
+    const [{ data: pedidos }, { data: motoboys }] = await Promise.all([
+      supabaseAdmin
+        .from('pedidos')
+        .select(`
+          id, status, pagamento_status, total, subtotal, taxa_entrega,
+          forma_pagamento, criado_em, endereco_entrega, guest_nome,
+          estabelecimentos (id, nome),
+          profiles (nome, telefone),
+          motoboys (id, nome, lat, lng)
+        `)
+        .in('status', statusAtivos)
+        .eq('pagamento_status', 'aprovado')
+        .order('criado_em', { ascending: false }),
+
+      supabaseAdmin
+        .from('motoboys')
+        .select('id, nome, disponivel, ativo, lat, lng')
+        .eq('ativo', true)
+        .order('nome'),
+    ]);
+
+    res.json({
+      pedidos_ativos: pedidos || [],
+      motoboys: motoboys || [],
+      atualizado_em: new Date().toISOString(),
+    });
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // POST /api/admin/establishments — Cadastrar loja
 // =============================================
 router.post(
