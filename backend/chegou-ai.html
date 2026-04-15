@@ -3708,7 +3708,7 @@ async function renderMotoboy() {
       html += disponiveis.map(function(p) {
         var ganho = 'R$ ' + parseFloat(p.taxa_entrega || 4).toFixed(2).replace('.',',');
         var nomeLoja = p.estabelecimentos ? p.estabelecimentos.nome : '—';
-        var nomeCliente = p.profiles ? p.profiles.nome : '—';
+        var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : (p.guest_nome || '—');
         var distLoja = '';
         return '<div class="entrega-card">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
