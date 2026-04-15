@@ -4874,12 +4874,45 @@ function atualizarMapaCliente(lat, lng, nomeMoto) {
     mapCliente.setView([lat, lng], 16, { animate: true, duration: 0.8 });
   }
 
-  // ETA no overlay
+  // ETA via OSRM (rota real pela rua)
   var subEl = document.getElementById('rastreio-motoboy-sub');
   if(subEl && pedidoEntregaLat && pedidoEntregaLng) {
-    var dist = haversine(lat, lng, pedidoEntregaLat, pedidoEntregaLng);
-    var etaMin = Math.max(1, Math.ceil((dist / 20) * 60));
-    subEl.textContent = dist < 0.08 ? 'Chegando!' : '~' + etaMin + ' min · ' + (dist < 1 ? Math.round(dist * 1000) + ' m' : dist.toFixed(1) + ' km');
+    var distLinha = haversine(lat, lng, pedidoEntregaLat, pedidoEntregaLng);
+    if(distLinha < 0.08) {
+      subEl.textContent = 'Chegando!';
+    } else {
+      // Mostrar estimativa em linha reta enquanto OSRM carrega
+      if(!subEl._osrmAtualizado) {
+        var etaMin = Math.max(1, Math.ceil((distLinha / 20) * 60));
+        subEl.textContent = '~' + etaMin + ' min · ' + (distLinha < 1 ? Math.round(distLinha * 1000) + ' m' : distLinha.toFixed(1) + ' km');
+      }
+      // Calcular rota real (throttle: só recalcula se motoboy moveu > 50m desde última vez)
+      var agora = Date.now();
+      var distUltima = (subEl._ultimoLat && subEl._ultimoLng) ? haversine(lat, lng, subEl._ultimoLat, subEl._ultimoLng) : 99;
+      if(!subEl._osrmTs || (agora - subEl._osrmTs > 20000) || distUltima > 0.05) {
+        subEl._osrmTs = agora;
+        subEl._ultimoLat = lat;
+        subEl._ultimoLng = lng;
+        fetch('https://router.project-osrm.org/route/v1/driving/' + lng + ',' + lat + ';' + pedidoEntregaLng + ',' + pedidoEntregaLat + '?overview=false')
+          .then(function(r){ return r.json(); })
+          .then(function(d) {
+            if(!d.routes || !d.routes[0]) return;
+            var rota = d.routes[0];
+            var distM = rota.distance; // metros
+            var durS  = rota.duration; // segundos
+            var durMin = Math.max(1, Math.ceil(durS / 60));
+            var distTxt = distM < 1000 ? Math.round(distM) + ' m' : (distM / 1000).toFixed(1) + ' km';
+            var elSub = document.getElementById('rastreio-motoboy-sub');
+            if(elSub) {
+              elSub.textContent = '~' + durMin + ' min · ' + distTxt;
+              elSub._osrmAtualizado = true;
+            }
+          })
+          .catch(function() {
+            // fallback silencioso: mantém estimativa em linha reta
+          });
+      }
+    }
   } else if(subEl && !subEl._defaultSet) {
     subEl.textContent = 'Seu pedido está saindo para entrega';
     subEl._defaultSet = true;

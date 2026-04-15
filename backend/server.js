@@ -57,6 +57,7 @@ app.use(helmet({
         'https://api.pagar.me',
         'wss://*.supabase.co',
         'https://nominatim.openstreetmap.org',
+        'https://router.project-osrm.org',
       ],
       frameSrc: ["'none'"],
     },
