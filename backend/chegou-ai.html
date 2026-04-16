@@ -3223,7 +3223,14 @@ async function renderAdmin(secao) {
           '<input type="text" id="new-loja-endereco" placeholder="Ex: Rua das Flores, 123, Guajará-AM" oninput="geocodificarLoja()">' +
           '<div id="new-loja-geo" style="font-size:12px;color:var(--texto2);margin-top:4px;"></div>' +
         '</div>' +
-        '<div class="campo"><label>Senha de acesso</label><input type="password" id="new-loja-senha" placeholder="Senha (mínimo 6 chars)"></div>' +
+        '<div class="campo"><label>Senha de acesso</label><div style="position:relative;">' +
+          '<input type="password" id="new-loja-senha" placeholder="Senha (mínimo 6 chars)" style="padding-right:44px;">' +
+          '<button type="button" onclick="toggleSenha(\'new-loja-senha\',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--texto2);">👁</button>' +
+        '</div></div>' +
+        '<div class="campo"><label>Confirmar senha</label><div style="position:relative;">' +
+          '<input type="password" id="new-loja-senha2" placeholder="Digite a senha novamente" style="padding-right:44px;">' +
+          '<button type="button" onclick="toggleSenha(\'new-loja-senha2\',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--texto2);">👁</button>' +
+        '</div></div>' +
         '<button class="btn-principal" id="btn-cad-loja" onclick="cadastrarLoja()">Cadastrar loja</button>' +
       '</div>' +
       '<div class="secao-titulo" style="font-size:16px;margin-bottom:20px;">Cadastrar motoboy</div>' +
@@ -3234,7 +3241,14 @@ async function renderAdmin(secao) {
         '<div class="campo"><label>E-mail de acesso</label><input type="email" id="new-moto-email" placeholder="motoboy@email.com"></div>' +
         '<div class="campo"><label>Chave Pix (para repasse)</label><input type="text" id="new-moto-pix" placeholder="CPF, e-mail, telefone ou chave aleatória"></div>' +
         '<div class="campo"><label>Moto (modelo/placa)</label><input type="text" id="new-moto-moto" placeholder="Ex: Honda CG 150 - ABC1234"></div>' +
-        '<div class="campo"><label>Senha de acesso</label><input type="password" id="new-moto-senha" placeholder="Senha (mínimo 6 chars)"></div>' +
+        '<div class="campo"><label>Senha de acesso</label><div style="position:relative;">' +
+          '<input type="password" id="new-moto-senha" placeholder="Senha (mínimo 6 chars)" style="padding-right:44px;">' +
+          '<button type="button" onclick="toggleSenha(\'new-moto-senha\',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--texto2);">👁</button>' +
+        '</div></div>' +
+        '<div class="campo"><label>Confirmar senha</label><div style="position:relative;">' +
+          '<input type="password" id="new-moto-senha2" placeholder="Digite a senha novamente" style="padding-right:44px;">' +
+          '<button type="button" onclick="toggleSenha(\'new-moto-senha2\',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--texto2);">👁</button>' +
+        '</div></div>' +
         '<button class="btn-principal" id="btn-cad-moto" onclick="cadastrarMotoboy()">Cadastrar motoboy</button>' +
       '</div>';
   }
@@ -3459,15 +3473,24 @@ function geocodificarLoja() {
   }, 800);
 }
 
+function toggleSenha(id, btn) {
+  var input = document.getElementById(id);
+  if(!input) return;
+  input.type = input.type === 'password' ? 'text' : 'password';
+  btn.textContent = input.type === 'password' ? '👁' : '🙈';
+}
+
 async function cadastrarLoja() {
   const nome = sanitizar(document.getElementById('new-loja-nome').value);
   const telefone = document.getElementById('new-loja-tel').value.replace(/\D/g,'');
   const email = sanitizar(document.getElementById('new-loja-email').value);
   const senha = document.getElementById('new-loja-senha').value;
+  const senha2 = document.getElementById('new-loja-senha2').value;
   const categoria = document.getElementById('new-loja-cat').value;
   const chavePix = sanitizar(document.getElementById('new-loja-pix').value);
 
   if(!nome || telefone.length < 10 || !email || senha.length < 6) return alert('Preencha os campos corretamente');
+  if(senha !== senha2) return alert('As senhas não coincidem. Verifique e tente novamente.');
 
   const btn = document.getElementById('btn-cad-loja');
   btn.disabled = true; btn.textContent = 'Aguarde...';
@@ -3490,6 +3513,7 @@ async function cadastrarMotoboy() {
   const telefone = document.getElementById('new-moto-tel').value.replace(/\D/g,'');
   const email = sanitizar(document.getElementById('new-moto-email').value);
   const senha = document.getElementById('new-moto-senha').value;
+  const senha2 = document.getElementById('new-moto-senha2').value;
   const moto = sanitizar(document.getElementById('new-moto-moto').value);
   const chavePix = sanitizar(document.getElementById('new-moto-pix').value);
 
@@ -3497,6 +3521,7 @@ async function cadastrarMotoboy() {
   if(telefone.length < 10) return alert('Telefone inválido. Digite com DDD, ex: 97999999999 (' + telefone.length + ' dígitos encontrados)');
   if(!email || !email.includes('@')) return alert('E-mail inválido');
   if(senha.length < 6) return alert('Senha deve ter pelo menos 6 caracteres (' + senha.length + ' informados)');
+  if(senha !== senha2) return alert('As senhas não coincidem. Verifique e tente novamente.');
   
   const btn = document.getElementById('btn-cad-moto');
   btn.disabled = true; btn.textContent = 'Aguarde...';
