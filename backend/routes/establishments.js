@@ -299,6 +299,48 @@ router.post(
 );
 
 // =============================================
+// GET /api/establishments/me/products/search-photo — Buscar foto via Open Food Facts
+// =============================================
+router.get('/me/products/search-photo', requireRole('estabelecimento'), async (req, res) => {
+  const nome = (req.query.nome || '').trim().slice(0, 100);
+  if (!nome) return res.json({ foto_url: null });
+
+  try {
+    // Tenta primeiro banco brasileiro, depois global
+    const urls = [
+      `https://br.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(nome)}&action=process&json=1&page_size=5&fields=product_name,image_front_url,image_url`,
+      `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(nome)}&action=process&json=1&page_size=5&fields=product_name,image_front_url,image_url`,
+    ];
+
+    for (const url of urls) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 4000);
+      try {
+        const r = await fetch(url, {
+          signal: ctrl.signal,
+          headers: { 'User-Agent': 'ChegouAi/1.0 (helttongalvao@gmail.com)' },
+        });
+        clearTimeout(timer);
+        if (!r.ok) continue;
+        const data = await r.json();
+        const products = data.products || [];
+        for (const p of products) {
+          const foto = p.image_front_url || p.image_url;
+          if (foto && foto.startsWith('http')) {
+            return res.json({ foto_url: foto });
+          }
+        }
+      } catch {
+        clearTimeout(timer);
+      }
+    }
+    res.json({ foto_url: null });
+  } catch {
+    res.json({ foto_url: null });
+  }
+});
+
+// =============================================
 // POST /api/establishments/me/products/import — Importar produtos via CSV/JSON
 // =============================================
 router.post('/me/products/import', requireRole('estabelecimento'), async (req, res, next) => {

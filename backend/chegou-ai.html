@@ -2311,15 +2311,34 @@ function abrirImportarCSV() {
     'Colunas do CSV:\n' +
     '  nome, preco — obrigatórias\n' +
     '  descricao, categoria, emoji — opcionais\n' +
-    '  foto_url — opcional (link direto da foto, ex: https://...)\n\n' +
+    '  foto_url — opcional (URL direta da foto)\n\n' +
     'Exemplo:\n' +
-    '  nome,preco,descricao,categoria,foto_url\n' +
-    '  Arroz 5kg,12.90,Tipo 1,Grãos,https://link-da-foto.jpg\n\n' +
-    'Dica: suba as fotos no Google Drive, clique em "Compartilhar" → "Copiar link" e cole na coluna foto_url.\n\n' +
-    'Exporte do Excel/Google Sheets como CSV (separado por vírgula).';
+    '  nome,preco,descricao,categoria\n' +
+    '  Arroz 5kg,12.90,Tipo 1,Grãos\n' +
+    '  Feijão Carioca 1kg,7.50,,Grãos\n\n' +
+    '💡 Após importar, o sistema buscará fotos automaticamente\n' +
+    '   pelo nome do produto (banco mundial de alimentos).\n' +
+    '   Produtos sem foto poderão ter foto adicionada manualmente.\n\n' +
+    'Exporte do Excel/Google Sheets como CSV (separado por vírgula ou ponto e vírgula).';
   if(confirm(info + '\n\nContinuar?')) {
     document.getElementById('csv-import-input').click();
   }
+}
+
+function parseCsvLinha(linha, sep) {
+  // Parser simples que lida com campos entre aspas
+  var cols = [];
+  var dentro = false;
+  var atual = '';
+  for(var ci = 0; ci < linha.length; ci++) {
+    var ch = linha[ci];
+    if((ch === '"' || ch === '\u201c' || ch === '\u201d') && !dentro) { dentro = true; continue; }
+    if((ch === '"' || ch === '\u201c' || ch === '\u201d') && dentro) { dentro = false; continue; }
+    if(ch === sep && !dentro) { cols.push(atual.trim()); atual = ''; continue; }
+    atual += ch;
+  }
+  cols.push(atual.trim());
+  return cols;
 }
 
 function processarArquivoImport(input) {
@@ -2331,25 +2350,30 @@ function processarArquivoImport(input) {
     var linhas = texto.split(/\r?\n/).filter(function(l){ return l.trim(); });
     if(linhas.length < 2) { alert('Arquivo sem dados válidos.'); return; }
 
+    // Detectar separador (vírgula ou ponto e vírgula — Excel BR usa ;)
+    var sep = linhas[0].includes(';') ? ';' : ',';
+
     // Detectar cabeçalho
-    var cabecalho = linhas[0].split(',').map(function(c){ return c.trim().toLowerCase().replace(/["""]/g,''); });
-    var idxNome  = cabecalho.findIndex(function(c){ return c.includes('nome') || c.includes('produto'); });
-    var idxPreco = cabecalho.findIndex(function(c){ return c.includes('preco') || c.includes('preço') || c.includes('valor'); });
-    var idxDesc  = cabecalho.findIndex(function(c){ return c.includes('desc'); });
+    var cabecalho = parseCsvLinha(linhas[0], sep).map(function(c){ return c.toLowerCase().replace(/["""]/g,'').trim(); });
+    var idxNome  = cabecalho.findIndex(function(c){ return c.includes('nome') || c.includes('produto') || c.includes('descri') && !c.includes('descricao'); });
+    var idxPreco = cabecalho.findIndex(function(c){ return c.includes('preco') || c.includes('preço') || c.includes('valor') || c.includes('price'); });
+    var idxDesc  = cabecalho.findIndex(function(c){ return c.includes('descricao') || c.includes('descrição') || c === 'desc'; });
     var idxCat   = cabecalho.findIndex(function(c){ return c.includes('categ'); });
     var idxEmoji = cabecalho.findIndex(function(c){ return c.includes('emoji'); });
-    var idxFoto  = cabecalho.findIndex(function(c){ return c.includes('foto') || c.includes('imagem') || c.includes('image') || c.includes('url'); });
+    var idxFoto  = cabecalho.findIndex(function(c){ return c.includes('foto') || c.includes('imagem') || c.includes('image') || (c.includes('url') && !c.includes('categ')); });
 
     if(idxNome === -1 || idxPreco === -1) {
-      alert('Colunas "nome" e "preco" são obrigatórias no cabeçalho.\n\nColunas encontradas: ' + cabecalho.join(', '));
+      alert('Colunas "nome" e "preco" são obrigatórias no cabeçalho.\n\nColunas encontradas: ' + cabecalho.join(', ') + '\n\nSeparador detectado: "' + sep + '"');
       return;
     }
 
     var produtos = [];
     for(var i = 1; i < linhas.length; i++) {
-      var cols = linhas[i].split(',').map(function(c){ return c.trim().replace(/^[""]|[""]$/g,''); });
-      if(!cols[idxNome] || !cols[idxPreco]) continue;
-      var p = { nome: cols[idxNome], preco: cols[idxPreco] };
+      var cols = parseCsvLinha(linhas[i], sep);
+      var nomeProd = cols[idxNome] ? cols[idxNome].replace(/^[""]|[""]$/g,'').trim() : '';
+      var precoProd = cols[idxPreco] ? cols[idxPreco].replace(/^[""]|[""]$/g,'').trim() : '';
+      if(!nomeProd || !precoProd) continue;
+      var p = { nome: nomeProd, preco: precoProd.replace(',', '.') };
       if(idxDesc >= 0 && cols[idxDesc]) p.descricao = cols[idxDesc];
       if(idxCat >= 0 && cols[idxCat]) p.categoria = cols[idxCat];
       if(idxEmoji >= 0 && cols[idxEmoji]) p.emoji = cols[idxEmoji];
@@ -2358,22 +2382,100 @@ function processarArquivoImport(input) {
     }
 
     if(produtos.length === 0) { alert('Nenhum produto válido encontrado.'); return; }
-    if(!confirm('Encontrei ' + produtos.length + ' produto(s).\n\nImportar agora?')) return;
+    var comFotoCSV = produtos.filter(function(p){ return p.foto_url; }).length;
+    var semFotoCSV = produtos.length - comFotoCSV;
+    var msgConfirm = 'Encontrei ' + produtos.length + ' produto(s)';
+    if(comFotoCSV > 0) msgConfirm += ' — ' + comFotoCSV + ' com foto na planilha';
+    if(semFotoCSV > 0) msgConfirm += ', ' + semFotoCSV + ' sem foto (serão buscadas automaticamente)';
+    if(!confirm(msgConfirm + '.\n\nImportar agora?')) { input.value = ''; return; }
 
     try {
       showToast('⏳', 'Importando...', produtos.length + ' produtos sendo cadastrados');
       var resp = await apiCall('/api/establishments/me/products/import', { method: 'POST', body: { produtos: produtos } });
       window._idsImportados = new Set(resp.ids || []);
-      var comFoto = produtos.filter(function(p){ return p.foto_url; }).length;
-      var msgFoto = comFoto > 0 ? comFoto + ' com foto.' : 'Adicione as fotos depois.';
-      showToast('✅', 'Importação concluída!', resp.importados + ' produtos importados. ' + msgFoto);
-      renderCardapioEst(true);
+      showToast('✅', 'Cadastrados!', resp.importados + ' produtos importados com sucesso');
+      await renderCardapioEst(true);
+
+      // Buscar fotos automaticamente para produtos sem foto
+      var semFoto = cardapioEst.filter(function(p){ return !p.imagem_url && window._idsImportados && window._idsImportados.has(p.id); });
+      if(semFoto.length > 0) {
+        await buscarFotosAutomatico(semFoto);
+      }
     } catch(e) {
       alert('Erro na importação: ' + e.message);
     }
     input.value = '';
   };
   reader.readAsText(file, 'UTF-8');
+}
+
+async function buscarFotosAutomatico(produtosSemFoto) {
+  if(!produtosSemFoto || produtosSemFoto.length === 0) return;
+
+  // Criar overlay de progresso
+  var overlay = document.createElement('div');
+  overlay.id = 'foto-busca-overlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = '<div style="background:white;border-radius:20px;padding:28px 24px;max-width:340px;width:90%;text-align:center;">' +
+    '<div style="font-size:32px;margin-bottom:8px;">🔍</div>' +
+    '<div style="font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">Buscando fotos automaticamente</div>' +
+    '<div id="foto-busca-status" style="font-size:13px;color:#666;margin-bottom:16px;">Iniciando...</div>' +
+    '<div style="background:#f0f0f0;border-radius:8px;height:8px;overflow:hidden;">' +
+      '<div id="foto-busca-barra" style="height:100%;background:#FF6D00;border-radius:8px;width:0%;transition:width 0.3s;"></div>' +
+    '</div>' +
+    '<div id="foto-busca-contadores" style="font-size:12px;color:#888;margin-top:10px;"></div>' +
+  '</div>';
+  document.body.appendChild(overlay);
+
+  var total = produtosSemFoto.length;
+  var encontradas = 0;
+  var naoEncontradas = [];
+
+  for(var i = 0; i < produtosSemFoto.length; i++) {
+    var prod = produtosSemFoto[i];
+    var pct = Math.round(((i + 1) / total) * 100);
+
+    document.getElementById('foto-busca-status').textContent = 'Buscando: ' + prod.nome.substring(0, 35) + (prod.nome.length > 35 ? '...' : '');
+    document.getElementById('foto-busca-barra').style.width = pct + '%';
+    document.getElementById('foto-busca-contadores').textContent = (i + 1) + ' de ' + total + ' — ' + encontradas + ' foto(s) encontrada(s)';
+
+    try {
+      var r = await apiCall('/api/establishments/me/products/search-photo?nome=' + encodeURIComponent(prod.nome));
+      if(r.foto_url) {
+        await apiCall('/api/establishments/me/products/' + prod.id, { method: 'PUT', body: { imagem_url: r.foto_url } });
+        // Atualizar no cache local
+        var local = cardapioEst.find(function(p){ return p.id === prod.id; });
+        if(local) local.imagem_url = r.foto_url;
+        encontradas++;
+      } else {
+        naoEncontradas.push(prod);
+      }
+    } catch(_) {
+      naoEncontradas.push(prod);
+    }
+
+    // Pequena pausa para não sobrecarregar
+    await new Promise(function(res){ setTimeout(res, 200); });
+  }
+
+  // Remover overlay
+  overlay.remove();
+
+  // Re-renderizar cardápio com fotos atualizadas
+  await renderCardapioEst(true);
+
+  // Resultado final
+  var msgFinal = '✅ Busca de fotos concluída!\n\n' +
+    '📸 ' + encontradas + ' foto(s) encontrada(s) automaticamente\n';
+  if(naoEncontradas.length > 0) {
+    msgFinal += '⚠️ ' + naoEncontradas.length + ' produto(s) sem foto:\n' +
+      naoEncontradas.slice(0, 5).map(function(p){ return '  • ' + p.nome; }).join('\n') +
+      (naoEncontradas.length > 5 ? '\n  ... e mais ' + (naoEncontradas.length - 5) : '') +
+      '\n\nClique em ✏️ Editar para adicionar a foto manualmente.';
+  } else {
+    msgFinal += '\n🎉 Todos os produtos receberam foto!';
+  }
+  alert(msgFinal);
 }
 
 async function renderCardapioEst(manterDestaque) {
