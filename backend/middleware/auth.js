@@ -1,4 +1,13 @@
+const { createClient } = require('@supabase/supabase-js');
 const { supabaseAdmin } = require('../config/supabase');
+
+// Client isolado só para verificar tokens JWT — nunca faz queries de DB
+// Evita contaminar o supabaseAdmin (service_role) com JWTs de usuários
+function criarVerificadorToken() {
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 /**
  * Middleware de autenticação via JWT do Supabase.
@@ -13,12 +22,13 @@ async function requireAuth(req, res, next) {
   const token = authHeader.slice(7);
 
   try {
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    // Verificar token com client isolado — não contamina o supabaseAdmin
+    const { data: { user }, error } = await criarVerificadorToken().auth.getUser(token);
     if (error || !user) {
       return res.status(401).json({ error: 'Token inválido ou expirado' });
     }
 
-    // Buscar perfil completo do usuário
+    // Buscar perfil completo via supabaseAdmin (service_role — bypassa RLS)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('*')
@@ -57,7 +67,6 @@ function requireRole(...roles) {
 
 /**
  * Auth opcional: se tiver token válido, popula req.user. Senão, req.user = null.
- * Usado em rotas que aceitam tanto usuários logados quanto convidados (guest).
  */
 async function optionalAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -67,7 +76,7 @@ async function optionalAuth(req, res, next) {
   }
   const token = authHeader.slice(7);
   try {
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error } = await criarVerificadorToken().auth.getUser(token);
     if (error || !user) { req.user = null; return next(); }
     const { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('id', user.id).single();
     req.user = profile ? { ...user, profile } : null;
