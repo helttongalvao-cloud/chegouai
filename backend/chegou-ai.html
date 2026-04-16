@@ -3050,7 +3050,8 @@ async function renderAdmin(secao) {
     document.getElementById('admin-comissao') && (document.getElementById('admin-comissao').textContent = 'R$ ' + (adminDataCache.stats.comissaoHoje || 0).toFixed(2).replace('.', ','));
     document.getElementById('admin-lojas') && (document.getElementById('admin-lojas').textContent = adminDataCache.stats.estabelecimentosAtivos || 0);
     document.getElementById('admin-pedidos') && (document.getElementById('admin-pedidos').textContent = adminDataCache.stats.pedidosHoje || 0);
-    document.getElementById('admin-motoboys') && (document.getElementById('admin-motoboys').textContent = adminDataCache.stats.motoboysdisponiveis || 0);
+    var motoAtivos = (adminDataCache.motoboys || []).filter(function(m){ return m.ativo && m.disponivel; }).length;
+    document.getElementById('admin-motoboys') && (document.getElementById('admin-motoboys').textContent = motoAtivos);
   }
 
   // Fases progressivas
