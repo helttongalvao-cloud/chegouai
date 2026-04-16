@@ -579,9 +579,15 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       </label>
     </div>
     <div class="secao-checkout" id="secao-guest-nome" style="display:none;">
-      <h4>👤 Seu nome</h4>
-      <div class="campo" style="margin:0;">
-        <input type="text" placeholder="Nome completo" id="checkout-guest-nome" style="margin:0;" autocomplete="name">
+      <h4>👤 Identificação (obrigatório)</h4>
+      <div class="campo" style="margin:0 0 10px;">
+        <input type="text" placeholder="Nome completo *" id="checkout-guest-nome" style="margin:0;" autocomplete="name">
+      </div>
+      <div class="campo" style="margin:0 0 10px;">
+        <input type="text" id="checkout-guest-cpf" placeholder="CPF *" maxlength="14" inputmode="numeric" oninput="mascaraCPF(this)" style="margin:0;">
+      </div>
+      <div id="guest-gps-aviso" style="font-size:12px;color:var(--erro);margin-top:4px;display:none;">
+        ⚠️ Use o botão 📍 abaixo para confirmar sua localização
       </div>
     </div>
     <div class="secao-checkout">
@@ -2103,6 +2109,16 @@ async function confirmarPedido() {
   if(isGuest) {
     guestNome = (document.getElementById('checkout-guest-nome')?.value || '').trim();
     if(guestNome.length < 2) { alert('Informe seu nome completo'); return; }
+
+    guestCpf = (document.getElementById('checkout-guest-cpf')?.value || '').replace(/\D/g,'');
+    if(guestCpf.length !== 11) { alert('Informe seu CPF (11 dígitos)'); return; }
+
+    if(!clienteLat || !clienteLng) {
+      var av = document.getElementById('guest-gps-aviso');
+      if(av) av.style.display = '';
+      alert('Use o botão 📍 "Usar minha localização atual" para confirmar onde você está');
+      return;
+    }
   }
 
   // Validar valor mínimo
@@ -2138,8 +2154,9 @@ async function confirmarPedido() {
     if(cupomAplicado) bodyPedido.cupom = cupomAplicado.codigo;
     if(isGuest) {
       bodyPedido.guestNome = guestNome;
-      guestCpf = (document.getElementById('checkout-cpf')?.value || '').replace(/\D/g,'');
-      if(guestCpf) bodyPedido.guestCpf = guestCpf;
+      bodyPedido.guestCpf = guestCpf;
+      bodyPedido.clienteLat = clienteLat;
+      bodyPedido.clienteLng = clienteLng;
     }
 
     // 1. Criar pedido no backend
@@ -2192,6 +2209,8 @@ function usarLocalizacao() {
       btn.textContent = '✅ Localização obtida — ajuste o pin se precisar';
       btn.style.borderColor = 'var(--verde)';
       btn.style.color = 'var(--verde)';
+      var av = document.getElementById('guest-gps-aviso');
+      if(av) av.style.display = 'none';
       mostrarMapaPicker(clienteLat, clienteLng);
     },
     function(err) {
