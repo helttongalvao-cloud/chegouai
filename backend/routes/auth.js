@@ -1,16 +1,11 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { createClient } = require('@supabase/supabase-js');
-const { supabaseAdmin } = require('../config/supabase');
+const { supabaseAdmin, supabaseAnon } = require('../config/supabase');
 const { requireAuth } = require('../middleware/auth');
 const { authSlowDown } = require('../middleware/security');
 
-// Cria um client de autenticação temporário por request — evita contaminação do singleton
-function criarAuthClient() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
+// supabaseAnon é usado APENAS para signInWithPassword (nunca para queries de DB)
+// Contaminação do anon com JWT de usuário não afeta o supabaseAdmin (service_role)
 
 const router = express.Router();
 
@@ -124,8 +119,8 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
 
     const emailLogin = profileEmail?.email || `tel_${telLimpo}@chegouai.app`;
 
-    // Criar client temporário por request — evita race condition com singleton
-    const { data, error } = await criarAuthClient().auth.signInWithPassword({
+    // supabaseAnon nunca faz queries de DB — contaminação com JWT de usuário é inofensiva
+    const { data, error } = await supabaseAnon.auth.signInWithPassword({
       email: emailLogin,
       password: senha,
     });
