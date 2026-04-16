@@ -114,11 +114,13 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
 
   try {
     // Buscar e-mail interno pelo telefone
-    const { data: profileEmail } = await supabaseAdmin
+    const { data: profileEmail, error: profileLookupErr } = await supabaseAdmin
       .from('profiles')
       .select('email')
       .eq('telefone', telLimpo)
       .maybeSingle();
+
+    console.log('[Auth/login] profileLookup:', { tel: telLimpo, email: profileEmail?.email || null, err: profileLookupErr?.message || null });
 
     const emailLogin = profileEmail?.email || `tel_${telLimpo}@chegouai.app`;
 
@@ -129,7 +131,7 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
     });
 
     if (error) {
-      console.error('[Auth/login] Supabase signInWithPassword error:', error.message, '| email:', emailLogin);
+      console.error('[Auth/login] signInWithPassword error:', error.message, '| email usado:', emailLogin);
       return res.status(400).json({ error: 'Telefone ou senha incorretos' });
     }
 
