@@ -560,7 +560,7 @@ router.patch(
       if (status === 'entregue' && pedido.motoboy_id) {
         const { data: repasseExistente } = await supabaseAdmin
           .from('repasses')
-          .select('id, status')
+          .select('id, status, motoboy_id')
           .eq('pedido_id', orderId)
           .eq('tipo', 'motoboy')
           .maybeSingle();
@@ -575,6 +575,11 @@ router.patch(
             valor: valorRepasse,
             status: 'pendente',
           });
+        } else if (!repasseExistente.motoboy_id) {
+          // Repasse criado pelo webhook sem motoboy_id — atualiza agora que sabemos o motoboy
+          await supabaseAdmin.from('repasses')
+            .update({ motoboy_id: pedido.motoboy_id, atualizado_em: new Date().toISOString() })
+            .eq('id', repasseExistente.id);
         }
 
         // Transferir via Pix Pagar.me se pagamento aprovado e motoboy tem chave Pix

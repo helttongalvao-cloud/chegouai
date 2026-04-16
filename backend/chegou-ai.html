@@ -3050,7 +3050,7 @@ async function renderAdmin(secao) {
     document.getElementById('admin-comissao') && (document.getElementById('admin-comissao').textContent = 'R$ ' + (adminDataCache.stats.comissaoHoje || 0).toFixed(2).replace('.', ','));
     document.getElementById('admin-lojas') && (document.getElementById('admin-lojas').textContent = adminDataCache.stats.estabelecimentosAtivos || 0);
     document.getElementById('admin-pedidos') && (document.getElementById('admin-pedidos').textContent = adminDataCache.stats.pedidosHoje || 0);
-    document.getElementById('admin-motoboys') && (document.getElementById('admin-motoboys').textContent = adminDataCache.stats.motoboysAtivos || 0);
+    document.getElementById('admin-motoboys') && (document.getElementById('admin-motoboys').textContent = adminDataCache.stats.motoboysdisponiveis || 0);
   }
 
   // Fases progressivas
@@ -3094,17 +3094,17 @@ async function renderAdmin(secao) {
         if(r.tipo === 'plataforma') return;
         if(r.status === 'pago') { pagoTotal += r.valor; return; }
         if(r.tipo === 'lojista') {
-          var id = r.estabelecimento_id || 'desconhecido';
-          var nome = r.estabelecimentos?.nome || 'Loja';
-          var pix = r.estabelecimentos?.mp_user_id || '';
+          var id = r.pedidos?.estabelecimentos?.id || 'desconhecido';
+          var nome = r.pedidos?.estabelecimentos?.nome || 'Loja';
+          var pix = '';
           if(!porLoja[id]) porLoja[id] = { nome: nome, chave_pix: pix, total: 0, ids: [] };
           porLoja[id].total += r.valor;
           porLoja[id].ids.push(r.id);
         } else if(r.tipo === 'motoboy') {
-          var id = r.motoboy_id || 'desconhecido';
-          var nome = r.motoboys?.nome || 'Motoboy';
-          var pix = r.motoboys?.chave_pix || '';
-          if(!porMoto[id]) porMoto[id] = { nome: nome, chave_pix: pix, total: 0, ids: [] };
+          var motoNome = r.motoboys?.nome || r.pedidos?.motoboys?.nome || 'Motoboy';
+          var id = r.motoboy_id || r.pedidos?.motoboys?.id || 'desconhecido';
+          var pix = r.motoboys?.chave_pix || r.pedidos?.motoboys?.chave_pix || '';
+          if(!porMoto[id]) porMoto[id] = { nome: motoNome, chave_pix: pix, total: 0, ids: [] };
           porMoto[id].total += r.valor;
           porMoto[id].ids.push(r.id);
         }
