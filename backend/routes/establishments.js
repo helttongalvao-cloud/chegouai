@@ -7,6 +7,52 @@ const { calcularComissao } = require('../services/commission');
 const router = express.Router();
 
 // =============================================
+// GET /api/establishments/products/search — Busca global de produtos (público)
+// =============================================
+router.get('/products/search', async (req, res, next) => {
+  try {
+    const q = (req.query.q || '').trim().slice(0, 80);
+    if (q.length < 2) return res.json([]);
+
+    const { data, error } = await supabaseAdmin
+      .from('produtos')
+      .select(`
+        id, nome, descricao, preco, emoji, imagem_url, categoria,
+        estabelecimentos!inner (id, nome, emoji, aberto, ativo, categoria, taxa_entrega, tempo_entrega)
+      `)
+      .ilike('nome', `%${q}%`)
+      .eq('disponivel', true)
+      .eq('estabelecimentos.ativo', true)
+      .order('nome')
+      .limit(40);
+
+    if (error) throw error;
+
+    // Retornar apenas produtos de lojas abertas
+    const resultado = (data || [])
+      .filter(p => p.estabelecimentos?.aberto)
+      .map(p => ({
+        id: p.id,
+        nome: p.nome,
+        descricao: p.descricao || '',
+        preco: p.preco,
+        emoji: p.emoji,
+        imagem_url: p.imagem_url || null,
+        loja: {
+          id: p.estabelecimentos.id,
+          nome: p.estabelecimentos.nome,
+          emoji: p.estabelecimentos.emoji,
+          categoria: p.estabelecimentos.categoria,
+          taxa_entrega: p.estabelecimentos.taxa_entrega,
+          tempo_entrega: p.estabelecimentos.tempo_entrega,
+        },
+      }));
+
+    res.json(resultado);
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // GET /api/establishments — Listar (público)
 // =============================================
 router.get('/', async (req, res, next) => {

@@ -496,11 +496,18 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       </div>
       <span style="color:var(--texto2)">›</span>
     </div>
-    <div class="busca-bar">
-    <span class="busca-icon">🔍</span>
-    <input type="text" placeholder="Buscar estabelecimento..." id="busca-input" oninput="buscarEst(this.value)">
-  </div>
-  <div class="secao-titulo">Categorias</div>
+    <div style="display:flex;gap:8px;margin-bottom:4px;">
+      <div class="busca-bar" style="margin-bottom:0;flex:1;">
+        <span class="busca-icon">🏪</span>
+        <input type="text" placeholder="Buscar loja..." id="busca-input" oninput="buscarEst(this.value)">
+      </div>
+      <div class="busca-bar" style="margin-bottom:0;flex:1;">
+        <span class="busca-icon">🔍</span>
+        <input type="text" placeholder="Buscar produto..." id="busca-produto-input" oninput="buscarProdutoGlobal(this.value)">
+      </div>
+    </div>
+    <div id="resultado-busca-produto" style="display:none;margin-bottom:8px;"></div>
+  <div class="secao-titulo" id="secao-titulo-categorias">Categorias</div>
     <div class="categorias">
       <div class="cat-btn ativo" onclick="filtrarCat(this,'todos')">🍽️ Todos</div>
       <div class="cat-btn" onclick="filtrarCat(this,'restaurante')">🍔 Restaurantes</div>
@@ -1538,6 +1545,15 @@ async function irHome() {
   // Limpar polling se houver (ex: checagem de pix/pagamento ou status do pedido)
   if(window.pixCheckInterval) clearInterval(window.pixCheckInterval);
   if(typeof pollingInterval !== 'undefined') clearInterval(pollingInterval);
+  // Limpar busca de produto ao voltar para home
+  var inpProd = document.getElementById('busca-produto-input');
+  if(inpProd) inpProd.value = '';
+  var elRes = document.getElementById('resultado-busca-produto');
+  if(elRes) elRes.style.display = 'none';
+  var elCats = document.getElementById('secao-titulo-categorias');
+  if(elCats) elCats.style.display = '';
+  var elLista = document.getElementById('lista-estabelecimentos');
+  if(elLista) elLista.style.display = '';
   carregarEstabelecimentos('todos'); // Roda em background sem bloquear
 }
 
@@ -1652,6 +1668,58 @@ function buscarEst(val) {
       '</div>' +
     '</div>';
   }).join('');
+}
+
+var _buscaProdTimer = null;
+function buscarProdutoGlobal(val) {
+  var q = val.trim();
+  var elRes = document.getElementById('resultado-busca-produto');
+  var elCats = document.getElementById('secao-titulo-categorias');
+  var elLista = document.getElementById('lista-estabelecimentos');
+
+  if(q.length < 2) {
+    elRes.style.display = 'none';
+    if(elCats) elCats.style.display = '';
+    if(elLista) elLista.style.display = '';
+    return;
+  }
+
+  // Ocultar lojas e categorias enquanto busca produto
+  if(elCats) elCats.style.display = 'none';
+  if(elLista) elLista.style.display = 'none';
+  elRes.style.display = 'block';
+  elRes.innerHTML = '<div style="text-align:center;padding:16px;color:var(--texto2);font-size:13px;"><div class="loading-spinner" style="margin:0 auto 8px;width:20px;height:20px;"></div>Buscando...</div>';
+
+  clearTimeout(_buscaProdTimer);
+  _buscaProdTimer = setTimeout(async function() {
+    try {
+      var dados = await apiCall('/api/establishments/products/search?q=' + encodeURIComponent(q));
+      if(!dados || dados.length === 0) {
+        elRes.innerHTML = '<div class="vazio" style="padding:20px;"><div class="vazio-icon" style="font-size:28px;">🔍</div>Nenhum produto encontrado nas lojas abertas</div>';
+        return;
+      }
+      elRes.innerHTML =
+        '<div style="font-size:12px;font-weight:700;color:var(--texto2);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">' + dados.length + ' produto(s) encontrado(s)</div>' +
+        dados.map(function(p) {
+          var imgHtml = p.imagem_url
+            ? '<img src="' + p.imagem_url + '" style="width:52px;height:52px;border-radius:10px;object-fit:cover;flex-shrink:0;" onerror="this.style.display=\'none\'">'
+            : '<div style="width:52px;height:52px;border-radius:10px;background:var(--cinza3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">' + (p.emoji || '🍽️') + '</div>';
+          var preco = 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.',',');
+          var frete = p.loja.taxa_entrega > 0 ? 'Frete R$ ' + parseFloat(p.loja.taxa_entrega).toFixed(2).replace('.',',') : 'Frete grátis';
+          return '<div onclick="abrirCardapio(\'' + p.loja.id + '\')" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--cinza2);border-radius:14px;margin-bottom:8px;cursor:pointer;border:1.5px solid var(--cinza3);">' +
+            imgHtml +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-size:14px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sanitizar(p.nome) + '</div>' +
+              '<div style="font-size:12px;color:var(--texto2);margin:2px 0;">' + sanitizar(p.loja.emoji || '🏪') + ' ' + sanitizar(p.loja.nome) + ' · ' + frete + '</div>' +
+              '<div style="font-size:15px;font-weight:800;color:var(--verde);">' + preco + '</div>' +
+            '</div>' +
+            '<div style="font-size:18px;color:var(--verde);font-weight:900;padding:0 4px;">›</div>' +
+          '</div>';
+        }).join('');
+    } catch(e) {
+      elRes.innerHTML = '<div style="text-align:center;padding:16px;color:var(--erro);font-size:13px;">Erro ao buscar produtos</div>';
+    }
+  }, 400);
 }
 
 // Fechar modal clicando fora — executar após DOM carregado
