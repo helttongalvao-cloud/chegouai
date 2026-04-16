@@ -148,7 +148,7 @@ router.get('/monitor', async (req, res, next) => {
   try {
     const statusAtivos = ['pendente', 'aprovado', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega'];
 
-    const [{ data: pedidos }, { data: motoboys }] = await Promise.all([
+    const [{ data: pedidos }, { data: motoboys }, { data: estabelecimentos }] = await Promise.all([
       supabaseAdmin
         .from('pedidos')
         .select(`
@@ -167,11 +167,38 @@ router.get('/monitor', async (req, res, next) => {
         .select('id, nome, disponivel, ativo, lat, lng')
         .eq('ativo', true)
         .order('nome'),
+
+      supabaseAdmin
+        .from('estabelecimentos')
+        .select('id, nome, aberto, ativo, categoria, emoji')
+        .eq('ativo', true)
+        .order('nome'),
     ]);
+
+    // Calcular pedidos pendentes e tempo máximo de espera por loja
+    const agora = new Date();
+    const statsLoja = {};
+    for (const p of (pedidos || [])) {
+      const estId = p.estabelecimentos?.id;
+      if (!estId) continue;
+      if (!statsLoja[estId]) statsLoja[estId] = { pendentes: 0, max_espera_min: 0 };
+      statsLoja[estId].pendentes++;
+      if (p.status === 'pendente') {
+        const min = Math.floor((agora - new Date(p.criado_em)) / 60000);
+        if (min > statsLoja[estId].max_espera_min) statsLoja[estId].max_espera_min = min;
+      }
+    }
+
+    const estabelecimentosComStats = (estabelecimentos || []).map(e => ({
+      ...e,
+      pedidos_ativos: statsLoja[e.id]?.pendentes || 0,
+      max_espera_min: statsLoja[e.id]?.max_espera_min || 0,
+    }));
 
     res.json({
       pedidos_ativos: pedidos || [],
       motoboys: motoboys || [],
+      estabelecimentos: estabelecimentosComStats,
       atualizado_em: new Date().toISOString(),
     });
   } catch (err) { next(err); }

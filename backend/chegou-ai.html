@@ -1728,8 +1728,8 @@ async function abrirCardapio(id) {
     var areaLista = document.getElementById('area-lista-compras');
     if(areaLista) areaLista.style.display = 'none';
 
-    // Salvar produtos para busca
-    produtosCache = (estAtual.produtos || []).filter(function(p) { return p.disponivel !== false; });
+    // Salvar todos os produtos (disponíveis e indisponíveis — indisponíveis aparecem bloqueados)
+    produtosCache = estAtual.produtos || [];
     renderProdutos(produtosCache);
 
     // Carregar endereço salvo
@@ -1792,17 +1792,22 @@ function renderProdutos(produtos) {
 }
 
 function renderCardProduto(item, i) {
+  var indisponivel = item.disponivel === false;
+  var opacidade = indisponivel ? 'opacity:0.5;' : '';
   var imgHtml = item.imagem_url
-    ? '<img src="' + item.imagem_url + '" style="width:56px;height:56px;border-radius:10px;object-fit:cover;" onerror="this.style.display=\'none\'">'
-    : '<div class="item-emoji">' + (item.emoji || '🍽️') + '</div>';
+    ? '<img src="' + item.imagem_url + '" style="width:56px;height:56px;border-radius:10px;object-fit:cover;' + opacidade + '" onerror="this.style.display=\'none\'">'
+    : '<div class="item-emoji" style="' + opacidade + '">' + (item.emoji || '🍽️') + '</div>';
+  var btnHtml = indisponivel
+    ? '<div style="font-size:11px;font-weight:700;color:#999;background:#f0f0f0;border-radius:20px;padding:6px 10px;white-space:nowrap;">Indisponível</div>'
+    : '<button class="item-add" onclick="adicionarItem(' + i + ')">+</button>';
   return '<div class="card-item" data-nome="' + (item.nome || '').toLowerCase() + '">' +
     imgHtml +
-    '<div class="item-info">' +
+    '<div class="item-info" style="' + opacidade + '">' +
       '<div class="item-nome">' + sanitizar(item.nome) + '</div>' +
       '<div class="item-desc">' + sanitizar(item.descricao || '') + '</div>' +
       '<div class="item-preco">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + '</div>' +
     '</div>' +
-    '<button class="item-add" onclick="adicionarItem(' + i + ')">+</button>' +
+    btnHtml +
   '</div>';
 }
 
@@ -1815,6 +1820,7 @@ function filtrarProdutos(termo) {
 
 function adicionarItem(idx) {
   const item = produtosCache[idx];
+  if(!item || item.disponivel === false) return;
   const existente = carrinho.find(function(c){ return c.id === item.id && !c.observacao; });
   if(existente) {
     existente.qtd++;
@@ -4163,7 +4169,32 @@ async function renderAdminMonitor() {
       var data = await apiCall('/api/admin/monitor');
       var peds = data.pedidos_ativos || [];
       var motos = data.motoboys || [];
+      var lojas = data.estabelecimentos || [];
       var agora = new Date();
+
+      // ── LOJISTAS ──────────────────────────────────────────
+      var lojasHtml = lojas.map(function(l) {
+        var abertoColor = l.aberto ? '#00C853' : '#999';
+        var abertoLabel = l.aberto ? 'Aberta' : 'Fechada';
+        var temPedidos = l.pedidos_ativos > 0;
+        var alerta = l.max_espera_min >= 10;
+        var bordaAlerta = alerta ? 'border-color:#ff4444;' : '';
+        var pedidosStr = temPedidos
+          ? '<span style="background:' + (alerta ? '#ff444422' : '#FF6D0022') + ';color:' + (alerta ? '#ff4444' : 'var(--laranja)') + ';font-weight:700;padding:2px 8px;border-radius:12px;font-size:11px;">' +
+            l.pedidos_ativos + ' pedido' + (l.pedidos_ativos !== 1 ? 's' : '') +
+            (alerta ? ' ⚠️ ' + l.max_espera_min + 'min' : '') + '</span>'
+          : '<span style="font-size:11px;color:var(--texto2);">Sem pedidos</span>';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--cinza3);' + bordaAlerta + '">' +
+          '<div style="display:flex;align-items:center;gap:10px;">' +
+            '<div style="width:36px;height:36px;border-radius:50%;background:var(--cinza3);display:flex;align-items:center;justify-content:center;font-size:18px;">' + (l.emoji || '🏪') + '</div>' +
+            '<div>' +
+              '<div style="font-size:13px;font-weight:700;">' + sanitizar(l.nome) + '</div>' +
+              '<div style="font-size:11px;color:' + abertoColor + ';font-weight:600;">' + abertoLabel + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="text-align:right;">' + pedidosStr + '</div>' +
+        '</div>';
+      }).join('');
 
       // ── MOTOBOYS ──────────────────────────────────────────
       var motosHtml = motos.map(function(m) {
@@ -4232,6 +4263,12 @@ async function renderAdminMonitor() {
             '<div style="font-size:11px;color:var(--texto2);">Atualizado às ' + hora + ' · a cada 15s</div>' +
           '</div>' +
           '<div style="background:#ff444422;border:1px solid #ff444444;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:#ff4444;">' + peds.length + ' ativo' + (peds.length !== 1 ? 's' : '') + '</div>' +
+        '</div>' +
+
+        // Lojistas
+        '<div style="background:var(--cinza2);border-radius:14px;padding:14px;margin-bottom:16px;border:1px solid var(--cinza3);">' +
+          '<div style="font-size:13px;font-weight:700;margin-bottom:8px;">🏪 Lojas (' + lojas.length + ')</div>' +
+          (lojasHtml || '<div style="font-size:13px;color:var(--texto2);">Nenhuma loja cadastrada</div>') +
         '</div>' +
 
         // Motoboys

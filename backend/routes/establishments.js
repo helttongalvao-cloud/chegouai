@@ -96,8 +96,8 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
       }
     }
 
-    // Filtrar apenas produtos disponíveis
-    est.produtos = est.produtos.filter((p) => p.disponivel);
+    // Ordenar: disponíveis primeiro, indisponíveis por último
+    est.produtos = [...est.produtos].sort((a, b) => (b.disponivel ? 1 : 0) - (a.disponivel ? 1 : 0));
 
     res.json(est);
   } catch (err) {
