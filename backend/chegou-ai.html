@@ -1353,6 +1353,8 @@ function irTela(id) {
   document.querySelectorAll('.tela').forEach(function(t){ t.classList.remove('ativa'); });
   document.getElementById(id).classList.add('ativa');
 }// SPLASH
+restaurarCarrinho();
+atualizarCarrinho();
 setTimeout(function(){
   // Modo mesa: /mesa?loja=ID&mesa=N — não requer login
   var params = new URLSearchParams(window.location.search);
@@ -1540,6 +1542,9 @@ function cardEstImg(e) {
 
 async function irHome() {
   carrinho = [];
+  estAtual = null;
+  localStorage.removeItem('chegouai_carrinho');
+  localStorage.removeItem('chegouai_est_atual');
   atualizarCarrinho();
   irTela('tela-home');
   // Limpar polling se houver (ex: checagem de pix/pagamento ou status do pedido)
@@ -1960,7 +1965,24 @@ function alterarQtdCarrinho(idx, delta) {
   }
 }
 
+function salvarCarrinho() {
+  try {
+    localStorage.setItem('chegouai_carrinho', JSON.stringify(carrinho));
+    localStorage.setItem('chegouai_est_atual', JSON.stringify(estAtual));
+  } catch(e) {}
+}
+
+function restaurarCarrinho() {
+  try {
+    var c = localStorage.getItem('chegouai_carrinho');
+    var e = localStorage.getItem('chegouai_est_atual');
+    if(c) carrinho = JSON.parse(c);
+    if(e) estAtual = JSON.parse(e);
+  } catch(e) {}
+}
+
 function atualizarCarrinho() {
+  salvarCarrinho();
   var total = carrinho.reduce(function(s,i){ return s + i.preco * i.qtd; }, 0);
   var qtd = carrinho.reduce(function(s,i){ return s + i.qtd; }, 0);
   const mostrar = qtd > 0;
