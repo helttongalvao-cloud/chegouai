@@ -35,12 +35,13 @@ async function buscarPedidoPendente(pedidoId, clienteId) {
 
 // ─── Helper: salvar pagarme_order_id e valores do split ──────────────────
 async function salvarCobranca(pedidoId, pagarmeOrderId, split) {
-  await supabaseAdmin.from('pedidos').update({
+  const { error } = await supabaseAdmin.from('pedidos').update({
     pagarme_order_id: pagarmeOrderId,
     comissao_plataforma: split.valorPlataforma,
     total: split.total,
     pagamento_status: 'aguardando',
   }).eq('id', pedidoId);
+  if (error) console.error('[salvarCobranca] Falha ao salvar pedido', pedidoId, error.message);
 }
 
 // ─── Helper: processar pagamento aprovado (idempotente) ──────────────────
@@ -301,12 +302,22 @@ router.get('/status/:pedidoId', [
     if (!pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
 
     // Fallback: webhook não disparou → consulta Pagar.me diretamente
-    if (pedido.pagamento_status === 'aguardando' && pedido.pagarme_order_id) {
+    // Aceita pagarme_order_id via query param quando salvarCobranca falhou
+    const pagarmeId = pedido.pagarme_order_id || req.query.pagarmeOrderId || null;
+    const statusNaoPago = ['pendente', 'aguardando'].includes(pedido.pagamento_status);
+    console.log('[Status]', req.params.pedidoId, 'pag_status:', pedido.pagamento_status, 'pagarmeId:', pagarmeId ? 'SET' : 'NULL');
+
+    if (statusNaoPago && pagarmeId) {
       try {
         const { buscarPedido } = require('../services/pagarme');
-        const order = await buscarPedido(pedido.pagarme_order_id);
+        const order = await buscarPedido(pagarmeId);
+        console.log('[Status fallback] Pagar.me order status:', order.status);
         if (order.status === 'paid') {
-          await processarPagamentoAprovado(pedido.id, pedido.pagarme_order_id);
+          // Garantir pagarme_order_id no DB caso salvarCobranca tenha falhado
+          if (!pedido.pagarme_order_id) {
+            await supabaseAdmin.from('pedidos').update({ pagarme_order_id: pagarmeId }).eq('id', pedido.id);
+          }
+          await processarPagamentoAprovado(pedido.id, pagarmeId);
           pedido.pagamento_status = 'aprovado';
           pedido.status = 'aceito';
         }

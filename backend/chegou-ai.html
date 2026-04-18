@@ -1257,14 +1257,15 @@ var pollingInterval = null;
 function startPollingPagamento(paymentId) {
   if(pollingInterval) clearInterval(pollingInterval);
   var tentativas = 0;
+  var qs = paymentId ? '?pagarmeOrderId=' + encodeURIComponent(paymentId) : '';
   pollingInterval = setInterval(async function() {
     tentativas++;
-    if(tentativas > 36) { // 3 minutos máximo
+    if(tentativas > 60) { // 5 minutos máximo
       clearInterval(pollingInterval);
       return;
     }
     try {
-      var resp = await apiCall('/api/payments/status/' + pedidoAtualId);
+      var resp = await apiCall('/api/payments/status/' + pedidoAtualId + qs);
       if(resp.pagamento_status === 'aprovado') {
         clearInterval(pollingInterval);
         fecharModalPagamento();
