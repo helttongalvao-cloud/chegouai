@@ -283,8 +283,9 @@ router.post('/webhook', async (req, res) => {
 
 // =============================================
 // GET /api/payments/status/:pedidoId
+// Rota pública — UUID é segredo suficiente; necessário para guests
 // =============================================
-router.get('/status/:pedidoId', requireAuth, [
+router.get('/status/:pedidoId', [
   param('pedidoId').isUUID(),
 ], async (req, res, next) => {
   const errors = validationResult(req);
@@ -293,12 +294,27 @@ router.get('/status/:pedidoId', requireAuth, [
   try {
     const { data: pedido } = await supabaseAdmin
       .from('pedidos')
-      .select('id, status, pagamento_status, total, comissao_plataforma')
+      .select('id, status, pagamento_status, total, comissao_plataforma, pagarme_order_id')
       .eq('id', req.params.pedidoId)
-      .eq('cliente_id', req.user.id)
       .single();
 
     if (!pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
+
+    // Fallback: webhook não disparou → consulta Pagar.me diretamente
+    if (pedido.pagamento_status === 'aguardando' && pedido.pagarme_order_id) {
+      try {
+        const { buscarPedido } = require('../services/pagarme');
+        const order = await buscarPedido(pedido.pagarme_order_id);
+        if (order.status === 'paid') {
+          await processarPagamentoAprovado(pedido.id, pedido.pagarme_order_id);
+          pedido.pagamento_status = 'aprovado';
+          pedido.status = 'aceito';
+        }
+      } catch (errPM) {
+        console.error('[Status fallback Pagar.me]', errPM.message);
+      }
+    }
+
     res.json(pedido);
   } catch (err) {
     next(err);
