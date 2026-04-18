@@ -1350,6 +1350,10 @@ function irTela(id) {
   if(telaAtiva && telaAtiva.id === 'tela-admin' && id !== 'tela-admin') {
     if(adminMonitorTimer) { clearInterval(adminMonitorTimer); adminMonitorTimer = null; }
   }
+  // Parar polling do lojista ao sair da tela
+  if(telaAtiva && telaAtiva.id === 'tela-estabelecimento' && id !== 'tela-estabelecimento') {
+    if(window.estPollingTimer) { clearInterval(window.estPollingTimer); window.estPollingTimer = null; }
+  }
   document.querySelectorAll('.tela').forEach(function(t){ t.classList.remove('ativa'); });
   document.getElementById(id).classList.add('ativa');
 }// SPLASH
@@ -1400,6 +1404,8 @@ function entrarComo(perfil) {
   else if(perfil === 'estabelecimento') {
     irTela('tela-estabelecimento');
     setTimeout(function() { renderEstabelecimento(); }, 50);
+    if(window.estPollingTimer) clearInterval(window.estPollingTimer);
+    window.estPollingTimer = setInterval(function() { renderEstabelecimento(); }, 20000);
   }
   else if(perfil === 'motoboy') {
     irTela('tela-motoboy');
