@@ -57,7 +57,7 @@ router.post(
       // 1. Validar estabelecimento
       const { data: est, error: estErr } = await supabaseAdmin
         .from('estabelecimentos')
-        .select('id, nome, aberto, taxa_entrega, cadastro_data, ativo, user_id, valor_minimo, whatsapp, tipo_entrega')
+        .select('id, nome, aberto, taxa_entrega, cadastro_data, ativo, user_id, valor_minimo, whatsapp, tipo_entrega, pausado')
         .eq('id', estabelecimentoId)
         .eq('ativo', true)
         .single();
@@ -67,6 +67,9 @@ router.post(
       }
       if (!est.aberto) {
         return res.status(400).json({ error: 'Estabelecimento fechado no momento' });
+      }
+      if (est.pausado) {
+        return res.status(400).json({ error: 'Esta loja pausou os pedidos temporariamente. Tente novamente em breve.' });
       }
 
       // 2. Validar e buscar produtos
@@ -89,24 +92,41 @@ router.post(
       let subtotal = 0;
       const itensPedido = itens.map((item) => {
         const produto = produtosMap[item.produtoId];
-        const itemTotal = parseFloat((produto.preco * item.quantidade).toFixed(2));
+        const compsTotal = Array.isArray(item.complementos)
+          ? item.complementos.reduce((s, c) => s + parseFloat(c.preco_adicional || 0), 0)
+          : 0;
+        const precoUnit = parseFloat((produto.preco + compsTotal).toFixed(2));
+        const itemTotal = parseFloat((precoUnit * item.quantidade).toFixed(2));
         subtotal += itemTotal;
         const itemObj = {
           produto_id: item.produtoId,
           nome: produto.nome,
-          preco_unitario: produto.preco,
+          preco_unitario: precoUnit,
           quantidade: item.quantidade,
           subtotal: itemTotal,
         };
         if (item.observacao) itemObj.observacao = item.observacao;
+        if (Array.isArray(item.complementos) && item.complementos.length > 0) {
+          itemObj.complementos = item.complementos.map(c => ({
+            id: c.id, nome: c.nome, preco_adicional: parseFloat(c.preco_adicional || 0),
+          }));
+        }
         return itemObj;
       });
       subtotal = parseFloat(subtotal.toFixed(2));
 
-      // 3b. Validar valor mínimo
+      // 3b. Validar valor mínimo do estabelecimento
       if (est.valor_minimo && subtotal < parseFloat(est.valor_minimo)) {
         return res.status(400).json({
           error: `Pedido mínimo é R$${parseFloat(est.valor_minimo).toFixed(2).replace('.', ',')}`,
+        });
+      }
+
+      // 3c. Validar valor mínimo global do app
+      const valorMinimoGlobal = parseFloat(process.env.PEDIDO_MINIMO_GLOBAL || '0');
+      if (valorMinimoGlobal > 0 && subtotal < valorMinimoGlobal) {
+        return res.status(400).json({
+          error: `Pedido mínimo é R$${valorMinimoGlobal.toFixed(2).replace('.', ',')}`,
         });
       }
 

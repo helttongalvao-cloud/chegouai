@@ -61,7 +61,7 @@ router.get('/', async (req, res, next) => {
 
     let query = supabaseAdmin
       .from('estabelecimentos')
-      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp')
+      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp, pausado')
       .eq('ativo', true)
       .order('nome');
 
@@ -94,6 +94,7 @@ router.get('/', async (req, res, next) => {
           est.aberto = false;
         }
       }
+      if (est.pausado) est.aberto = false;
       return est;
     });
 
@@ -115,8 +116,12 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
       .from('estabelecimentos')
       .select(`
         id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng,
-        valor_minimo, horarios, foto_url, whatsapp,
-        produtos (id, nome, descricao, preco, emoji, disponivel, imagem_url, categoria)
+        valor_minimo, horarios, foto_url, whatsapp, pausado,
+        produtos (id, nome, descricao, preco, emoji, disponivel, imagem_url, categoria,
+          grupos_complementos (id, nome, obrigatorio, max_escolhas, ordem,
+            complementos (id, nome, preco_adicional, disponivel, ordem)
+          )
+        )
       `)
       .eq('id', req.params.id)
       .eq('ativo', true)
@@ -141,6 +146,7 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
         est.aberto = false; // dia não configurado = fechado
       }
     }
+    if (est.pausado) est.aberto = false;
 
     // Ordenar: disponíveis primeiro, indisponíveis por último
     est.produtos = [...est.produtos].sort((a, b) => (b.disponivel ? 1 : 0) - (a.disponivel ? 1 : 0));
@@ -183,7 +189,7 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         forma_pagamento, total, subtotal, taxa_entrega,
         endereco_entrega, telefone_cliente, lista_compras, criado_em, guest_nome,
         motoboy_proprio_id,
-        itens_pedido (nome, quantidade, preco_unitario, observacao),
+        itens_pedido (nome, quantidade, preco_unitario, observacao, complementos),
         motoboys (nome, telefone),
         motoboys_proprios (id, nome),
         profiles!pedidos_cliente_id_fkey (nome)
@@ -584,6 +590,102 @@ router.post('/me/upload-image', requireAuth, requireRole('estabelecimento', 'adm
   } catch (err) {
     next(err);
   }
+});
+
+// =============================================
+// PATCH /api/establishments/me/pausar — Pausar/retomar loja
+// =============================================
+router.patch('/me/pausar', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id, pausado').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
+    const novoPausado = !est.pausado;
+    await supabaseAdmin.from('estabelecimentos').update({ pausado: novoPausado }).eq('id', est.id);
+    res.json({ pausado: novoPausado });
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// COMPLEMENTOS — grupos e opções por produto
+// =============================================
+
+router.get('/me/products/:prodId/grupos', requireRole('estabelecimento'), [param('prodId').isUUID()], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+    const { data } = await supabaseAdmin.from('grupos_complementos')
+      .select('id, nome, obrigatorio, max_escolhas, ordem, complementos(id, nome, preco_adicional, disponivel, ordem)')
+      .eq('produto_id', req.params.prodId)
+      .order('ordem');
+    res.json(data || []);
+  } catch (err) { next(err); }
+});
+
+router.post('/me/products/:prodId/grupos', requireRole('estabelecimento'), [
+  param('prodId').isUUID(),
+  body('nome').trim().notEmpty().withMessage('Nome do grupo obrigatório'),
+  body('obrigatorio').optional().isBoolean(),
+  body('max_escolhas').optional().isInt({ min: 1, max: 20 }),
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+    const { data: prod } = await supabaseAdmin.from('produtos').select('id').eq('id', req.params.prodId).eq('estabelecimento_id', est.id).single();
+    if (!prod) return res.status(404).json({ error: 'Produto não encontrado' });
+    const { data, error } = await supabaseAdmin.from('grupos_complementos').insert({
+      produto_id: req.params.prodId,
+      nome: req.body.nome,
+      obrigatorio: req.body.obrigatorio || false,
+      max_escolhas: parseInt(req.body.max_escolhas || 1),
+      ordem: 0,
+    }).select().single();
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (err) { next(err); }
+});
+
+router.delete('/me/grupos/:grupoId', requireRole('estabelecimento'), [param('grupoId').isUUID()], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+    await supabaseAdmin.from('grupos_complementos').delete().eq('id', req.params.grupoId);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.post('/me/grupos/:grupoId/complementos', requireRole('estabelecimento'), [
+  param('grupoId').isUUID(),
+  body('nome').trim().notEmpty().withMessage('Nome obrigatório'),
+  body('preco_adicional').optional().isFloat({ min: 0 }),
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+  try {
+    const { data, error } = await supabaseAdmin.from('complementos').insert({
+      grupo_id: req.params.grupoId,
+      nome: req.body.nome,
+      preco_adicional: parseFloat(req.body.preco_adicional || 0),
+      disponivel: true,
+      ordem: 0,
+    }).select().single();
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (err) { next(err); }
+});
+
+router.delete('/me/complementos/:compId', requireRole('estabelecimento'), [param('compId').isUUID()], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+  try {
+    await supabaseAdmin.from('complementos').delete().eq('id', req.params.compId);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
 });
 
 // =============================================

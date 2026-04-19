@@ -148,6 +148,16 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .card-est-meta { display:flex; gap:12px; color:var(--texto2); font-size:13px; }
 .badge-aberto { background:#00C85320; color:var(--verde); font-size:11px; padding:3px 8px; border-radius:6px; font-weight:600; }
 .badge-fechado { background:#FF525220; color:var(--erro); font-size:11px; padding:3px 8px; border-radius:6px; font-weight:600; }
+.badge-pausado { background:#FF6D0020; color:#FF6D00; font-size:11px; padding:3px 8px; border-radius:6px; font-weight:600; }
+/* COMPLEMENTOS */
+.comp-grupo { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:12px; padding:14px; margin-bottom:10px; }
+.comp-grupo-titulo { font-size:14px; font-weight:700; margin-bottom:2px; }
+.comp-grupo-sub { font-size:12px; color:var(--texto2); margin-bottom:8px; }
+.comp-opcao { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--cinza3); cursor:pointer; gap:10px; }
+.comp-opcao:last-child { border-bottom:none; padding-bottom:0; }
+.comp-opcao label { flex:1; font-size:14px; cursor:pointer; }
+.comp-opcao-preco { font-size:13px; color:var(--verde); white-space:nowrap; }
+.comp-opcao input[type=radio], .comp-opcao input[type=checkbox] { width:18px; height:18px; accent-color:var(--verde); flex-shrink:0; cursor:pointer; }
 
 /* CARDÁPIO */
 #tela-cardapio { background:var(--preto); }
@@ -763,6 +773,13 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <div class="stat-card"><div class="stat-valor" id="est-pedidos-hoje">—</div><div class="stat-label">Pedidos hoje</div></div>
         <div class="stat-card"><div class="stat-valor" id="est-faturamento">—</div><div class="stat-label">Faturamento hoje</div></div>
       </div>
+      <div id="loja-status-bar" style="margin-bottom:16px;padding:12px 16px;border-radius:14px;border:1.5px solid var(--cinza3);background:var(--cinza2);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <div style="font-weight:600;font-size:14px;" id="loja-status-label">🟢 Loja aberta</div>
+          <div style="font-size:12px;color:var(--texto2);">Pausar para não receber pedidos</div>
+        </div>
+        <button id="btn-toggle-pausar" onclick="togglePausar()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Pausar</button>
+      </div>
       <div class="secao-titulo">Pedidos em aberto</div>
       <div class="pedidos-lista" id="pedidos-estabelecimento"></div>
     </div>
@@ -908,6 +925,7 @@ async function inicializarApp() {
       supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
     }
     if(cfg.taxaCartaoCliente) TAXA_CARTAO_CLIENTE = cfg.taxaCartaoCliente;
+    if(cfg.pedidoMinimo) pedidoMinimoGlobal = parseFloat(cfg.pedidoMinimo);
   } catch(e) {
     console.warn('[Config] Erro ao carregar config do servidor:', e.message);
   }
@@ -1339,6 +1357,14 @@ function calcularComissao(cadastroMes) {
 let carrinho = [];
 let estAtual = null;
 let perfilAtual = 'cliente';
+var pedidoMinimoGlobal = 0;
+
+function calcularTotalCarrinho() {
+  return carrinho.reduce(function(s, i) {
+    var compExtra = (i.complementos || []).reduce(function(cs, c) { return cs + parseFloat(c.preco_adicional || 0); }, 0);
+    return s + (i.preco + compExtra) * i.qtd;
+  }, 0);
+}
 
 
 function irTela(id) {
@@ -1598,9 +1624,9 @@ function renderEstabelecimentos(cat) {
     return;
   }
   lista.innerHTML = filtrados.map(function(e) {
-    var badge = e.aberto ? 'badge-aberto' : 'badge-fechado';
-    var status = e.aberto ? 'Aberto' : 'Fechado';
-    var esmaecido = e.aberto ? '' : 'style="opacity: 0.5; filter: grayscale(1);"';
+    var badge = e.pausado ? 'badge-pausado' : (e.aberto ? 'badge-aberto' : 'badge-fechado');
+    var status = e.pausado ? 'Pausado' : (e.aberto ? 'Aberto' : 'Fechado');
+    var esmaecido = (!e.aberto || e.pausado) ? 'style="opacity: 0.5; filter: grayscale(1);"' : '';
     return '<div class="card-est" onclick="abrirCardapio(\'' + e.id + '\')" ' + esmaecido + '>' +
       cardEstImg(e) +
       '<div class="card-est-info">' +
@@ -1914,7 +1940,12 @@ function filtrarProdutos(termo) {
 function adicionarItem(idx) {
   const item = produtosCache[idx];
   if(!item || item.disponivel === false) return;
-  const existente = carrinho.find(function(c){ return c.id === item.id && !c.observacao; });
+  var grupos = (item.grupos_complementos || []).filter(function(g){ return g.complementos && g.complementos.some(function(c){ return c.disponivel !== false; }); });
+  if(grupos.length > 0) {
+    abrirModalComplementos(item, idx, grupos);
+    return;
+  }
+  const existente = carrinho.find(function(c){ return c.id === item.id && !c.observacao && !(c.complementos && c.complementos.length); });
   if(existente) {
     existente.qtd++;
     atualizarCarrinho();
@@ -1925,8 +1956,62 @@ function adicionarItem(idx) {
     }
     return;
   }
-  // Abrir mini-modal para observação
   abrirModalObservacao(item, idx);
+}
+
+function abrirModalComplementos(item, idx, grupos) {
+  var overlay = document.getElementById('modal-complementos');
+  document.getElementById('comp-modal-titulo').textContent = item.nome;
+  document.getElementById('comp-modal-info').textContent = (item.emoji || '🍽️') + ' R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',');
+  document.getElementById('comp-obs-input').value = '';
+  var cont = document.getElementById('comp-grupos-container');
+  cont.innerHTML = grupos.map(function(g, gi) {
+    var opcoes = (g.complementos || []).filter(function(c){ return c.disponivel !== false; }).sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+    var tipoInput = g.max_escolhas > 1 ? 'checkbox' : 'radio';
+    var subLabel = g.obrigatorio ? '⚠️ Obrigatório' : 'Opcional';
+    if(g.max_escolhas > 1) subLabel += ' · Até ' + g.max_escolhas + ' opções';
+    return '<div class="comp-grupo">' +
+      '<div class="comp-grupo-titulo">' + sanitizar(g.nome) + '</div>' +
+      '<div class="comp-grupo-sub">' + subLabel + '</div>' +
+      opcoes.map(function(c) {
+        var precoTxt = parseFloat(c.preco_adicional || 0) > 0 ? ' <span class="comp-opcao-preco">+R$ ' + parseFloat(c.preco_adicional).toFixed(2).replace('.',',') + '</span>' : '';
+        return '<div class="comp-opcao">' +
+          '<input type="' + tipoInput + '" name="comp-grupo-' + gi + '" id="comp-' + c.id + '" value="' + c.id + '" data-nome="' + sanitizar(c.nome) + '" data-preco="' + (c.preco_adicional||0) + '">' +
+          '<label for="comp-' + c.id + '">' + sanitizar(c.nome) + precoTxt + '</label>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+  }).join('');
+  var addBtn = document.getElementById('comp-btn-add');
+  addBtn.onclick = function() {
+    var selecionados = [];
+    var valido = true;
+    grupos.forEach(function(g, gi) {
+      var inputs = cont.querySelectorAll('input[name="comp-grupo-' + gi + '"]:checked');
+      if(g.obrigatorio && inputs.length === 0) {
+        valido = false;
+        alert('Escolha uma opção em: ' + g.nome);
+        return;
+      }
+      if(g.max_escolhas > 1 && inputs.length > g.max_escolhas) {
+        valido = false;
+        alert('Máximo ' + g.max_escolhas + ' opções em: ' + g.nome);
+        return;
+      }
+      inputs.forEach(function(inp) {
+        selecionados.push({ id: inp.value, nome: inp.dataset.nome, preco_adicional: parseFloat(inp.dataset.preco || 0) });
+      });
+    });
+    if(!valido) return;
+    var obs = document.getElementById('comp-obs-input').value.trim().replace(/<[^>]*>/g,'').substring(0,200);
+    carrinho.push({...item, qtd:1, observacao: obs||'', complementos: selecionados});
+    atualizarCarrinho();
+    overlay.classList.remove('aberto');
+    const btns = document.querySelectorAll('.item-add');
+    if(btns[idx]) { btns[idx].style.background = 'var(--verde2)'; setTimeout(function(){ btns[idx].style.background = 'var(--verde)'; }, 200); }
+  };
+  overlay.classList.add('aberto');
+  overlay.addEventListener('click', function(e){ if(e.target===this) this.classList.remove('aberto'); }, { once: false });
 }
 
 function abrirModalObservacao(item, idx) {
@@ -2003,7 +2088,7 @@ function restaurarCarrinho() {
 
 function atualizarCarrinho() {
   salvarCarrinho();
-  var total = carrinho.reduce(function(s,i){ return s + i.preco * i.qtd; }, 0);
+  var total = calcularTotalCarrinho();
   var qtd = carrinho.reduce(function(s,i){ return s + i.qtd; }, 0);
   const mostrar = qtd > 0;
   ['carrinho-float','carrinho-float2'].forEach(function(id) {
@@ -2024,7 +2109,7 @@ function atualizarCarrinho() {
 function voltarCardapio() { irTela('tela-cardapio'); }
 
 function simularFrete(endereco) {
-  var subtotal = carrinho.reduce(function(s,i){ return s + i.preco * i.qtd; }, 0);
+  var subtotal = calcularTotalCarrinho();
   if (!endereco || endereco.length < 5) {
     document.getElementById('taxa-entrega-valor').textContent = 'Preencha o Endereço';
     document.getElementById('taxa-entrega-valor').style.color = 'var(--texto2)';
@@ -2064,7 +2149,7 @@ function simularFrete(endereco) {
 
 // CHECKOUT
 function irCheckout() {
-  var subtotal = carrinho.reduce(function(s,i){ return s + i.preco * i.qtd; }, 0);
+  var subtotal = calcularTotalCarrinho();
   document.getElementById('subtotal-valor').textContent = 'R$ ' + subtotal.toFixed(2).replace('.',',');
   
   // Limpa frete para requerer o endereço do usuário primeiro
@@ -2075,6 +2160,11 @@ function irCheckout() {
   window.taxaEntregaSimulada = 0;
   const resumo = document.getElementById('resumo-itens');
   resumo.innerHTML = carrinho.map(function(i, idx) {
+    var compExtra = (i.complementos || []).reduce(function(cs,c){ return cs + parseFloat(c.preco_adicional||0); }, 0);
+    var precoTotal = (i.preco + compExtra) * i.qtd;
+    var compsHtml = (i.complementos && i.complementos.length)
+      ? '<div style="font-size:11px;color:var(--verde);margin-top:2px;margin-left:58px;">+ ' + i.complementos.map(function(c){ return sanitizar(c.nome); }).join(', ') + '</div>'
+      : '';
     var obsHtml = i.observacao ? '<div style="font-size:11px;color:var(--texto2);font-style:italic;margin-top:2px;margin-left:58px;">📝 ' + sanitizar(i.observacao) + '</div>' : '';
     return '<div class="item-resumo" style="flex-direction:column;align-items:stretch;">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;">' +
@@ -2083,8 +2173,9 @@ function irCheckout() {
           '<span class="item-resumo-nome">' + i.qtd + 'x ' + sanitizar(i.nome) + '</span>' +
           '<button onclick="alterarQtdCarrinho(' + idx + ', 1)" style="width:24px;height:24px;border-radius:4px;border:none;background:var(--fundo2);color:var(--texto);cursor:pointer;">+</button>' +
         '</div>' +
-        '<span class="item-resumo-preco">R$ ' + (i.preco*i.qtd).toFixed(2).replace('.',',') + '</span>' +
+        '<span class="item-resumo-preco">R$ ' + precoTotal.toFixed(2).replace('.',',') + '</span>' +
       '</div>' +
+      compsHtml +
       obsHtml +
     '</div>';
   }).join('');
@@ -2181,7 +2272,7 @@ async function aplicarCupom() {
   resultEl.style.color = 'var(--texto2)';
   resultEl.textContent = 'Verificando cupom...';
   try {
-    var subtotal = carrinho.reduce(function(s,i){ return s + i.preco * i.qtd; }, 0);
+    var subtotal = calcularTotalCarrinho();
     var resp = await apiCall('/api/orders/cupom/' + encodeURIComponent(codigo) + '?subtotal=' + subtotal);
     cupomAplicado = resp;
     resultEl.style.color = 'var(--verde)';
@@ -2238,10 +2329,10 @@ async function confirmarPedido() {
   }
 
   // Validar valor mínimo
-  var subtotal = carrinho.reduce(function(s,i){ return s + i.preco * i.qtd; }, 0);
-  var valorMin = estAtual.valor_minimo || 0;
+  var subtotal = calcularTotalCarrinho();
+  var valorMin = Math.max(parseFloat(estAtual.valor_minimo || 0), pedidoMinimoGlobal);
   if(valorMin > 0 && subtotal < valorMin) {
-    alert('Pedido mínimo: R$ ' + parseFloat(valorMin).toFixed(2).replace('.',',') + '. Adicione mais itens para continuar.');
+    alert('Pedido mínimo: R$ ' + valorMin.toFixed(2).replace('.',',') + '. Adicione mais itens para continuar.');
     return;
   }
 
@@ -2252,10 +2343,11 @@ async function confirmarPedido() {
   mostrarLoadingPagamento('Criando pedido...');
 
   try {
-    // Montar itens com IDs reais dos produtos e observações
+    // Montar itens com IDs reais dos produtos, observações e complementos
     var itensPedido = carrinho.map(function(item) {
       var obj = { produtoId: item.id, quantidade: item.qtd };
       if(item.observacao) obj.observacao = item.observacao;
+      if(item.complementos && item.complementos.length > 0) obj.complementos = item.complementos;
       return obj;
     });
 
@@ -2630,6 +2722,7 @@ async function renderCardapioEst(manterDestaque) {
       '</div>' +
       '<div class="prod-acoes">' +
         btnFoto +
+        '<button class="btn-editar" onclick="gerenciarComplementos(\'' + p.id + '\', \'' + sanitizar(p.nome).replace(/'/g,"\\'") + '\')">🔧 Complementos</button>' +
         '<button class="btn-deletar" onclick="deletarProduto(\'' + p.id + '\')">🗑️ Remover</button>' +
       '</div>' +
     '</div>';
@@ -3066,6 +3159,98 @@ async function deletarProduto(id) {
   }
 }
 
+var _mgcProdutoId = null;
+
+async function gerenciarComplementos(produtoId, nomeProduto) {
+  _mgcProdutoId = produtoId;
+  document.getElementById('mgc-titulo').textContent = '🔧 ' + nomeProduto;
+  var modal = document.getElementById('modal-gerenciar-comps');
+  modal.classList.add('aberto');
+  modal.addEventListener('click', function(e){ if(e.target===this) this.classList.remove('aberto'); }, { once: false });
+  await renderGruposGerenciar();
+}
+
+async function renderGruposGerenciar() {
+  var el = document.getElementById('mgc-grupos-lista');
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--texto2);">Carregando...</div>';
+  try {
+    var grupos = await apiCall('/api/establishments/me/products/' + _mgcProdutoId + '/grupos');
+    if(!grupos.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--texto2);padding:8px 0;">Nenhum grupo adicionado ainda.</div>';
+      return;
+    }
+    el.innerHTML = grupos.map(function(g) {
+      var opcoes = (g.complementos || []).map(function(c) {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--cinza3);">' +
+          '<span style="font-size:13px;">' + sanitizar(c.nome) + (parseFloat(c.preco_adicional||0)>0 ? ' <span style="color:var(--verde);">+R$ ' + parseFloat(c.preco_adicional).toFixed(2).replace('.',',') + '</span>' : '') + '</span>' +
+          '<button onclick="removerComplemento(\'' + c.id + '\')" style="border:none;background:transparent;color:var(--erro);font-size:12px;cursor:pointer;padding:2px 6px;">✕</button>' +
+        '</div>';
+      }).join('');
+      var addOpcaoHtml =
+        '<div style="display:flex;gap:6px;margin-top:8px;">' +
+          '<input id="nova-opc-nome-' + g.id + '" placeholder="Nome da opção" style="flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:13px;">' +
+          '<input id="nova-opc-preco-' + g.id + '" placeholder="R$0" type="number" min="0" step="0.01" style="width:80px;padding:8px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:13px;text-align:center;">' +
+          '<button onclick="adicionarOpcaoComp(\'' + g.id + '\')" style="padding:8px 10px;border-radius:8px;border:1.5px solid var(--verde);background:transparent;color:var(--verde);font-size:12px;font-weight:700;cursor:pointer;">+</button>' +
+        '</div>';
+      return '<div class="comp-grupo" style="margin-bottom:10px;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">' +
+          '<span class="comp-grupo-titulo">' + sanitizar(g.nome) + ' <span style="font-size:11px;color:var(--texto2);font-weight:400;">' + (g.obrigatorio?'Obrigatório':'Opcional') + ' · Máx.' + g.max_escolhas + '</span></span>' +
+          '<button onclick="removerGrupoComp(\'' + g.id + '\')" style="border:none;background:transparent;color:var(--erro);font-size:13px;cursor:pointer;">🗑️</button>' +
+        '</div>' +
+        (opcoes || '<div style="font-size:12px;color:var(--texto2);">Sem opções</div>') +
+        addOpcaoHtml +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--erro);">Erro ao carregar</div>';
+  }
+}
+
+async function adicionarGrupoComp() {
+  var nome = document.getElementById('mgc-novo-grupo-nome').value.trim();
+  if(!nome) { alert('Informe o nome do grupo'); return; }
+  var obrigatorio = document.getElementById('mgc-novo-grupo-obrig').checked;
+  var maxEscolhas = parseInt(document.getElementById('mgc-novo-grupo-max').value || 1);
+  try {
+    await apiCall('/api/establishments/me/products/' + _mgcProdutoId + '/grupos', {
+      method: 'POST', body: { nome, obrigatorio, max_escolhas: maxEscolhas }
+    });
+    document.getElementById('mgc-novo-grupo-nome').value = '';
+    document.getElementById('mgc-novo-grupo-obrig').checked = false;
+    document.getElementById('mgc-novo-grupo-max').value = 1;
+    await renderGruposGerenciar();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function adicionarOpcaoComp(grupoId) {
+  var nomeEl = document.getElementById('nova-opc-nome-' + grupoId);
+  var precoEl = document.getElementById('nova-opc-preco-' + grupoId);
+  var nome = nomeEl ? nomeEl.value.trim() : '';
+  if(!nome) { alert('Informe o nome da opção'); return; }
+  var preco = precoEl ? parseFloat(precoEl.value || 0) : 0;
+  try {
+    await apiCall('/api/establishments/me/grupos/' + grupoId + '/complementos', {
+      method: 'POST', body: { nome, preco_adicional: preco }
+    });
+    await renderGruposGerenciar();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function removerGrupoComp(grupoId) {
+  if(!confirm('Remover este grupo e todas as opções?')) return;
+  try {
+    await apiCall('/api/establishments/me/grupos/' + grupoId, { method: 'DELETE' });
+    await renderGruposGerenciar();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function removerComplemento(compId) {
+  try {
+    await apiCall('/api/establishments/me/complementos/' + compId, { method: 'DELETE' });
+    await renderGruposGerenciar();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
 function labelCardapio(categoria) {
   if(!categoria) return '🍽️ Cardápio';
   if(categoria === 'farmacia') return '💊 Medicamentos';
@@ -3094,8 +3279,13 @@ async function renderEstabelecimento() {
     if(data.estabelecimento) {
       var btnCap = document.getElementById('est-nav-cardapio');
       if(btnCap) btnCap.textContent = labelCardapio(data.estabelecimento.categoria);
-      // Iniciar realtime com o ID real do estabelecimento
       iniciarRealtimeLojista(data.estabelecimento.id);
+      // Atualizar estado de pausa
+      var estasPausado = !!data.estabelecimento.pausado;
+      var btnPausar = document.getElementById('btn-toggle-pausar');
+      var labelPausado = document.getElementById('loja-status-label');
+      if(btnPausar) { btnPausar.textContent = estasPausado ? 'Retomar' : 'Pausar'; btnPausar.style.background = estasPausado ? 'var(--erro)' : 'var(--verde)'; }
+      if(labelPausado) labelPausado.textContent = estasPausado ? '🔴 Loja pausada' : '🟢 Loja aberta';
     }
     var pedidos = data.pedidosAbertos || [];
     if(!lista) return;
@@ -3139,7 +3329,8 @@ async function renderEstabelecimento() {
       } else {
         itensTxt = (p.itens_pedido || []).map(function(i){
           var obs = i.observacao ? ' <em style="color:var(--verde);font-size:11px;">(' + sanitizar(i.observacao) + ')</em>' : '';
-          return i.quantidade + 'x ' + sanitizar(i.nome) + obs;
+          var comps = (i.complementos && i.complementos.length) ? ' <span style="color:var(--texto2);font-size:11px;">[' + i.complementos.map(function(c){ return sanitizar(c.nome); }).join(', ') + ']</span>' : '';
+          return i.quantidade + 'x ' + sanitizar(i.nome) + comps + obs;
         }).join('<br>');
       }
       var telNum = p.telefone_cliente ? p.telefone_cliente.replace(/\D/g,'') : '';
@@ -3235,6 +3426,22 @@ function imprimirComanda(id) {
   win.document.close();
   win.focus();
   setTimeout(function(){ win.print(); win.close(); }, 400);
+}
+
+async function togglePausar() {
+  var btn = document.getElementById('btn-toggle-pausar');
+  if(btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    var resp = await apiCall('/api/establishments/me/pausar', { method: 'PATCH' });
+    var estasPausado = resp.pausado;
+    if(btn) { btn.disabled = false; btn.textContent = estasPausado ? 'Retomar' : 'Pausar'; btn.style.background = estasPausado ? 'var(--erro)' : 'var(--verde)'; }
+    var label = document.getElementById('loja-status-label');
+    if(label) label.textContent = estasPausado ? '🔴 Loja pausada' : '🟢 Loja aberta';
+    showToast(estasPausado ? '🔴' : '🟢', estasPausado ? 'Loja pausada' : 'Loja retomada', estasPausado ? 'Não está aceitando novos pedidos.' : 'Aceitando pedidos novamente.');
+  } catch(e) {
+    if(btn) { btn.disabled = false; }
+    alert('Erro ao pausar loja: ' + e.message);
+  }
 }
 
 async function atualizarStatusPedido(pedidoId, novoStatus, btn) {
@@ -4581,6 +4788,40 @@ function adminNav(btn, secao) {
     <div class="link-texto" style="margin-top:16px;">
       Já tem conta? <span onclick="irTela('tela-login')" style="color:var(--verde);cursor:pointer;font-weight:500;">Entrar</span>
     </div>
+  </div>
+</div>
+
+<!-- MODAL COMPLEMENTOS (seleção pelo cliente) -->
+<div class="modal-overlay" id="modal-complementos">
+  <div class="modal-box modal-produto">
+    <div class="modal-titulo" id="comp-modal-titulo">Personalizar pedido</div>
+    <div id="comp-modal-info" style="font-size:13px;color:var(--texto2);margin-bottom:14px;"></div>
+    <div id="comp-grupos-container"></div>
+    <div class="form-grupo">
+      <label>Observação (opcional)</label>
+      <input type="text" id="comp-obs-input" placeholder="Ex: sem cebola, bem passado..." maxlength="200" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;">
+    </div>
+    <button class="btn-principal" id="comp-btn-add">Adicionar ao carrinho</button>
+    <button onclick="document.getElementById('modal-complementos').classList.remove('aberto')" style="width:100%;background:transparent;border:none;color:var(--texto2);padding:14px;cursor:pointer;font-size:14px;font-family:'DM Sans',sans-serif;">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL GERENCIAR COMPLEMENTOS (lojista) -->
+<div class="modal-overlay" id="modal-gerenciar-comps">
+  <div class="modal-box modal-produto">
+    <div class="modal-titulo" id="mgc-titulo">Complementos do produto</div>
+    <div id="mgc-grupos-lista"></div>
+    <hr style="border-color:var(--cinza3);margin:14px 0;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--texto2);">Adicionar grupo</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+      <input id="mgc-novo-grupo-nome" placeholder="Nome do grupo (ex: Adicionais)" style="padding:10px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="mgc-novo-grupo-obrig" style="accent-color:var(--verde);width:16px;height:16px;"> Obrigatório</label>
+        <label style="font-size:13px;">Máx. escolhas: <input id="mgc-novo-grupo-max" type="number" min="1" max="20" value="1" style="width:60px;padding:6px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:13px;text-align:center;"></label>
+      </div>
+    </div>
+    <button onclick="adicionarGrupoComp()" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--verde);background:transparent;color:var(--verde);font-weight:700;font-size:14px;cursor:pointer;margin-bottom:14px;">+ Adicionar grupo</button>
+    <button onclick="document.getElementById('modal-gerenciar-comps').classList.remove('aberto')" style="width:100%;background:transparent;border:none;color:var(--texto2);padding:12px;cursor:pointer;font-size:14px;font-family:'DM Sans',sans-serif;">Fechar</button>
   </div>
 </div>
 

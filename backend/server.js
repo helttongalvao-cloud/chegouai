@@ -152,6 +152,8 @@ app.get('/api/config', (req, res) => {
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
     // Taxa de conveniência do cartão cobrada do cliente (configurável via Railway)
     taxaCartaoCliente: parseFloat(process.env.ASAAS_TAXA_CARTAO || '2.99'),
+    // Pedido mínimo global do app (configurável via Railway)
+    pedidoMinimo: parseFloat(process.env.PEDIDO_MINIMO_GLOBAL || '0'),
   });
 });
 
