@@ -393,7 +393,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 /* HOME — cards maiores */
 .card-est-img { height:160px; position:relative; }
-.card-est-img img { width:100%; height:100%; object-fit:cover; display:block; }
+.card-est-img img { width:100%; height:100%; object-fit:contain; background:#1a1a1a; display:block; }
 .card-est-placeholder { width:100%; height:160px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
 .card-est-placeholder .pl-emoji { font-size:56px; line-height:1; }
 .card-est-placeholder .pl-inicial {
@@ -2719,7 +2719,7 @@ async function renderInfoLoja() {
     '<h4 style="font-size:15px;font-weight:700;margin-bottom:14px;">Configurações da loja</h4>' +
     '<div class="form-grupo"><label>Foto da loja</label>' +
     '<div id="loja-foto-preview" style="' + fotoPreviewStyle + 'position:relative;margin-bottom:8px;">' +
-      '<img id="loja-foto-img" src="' + (est.foto_url || '') + '" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;">' +
+      '<img id="loja-foto-img" src="' + (est.foto_url || '') + '" style="width:100%;max-height:180px;object-fit:contain;background:#1a1a1a;border-radius:10px;">' +
       '<button type="button" onclick="removerFotoLoja()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.65);border:none;border-radius:6px;color:white;padding:4px 8px;cursor:pointer;font-size:12px;">🗑️ Remover</button>' +
     '</div>' +
     '<label for="loja-foto-input" id="loja-foto-label" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;border:1.5px dashed var(--cinza3);background:var(--cinza2);color:var(--texto2);cursor:pointer;font-size:14px;">' +
