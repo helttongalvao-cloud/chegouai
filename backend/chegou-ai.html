@@ -1531,7 +1531,11 @@ function irLogin() {
 
 function cardEstImg(e) {
   if(e.foto_url) {
-    return '<div class="card-est-img"><img src="' + e.foto_url + '" alt="' + sanitizar(e.nome) + '" loading="lazy"></div>';
+    var u = e.foto_url;
+    return '<div class="card-est-img" style="position:relative;overflow:hidden;">' +
+      '<div style="position:absolute;inset:0;background-image:url(\'' + u + '\');background-size:cover;background-position:center;filter:blur(12px) brightness(0.7);transform:scale(1.1);"></div>' +
+      '<img src="' + u + '" alt="' + sanitizar(e.nome) + '" loading="lazy" style="position:relative;width:100%;height:100%;object-fit:contain;">' +
+    '</div>';
   }
   var gradientes = {
     restaurante: 'linear-gradient(135deg,#1a0a00,#3d1a00)',
