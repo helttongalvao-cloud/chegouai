@@ -420,7 +420,7 @@ router.get('/:id', optionalAuth, [param('id').isUUID()], async (req, res, next) 
   try {
     const { data: pedido, error } = await supabaseAdmin
       .from('pedidos')
-      .select(`*, estabelecimentos (nome, emoji, telefone, whatsapp, user_id), itens_pedido (*)`)
+      .select(`*, estabelecimentos (nome, emoji, whatsapp, user_id), itens_pedido (*)`)
       .eq('id', req.params.id)
       .single();
 

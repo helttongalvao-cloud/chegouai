@@ -19,3 +19,6 @@ GRANT ALL ON public.complementos       TO service_role;
 DROP POLICY IF EXISTS "service_role_motoboys" ON public.motoboys;
 CREATE POLICY "service_role_motoboys"
   ON public.motoboys TO service_role USING (true) WITH CHECK (true);
+
+-- Garante coluna telefone em estabelecimentos (pode não existir em DBs antigos)
+ALTER TABLE public.estabelecimentos ADD COLUMN IF NOT EXISTS telefone TEXT;
