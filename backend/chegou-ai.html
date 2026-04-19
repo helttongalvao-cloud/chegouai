@@ -6291,6 +6291,25 @@ async function renderRepasses() {
         ) +
       '</div>';
 
+    // ── REPASSE PARA A PLATAFORMA ──────────────────────────
+    var comissaoPendente = r.total_desconto || 0;
+    var plataformaHtml =
+      '<div style="background:var(--cinza2);border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid var(--cinza3);">' +
+        '<div style="font-size:15px;font-weight:700;margin-bottom:12px;">📲 Repasse para a plataforma (Chegou Aí)</div>' +
+        '<div style="background:rgba(255,109,0,0.08);border:1px solid rgba(255,109,0,0.3);border-radius:12px;padding:14px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+            '<div>' +
+              '<div style="font-size:13px;color:var(--texto2);">' + (extrato.comissao_pct||5) + '% sobre vendas brutas — últimos ' + (extrato.periodo||7) + ' dias</div>' +
+              '<div style="font-size:12px;color:var(--texto2);margin-top:2px;">Pix: <b>helttongalvao@gmail.com</b></div>' +
+            '</div>' +
+            '<div style="text-align:right;">' +
+              '<div style="font-size:20px;font-weight:700;color:var(--laranja);">R$ ' + comissaoPendente.toFixed(2).replace('.',',') + '</div>' +
+              '<div style="font-size:11px;color:var(--texto2);">a repassar</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
     // ── REPASSES DE MOTOBOYS PRÓPRIOS ──────────────────────
     var motosHtml = '';
     if(grupos && grupos.length) {
@@ -6318,7 +6337,7 @@ async function renderRepasses() {
         }).join('');
     }
 
-    el.innerHTML = resumoHtml + motosHtml;
+    el.innerHTML = resumoHtml + plataformaHtml + motosHtml;
   } catch(e) {
     el.innerHTML = '<div style="color:#ff4444;padding:20px;text-align:center;">Erro ao carregar repasses</div>';
   }

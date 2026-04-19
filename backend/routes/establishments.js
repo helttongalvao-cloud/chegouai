@@ -197,23 +197,25 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
       .eq('pagamento_status', 'aprovado') // Só conta como pedido real se foi pago
       .neq('status', 'cancelado');
 
-    const pedidosAbertos = await supabaseAdmin
+    const { data: pedidosAbertos, error: errPedidos } = await supabaseAdmin
       .from('pedidos')
       .select(`
         id, tipo, tipo_pedido, numero_mesa, nome_cliente_mesa, status, pagamento_status,
         forma_pagamento, total, subtotal, taxa_entrega,
         endereco_entrega, telefone_cliente, lista_compras, criado_em, guest_nome,
         motoboy_proprio_id,
-        itens_pedido (nome, quantidade, preco_unitario, observacao, complementos),
+        itens_pedido (nome, quantidade, preco_unitario, observacao),
         motoboys (nome, telefone),
         motoboys_proprios (id, nome),
         profiles!pedidos_cliente_id_fkey (nome)
       `)
       .eq('estabelecimento_id', est.id)
       .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue'])
-      .or('pagamento_status.eq.aprovado,tipo.eq.lista') // Inclui pedidos de lista mesmo sem pagamento confirmado
+      .or('pagamento_status.eq.aprovado,pagamento_status.eq.aguardando,tipo.eq.lista')
       .gte('criado_em', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString())
       .order('criado_em', { ascending: true });
+
+    if (errPedidos) console.error('[dashboard] pedidosAbertos query error:', errPedidos);
 
     const faturamento = pedidosHoje?.reduce((s, p) => s + (p.subtotal || 0), 0) || 0;
     const comissao = calcularComissao(est.cadastro_data);
@@ -227,7 +229,7 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         comissaoPaga: parseFloat((faturamento * comissao.taxa / 100).toFixed(2)),
         saldoLiquido: parseFloat((faturamento * (1 - comissao.taxa / 100)).toFixed(2)),
       },
-      pedidosAbertos: pedidosAbertos.data || [],
+      pedidosAbertos: pedidosAbertos || [],
     });
   } catch (err) {
     next(err);
