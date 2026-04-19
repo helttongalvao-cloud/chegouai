@@ -2004,14 +2004,14 @@ function abrirModalComplementos(item, idx, grupos) {
     });
     if(!valido) return;
     var obs = document.getElementById('comp-obs-input').value.trim().replace(/<[^>]*>/g,'').substring(0,200);
-    carrinho.push({...item, qtd:1, observacao: obs||'', complementos: selecionados});
+    carrinho.push({ id:item.id, nome:item.nome, preco:item.preco, emoji:item.emoji, disponivel:item.disponivel, imagem_url:item.imagem_url||'', categoria:item.categoria||'', qtd:1, observacao:obs||'', complementos:selecionados });
     atualizarCarrinho();
     overlay.classList.remove('aberto');
     const btns = document.querySelectorAll('.item-add');
     if(btns[idx]) { btns[idx].style.background = 'var(--verde2)'; setTimeout(function(){ btns[idx].style.background = 'var(--verde)'; }, 200); }
   };
+  overlay.onclick = function(e){ if(e.target===this) this.classList.remove('aberto'); };
   overlay.classList.add('aberto');
-  overlay.addEventListener('click', function(e){ if(e.target===this) this.classList.remove('aberto'); }, { once: false });
 }
 
 function abrirModalObservacao(item, idx) {
@@ -2043,7 +2043,7 @@ function abrirModalObservacao(item, idx) {
   var addBtn = document.getElementById('obs-btn-add');
   addBtn.onclick = function() {
     var obs = obsInput.value.trim().replace(/<[^>]*>/g,'').substring(0,200);
-    carrinho.push({...item, qtd:1, observacao: obs || ''});
+    carrinho.push({ id:item.id, nome:item.nome, preco:item.preco, emoji:item.emoji, disponivel:item.disponivel, imagem_url:item.imagem_url||'', categoria:item.categoria||'', qtd:1, observacao:obs||'', complementos:[] });
     atualizarCarrinho();
     overlay.classList.remove('aberto');
     // feedback visual
@@ -2327,6 +2327,8 @@ async function confirmarPedido() {
       return;
     }
   }
+
+  if(!estAtual || !estAtual.id) { alert('Erro: estabelecimento não identificado. Volte ao cardápio e tente novamente.'); return; }
 
   // Validar valor mínimo
   var subtotal = calcularTotalCarrinho();
@@ -3165,8 +3167,8 @@ async function gerenciarComplementos(produtoId, nomeProduto) {
   _mgcProdutoId = produtoId;
   document.getElementById('mgc-titulo').textContent = '🔧 ' + nomeProduto;
   var modal = document.getElementById('modal-gerenciar-comps');
+  modal.onclick = function(e){ if(e.target===this) this.classList.remove('aberto'); };
   modal.classList.add('aberto');
-  modal.addEventListener('click', function(e){ if(e.target===this) this.classList.remove('aberto'); }, { once: false });
   await renderGruposGerenciar();
 }
 
@@ -3266,6 +3268,22 @@ function atualizarLabelCardapio(cat) {
 }
 
 async function renderEstabelecimento() {
+  // Reinicializa estrutura se foi destruída ao trocar de aba
+  if(!document.getElementById('pedidos-estabelecimento')) {
+    var secao = document.getElementById('est-secao-pedidos');
+    if(secao) secao.innerHTML =
+      '<div class="stats-grid">' +
+        '<div class="stat-card"><div class="stat-valor" id="est-pedidos-hoje">—</div><div class="stat-label">Pedidos hoje</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" id="est-faturamento">—</div><div class="stat-label">Faturamento hoje</div></div>' +
+      '</div>' +
+      '<div id="loja-status-bar" style="margin-bottom:16px;padding:12px 16px;border-radius:14px;border:1.5px solid var(--cinza3);background:var(--cinza2);display:flex;align-items:center;justify-content:space-between;gap:10px;">' +
+        '<div><div style="font-weight:600;font-size:14px;" id="loja-status-label">🟢 Loja aberta</div>' +
+        '<div style="font-size:12px;color:var(--texto2);">Pausar para não receber pedidos</div></div>' +
+        '<button id="btn-toggle-pausar" onclick="togglePausar()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Pausar</button>' +
+      '</div>' +
+      '<div class="secao-titulo">Pedidos em aberto</div>' +
+      '<div class="pedidos-lista" id="pedidos-estabelecimento"></div>';
+  }
   var lista = document.getElementById('pedidos-estabelecimento');
   if(lista && !lista.firstChild) lista.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando pedidos...</div>';
   try {
@@ -3288,6 +3306,7 @@ async function renderEstabelecimento() {
       if(labelPausado) labelPausado.textContent = estasPausado ? '🔴 Loja pausada' : '🟢 Loja aberta';
     }
     var pedidos = data.pedidosAbertos || [];
+    lista = document.getElementById('pedidos-estabelecimento');
     if(!lista) return;
     if(pedidos.length === 0) {
       lista.innerHTML = '<div class="vazio"><div class="vazio-icon">📦</div>Nenhum pedido aberto no momento</div>';
