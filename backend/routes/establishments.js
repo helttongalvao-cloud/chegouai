@@ -117,11 +117,7 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
       .select(`
         id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng,
         valor_minimo, horarios, foto_url, whatsapp, pausado,
-        produtos (id, nome, descricao, preco, emoji, disponivel, imagem_url, categoria,
-          grupos_complementos (id, nome, obrigatorio, max_escolhas, ordem,
-            complementos (id, nome, preco_adicional, disponivel, ordem)
-          )
-        )
+        produtos (id, nome, descricao, preco, emoji, disponivel, imagem_url, categoria)
       `)
       .eq('id', req.params.id)
       .eq('ativo', true)
@@ -143,10 +139,29 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
         const minFecha = hF * 60 + mF;
         est.aberto = minAtual >= minAbre && minAtual <= minFecha;
       } else {
-        est.aberto = false; // dia não configurado = fechado
+        est.aberto = false;
       }
     }
     if (est.pausado) est.aberto = false;
+
+    // Buscar grupos de complementos separadamente para evitar nesting de 3 níveis
+    if (est.produtos && est.produtos.length > 0) {
+      const prodIds = est.produtos.map(p => p.id);
+      const { data: grupos } = await supabaseAdmin
+        .from('grupos_complementos')
+        .select('produto_id, id, nome, obrigatorio, max_escolhas, ordem, complementos(id, nome, preco_adicional, disponivel, ordem)')
+        .in('produto_id', prodIds)
+        .order('ordem');
+
+      if (grupos && grupos.length > 0) {
+        const gruposMap = {};
+        grupos.forEach(g => {
+          if (!gruposMap[g.produto_id]) gruposMap[g.produto_id] = [];
+          gruposMap[g.produto_id].push(g);
+        });
+        est.produtos = est.produtos.map(p => ({ ...p, grupos_complementos: gruposMap[p.id] || [] }));
+      }
+    }
 
     // Ordenar: disponíveis primeiro, indisponíveis por último
     est.produtos = [...est.produtos].sort((a, b) => (b.disponivel ? 1 : 0) - (a.disponivel ? 1 : 0));
