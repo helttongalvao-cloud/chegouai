@@ -3353,7 +3353,7 @@ async function renderEstabelecimento() {
       else if(p.status === 'aceito')
         botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'preparando\',this)">Iniciar preparo</button>';
       else if(p.status === 'preparando')
-        botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'pronto\',this)">Marcar pronto</button>';
+        botao = '<button class="btn-acao" onclick="escolherTipoEntregaModal(\'' + p.id + '\')">Marcar pronto</button>';
       else if(p.status === 'pronto')
         botao = p.tipo_entrega === 'proprio'
           ? '<button class="btn-acao" onclick="selecionarMotoboyEntrega(\'' + p.id + '\')">🛵 Saiu para entrega</button>'
@@ -6197,6 +6197,52 @@ async function removerMotoboyProprio(id, btn) {
 // ============================================================
 // SELECIONAR MOTOBOY — modal ao clicar "Saiu para entrega"
 // ============================================================
+function escolherTipoEntregaModal(pedidoId) {
+  var anterior = document.getElementById('modal-tipo-entrega');
+  if(anterior) anterior.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'modal-tipo-entrega';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+  modal.innerHTML =
+    '<div style="background:var(--cinza1);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;">' +
+      '<h3 style="margin:0 0 6px;">🚚 Como será a entrega?</h3>' +
+      '<p style="font-size:13px;color:var(--texto2);margin:0 0 16px;">Pedido pronto — escolha o tipo de entrega</p>' +
+      '<button onclick="escolherMotoboyProprio(\'' + pedidoId + '\')" ' +
+        'style="width:100%;padding:14px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:15px;font-weight:600;cursor:pointer;text-align:left;margin-bottom:10px;">' +
+        '🛵 Motoboy próprio<br>' +
+        '<span style="font-size:12px;color:var(--texto2);font-weight:400;">Selecionar um dos seus entregadores cadastrados</span>' +
+      '</button>' +
+      '<button id="btn-motoboy-app" onclick="escolherMotoboyApp(\'' + pedidoId + '\',this)" ' +
+        'style="width:100%;padding:14px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:15px;font-weight:600;cursor:pointer;text-align:left;margin-bottom:10px;">' +
+        '📲 Motoboy do app<br>' +
+        '<span style="font-size:12px;color:var(--texto2);font-weight:400;">Notificar entregadores disponíveis na plataforma</span>' +
+      '</button>' +
+      '<button onclick="document.getElementById(\'modal-tipo-entrega\').remove()" ' +
+        'style="width:100%;padding:12px;border-radius:12px;background:var(--cinza3);border:none;color:var(--texto);font-weight:600;cursor:pointer;">Cancelar</button>' +
+    '</div>';
+  document.body.appendChild(modal);
+}
+
+function escolherMotoboyProprio(pedidoId) {
+  document.getElementById('modal-tipo-entrega')?.remove();
+  // Vai direto para seleção do motoboy — PATCH saiu_para_entrega em confirmarSaidaEntrega
+  selecionarMotoboyEntrega(pedidoId);
+}
+
+async function escolherMotoboyApp(pedidoId, btn) {
+  if(btn) { btn.disabled = true; btn.innerHTML = '⏳ Notificando...'; }
+  try {
+    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'pronto' } });
+    document.getElementById('modal-tipo-entrega')?.remove();
+    showToast('📲', 'Motoboys notificados!', 'Os entregadores disponíveis foram avisados.');
+    renderEstabelecimento();
+  } catch(e) {
+    if(btn) { btn.disabled = false; btn.innerHTML = '📲 Motoboy do app<br><span style="font-size:12px;color:var(--texto2);font-weight:400;">Notificar entregadores disponíveis na plataforma</span>'; }
+    showToast('❌', 'Erro', e.message);
+  }
+}
+
 async function selecionarMotoboyEntrega(pedidoId) {
   var motoboys = [];
   try { motoboys = await apiCall('/api/establishments/me/motoboys'); } catch(e) {}
