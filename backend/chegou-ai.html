@@ -708,6 +708,9 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     </div>
   </div>
 
+  <!-- Link de rastreio para guest (sem login) -->
+  <div id="guest-rastreio-link" style="display:none;width:100%;margin-bottom:12px;"></div>
+
   <div id="confirmado-whatsapp" style="width:100%;margin-bottom:8px;"></div>
   <div id="btn-confirmar-recebimento-wrap" style="display:none;margin-bottom:12px;">
     <button onclick="confirmarRecebimento()" style="width:100%;padding:14px;border-radius:12px;background:var(--verde);border:none;color:var(--preto);font-size:15px;font-weight:700;cursor:pointer;">✅ Confirmar recebimento</button>
@@ -1197,6 +1200,7 @@ async function submitCartao(e, pedidoId) {
       fecharModalPagamento();
       irTela('tela-confirmado');
       mostrarWhatsappEstabelecimento();
+      mostrarLinkRastreioGuest();
       ultimoStatusConhecido = {};
       iniciarPollingPedidos();
     } else {
@@ -1289,6 +1293,7 @@ function startPollingPagamento(paymentId) {
         fecharModalPagamento();
         irTela('tela-confirmado');
         mostrarWhatsappEstabelecimento();
+        mostrarLinkRastreioGuest();
         ultimoStatusConhecido = {};
         iniciarPollingPedidos();
       }
@@ -1297,6 +1302,21 @@ function startPollingPagamento(paymentId) {
 }
 
 // mostrarCheckoutSimulado removido — substituído pelo checkout transparente Asaas
+
+function mostrarLinkRastreioGuest() {
+  var el = document.getElementById('guest-rastreio-link');
+  if(!el || authToken || !pedidoAtualId) { if(el) el.style.display = 'none'; return; }
+  var link = window.location.origin + '/app?acompanhar=' + pedidoAtualId;
+  el.style.display = 'block';
+  el.innerHTML =
+    '<div style="background:rgba(255,255,255,0.05);border:1px solid var(--cinza3);border-radius:12px;padding:12px;text-align:center;">' +
+      '<div style="font-size:12px;color:var(--texto2);margin-bottom:8px;">🔗 Salve o link para acompanhar de outro dispositivo</div>' +
+      '<button onclick="navigator.clipboard.writeText(\'' + link + '\').then(function(){ showToast(\'✅\',\'Copiado!\',\'Cole em qualquer navegador para acompanhar.\'); })" ' +
+        'style="width:100%;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">' +
+        '📋 Copiar link de acompanhamento' +
+      '</button>' +
+    '</div>';
+}
 
 function mostrarWhatsappEstabelecimento() {
   var el = document.getElementById('confirmado-whatsapp');
@@ -5140,8 +5160,17 @@ if(isAndroid && !isStandalone && !bannerDispensado && !deferredInstallPrompt) {
   var params = new URLSearchParams(window.location.search);
   var payStatus = params.get('payment_status');
   var orderId = params.get('order');
+  var acompanhar = params.get('acompanhar'); // link de rastreio para guest
+
+  if(acompanhar && /^[0-9a-f-]{36}$/.test(acompanhar)) {
+    window.history.replaceState({}, '', '/app');
+    pedidoAtualId = acompanhar;
+    localStorage.setItem('chegouai_pedido_id', pedidoAtualId);
+    setTimeout(function() { irTela('tela-confirmado'); ultimoStatusConhecido = {}; iniciarPollingPedidos(); }, 600);
+    return;
+  }
+
   if(payStatus && orderId) {
-    // Limpar URL
     window.history.replaceState({}, '', '/');
     if(payStatus === 'approved') {
       pedidoAtualId = orderId;
