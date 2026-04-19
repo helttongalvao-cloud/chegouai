@@ -19,9 +19,16 @@ const supabaseAdmin = createClient(
 );
 
 // Client com anon key — para verificar tokens JWT de usuários
+// persistSession: false evita contaminação de sessão entre requests no servidor
 const supabaseAnon = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_ANON_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
 );
 
 module.exports = { supabaseAdmin, supabaseAnon };
