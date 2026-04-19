@@ -5372,7 +5372,14 @@ function iniciarPollingPedidos() {
         if(resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
           atualizarMapaCliente(resp.motoboys.lat, resp.motoboys.lng, resp.motoboys.nome);
         }
-      } catch(e) {}
+      } catch(e) {
+        if(e.status === 404 || e.status === 403) {
+          clearInterval(pollingInterval);
+          pedidoAtualId = null;
+          localStorage.removeItem('chegouai_pedido_id');
+          irHome();
+        }
+      }
       return;
     }
     if(!authToken || !currentUser) return;
@@ -5576,7 +5583,14 @@ async function atualizarStatusManual() {
       }
     }
   } catch(e) {
-    showToast('⚠️', 'Erro ao atualizar', e.message || 'Tente novamente.');
+    if(e.status === 404 || e.status === 403) {
+      // Pedido não existe mais — limpar estado e voltar ao início
+      pedidoAtualId = null;
+      localStorage.removeItem('chegouai_pedido_id');
+      irHome();
+    } else {
+      showToast('⚠️', 'Erro ao atualizar', e.message || 'Tente novamente.');
+    }
   }
   if(btn) { btn.textContent = '🔄 Atualizar status'; btn.disabled = false; }
 }
