@@ -420,16 +420,26 @@ router.get('/:id', optionalAuth, [param('id').isUUID()], async (req, res, next) 
   try {
     const { data: pedido, error } = await supabaseAdmin
       .from('pedidos')
-      .select(`
-        *,
-        estabelecimentos (nome, emoji, telefone, whatsapp, user_id),
-        itens_pedido (*),
-        motoboys (id, nome, telefone, lat, lng)
-      `)
+      .select(`*, estabelecimentos (nome, emoji, telefone, whatsapp, user_id), itens_pedido (*)`)
       .eq('id', req.params.id)
       .single();
 
-    if (error || !pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
+    if (error || !pedido) {
+      if (error) console.error('[GET /orders/:id]', error.message);
+      return res.status(404).json({ error: 'Pedido não encontrado' });
+    }
+
+    // Buscar motoboy separado para não falhar a query principal
+    if (pedido.motoboy_id) {
+      const { data: mb } = await supabaseAdmin
+        .from('motoboys')
+        .select('id, nome, telefone, lat, lng')
+        .eq('id', pedido.motoboy_id)
+        .single();
+      pedido.motoboys = mb || null;
+    } else {
+      pedido.motoboys = null;
+    }
 
     if (req.user) {
       const perfil = req.user.profile.perfil;
