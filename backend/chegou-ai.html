@@ -1863,9 +1863,18 @@ function renderProdutos(produtos) {
   });
 
   var html = '';
+  // Primeiro renderiza categorias conhecidas (na ordem), depois as demais
+  var catsRenderizadas = new Set();
   ordemCat.forEach(function(cat) {
     if(!grupos[cat] || !grupos[cat].length) return;
+    catsRenderizadas.add(cat);
     html += '<div style="font-size:13px;font-weight:700;color:var(--verde);padding:12px 0 6px;letter-spacing:0.5px;text-transform:uppercase;">' + (categoriaLabels[cat] || cat) + '</div>';
+    html += grupos[cat].map(function(pi){ return renderCardProduto(pi.produto, pi.idx); }).join('');
+  });
+  // Categorias extras (mercado, etc.) em ordem alfabética
+  Object.keys(grupos).sort().forEach(function(cat) {
+    if(catsRenderizadas.has(cat)) return;
+    html += '<div style="font-size:13px;font-weight:700;color:var(--verde);padding:12px 0 6px;letter-spacing:0.5px;text-transform:uppercase;">' + cat + '</div>';
     html += grupos[cat].map(function(pi){ return renderCardProduto(pi.produto, pi.idx); }).join('');
   });
   lista.innerHTML = html;
