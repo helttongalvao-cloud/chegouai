@@ -211,7 +211,7 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
       `)
       .eq('estabelecimento_id', est.id)
       .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue'])
-      .or('pagamento_status.eq.aprovado,pagamento_status.eq.aguardando,tipo.eq.lista')
+      .or('pagamento_status.eq.aprovado,tipo.eq.lista')
       .gte('criado_em', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString())
       .order('criado_em', { ascending: true });
 
