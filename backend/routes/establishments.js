@@ -452,7 +452,21 @@ router.post('/me/products/import', requireRole('estabelecimento'), async (req, r
       return res.status(400).json({ error: 'Nenhum produto válido encontrado no arquivo' });
     }
 
-    const { data, error } = await supabaseAdmin.from('produtos').insert(registros).select('id');
+    // Busca nomes já existentes para evitar duplicatas em chamada dupla
+    const nomes = registros.map(r => r.nome);
+    const { data: existentes } = await supabaseAdmin
+      .from('produtos')
+      .select('nome')
+      .eq('estabelecimento_id', est.id)
+      .in('nome', nomes);
+    const nomesExistentes = new Set((existentes || []).map(p => p.nome));
+    const novos = registros.filter(r => !nomesExistentes.has(r.nome));
+
+    if (novos.length === 0) {
+      return res.json({ importados: 0, total: produtos.length, ids: [], aviso: 'Todos os produtos já existem no cardápio' });
+    }
+
+    const { data, error } = await supabaseAdmin.from('produtos').insert(novos).select('id');
     if (error) throw error;
 
     res.json({ importados: data.length, total: produtos.length, ids: data.map(p => p.id) });

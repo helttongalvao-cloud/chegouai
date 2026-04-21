@@ -2573,8 +2573,10 @@ function parseCsvLinha(linha, sep) {
 }
 
 function processarArquivoImport(input) {
+  if(window._importando) return;
   var file = input.files[0];
   if(!file) return;
+  input.value = '';
   var reader = new FileReader();
   reader.onload = async function(e) {
     var texto = e.target.result;
@@ -2621,6 +2623,7 @@ function processarArquivoImport(input) {
     if(!confirm(msgConfirm + '.\n\nImportar agora?')) { input.value = ''; return; }
 
     try {
+      window._importando = true;
       showToast('⏳', 'Importando...', produtos.length + ' produtos sendo cadastrados');
       var resp = await apiCall('/api/establishments/me/products/import', { method: 'POST', body: { produtos: produtos } });
       window._idsImportados = new Set(resp.ids || []);
@@ -2634,8 +2637,9 @@ function processarArquivoImport(input) {
       }
     } catch(e) {
       alert('Erro na importação: ' + e.message);
+    } finally {
+      window._importando = false;
     }
-    input.value = '';
   };
   reader.readAsText(file, 'UTF-8');
 }
