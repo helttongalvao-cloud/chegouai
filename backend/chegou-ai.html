@@ -3169,6 +3169,7 @@ async function salvarProduto() {
     renderCardapioEst();
   } catch(e) {
     alert('Erro ao salvar produto: ' + e.message);
+  } finally {
     if(btn) { btn.disabled = false; btn.textContent = 'Salvar produto'; }
   }
 }
