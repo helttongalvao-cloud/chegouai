@@ -3034,7 +3034,7 @@ async function salvarInfoLoja() {
     showToast('❌', 'Erro ao salvar', e.message);
   }
 }
-let emojiSelecionado = '🍔';
+let emojiSelecionado = '📦';
 
 
 function abrirModalProduto(idx) {
@@ -3078,7 +3078,7 @@ function abrirModalProduto(idx) {
     var preview = document.getElementById('prod-foto-preview');
     if(preview) preview.style.display = 'none';
     document.getElementById('prod-foto-label').textContent = '📷 Escolher foto do celular ou computador';
-    emojiSelecionado = '🍔';
+    emojiSelecionado = '📦';
     document.querySelectorAll('.emoji-op').forEach(function(e,i){ e.classList.toggle('selecionado', i===0); });
   }
   document.getElementById('modal-produto').classList.add('aberto');
@@ -4914,26 +4914,30 @@ function adminNav(btn, secao) {
     <div class="form-grupo">
       <label>Ícone do produto</label>
       <div class="emoji-grid" id="emoji-grid">
-        <div class="emoji-op selecionado" onclick="selecionarEmoji(this,'🍔')">🍔</div>
+        <div class="emoji-op selecionado" onclick="selecionarEmoji(this,'📦')">📦</div>
+        <div class="emoji-op" onclick="selecionarEmoji(this,'💊')">💊</div>
+        <div class="emoji-op" onclick="selecionarEmoji(this,'🧴')">🧴</div>
+        <div class="emoji-op" onclick="selecionarEmoji(this,'🩺')">🩺</div>
+        <div class="emoji-op" onclick="selecionarEmoji(this,'🌡️')">🌡️</div>
+        <div class="emoji-op" onclick="selecionarEmoji(this,'🩹')">🩹</div>
+        <div class="emoji-op" onclick="selecionarEmoji(this,'🧪')">🧪</div>
+        <div class="emoji-op" onclick="selecionarEmoji(this,'🧼')">🧼</div>
+        <div class="emoji-op" onclick="selecionarEmoji(this,'🪥')">🪥</div>
+        <div class="emoji-op" onclick="selecionarEmoji(this,'🧻')">🧻</div>
+        <div class="emoji-op" onclick="selecionarEmoji(this,'🛒')">🛒</div>
+        <div class="emoji-op" onclick="selecionarEmoji(this,'🍔')">🍔</div>
         <div class="emoji-op" onclick="selecionarEmoji(this,'🍕')">🍕</div>
-        <div class="emoji-op" onclick="selecionarEmoji(this,'🍟')">🍟</div>
-        <div class="emoji-op" onclick="selecionarEmoji(this,'🌮')">🌮</div>
-        <div class="emoji-op" onclick="selecionarEmoji(this,'🍝')">🍝</div>
         <div class="emoji-op" onclick="selecionarEmoji(this,'🍗')">🍗</div>
-        <div class="emoji-op" onclick="selecionarEmoji(this,'🐟')">🐟</div>
+        <div class="emoji-op" onclick="selecionarEmoji(this,'🍝')">🍝</div>
         <div class="emoji-op" onclick="selecionarEmoji(this,'🥩')">🥩</div>
         <div class="emoji-op" onclick="selecionarEmoji(this,'🍱')">🍱</div>
         <div class="emoji-op" onclick="selecionarEmoji(this,'🥗')">🥗</div>
         <div class="emoji-op" onclick="selecionarEmoji(this,'🍰')">🍰</div>
         <div class="emoji-op" onclick="selecionarEmoji(this,'🥤')">🥤</div>
-        <div class="emoji-op" onclick="selecionarEmoji(this,'🧃')">🧃</div>
         <div class="emoji-op" onclick="selecionarEmoji(this,'☕')">☕</div>
-        <div class="emoji-op" onclick="selecionarEmoji(this,'🍺')">🍺</div>
-        <div class="emoji-op" onclick="selecionarEmoji(this,'💊')">💊</div>
-        <div class="emoji-op" onclick="selecionarEmoji(this,'🧴')">🧴</div>
         <div class="emoji-op" onclick="selecionarEmoji(this,'🍞')">🍞</div>
       </div>
-      <input type="hidden" id="prod-emoji" value="🍔">
+      <input type="hidden" id="prod-emoji" value="📦">
     </div>
     <div class="form-grupo">
       <div class="disponivel-toggle">
