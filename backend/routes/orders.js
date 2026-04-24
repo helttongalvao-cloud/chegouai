@@ -171,8 +171,8 @@ router.post(
       let taxaFinal = split.taxaEntrega;
       if (req.body.taxaEntrega !== undefined) {
         const taxaCliente = parseFloat(req.body.taxaEntrega);
-        if (isNaN(taxaCliente) || taxaCliente < 2 || taxaCliente > 2.50) {
-          return res.status(400).json({ error: 'Taxa de entrega inválida (deve ser entre R$2,00 e R$2,50)' });
+        if (isNaN(taxaCliente) || taxaCliente < 2 || taxaCliente > 4) {
+          return res.status(400).json({ error: 'Taxa de entrega inválida (deve ser entre R$2,00 e R$4,00)' });
         }
         taxaFinal = taxaCliente;
       }

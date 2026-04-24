@@ -83,15 +83,22 @@ console.log('\n🛵 Taxa de entrega por distância\n');
 
 function calcularTaxaEntrega(distanciaKm) {
   if (distanciaKm <= 1.5) return 2.00;
-  return 2.50;
+  if (distanciaKm <= 3.0) return 2.50;
+  if (distanciaKm <= 4.5) return 3.00;
+  if (distanciaKm <= 6.0) return 3.50;
+  return 4.00;
 }
 
-assert('0,5 km → R$ 2,00', calcularTaxaEntrega(0.5) === 2.00);
-assert('1,0 km → R$ 2,00', calcularTaxaEntrega(1.0) === 2.00);
+assert('0,1 km → R$ 2,00', calcularTaxaEntrega(0.1) === 2.00);
 assert('1,5 km exato → R$ 2,00', calcularTaxaEntrega(1.5) === 2.00);
 assert('1,6 km → R$ 2,50', calcularTaxaEntrega(1.6) === 2.50);
-assert('3,0 km → R$ 2,50', calcularTaxaEntrega(3.0) === 2.50);
-assert('0,1 km (vizinho) → R$ 2,00', calcularTaxaEntrega(0.1) === 2.00);
+assert('3,0 km exato → R$ 2,50', calcularTaxaEntrega(3.0) === 2.50);
+assert('3,1 km → R$ 3,00', calcularTaxaEntrega(3.1) === 3.00);
+assert('4,5 km exato → R$ 3,00', calcularTaxaEntrega(4.5) === 3.00);
+assert('4,6 km → R$ 3,50', calcularTaxaEntrega(4.6) === 3.50);
+assert('6,0 km exato → R$ 3,50', calcularTaxaEntrega(6.0) === 3.50);
+assert('6,1 km → R$ 4,00', calcularTaxaEntrega(6.1) === 4.00);
+assert('10 km → R$ 4,00', calcularTaxaEntrega(10) === 4.00);
 
 // ── Resultado ─────────────────────────────────────────────────
 console.log('\n─────────────────────────────────────');
