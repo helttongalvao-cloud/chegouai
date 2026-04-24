@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"></noscript>
 <style>
@@ -2620,71 +2621,137 @@ function processarArquivoImport(input) {
   var file = input.files[0];
   if(!file) return;
   input.value = '';
+
+  var ext = (file.name || '').split('.').pop().toLowerCase();
+  var isExcel = ext === 'xls' || ext === 'xlsx';
+
   var reader = new FileReader();
   reader.onload = async function(e) {
-    var texto = e.target.result;
-    var linhas = texto.split(/\r?\n/).filter(function(l){ return l.trim(); });
-    if(linhas.length < 2) { alert('Arquivo sem dados válidos.'); return; }
+    var produtos = [];
 
-    // Detectar separador (vírgula ou ponto e vírgula — Excel BR usa ;)
-    var sep = linhas[0].includes(';') ? ';' : ',';
-
-    // Detectar cabeçalho
-    var cabecalho = parseCsvLinha(linhas[0], sep).map(function(c){ return c.toLowerCase().replace(/["""]/g,'').trim(); });
-    var idxNome  = cabecalho.findIndex(function(c){ return c.includes('nome') || c.includes('produto') || c.includes('descri') && !c.includes('descricao'); });
-    var idxPreco = cabecalho.findIndex(function(c){ return c.includes('preco') || c.includes('preço') || c.includes('valor') || c.includes('price'); });
-    var idxDesc  = cabecalho.findIndex(function(c){ return c.includes('descricao') || c.includes('descrição') || c === 'desc'; });
-    var idxCat   = cabecalho.findIndex(function(c){ return c.includes('categ'); });
-    var idxEmoji = cabecalho.findIndex(function(c){ return c.includes('emoji'); });
-    var idxFoto  = cabecalho.findIndex(function(c){ return c.includes('foto') || c.includes('imagem') || c.includes('image') || (c.includes('url') && !c.includes('categ')); });
-
-    if(idxNome === -1 || idxPreco === -1) {
-      alert('Colunas "nome" e "preco" são obrigatórias no cabeçalho.\n\nColunas encontradas: ' + cabecalho.join(', ') + '\n\nSeparador detectado: "' + sep + '"');
+    try {
+      if(isExcel || typeof XLSX !== 'undefined' && !isProbablyCSV(e.target.result)) {
+        // Formato Excel (.xls / .xlsx) — usar SheetJS
+        if(typeof XLSX === 'undefined') {
+          alert('Biblioteca de leitura de Excel não carregou. Verifique sua conexão e tente novamente.');
+          return;
+        }
+        var workbook = XLSX.read(e.target.result, { type: 'array' });
+        var sheet = workbook.Sheets[workbook.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        if(!rows || rows.length === 0) { alert('Planilha vazia ou sem dados.'); return; }
+        produtos = extrairProdutosDasPlanilha(rows);
+      } else {
+        // Formato CSV — lógica original
+        var texto = new TextDecoder('UTF-8').decode(new Uint8Array(e.target.result));
+        var linhas = texto.split(/\r?\n/).filter(function(l){ return l.trim(); });
+        if(linhas.length < 2) { alert('Arquivo sem dados válidos.'); return; }
+        var sep = linhas[0].includes(';') ? ';' : ',';
+        var cabecalho = parseCsvLinha(linhas[0], sep).map(function(c){ return c.toLowerCase().replace(/["""]/g,'').trim(); });
+        var idxNome  = cabecalho.findIndex(function(c){ return c.includes('nome') || c.includes('produto'); });
+        var idxPreco = cabecalho.findIndex(function(c){ return c.includes('preco') || c.includes('preço') || c.includes('valor') || c.includes('price'); });
+        var idxDesc  = cabecalho.findIndex(function(c){ return c.includes('descricao') || c.includes('descrição') || c === 'desc'; });
+        var idxCat   = cabecalho.findIndex(function(c){ return c.includes('categ'); });
+        var idxEmoji = cabecalho.findIndex(function(c){ return c.includes('emoji'); });
+        var idxFoto  = cabecalho.findIndex(function(c){ return c.includes('foto') || c.includes('imagem') || c.includes('image') || (c.includes('url') && !c.includes('categ')); });
+        if(idxNome === -1 || idxPreco === -1) {
+          alert('Colunas "nome" e "preco" são obrigatórias.\n\nColunas encontradas: ' + cabecalho.join(', '));
+          return;
+        }
+        for(var i = 1; i < linhas.length; i++) {
+          var cols = parseCsvLinha(linhas[i], sep);
+          var nomeProd = cols[idxNome] ? cols[idxNome].replace(/^[""]|[""]$/g,'').trim() : '';
+          var precoProd = cols[idxPreco] ? cols[idxPreco].replace(/^[""]|[""]$/g,'').trim() : '';
+          if(!nomeProd || !precoProd) continue;
+          var p = { nome: nomeProd, preco: precoProd.replace(',', '.') };
+          if(idxDesc >= 0 && cols[idxDesc]) p.descricao = cols[idxDesc];
+          if(idxCat >= 0 && cols[idxCat]) p.categoria = cols[idxCat];
+          if(idxEmoji >= 0 && cols[idxEmoji]) p.emoji = cols[idxEmoji];
+          if(idxFoto >= 0 && cols[idxFoto] && cols[idxFoto].startsWith('http')) p.foto_url = cols[idxFoto];
+          produtos.push(p);
+        }
+      }
+    } catch(parseErr) {
+      alert('Não foi possível ler o arquivo: ' + (parseErr.message || 'formato inválido'));
       return;
     }
 
-    var produtos = [];
-    for(var i = 1; i < linhas.length; i++) {
-      var cols = parseCsvLinha(linhas[i], sep);
-      var nomeProd = cols[idxNome] ? cols[idxNome].replace(/^[""]|[""]$/g,'').trim() : '';
-      var precoProd = cols[idxPreco] ? cols[idxPreco].replace(/^[""]|[""]$/g,'').trim() : '';
-      if(!nomeProd || !precoProd) continue;
-      var p = { nome: nomeProd, preco: precoProd.replace(',', '.') };
-      if(idxDesc >= 0 && cols[idxDesc]) p.descricao = cols[idxDesc];
-      if(idxCat >= 0 && cols[idxCat]) p.categoria = cols[idxCat];
-      if(idxEmoji >= 0 && cols[idxEmoji]) p.emoji = cols[idxEmoji];
-      if(idxFoto >= 0 && cols[idxFoto] && cols[idxFoto].startsWith('http')) p.foto_url = cols[idxFoto];
-      produtos.push(p);
-    }
+    if(produtos.length === 0) { alert('Nenhum produto válido encontrado. Verifique se as colunas "nome" e "preco" existem na planilha.'); return; }
 
-    if(produtos.length === 0) { alert('Nenhum produto válido encontrado.'); return; }
-    var comFotoCSV = produtos.filter(function(p){ return p.foto_url; }).length;
-    var semFotoCSV = produtos.length - comFotoCSV;
+    var comFoto = produtos.filter(function(p){ return p.foto_url; }).length;
+    var semFoto = produtos.length - comFoto;
     var msgConfirm = 'Encontrei ' + produtos.length + ' produto(s)';
-    if(comFotoCSV > 0) msgConfirm += ' — ' + comFotoCSV + ' com foto na planilha';
-    if(semFotoCSV > 0) msgConfirm += ', ' + semFotoCSV + ' sem foto (serão buscadas automaticamente)';
-    if(!confirm(msgConfirm + '.\n\nImportar agora?')) { input.value = ''; return; }
+    if(comFoto > 0) msgConfirm += ' — ' + comFoto + ' com foto';
+    if(semFoto > 0) msgConfirm += ', ' + semFoto + ' sem foto';
+    if(!confirm(msgConfirm + '.\n\nImportar agora?')) return;
 
     try {
       window._importando = true;
-      showToast('⏳', 'Importando...', produtos.length + ' produtos sendo cadastrados');
-      var resp = await apiCall('/api/establishments/me/products/import', { method: 'POST', body: { produtos: produtos } });
-      window._idsImportados = new Set(resp.ids || []);
-      showToast('✅', 'Cadastrados!', resp.importados + ' produtos importados com sucesso');
-      await renderCardapioEst(true);
+      window._idsImportados = new Set();
+      var totalImportados = 0;
+      var LOTE = 1000;
+      var totalLotes = Math.ceil(produtos.length / LOTE);
 
-      // Buscar fotos automaticamente para produtos sem foto
-      var semFoto = cardapioEst.filter(function(p){ return !p.imagem_url && window._idsImportados && window._idsImportados.has(p.id); });
-      if(semFoto.length > 0) {
-        await buscarFotosAutomatico(semFoto);
+      for(var lote = 0; lote < totalLotes; lote++) {
+        var inicio = lote * LOTE;
+        var fatia = produtos.slice(inicio, inicio + LOTE);
+        showToast('⏳', 'Importando...', (lote + 1) + '/' + totalLotes + ' — ' + (inicio + fatia.length) + ' de ' + produtos.length + ' produtos');
+        var resp = await apiCall('/api/establishments/me/products/import', { method: 'POST', body: { produtos: fatia } });
+        (resp.ids || []).forEach(function(id){ window._idsImportados.add(id); });
+        totalImportados += (resp.importados || 0);
       }
+
+      showToast('✅', 'Cadastrados!', totalImportados + ' produtos importados com sucesso');
+      await renderCardapioEst(true);
+      var semFotoList = cardapioEst.filter(function(p){ return !p.imagem_url && window._idsImportados && window._idsImportados.has(p.id); });
+      if(semFotoList.length > 0) await buscarFotosAutomatico(semFotoList);
     } catch(e) {
       alert('Erro na importação: ' + e.message);
     } finally {
       window._importando = false;
     }
   };
-  reader.readAsText(file, 'UTF-8');
+  reader.readAsArrayBuffer(file);
+}
+
+function isProbablyCSV(arrayBuffer) {
+  // Verifica os 4 primeiros bytes — se for D0 CF 11 E0 é XLS binário
+  var bytes = new Uint8Array(arrayBuffer, 0, 4);
+  return !(bytes[0] === 0xD0 && bytes[1] === 0xCF && bytes[2] === 0x11 && bytes[3] === 0xE0);
+}
+
+function extrairProdutosDasPlanilha(rows) {
+  var produtos = [];
+  rows.forEach(function(row) {
+    var rawKeys = Object.keys(row);
+    function getVal(termos) {
+      for(var i = 0; i < rawKeys.length; i++) {
+        var k = rawKeys[i].toLowerCase().trim();
+        if(termos.some(function(t){ return k.includes(t); })) return String(row[rawKeys[i]] || '').trim();
+      }
+      return '';
+    }
+    // Ignorar linhas com Status inativo (se existir coluna Status)
+    var status = getVal(['status']);
+    if(status && status.toLowerCase() !== 'ativo') return;
+
+    var nome  = getVal(['nome', 'produto', 'item']);
+    var preco = getVal(['preco', 'preço', 'valor', 'price']);
+    if(!nome || !preco) return;
+    var precoNum = String(preco).replace(',', '.').replace(/[^\d.]/g, '');
+    if(!precoNum || isNaN(parseFloat(precoNum)) || parseFloat(precoNum) <= 0) return;
+    var p = { nome: nome, preco: precoNum };
+    var desc = getVal(['descricao', 'descrição', 'desc']);
+    if(desc) p.descricao = desc;
+    var cat = getVal(['categ']);
+    if(cat) p.categoria = cat;
+    var emoji = getVal(['emoji']);
+    if(emoji) p.emoji = emoji;
+    var foto = getVal(['foto', 'imagem', 'image', 'url']);
+    if(foto && foto.startsWith('http')) p.foto_url = foto;
+    produtos.push(p);
+  });
+  return produtos;
 }
 
 async function buscarFotosAutomatico(produtosSemFoto) {

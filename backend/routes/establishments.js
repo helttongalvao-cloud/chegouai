@@ -418,8 +418,8 @@ router.post('/me/products/import', requireRole('estabelecimento'), async (req, r
     if (!Array.isArray(produtos) || produtos.length === 0) {
       return res.status(400).json({ error: 'Lista de produtos inválida' });
     }
-    if (produtos.length > 500) {
-      return res.status(400).json({ error: 'Máximo de 500 produtos por importação' });
+    if (produtos.length > 1000) {
+      return res.status(400).json({ error: 'Máximo de 1000 produtos por lote' });
     }
 
     const { data: est } = await supabaseAdmin
