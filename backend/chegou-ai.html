@@ -612,7 +612,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div id="resumo-itens"></div>
       <div class="total-linha"><span>Subtotal</span><span id="subtotal-valor">R$ 0,00</span></div>
       <div class="total-linha"><span>Taxa de entrega</span><span style="color:var(--verde)" id="taxa-entrega-valor">R$ 3,00</span></div>
-      <div style="font-size:11px;color:var(--texto2);margin-top:-6px;margin-bottom:4px;" id="taxa-entrega-info">📍 Até 1 km — R$ 2,00 &nbsp;|&nbsp; Acima de 3 km — R$ 4,00</div>
+      <div style="font-size:11px;color:var(--texto2);margin-top:-6px;margin-bottom:4px;" id="taxa-entrega-info">📍 Até 1,5 km — R$ 2,00 &nbsp;|&nbsp; Acima de 1,5 km — R$ 2,50</div>
       <div class="total-linha" id="linha-conveniencia" style="display:none;"><span style="color:var(--texto2);">Taxa conveniência (cartão)</span><span id="conveniencia-valor" style="color:var(--texto2);">R$ 0,00</span></div>
       <div class="total-linha destaque"><span>Total</span><span class="valor" id="total-valor">R$ 0,00</span></div>
     </div>
@@ -1399,11 +1399,10 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Taxa de entrega por distância — R$2 (até 1km), R$3 (até 2km), R$4 (acima de 2km)
+// Taxa de entrega por distância — R$2 (até 1,5km) | R$2,50 (acima de 1,5km)
 function calcularTaxaEntrega(distanciaKm) {
-  if (distanciaKm <= 1.0) return 2;
-  if (distanciaKm <= 2.0) return 3;
-  return 4;
+  if (distanciaKm <= 1.5) return 2.00;
+  return 2.50;
 }
 
 // Coordenadas GPS do cliente (capturadas ao usar "minha localização")
@@ -2161,10 +2160,10 @@ function atualizarCarrinho() {
     const el = document.getElementById(id);
     if(el) el.textContent = qtd;
   });
-  // Mostra faixa de R$3 a R$4 no carrinho
+  // Mostra faixa de frete R$2 a R$2,50 no carrinho
   ['carrinho-total','carrinho-total2'].forEach(function(id) {
     const el = document.getElementById(id);
-    if(el) el.textContent = 'R$ ' + (total+2).toFixed(2).replace('.',',') + ' ~ ' + (total+3).toFixed(2).replace('.',',');
+    if(el) el.textContent = 'R$ ' + (total+2).toFixed(2).replace('.',',') + ' ~ ' + (total+2.5).toFixed(2).replace('.',',');
   });
 }
 
