@@ -2688,18 +2688,10 @@ function processarArquivoImport(input) {
     try {
       window._importando = true;
       window._idsImportados = new Set();
-      var totalImportados = 0;
-      var LOTE = 1000;
-      var totalLotes = Math.ceil(produtos.length / LOTE);
-
-      for(var lote = 0; lote < totalLotes; lote++) {
-        var inicio = lote * LOTE;
-        var fatia = produtos.slice(inicio, inicio + LOTE);
-        showToast('⏳', 'Importando...', (lote + 1) + '/' + totalLotes + ' — ' + (inicio + fatia.length) + ' de ' + produtos.length + ' produtos');
-        var resp = await apiCall('/api/establishments/me/products/import', { method: 'POST', body: { produtos: fatia } });
-        (resp.ids || []).forEach(function(id){ window._idsImportados.add(id); });
-        totalImportados += (resp.importados || 0);
-      }
+      showToast('⏳', 'Importando...', produtos.length + ' produtos...');
+      var resp = await apiCall('/api/establishments/me/products/import', { method: 'POST', body: { produtos: produtos } });
+      (resp.ids || []).forEach(function(id){ window._idsImportados.add(id); });
+      var totalImportados = resp.importados || 0;
 
       showToast('✅', 'Cadastrados!', totalImportados + ' produtos importados com sucesso');
       await renderCardapioEst(true);

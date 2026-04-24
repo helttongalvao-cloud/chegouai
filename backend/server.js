@@ -97,7 +97,7 @@ app.use(cors({
 // =============================================
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-app.use(express.json({ limit: '2mb' }));           // Limitar body size (importação CSV pode ter muitos produtos)
+app.use(express.json({ limit: '10mb' }));           // Limitar body size (importação CSV pode ter muitos produtos)
 app.use(express.urlencoded({ extended: false }));
 
 // =============================================
