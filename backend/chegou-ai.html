@@ -2695,8 +2695,9 @@ function processarArquivoImport(input) {
 
       showToast('✅', 'Cadastrados!', totalImportados + ' produtos importados com sucesso');
       await renderCardapioEst(true);
+      var catAtual = estDataCache?.estabelecimento?.categoria;
       var semFotoList = cardapioEst.filter(function(p){ return !p.imagem_url && window._idsImportados && window._idsImportados.has(p.id); });
-      if(semFotoList.length > 0) await buscarFotosAutomatico(semFotoList);
+      if(semFotoList.length > 0 && catAtual !== 'farmacia') await buscarFotosAutomatico(semFotoList);
     } catch(e) {
       alert('Erro na importação: ' + e.message);
     } finally {
