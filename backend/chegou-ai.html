@@ -3143,6 +3143,17 @@ let emojiSelecionado = '📦';
 function abrirModalProduto(idx) {
   document.getElementById('modal-produto-titulo').textContent = idx !== undefined ? '✏️ Editar produto' : '➕ Novo produto';
   document.getElementById('produto-idx').value = idx !== undefined ? idx : -1;
+
+  // Preenche categorias conforme tipo do estabelecimento
+  var catSel = document.getElementById('prod-categoria');
+  var catAtual = estDataCache?.estabelecimento?.categoria;
+  var opcoes = catAtual === 'farmacia'
+    ? [['medicamento','Medicamento'],['perfumaria','Perfumaria'],['controlado','Controlado'],['higiene','Higiene'],['outros','Outros']]
+    : catAtual === 'mercado'
+    ? [['principal','Principal'],['hortifruti','Hortifruti'],['acougue','Açougue'],['padaria','Padaria'],['bebidas','Bebidas'],['limpeza','Limpeza'],['higiene','Higiene'],['outros','Outros']]
+    : [['principal','Principal'],['entradas','Entradas'],['lanches','Lanches'],['bebidas','Bebidas'],['sobremesas','Sobremesas'],['porcoes','Porções'],['combos','Combos']];
+  catSel.innerHTML = opcoes.map(function(o){ return '<option value="'+o[0]+'">'+o[1]+'</option>'; }).join('');
+
   const produtos = estDataCache?.produtos || [];
   
   if(idx !== undefined && produtos[idx]) {
@@ -4989,15 +5000,7 @@ function adminNav(btn, secao) {
     </div>
     <div class="form-grupo">
       <label>Categoria</label>
-      <select id="prod-categoria" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;">
-        <option value="principal">Principal</option>
-        <option value="entradas">Entradas</option>
-        <option value="lanches">Lanches</option>
-        <option value="bebidas">Bebidas</option>
-        <option value="sobremesas">Sobremesas</option>
-        <option value="porcoes">Porções</option>
-        <option value="combos">Combos</option>
-      </select>
+      <select id="prod-categoria" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;"></select>
     </div>
     <div class="form-grupo">
       <label>Foto do produto</label>
