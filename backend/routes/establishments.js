@@ -297,10 +297,10 @@ router.get('/me/products', requireRole('estabelecimento', 'admin'), async (req, 
 
     if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
-    // Pagina em blocos de 1000 para contornar db-max-rows do PostgREST
+    // Pagina em blocos de 100 — compatível com qualquer valor de db-max-rows no Supabase
     let todos = [];
     let from = 0;
-    const PAGE = 1000;
+    const PAGE = 100;
     while (true) {
       const { data, error } = await supabaseAdmin
         .from('produtos')
@@ -470,11 +470,11 @@ router.post('/me/products/import', requireRole('estabelecimento'), async (req, r
         .from('produtos')
         .select('nome')
         .eq('estabelecimento_id', est.id)
-        .range(from, from + 999);
+        .range(from, from + 99);
       if (!page || page.length === 0) break;
       existentes = existentes.concat(page);
-      if (page.length < 1000) break;
-      from += 1000;
+      if (page.length < 100) break;
+      from += 100;
     }
     const nomesExistentes = new Set(existentes.map(p => p.nome));
     const novos = registros.filter(r => !nomesExistentes.has(r.nome));
