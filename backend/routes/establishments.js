@@ -297,14 +297,24 @@ router.get('/me/products', requireRole('estabelecimento', 'admin'), async (req, 
 
     if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
-    const { data, error } = await supabaseAdmin
-      .from('produtos')
-      .select('*')
-      .eq('estabelecimento_id', est.id)
-      .order('nome');
-
-    if (error) throw error;
-    res.json(data);
+    // Pagina em blocos de 1000 para contornar db-max-rows do PostgREST
+    let todos = [];
+    let from = 0;
+    const PAGE = 1000;
+    while (true) {
+      const { data, error } = await supabaseAdmin
+        .from('produtos')
+        .select('*')
+        .eq('estabelecimento_id', est.id)
+        .order('nome')
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      todos = todos.concat(data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+    res.json(todos);
   } catch (err) {
     next(err);
   }
@@ -452,14 +462,21 @@ router.post('/me/products/import', requireRole('estabelecimento'), async (req, r
       return res.status(400).json({ error: 'Nenhum produto válido encontrado no arquivo' });
     }
 
-    // Busca nomes já existentes para evitar duplicatas em chamada dupla
-    const nomes = registros.map(r => r.nome);
-    const { data: existentes } = await supabaseAdmin
-      .from('produtos')
-      .select('nome')
-      .eq('estabelecimento_id', est.id)
-      .in('nome', nomes);
-    const nomesExistentes = new Set((existentes || []).map(p => p.nome));
+    // Busca TODOS os nomes existentes (paginado) para evitar URL gigante com .in()
+    let existentes = [];
+    let from = 0;
+    while (true) {
+      const { data: page } = await supabaseAdmin
+        .from('produtos')
+        .select('nome')
+        .eq('estabelecimento_id', est.id)
+        .range(from, from + 999);
+      if (!page || page.length === 0) break;
+      existentes = existentes.concat(page);
+      if (page.length < 1000) break;
+      from += 1000;
+    }
+    const nomesExistentes = new Set(existentes.map(p => p.nome));
     const novos = registros.filter(r => !nomesExistentes.has(r.nome));
 
     if (novos.length === 0) {
