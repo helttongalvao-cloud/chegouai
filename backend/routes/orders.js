@@ -508,8 +508,27 @@ router.patch(
           return res.status(400).json({ error: 'Não é possível cancelar pedido já pago' });
       }
 
+      // Validar código de entrega quando motoboy confirma entrega
+      if (status === 'entregue' && perfil === 'motoboy') {
+        const { codigoEntrega } = req.body;
+        if (!codigoEntrega || !/^\d{4}$/.test(codigoEntrega)) {
+          return res.status(400).json({ error: 'Informe os 4 últimos dígitos do telefone do cliente' });
+        }
+        const { data: pedCheck } = await supabaseAdmin
+          .from('pedidos').select('telefone_cliente').eq('id', orderId).single();
+        const tel = (pedCheck?.telefone_cliente || '').replace(/\D/g, '');
+        if (tel.length < 4 || tel.slice(-4) !== codigoEntrega) {
+          return res.status(400).json({ error: 'Código incorreto. Peça ao cliente os 4 últimos dígitos do telefone.' });
+        }
+      }
+
       // Campos extras para o update
       const updateFields = { status, atualizado_em: new Date().toISOString() };
+
+      // Gerar código de coleta quando pedido fica pronto
+      if (status === 'pronto') {
+        updateFields.codigo_coleta = String(Math.floor(Math.random() * 900) + 100);
+      }
 
       // Se marcando saiu_para_entrega com motoboy próprio, salvar o vínculo
       if (status === 'saiu_para_entrega' && req.body.motoboyProprioId) {
@@ -883,6 +902,131 @@ router.post('/:id/confirmar-recebimento', requireAuth, [param('id').isUUID()], a
     if (error || !pedido) return res.status(400).json({ error: 'Pedido não encontrado ou não está em trânsito' });
 
     res.json({ message: 'Recebimento confirmado!', pedido });
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// POST /api/orders/:id/verificar-coleta
+// Motoboy digita o código de 3 dígitos que o lojista mostra
+// =============================================
+router.post('/:id/verificar-coleta', requireRole('motoboy'), [param('id').isUUID()], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+
+  const { codigo } = req.body;
+  if (!codigo || !/^\d{3}$/.test(String(codigo))) {
+    return res.status(400).json({ error: 'Código deve ter exatamente 3 dígitos' });
+  }
+
+  try {
+    const { data: motoboy } = await supabaseAdmin
+      .from('motoboys').select('id').eq('user_id', req.user.id).single();
+    if (!motoboy) return res.status(404).json({ error: 'Motoboy não encontrado' });
+
+    const { data: pedido } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, codigo_coleta, status')
+      .eq('id', req.params.id)
+      .eq('motoboy_id', motoboy.id)
+      .single();
+
+    if (!pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
+    if (!pedido.codigo_coleta) return res.status(400).json({ error: 'Pedido sem código de coleta' });
+    if (pedido.codigo_coleta !== String(codigo)) {
+      return res.status(400).json({ error: 'Código incorreto. Confirme com o lojista.' });
+    }
+
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// GET /api/orders/:id/chat — Buscar mensagens
+// POST /api/orders/:id/chat — Enviar mensagem
+// PATCH /api/orders/:id/chat/lida — Marcar como lidas
+// =============================================
+async function verificarAcessoChat(pedidoId, user) {
+  const perfil = user.profile.perfil;
+  if (!['cliente', 'motoboy'].includes(perfil)) return null;
+
+  let query = supabaseAdmin.from('pedidos').select('id, status, cliente_id, motoboy_id, telefone_cliente').eq('id', pedidoId);
+
+  if (perfil === 'cliente') {
+    query = query.eq('cliente_id', user.id);
+  } else {
+    const { data: mb } = await supabaseAdmin.from('motoboys').select('id').eq('user_id', user.id).single();
+    if (!mb) return null;
+    query = query.eq('motoboy_id', mb.id);
+  }
+
+  const { data: pedido } = await query.single();
+  return pedido || null;
+}
+
+router.get('/:id/chat', requireAuth, [param('id').isUUID()], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+
+  try {
+    const pedido = await verificarAcessoChat(req.params.id, req.user);
+    if (!pedido) return res.status(403).json({ error: 'Acesso negado' });
+
+    const { data: msgs, error } = await supabaseAdmin
+      .from('chat_mensagens')
+      .select('id, remetente, mensagem, lida, criado_em')
+      .eq('pedido_id', req.params.id)
+      .order('criado_em', { ascending: true });
+
+    if (error) throw error;
+    res.json(msgs || []);
+  } catch (err) { next(err); }
+});
+
+router.post('/:id/chat', requireAuth, [param('id').isUUID()], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+
+  const mensagem = (req.body.mensagem || '').trim().slice(0, 500);
+  if (!mensagem) return res.status(400).json({ error: 'Mensagem não pode estar vazia' });
+
+  try {
+    const pedido = await verificarAcessoChat(req.params.id, req.user);
+    if (!pedido) return res.status(403).json({ error: 'Acesso negado' });
+    if (!['coletado', 'saiu_para_entrega'].includes(pedido.status)) {
+      return res.status(400).json({ error: 'Chat disponível apenas durante a entrega' });
+    }
+
+    const perfil = req.user.profile.perfil;
+    const { data: msg, error } = await supabaseAdmin
+      .from('chat_mensagens')
+      .insert({ pedido_id: req.params.id, remetente: perfil, mensagem })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(msg);
+  } catch (err) { next(err); }
+});
+
+router.patch('/:id/chat/lida', requireAuth, [param('id').isUUID()], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+
+  try {
+    const pedido = await verificarAcessoChat(req.params.id, req.user);
+    if (!pedido) return res.status(403).json({ error: 'Acesso negado' });
+
+    const perfil = req.user.profile.perfil;
+    const remetenteOposto = perfil === 'cliente' ? 'motoboy' : 'cliente';
+
+    await supabaseAdmin
+      .from('chat_mensagens')
+      .update({ lida: true })
+      .eq('pedido_id', req.params.id)
+      .eq('remetente', remetenteOposto)
+      .eq('lida', false);
+
+    res.json({ ok: true });
   } catch (err) { next(err); }
 });
 
