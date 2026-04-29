@@ -1457,6 +1457,8 @@ setTimeout(function(){
   var lojaParam = params.get('loja');
   if(window.location.pathname === '/mesa' && lojaParam) {
     iniciarModoMesa(lojaParam, params.get('mesa') || '');
+  } else if(window.location.pathname === '/motoboy' && lojaParam) {
+    iniciarModoMotoboyProprio(lojaParam);
   } else {
     irTela('tela-login');
   }
@@ -3016,6 +3018,7 @@ async function renderInfoLoja() {
     '<input id="input-novo-motoboy" type="text" placeholder="Nome do motoboy" maxlength="80" style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;">' +
     '<button onclick="adicionarMotoboyProprio()" style="padding:10px 16px;border-radius:10px;background:var(--verde);border:none;color:#000;font-weight:700;cursor:pointer;">+ Adicionar</button>' +
     '</div>' +
+    '<button onclick="copiarLinkMotoboy(\'' + est.id + '\')" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">🔗 Copiar link do motoboy</button>' +
     '</div>' +
     '</div>' +
     '</div>';
@@ -6204,6 +6207,15 @@ function mostrarQRCodeMesa(lojaId) {
 // ============================================================
 // TIPO DE ENTREGA — toggle nas configurações
 // ============================================================
+function copiarLinkMotoboy(estId) {
+  var link = window.location.origin + '/motoboy?loja=' + estId;
+  navigator.clipboard.writeText(link).then(function() {
+    showToast('🔗', 'Link copiado!', 'Envie para o seu motoboy pelo WhatsApp');
+  }).catch(function() {
+    prompt('Copie o link abaixo:', link);
+  });
+}
+
 async function alterarTipoEntrega(tipo) {
   try {
     await apiCall('/api/establishments/me/tipo-entrega', { method: 'PATCH', body: JSON.stringify({ tipo_entrega: tipo }) });
@@ -6839,6 +6851,194 @@ async function confirmarCodigo() {
 <button id="chat-fab" class="chat-fab">
   💬<span class="chat-badge"></span>
 </button>
+
+<!-- =============================================
+     TELA MOTOBOY PRÓPRIO
+     ============================================= -->
+<div id="tela-motoboy-proprio" style="display:none;min-height:100vh;background:var(--fundo);padding:0 0 40px 0;">
+  <div style="background:var(--card);padding:20px 20px 16px 20px;border-bottom:1px solid var(--cinza3);position:sticky;top:0;z-index:10;">
+    <div id="mp-est-nome" style="font-size:18px;font-weight:700;color:var(--texto);">🛵 Entregas</div>
+    <div style="font-size:12px;color:var(--texto2);margin-top:2px;">Seus pedidos para entregar</div>
+  </div>
+  <div id="mp-lista" style="padding:16px;"></div>
+</div>
+
+<!-- Modal código motoboy próprio -->
+<div id="modal-mp-codigo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:flex-end;justify-content:center;">
+  <div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;">
+    <div id="mp-codigo-titulo" style="font-size:16px;font-weight:700;color:var(--texto);text-align:center;margin-bottom:8px;"></div>
+    <div id="mp-codigo-subtitulo" style="font-size:13px;color:var(--texto2);text-align:center;margin-bottom:20px;"></div>
+    <div id="mp-codigo-display" style="font-size:32px;font-weight:700;letter-spacing:12px;text-align:center;color:var(--verde);height:48px;margin-bottom:16px;"></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:300px;margin:0 auto 12px;">
+      <button onclick="mpNumpad('1')" style="padding:16px;border-radius:12px;background:var(--cinza3);border:none;font-size:20px;font-weight:600;color:var(--texto);cursor:pointer;">1</button>
+      <button onclick="mpNumpad('2')" style="padding:16px;border-radius:12px;background:var(--cinza3);border:none;font-size:20px;font-weight:600;color:var(--texto);cursor:pointer;">2</button>
+      <button onclick="mpNumpad('3')" style="padding:16px;border-radius:12px;background:var(--cinza3);border:none;font-size:20px;font-weight:600;color:var(--texto);cursor:pointer;">3</button>
+      <button onclick="mpNumpad('4')" style="padding:16px;border-radius:12px;background:var(--cinza3);border:none;font-size:20px;font-weight:600;color:var(--texto);cursor:pointer;">4</button>
+      <button onclick="mpNumpad('5')" style="padding:16px;border-radius:12px;background:var(--cinza3);border:none;font-size:20px;font-weight:600;color:var(--texto);cursor:pointer;">5</button>
+      <button onclick="mpNumpad('6')" style="padding:16px;border-radius:12px;background:var(--cinza3);border:none;font-size:20px;font-weight:600;color:var(--texto);cursor:pointer;">6</button>
+      <button onclick="mpNumpad('7')" style="padding:16px;border-radius:12px;background:var(--cinza3);border:none;font-size:20px;font-weight:600;color:var(--texto);cursor:pointer;">7</button>
+      <button onclick="mpNumpad('8')" style="padding:16px;border-radius:12px;background:var(--cinza3);border:none;font-size:20px;font-weight:600;color:var(--texto);cursor:pointer;">8</button>
+      <button onclick="mpNumpad('9')" style="padding:16px;border-radius:12px;background:var(--cinza3);border:none;font-size:20px;font-weight:600;color:var(--texto);cursor:pointer;">9</button>
+      <button onclick="fecharModalMpCodigo()" style="padding:16px;border-radius:12px;background:var(--cinza3);border:none;font-size:13px;color:var(--texto2);cursor:pointer;">Cancelar</button>
+      <button onclick="mpNumpad('0')" style="padding:16px;border-radius:12px;background:var(--cinza3);border:none;font-size:20px;font-weight:600;color:var(--texto);cursor:pointer;">0</button>
+      <button onclick="mpApagar()" style="padding:16px;border-radius:12px;background:var(--cinza3);border:none;font-size:20px;color:var(--texto);cursor:pointer;">⌫</button>
+    </div>
+    <div id="mp-codigo-erro" style="color:#e53935;font-size:13px;text-align:center;min-height:18px;margin-bottom:8px;"></div>
+    <button id="mp-btn-confirmar" onclick="mpConfirmar()" disabled style="width:100%;padding:14px;border-radius:12px;background:var(--verde);border:none;color:#fff;font-size:16px;font-weight:700;cursor:pointer;opacity:0.5;">Confirmar</button>
+  </div>
+</div>
+
+<script>
+// ── Motoboy Próprio ──────────────────────────────────────────────────────────
+var _mpEstId = '';
+var _mpPedidos = [];
+var _mpCodigoAtual = '';
+var _mpAcaoAtual = null; // { pedidoId, tipo: 'coletar'|'entregar', digitos: 3|4 }
+var _mpPolling = null;
+
+async function iniciarModoMotoboyProprio(estId) {
+  _mpEstId = estId;
+  document.body.innerHTML = document.getElementById('tela-motoboy-proprio').outerHTML +
+    document.getElementById('modal-mp-codigo').outerHTML +
+    '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></' + 'script>';
+  document.getElementById('tela-motoboy-proprio').style.display = 'block';
+  await mpCarregarPedidos();
+  _mpPolling = setInterval(mpCarregarPedidos, 15000);
+}
+
+async function mpCarregarPedidos() {
+  try {
+    var resp = await fetch(API_BASE + '/api/motoboy-proprio/' + _mpEstId);
+    var data = await resp.json();
+    if(!resp.ok) { mpMostrarErro(data.error || 'Erro ao carregar pedidos'); return; }
+    _mpPedidos = data.pedidos || [];
+    var nomeEl = document.getElementById('mp-est-nome');
+    if(nomeEl) nomeEl.textContent = (data.estabelecimento?.emoji || '🛵') + ' ' + (data.estabelecimento?.nome || 'Entregas');
+    mpRenderLista();
+  } catch(e) { mpMostrarErro('Sem conexão'); }
+}
+
+function mpRenderLista() {
+  var lista = document.getElementById('mp-lista');
+  if(!lista) return;
+  if(_mpPedidos.length === 0) {
+    lista.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--texto2);"><div style="font-size:48px;margin-bottom:12px;">✅</div><div style="font-size:16px;font-weight:600;">Nenhum pedido pendente</div><div style="font-size:13px;margin-top:4px;">Atualizando automaticamente...</div></div>';
+    return;
+  }
+  lista.innerHTML = _mpPedidos.map(function(p) {
+    var itens = (p.itens_pedido || []).map(function(i){ return i.quantidade + 'x ' + i.nome; }).join(', ');
+    var isColetado = p.status === 'coletado';
+    var corStatus = isColetado ? '#ff9800' : 'var(--verde)';
+    var labelStatus = isColetado ? '🛵 Coletado — confirmar entrega' : '📦 Pronto para coletar';
+    var mapsUrl = 'https://maps.google.com/?q=' + encodeURIComponent(p.endereco_entrega || '');
+    return '<div style="background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;border:1.5px solid ' + corStatus + '20;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<span style="font-size:11px;font-weight:700;color:' + corStatus + ';background:' + corStatus + '18;padding:3px 8px;border-radius:20px;">' + labelStatus + '</span>' +
+        '<span style="font-size:11px;color:var(--texto2);">R$ ' + parseFloat(p.taxa_entrega || 0).toFixed(2).replace('.',',') + ' de frete</span>' +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--texto2);margin-bottom:6px;">' + itens + '</div>' +
+      '<div style="font-size:14px;font-weight:600;color:var(--texto);margin-bottom:12px;">📍 ' + sanitizarMP(p.endereco_entrega || '') + '</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<a href="' + mapsUrl + '" target="_blank" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;font-weight:600;text-decoration:none;text-align:center;">🗺️ Navegar</a>' +
+        (!isColetado
+          ? '<button onclick="mpAbrirColetar(\'' + p.id + '\')" style="flex:1;padding:10px;border-radius:10px;background:var(--verde);border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">✅ Coletei</button>'
+          : '<button onclick="mpAbrirEntregar(\'' + p.id + '\')" style="flex:1;padding:10px;border-radius:10px;background:#ff9800;border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">🏠 Entreguei</button>'
+        ) +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function sanitizarMP(str) {
+  return str.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function mpAbrirColetar(pedidoId) {
+  _mpAcaoAtual = { pedidoId: pedidoId, tipo: 'coletar', digitos: 3 };
+  _mpCodigoAtual = '';
+  document.getElementById('mp-codigo-titulo').textContent = 'Código de Coleta';
+  document.getElementById('mp-codigo-subtitulo').textContent = 'Digite o código de 3 dígitos que o lojista mostrar';
+  mpAtualizarDisplay();
+  document.getElementById('mp-codigo-erro').textContent = '';
+  document.getElementById('modal-mp-codigo').style.display = 'flex';
+}
+
+function mpAbrirEntregar(pedidoId) {
+  _mpAcaoAtual = { pedidoId: pedidoId, tipo: 'entregar', digitos: 4 };
+  _mpCodigoAtual = '';
+  document.getElementById('mp-codigo-titulo').textContent = 'Confirmar Entrega';
+  document.getElementById('mp-codigo-subtitulo').textContent = 'Digite os 4 últimos dígitos do telefone do cliente';
+  mpAtualizarDisplay();
+  document.getElementById('mp-codigo-erro').textContent = '';
+  document.getElementById('modal-mp-codigo').style.display = 'flex';
+}
+
+function fecharModalMpCodigo() {
+  document.getElementById('modal-mp-codigo').style.display = 'none';
+  _mpAcaoAtual = null;
+  _mpCodigoAtual = '';
+}
+
+function mpNumpad(d) {
+  if(!_mpAcaoAtual) return;
+  if(_mpCodigoAtual.length >= _mpAcaoAtual.digitos) return;
+  _mpCodigoAtual += d;
+  mpAtualizarDisplay();
+}
+
+function mpApagar() {
+  _mpCodigoAtual = _mpCodigoAtual.slice(0,-1);
+  mpAtualizarDisplay();
+}
+
+function mpAtualizarDisplay() {
+  var display = document.getElementById('mp-codigo-display');
+  var btn = document.getElementById('mp-btn-confirmar');
+  if(!display || !_mpAcaoAtual) return;
+  var digitos = _mpAcaoAtual.digitos;
+  var mostrar = _mpCodigoAtual.padEnd(digitos, '·');
+  display.textContent = mostrar.split('').join(' ');
+  var pronto = _mpCodigoAtual.length === digitos;
+  btn.disabled = !pronto;
+  btn.style.opacity = pronto ? '1' : '0.5';
+}
+
+async function mpConfirmar() {
+  if(!_mpAcaoAtual || _mpCodigoAtual.length !== _mpAcaoAtual.digitos) return;
+  var btn = document.getElementById('mp-btn-confirmar');
+  btn.disabled = true;
+  btn.textContent = 'Confirmando...';
+  document.getElementById('mp-codigo-erro').textContent = '';
+  try {
+    var url = API_BASE + '/api/motoboy-proprio/' + _mpEstId + '/pedidos/' + _mpAcaoAtual.pedidoId + '/' + _mpAcaoAtual.tipo;
+    var resp = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codigo: _mpCodigoAtual })
+    });
+    var data = await resp.json();
+    if(!resp.ok) {
+      document.getElementById('mp-codigo-erro').textContent = data.error || 'Código incorreto';
+      _mpCodigoAtual = '';
+      mpAtualizarDisplay();
+      btn.disabled = false;
+      btn.textContent = 'Confirmar';
+      return;
+    }
+    fecharModalMpCodigo();
+    await mpCarregarPedidos();
+  } catch(e) {
+    document.getElementById('mp-codigo-erro').textContent = 'Erro de conexão';
+    btn.disabled = false;
+    btn.textContent = 'Confirmar';
+  }
+}
+
+function mpMostrarErro(msg) {
+  var lista = document.getElementById('mp-lista');
+  if(lista) lista.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#e53935;">' + msg + '</div>';
+}
+</script>
 
 </body>
 </html>

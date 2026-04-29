@@ -17,6 +17,7 @@ const adminRoutes = require('./routes/admin');
 const featuresRoutes = require('./routes/features');
 const notificationsRoutes = require('./routes/notifications');
 const mesaRoutes = require('./routes/mesa');
+const motoboyProprioRoutes = require('./routes/motoboyProprio');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -125,6 +126,11 @@ app.get('/mesa', (req, res) => {
   res.sendFile(path.join(__dirname, 'chegou-ai.html'));
 });
 
+// Motoboy próprio — tela de entregas do motoboy do lojista (sem login)
+app.get('/motoboy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'chegou-ai.html'));
+});
+
 // =============================================
 // RATE LIMITING global
 // =============================================
@@ -142,6 +148,7 @@ app.use('/api/features', featuresRoutes);
 // OAuth MP removido — split via Asaas wallets
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/mesa', mesaRoutes);
+app.use('/api/motoboy-proprio', motoboyProprioRoutes);
 
 // =============================================
 // CONFIG PÚBLICA — Expõe chaves seguras ao frontend
