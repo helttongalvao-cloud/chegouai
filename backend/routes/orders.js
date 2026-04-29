@@ -167,21 +167,14 @@ router.post(
         supabaseAdmin.from('cupons').update({ usos_atual: cupomData.usos_atual + 1 }).eq('id', cupomData.id).then(() => {});
       }
 
-      // 5. Calcular taxa de entrega final
-      // Entrega própria: usa a taxa cadastrada pelo lojista (ele repassa ao seu motoboy)
-      // Entrega app: usa a taxa calculada por distância (enviada pelo frontend, entre R$2–R$4)
-      let taxaFinal;
-      if (est.tipo_entrega === 'proprio') {
-        taxaFinal = parseFloat(est.taxa_entrega || 0);
-      } else {
-        taxaFinal = split.taxaEntrega;
-        if (req.body.taxaEntrega !== undefined) {
-          const taxaCliente = parseFloat(req.body.taxaEntrega);
-          if (isNaN(taxaCliente) || taxaCliente < 2 || taxaCliente > 4) {
-            return res.status(400).json({ error: 'Taxa de entrega inválida (deve ser entre R$2,00 e R$4,00)' });
-          }
-          taxaFinal = taxaCliente;
+      // 5. Calcular taxa de entrega final — calculada por distância para ambos os tipos
+      let taxaFinal = split.taxaEntrega;
+      if (req.body.taxaEntrega !== undefined) {
+        const taxaCliente = parseFloat(req.body.taxaEntrega);
+        if (isNaN(taxaCliente) || taxaCliente < 2 || taxaCliente > 4) {
+          return res.status(400).json({ error: 'Taxa de entrega inválida (deve ser entre R$2,00 e R$4,00)' });
         }
+        taxaFinal = taxaCliente;
       }
       taxaFinal = Math.round(taxaFinal * 100) / 100; // garantir 2 casas decimais
       const totalFinal = parseFloat(Math.max(0, subtotal + taxaFinal - desconto).toFixed(2));

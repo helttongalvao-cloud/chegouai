@@ -43,12 +43,11 @@ router.get('/:estId', [param('estId').isUUID()], async (req, res, next) => {
 
 // =============================================
 // PATCH /api/motoboy-proprio/:estId/pedidos/:pedidoId/coletar
-// Marca como "coletado" — requer código de 3 dígitos
+// Marca como "coletado" — sem código (motoboy é de confiança do lojista)
 // =============================================
 router.patch('/:estId/pedidos/:pedidoId/coletar', [
   param('estId').isUUID(),
   param('pedidoId').isUUID(),
-  body('codigo').matches(/^\d{3}$/).withMessage('Código deve ter 3 dígitos'),
 ], async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
@@ -56,15 +55,13 @@ router.patch('/:estId/pedidos/:pedidoId/coletar', [
   try {
     const { data: pedido } = await supabaseAdmin
       .from('pedidos')
-      .select('id, status, codigo_coleta')
+      .select('id, status')
       .eq('id', req.params.pedidoId)
       .eq('estabelecimento_id', req.params.estId)
       .single();
 
     if (!pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
     if (pedido.status !== 'pronto') return res.status(400).json({ error: 'Pedido não está pronto para coleta' });
-    if (!pedido.codigo_coleta) return res.status(400).json({ error: 'Pedido sem código de coleta' });
-    if (pedido.codigo_coleta !== req.body.codigo) return res.status(400).json({ error: 'Código incorreto. Confirme com o lojista.' });
 
     await supabaseAdmin
       .from('pedidos')

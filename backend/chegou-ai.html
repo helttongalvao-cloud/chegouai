@@ -6953,14 +6953,16 @@ function sanitizarMP(str) {
   return str.replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function mpAbrirColetar(pedidoId) {
-  _mpAcaoAtual = { pedidoId: pedidoId, tipo: 'coletar', digitos: 3 };
-  _mpCodigoAtual = '';
-  document.getElementById('mp-codigo-titulo').textContent = 'Código de Coleta';
-  document.getElementById('mp-codigo-subtitulo').textContent = 'Digite o código de 3 dígitos que o lojista mostrar';
-  mpAtualizarDisplay();
-  document.getElementById('mp-codigo-erro').textContent = '';
-  document.getElementById('modal-mp-codigo').style.display = 'flex';
+async function mpAbrirColetar(pedidoId) {
+  if(!confirm('Confirmar coleta deste pedido?')) return;
+  try {
+    var resp = await fetch(API_BASE + '/api/motoboy-proprio/' + _mpEstId + '/pedidos/' + pedidoId + '/coletar', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{}'
+    });
+    var data = await resp.json();
+    if(!resp.ok) { alert(data.error || 'Erro ao confirmar coleta'); return; }
+    await mpCarregarPedidos();
+  } catch(e) { alert('Erro de conexão'); }
 }
 
 function mpAbrirEntregar(pedidoId) {
