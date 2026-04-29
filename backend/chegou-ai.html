@@ -1920,7 +1920,8 @@ async function abrirCardapio(id) {
 
 var categoriaLabels = {
   principal: 'Principal', entradas: 'Entradas', lanches: 'Lanches',
-  bebidas: 'Bebidas', sobremesas: 'Sobremesas', porcoes: 'Porções', combos: 'Combos'
+  bebidas: 'Bebidas', sobremesas: 'Sobremesas', porcoes: 'Porções', combos: 'Combos',
+  adicionais: 'Adicionais'
 };
 
 function renderProdutos(produtos) {
@@ -3151,7 +3152,7 @@ function abrirModalProduto(idx) {
     ? [['medicamento','Medicamento'],['perfumaria','Perfumaria'],['controlado','Controlado'],['higiene','Higiene'],['outros','Outros']]
     : catAtual === 'mercado'
     ? [['principal','Principal'],['hortifruti','Hortifruti'],['acougue','Açougue'],['padaria','Padaria'],['bebidas','Bebidas'],['limpeza','Limpeza'],['higiene','Higiene'],['outros','Outros']]
-    : [['principal','Principal'],['entradas','Entradas'],['lanches','Lanches'],['bebidas','Bebidas'],['sobremesas','Sobremesas'],['porcoes','Porções'],['combos','Combos']];
+    : [['principal','Principal'],['entradas','Entradas'],['lanches','Lanches'],['bebidas','Bebidas'],['sobremesas','Sobremesas'],['porcoes','Porções'],['combos','Combos'],['adicionais','Adicionais']];
   catSel.innerHTML = opcoes.map(function(o){ return '<option value="'+o[0]+'">'+o[1]+'</option>'; }).join('');
 
   const produtos = estDataCache?.produtos || [];
