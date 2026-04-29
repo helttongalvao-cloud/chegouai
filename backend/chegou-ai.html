@@ -400,8 +400,27 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 }
 .home-greeting span { color:var(--verde); }
 
-/* HOME — categorias pill */
+/* HOME — categorias ícone estilo iFood */
 .cat-btn { border-radius:100px; padding:9px 18px; }
+.cat-icon-grid { display:flex; gap:6px; overflow-x:auto; padding:4px 0 12px; scrollbar-width:none; margin-bottom:8px; }
+.cat-icon-grid::-webkit-scrollbar { display:none; }
+.cat-icon-item { display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; min-width:64px; }
+.cat-icon-item .ci-circle { width:54px; height:54px; border-radius:50%; background:var(--cinza2); border:2px solid var(--cinza3); display:flex; align-items:center; justify-content:center; font-size:26px; transition:all 0.2s; }
+.cat-icon-item.ativo .ci-circle, .cat-icon-item:hover .ci-circle { background:var(--verde); border-color:var(--verde); }
+.cat-icon-item .ci-label { font-size:10px; font-weight:600; color:var(--texto2); text-align:center; line-height:1.2; }
+.cat-icon-item.ativo .ci-label { color:var(--verde); }
+
+/* CARDÁPIO — barra de categorias sticky */
+.cat-tabs-bar { display:flex; gap:0; overflow-x:auto; scrollbar-width:none; background:var(--preto); border-bottom:1.5px solid var(--cinza3); position:sticky; top:0; z-index:20; padding:0 16px; }
+.cat-tabs-bar::-webkit-scrollbar { display:none; }
+.cat-tab { padding:12px 14px; white-space:nowrap; font-size:13px; font-weight:600; color:var(--texto2); cursor:pointer; border-bottom:2.5px solid transparent; transition:all 0.2s; }
+.cat-tab.ativo { color:var(--verde); border-bottom-color:var(--verde); }
+
+/* CARD LOJA — rating badge */
+.card-est-rating { display:flex; align-items:center; gap:3px; font-size:12px; font-weight:700; color:#f5a623; }
+
+/* CARD PRODUTO — badge desconto */
+.badge-desconto { position:absolute; top:8px; left:8px; background:#e53935; color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px; }
 
 /* HOME — cards maiores */
 .card-est-img { height:160px; position:relative; }
@@ -557,14 +576,15 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       </div>
     </div>
     <div id="resultado-busca-produto" style="display:none;margin-bottom:8px;"></div>
-  <div class="secao-titulo" id="secao-titulo-categorias">Categorias</div>
-    <div class="categorias">
-      <div class="cat-btn ativo" onclick="filtrarCat(this,'todos')">🍽️ Todos</div>
-      <div class="cat-btn" onclick="filtrarCat(this,'restaurante')">🍔 Restaurantes</div>
-      <div class="cat-btn" onclick="filtrarCat(this,'mercado')">🛒 Mercados</div>
-      <div class="cat-btn" onclick="filtrarCat(this,'farmacia')">💊 Farmácias</div>
-      <div class="cat-btn" onclick="filtrarCat(this,'lanche')">🥪 Lanches</div>
+  <div id="secao-titulo-categorias">
+    <div class="cat-icon-grid">
+      <div class="cat-icon-item ativo" onclick="filtrarCatIcon(this,'todos')"><div class="ci-circle">🍽️</div><div class="ci-label">Todos</div></div>
+      <div class="cat-icon-item" onclick="filtrarCatIcon(this,'restaurante')"><div class="ci-circle">🍔</div><div class="ci-label">Restaurantes</div></div>
+      <div class="cat-icon-item" onclick="filtrarCatIcon(this,'mercado')"><div class="ci-circle">🛒</div><div class="ci-label">Mercados</div></div>
+      <div class="cat-icon-item" onclick="filtrarCatIcon(this,'farmacia')"><div class="ci-circle">💊</div><div class="ci-label">Farmácias</div></div>
+      <div class="cat-icon-item" onclick="filtrarCatIcon(this,'lanche')"><div class="ci-circle">🥪</div><div class="ci-label">Lanches</div></div>
     </div>
+  </div>
     <div class="secao-titulo">Estabelecimentos</div>
     <div class="estabelecimentos" id="lista-estabelecimentos"></div>
   </div>
@@ -591,6 +611,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <input type="text" id="busca-produto" placeholder="🔍 Buscar produto..." oninput="filtrarProdutos(this.value)" style="width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;">
   </div>
   <div id="cardapio-avaliacao" style="padding:0 16px 8px;font-size:13px;color:var(--texto2);"></div>
+  <div id="cat-tabs-bar" class="cat-tabs-bar" style="display:none;"></div>
   <div id="area-lista-compras" style="display:none;padding:0 16px;"></div>
   <div class="itens-cardapio" id="lista-itens"></div>
   <div class="carrinho-float oculto" id="carrinho-float2" onclick="irCheckout()">
@@ -1694,13 +1715,15 @@ function renderEstabelecimentos(cat) {
     var badge = e.pausado ? 'badge-pausado' : (e.aberto ? 'badge-aberto' : 'badge-fechado');
     var status = e.pausado ? 'Pausado' : (e.aberto ? 'Aberto' : 'Fechado');
     var esmaecido = (!e.aberto || e.pausado) ? 'style="opacity: 0.5; filter: grayscale(1);"' : '';
+    var ratingHtml = e.avaliacao > 0 ? '<span class="card-est-rating">⭐ ' + parseFloat(e.avaliacao).toFixed(1) + '</span>' : '';
     return '<div class="card-est" onclick="abrirCardapio(\'' + e.id + '\')" ' + esmaecido + '>' +
       cardEstImg(e) +
       '<div class="card-est-info">' +
         '<div class="card-est-nome">' + sanitizar(e.nome) + '</div>' +
         '<div class="card-est-meta">' +
-          '<span>' + (e.tempo_entrega || '30-45 min') + '</span>' +
-          '<span>Frete R$2-R$4</span>' +
+          (ratingHtml ? ratingHtml + '<span>·</span>' : '') +
+          '<span>🕐 ' + (e.tempo_entrega || '30-45 min') + '</span>' +
+          '<span>🛵 R$2-4</span>' +
           '<span class="' + badge + '">' + status + '</span>' +
         '</div>' +
       '</div>' +
@@ -1712,6 +1735,22 @@ function filtrarCat(btn, cat) {
   document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('ativo'); });
   btn.classList.add('ativo');
   carregarEstabelecimentos(cat);
+}
+
+function filtrarCatIcon(el, cat) {
+  document.querySelectorAll('.cat-icon-item').forEach(function(b){ b.classList.remove('ativo'); });
+  el.classList.add('ativo');
+  carregarEstabelecimentos(cat);
+}
+
+function scrollToSecao(tab) {
+  var id = tab.getAttribute('data-target');
+  var el = document.getElementById(id);
+  if(!el) return;
+  var tabsBar = document.getElementById('cat-tabs-bar');
+  var offset = (tabsBar ? tabsBar.offsetHeight : 0) + 8;
+  var top = el.getBoundingClientRect().top + window.scrollY - offset;
+  window.scrollTo({ top: top, behavior: 'smooth' });
 }
 
 function alterarEndereco() {
@@ -1948,6 +1987,7 @@ function renderProdutos(produtos) {
     lista.innerHTML = produtosComIdx.map(function(pi) {
       return renderCardProduto(pi.produto, pi.idx);
     }).join('');
+    document.getElementById('cat-tabs-bar').style.display = 'none';
     return;
   }
 
@@ -1960,39 +2000,81 @@ function renderProdutos(produtos) {
     grupos[cat].push(pi);
   });
 
-  var html = '';
-  // Primeiro renderiza categorias conhecidas (na ordem), depois as demais
+  // Calcular ordem final de categorias
+  var catsOrdenadas = [];
   var catsRenderizadas = new Set();
   ordemCat.forEach(function(cat) {
-    if(!grupos[cat] || !grupos[cat].length) return;
-    catsRenderizadas.add(cat);
-    html += '<div style="font-size:13px;font-weight:700;color:var(--verde);padding:12px 0 6px;letter-spacing:0.5px;text-transform:uppercase;">' + (categoriaLabels[cat] || cat) + '</div>';
-    html += grupos[cat].map(function(pi){ return renderCardProduto(pi.produto, pi.idx); }).join('');
+    if(grupos[cat] && grupos[cat].length) { catsOrdenadas.push(cat); catsRenderizadas.add(cat); }
   });
-  // Categorias extras (mercado, etc.) em ordem alfabética
   Object.keys(grupos).sort().forEach(function(cat) {
-    if(catsRenderizadas.has(cat)) return;
-    html += '<div style="font-size:13px;font-weight:700;color:var(--verde);padding:12px 0 6px;letter-spacing:0.5px;text-transform:uppercase;">' + cat + '</div>';
-    html += grupos[cat].map(function(pi){ return renderCardProduto(pi.produto, pi.idx); }).join('');
+    if(!catsRenderizadas.has(cat)) catsOrdenadas.push(cat);
+  });
+
+  var html = '';
+  catsOrdenadas.forEach(function(cat) {
+    var label = categoriaLabels[cat] || cat;
+    var slug = cat.replace(/[^a-z0-9]/gi, '-');
+    html += '<div id="secao-cat-' + slug + '" class="cat-secao" data-cat="' + slug + '">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--verde);padding:12px 0 6px;letter-spacing:0.5px;text-transform:uppercase;">' + label + '</div>' +
+      grupos[cat].map(function(pi){ return renderCardProduto(pi.produto, pi.idx); }).join('') +
+    '</div>';
   });
   lista.innerHTML = html;
+
+  // Montar barra de tabs
+  var tabsBar = document.getElementById('cat-tabs-bar');
+  tabsBar.style.display = 'flex';
+  tabsBar.innerHTML = catsOrdenadas.map(function(cat, i) {
+    var label = categoriaLabels[cat] || cat;
+    var slug = cat.replace(/[^a-z0-9]/gi, '-');
+    return '<div class="cat-tab' + (i===0?' ativo':'') + '" data-target="secao-cat-' + slug + '" onclick="scrollToSecao(this)">' + label + '</div>';
+  }).join('');
+
+  // IntersectionObserver para destacar tab ativa ao rolar
+  if(window._catTabsObserver) window._catTabsObserver.disconnect();
+  window._catTabsObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if(entry.isIntersecting) {
+        var id = entry.target.id;
+        tabsBar.querySelectorAll('.cat-tab').forEach(function(t) {
+          var ativo = t.getAttribute('data-target') === id;
+          t.classList.toggle('ativo', ativo);
+          if(ativo) t.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+        });
+      }
+    });
+  }, { rootMargin: '-30% 0px -65% 0px', threshold: 0 });
+  document.querySelectorAll('.cat-secao').forEach(function(s){ window._catTabsObserver.observe(s); });
 }
 
 function renderCardProduto(item, i) {
   var indisponivel = item.disponivel === false;
   var opacidade = indisponivel ? 'opacity:0.5;' : '';
-  var imgHtml = item.imagem_url
-    ? '<img src="' + item.imagem_url + '" style="width:56px;height:56px;border-radius:10px;object-fit:cover;' + opacidade + '" onerror="this.style.display=\'none\'">'
-    : '<div class="item-emoji" style="' + opacidade + '">' + (item.emoji || '🍽️') + '</div>';
+  var temPromo = item.preco_promocional && parseFloat(item.preco_promocional) > 0 && parseFloat(item.preco_promocional) < parseFloat(item.preco);
+  var imgWrap, imgInner;
+  if(item.imagem_url) {
+    imgInner = '<img src="' + item.imagem_url + '" style="width:56px;height:56px;border-radius:10px;object-fit:cover;' + opacidade + '" onerror="this.style.display=\'none\'">';
+  } else {
+    imgInner = '<div class="item-emoji" style="' + opacidade + '">' + (item.emoji || '🍽️') + '</div>';
+  }
+  if(temPromo) {
+    var pct = Math.round((1 - parseFloat(item.preco_promocional)/parseFloat(item.preco)) * 100);
+    imgWrap = '<div style="position:relative;flex-shrink:0;">' + imgInner + '<div class="badge-desconto">-' + pct + '%</div></div>';
+  } else {
+    imgWrap = imgInner;
+  }
   var btnHtml = indisponivel
     ? '<div style="font-size:11px;font-weight:700;color:#999;background:#f0f0f0;border-radius:20px;padding:6px 10px;white-space:nowrap;">Indisponível</div>'
     : '<button class="item-add" onclick="adicionarItem(' + i + ')">+</button>';
+  var precoHtml = temPromo
+    ? '<div class="item-preco"><span style="text-decoration:line-through;color:var(--texto2);font-size:12px;margin-right:4px;">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + '</span>R$ ' + parseFloat(item.preco_promocional).toFixed(2).replace('.',',') + '</div>'
+    : '<div class="item-preco">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + '</div>';
   return '<div class="card-item" data-nome="' + (item.nome || '').toLowerCase() + '">' +
-    imgHtml +
+    imgWrap +
     '<div class="item-info" style="' + opacidade + '">' +
       '<div class="item-nome">' + sanitizar(item.nome) + '</div>' +
       '<div class="item-desc">' + sanitizar(item.descricao || '') + '</div>' +
-      '<div class="item-preco">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + '</div>' +
+      precoHtml +
     '</div>' +
     btnHtml +
   '</div>';

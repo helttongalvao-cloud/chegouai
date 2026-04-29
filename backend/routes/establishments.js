@@ -61,7 +61,7 @@ router.get('/', async (req, res, next) => {
 
     let query = supabaseAdmin
       .from('estabelecimentos')
-      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp, pausado')
+      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp, pausado, avaliacao')
       .eq('ativo', true)
       .order('nome');
 
@@ -117,7 +117,7 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
       .select(`
         id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng,
         valor_minimo, horarios, foto_url, whatsapp, pausado,
-        produtos (id, nome, descricao, preco, emoji, disponivel, imagem_url, categoria)
+        produtos (id, nome, descricao, preco, preco_promocional, emoji, disponivel, imagem_url, categoria)
       `)
       .eq('id', req.params.id)
       .eq('ativo', true)
