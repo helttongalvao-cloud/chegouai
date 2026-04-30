@@ -54,9 +54,9 @@ router.get('/:lojaId', [param('lojaId').isUUID()], async (req, res, next) => {
 
     const { data: produtos } = await supabaseAdmin
       .from('produtos')
-      .select('id, nome, descricao, preco, categoria, foto_url, disponivel')
+      .select('id, nome, descricao, preco, categoria, foto_url, emoji, disponivel')
       .eq('estabelecimento_id', req.params.lojaId)
-      .eq('disponivel', true)
+      .neq('disponivel', false)
       .order('categoria')
       .order('nome');
 
