@@ -6435,7 +6435,7 @@ async function selecionarMotoboyEntrega(pedidoId) {
   var modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
 
-  var linkMotoboy = window.location.origin + '/motoboy?loja=' + (estAtual && estAtual.id ? estAtual.id : '');
+  var linkMotoboy = window.location.origin + '/motoboy?loja=' + (window._lojistaEstId || '');
 
   var opcoes = motoboys.length
     ? motoboys.map(function(m) {
