@@ -5208,6 +5208,10 @@ if('serviceWorker' in navigator) {
 // Verificar sessão ao iniciar (auto-login)
 // ============================================
 (async function verificarSessao() {
+  // Rotas públicas sem login — não fazer auto-login
+  var path = window.location.pathname;
+  if(path === '/motoboy' || path === '/mesa') return;
+
   var token = localStorage.getItem('chegouai_token');
   var user = JSON.parse(localStorage.getItem('chegouai_user') || 'null');
   if(token && user) {
