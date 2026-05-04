@@ -3521,6 +3521,7 @@ async function renderEstabelecimento() {
     el = document.getElementById('est-faturamento'); if(el) el.textContent = 'R$ ' + (stats.faturamento || 0).toFixed(2).replace('.',',');
     // Atualizar label cardápio pela categoria real
     if(data.estabelecimento) {
+      window._lojistaEstId = data.estabelecimento.id;
       var btnCap = document.getElementById('est-nav-cardapio');
       if(btnCap) btnCap.textContent = labelCardapio(data.estabelecimento.categoria);
       iniciarRealtimeLojista(data.estabelecimento.id);
@@ -3562,8 +3563,10 @@ async function renderEstabelecimento() {
         botao = '<button class="btn-acao" onclick="escolherTipoEntregaModal(\'' + p.id + '\')">Marcar pronto</button>';
       else if(p.status === 'pronto')
         botao = p.tipo_entrega === 'proprio'
-          ? '<button class="btn-acao" onclick="selecionarMotoboyEntrega(\'' + p.id + '\')">🛵 Saiu para entrega</button>'
+          ? '<button class="btn-acao secundario" onclick="enviarLinkMotoboyPedido()" style="background:rgba(0,200,83,0.1);border-color:var(--verde);color:var(--verde);">📲 Enviar link ao motoboy</button>'
           : '<button class="btn-acao secundario">Aguardando motoboy</button>';
+      else if(p.status === 'coletado' && p.tipo_entrega === 'proprio')
+        botao = '<button class="btn-acao secundario" style="opacity:0.6;cursor:default;">🛵 Motoboy a caminho...</button>';
       else if(p.status === 'saiu_para_entrega')
         botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'entregue\',this)">✅ Confirmar entrega</button>';
       else
@@ -6456,8 +6459,15 @@ async function selecionarMotoboyEntrega(pedidoId) {
 
 function enviarLinkMotoboy(nome, link) {
   var msg = 'Olá ' + nome + '! Acesse este link para ver os pedidos para entregar: ' + link;
-  var whatsappUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
-  window.open(whatsappUrl, '_blank');
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+}
+
+function enviarLinkMotoboyPedido() {
+  var estId = window._lojistaEstId;
+  if(!estId) { showToast('⚠️', 'Erro', 'Recarregue a página e tente novamente'); return; }
+  var link = window.location.origin + '/motoboy?loja=' + estId;
+  var msg = 'Acesse este link para ver os pedidos para entregar: ' + link;
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
 async function confirmarSaidaEntrega(pedidoId, motoboyId, motoboyNome) {
