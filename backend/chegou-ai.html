@@ -6428,21 +6428,36 @@ async function selecionarMotoboyEntrega(pedidoId) {
   var modal = document.createElement('div');
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
 
+  var linkMotoboy = window.location.origin + '/motoboy?loja=' + (estAtual && estAtual.id ? estAtual.id : '');
+
   var opcoes = motoboys.length
     ? motoboys.map(function(m) {
-        return '<button onclick="confirmarSaidaEntrega(\'' + pedidoId + '\',\'' + m.id + '\',\'' + sanitizar(m.nome) + '\')" ' +
-          'style="width:100%;padding:14px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:15px;font-weight:600;cursor:pointer;text-align:left;margin-bottom:8px;">' +
-          '🛵 ' + sanitizar(m.nome) + '</button>';
+        return '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+          '<button onclick="confirmarSaidaEntrega(\'' + pedidoId + '\',\'' + m.id + '\',\'' + sanitizar(m.nome) + '\')" ' +
+            'style="flex:1;padding:14px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:15px;font-weight:600;cursor:pointer;text-align:left;">' +
+            '🛵 ' + sanitizar(m.nome) + '</button>' +
+          '<button onclick="enviarLinkMotoboy(\'' + sanitizar(m.nome) + '\',\'' + linkMotoboy + '\')" ' +
+            'style="padding:14px 12px;border-radius:12px;background:var(--cinza3);border:1.5px solid var(--cinza4);color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;" title="Enviar link para o motoboy">' +
+            '📲 Link' +
+          '</button>' +
+        '</div>';
       }).join('')
     : '<p style="color:var(--texto2);font-size:14px;text-align:center;">Nenhum motoboy cadastrado.<br>Cadastre em ⚙️ Minha Loja.</p>';
 
   modal.innerHTML = '<div style="background:var(--cinza1);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;">' +
-    '<h3 style="margin:0 0 16px;">Quem vai entregar?</h3>' +
+    '<h3 style="margin:0 0 4px;">Quem vai entregar?</h3>' +
+    '<p style="font-size:12px;color:var(--texto2);margin:0 0 16px;">Toque em 📲 Link para enviar o acesso ao motoboy pelo WhatsApp</p>' +
     opcoes +
     '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="width:100%;padding:12px;border-radius:12px;background:var(--cinza3);border:none;color:var(--texto);font-weight:600;cursor:pointer;margin-top:4px;">Cancelar</button>' +
     '</div>';
 
   document.body.appendChild(modal);
+}
+
+function enviarLinkMotoboy(nome, link) {
+  var msg = 'Olá ' + nome + '! Acesse este link para ver os pedidos para entregar: ' + link;
+  var whatsappUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
+  window.open(whatsappUrl, '_blank');
 }
 
 async function confirmarSaidaEntrega(pedidoId, motoboyId, motoboyNome) {
