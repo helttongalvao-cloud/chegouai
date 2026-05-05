@@ -960,7 +960,12 @@ async function apiCall(path, options) {
   if(authToken) opts.headers['Authorization'] = 'Bearer ' + authToken;
   if(opts.body && typeof opts.body === 'object') opts.body = JSON.stringify(opts.body);
 
-  var resp = await fetch(API_BASE + path, opts);
+  var resp;
+  try {
+    resp = await fetch(API_BASE + path, opts);
+  } catch(netErr) {
+    throw new Error('Servidor indisponível. Verifique sua conexão e tente novamente.');
+  }
   var data = await resp.json().catch(function(){ return {}; });
 
   if (resp.status === 401) {
@@ -3701,12 +3706,23 @@ async function togglePausar() {
 
 async function atualizarStatusPedido(pedidoId, novoStatus, btn) {
   if(btn) { btn.disabled = true; btn.textContent = '...'; }
-  try {
-    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: novoStatus } });
-    renderEstabelecimento();
-  } catch(e) {
-    alert('Erro: ' + e.message);
-    if(btn) { btn.disabled = false; btn.textContent = 'Tentar novamente'; }
+  var tentativas = 0;
+  while(tentativas < 2) {
+    try {
+      await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: novoStatus } });
+      renderEstabelecimento();
+      return;
+    } catch(e) {
+      tentativas++;
+      if(tentativas < 2 && e.message.includes('indisponível')) {
+        if(btn) btn.textContent = 'Reconectando...';
+        await new Promise(function(r){ setTimeout(r, 3000); });
+      } else {
+        showToast('⚠️', 'Erro ao atualizar pedido', e.message);
+        if(btn) { btn.disabled = false; btn.textContent = 'Tentar novamente'; }
+        return;
+      }
+    }
   }
 }
 
