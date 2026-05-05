@@ -953,12 +953,14 @@ var authToken = localStorage.getItem('chegouai_token') || null;
 var currentUser = JSON.parse(localStorage.getItem('chegouai_user') || 'null');
 // Detectar ?acompanhar=UUID na URL antes de qualquer timeout
 (function() {
-  var _p = new URLSearchParams(window.location.search);
-  var _a = _p.get('acompanhar');
-  if(_a && /^[0-9a-f-]{36}$/.test(_a)) {
-    localStorage.setItem('chegouai_pedido_id', _a);
-    window.history.replaceState({}, '', '/app');
-  }
+  try {
+    var _p = new URLSearchParams(window.location.search);
+    var _a = _p.get('acompanhar');
+    if(_a && /^[0-9a-f-]{36}$/.test(_a)) {
+      localStorage.setItem('chegouai_pedido_id', _a);
+      try { window.history.replaceState({}, '', window.location.pathname); } catch(e) {}
+    }
+  } catch(e) {}
 })();
 var pedidoAtualId = localStorage.getItem('chegouai_pedido_id') || null;
 
@@ -1494,8 +1496,9 @@ setTimeout(function(){
     iniciarModoMesa(lojaParam, params.get('mesa') || '');
   } else if(window.location.pathname === '/motoboy' && lojaParam) {
     iniciarModoMotoboyProprio(lojaParam);
-  } else if(pedidoAtualId && !authToken) {
-    // Guest acompanhando pedido: já está na tela-confirmado, não redirecionar
+  } else if(pedidoAtualId) {
+    // Pedido ativo para rastrear — não redirecionar para login
+    if(!authToken) { irTela('tela-confirmado'); ultimoStatusConhecido = {}; iniciarPollingPedidos(); }
   } else {
     irTela('tela-login');
   }
