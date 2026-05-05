@@ -33,11 +33,11 @@ async function enviarPush(userId, titulo, corpo, dados) {
 
     await webpush.sendNotification(sub, payload, { urgency: 'high', TTL: 3600 });
   } catch (e) {
-    // Subscription expirada — remover
     if (e.statusCode === 410 || e.statusCode === 404) {
       await supabaseAdmin.from('push_subscriptions').delete().eq('user_id', userId);
+    } else {
+      console.error('[Push] Falha ao enviar para', userId, '— status:', e.statusCode, e.message);
     }
-    // Outros erros: silencioso para não quebrar o fluxo principal
   }
 }
 

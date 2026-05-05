@@ -1528,11 +1528,13 @@ function entrarComo(perfil) {
     setTimeout(function() { renderEstabelecimento(); }, 50);
     if(window.estPollingTimer) clearInterval(window.estPollingTimer);
     window.estPollingTimer = setInterval(function() { renderEstabelecimento(); }, 20000);
+    ativarNotificacoesPush();
   }
   else if(perfil === 'motoboy') {
     irTela('tela-motoboy');
     renderMotoboy();
     iniciarRealtimeMotoboy();
+    ativarNotificacoesPush();
   }
   else if(perfil === 'admin') { renderAdmin('pedidos'); irTela('tela-admin'); }
 }
