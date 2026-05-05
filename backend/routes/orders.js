@@ -450,10 +450,7 @@ router.get('/:id', optionalAuth, [param('id').isUUID()], async (req, res, next) 
         return res.status(403).json({ error: 'Acesso negado' });
       }
     } else {
-      // Guest: só pode ver pedidos sem cliente_id (UUID é indevinhável)
-      if (pedido.cliente_id !== null) {
-        return res.status(403).json({ error: 'Acesso negado' });
-      }
+      // Guest sem token: UUID é indevinhável, acesso de rastreio é permitido
     }
 
     res.json(pedido);
