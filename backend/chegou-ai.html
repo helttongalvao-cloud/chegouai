@@ -1485,6 +1485,8 @@ setTimeout(function(){
     iniciarModoMesa(lojaParam, params.get('mesa') || '');
   } else if(window.location.pathname === '/motoboy' && lojaParam) {
     iniciarModoMotoboyProprio(lojaParam);
+  } else if(pedidoAtualId && !authToken) {
+    // Guest acompanhando pedido: já está na tela-confirmado, não redirecionar
   } else {
     irTela('tela-login');
   }
