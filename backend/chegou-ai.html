@@ -951,6 +951,15 @@ var realtimeChannel = null;
 // Token de sessão (gerenciado pelo backend/Supabase)
 var authToken = localStorage.getItem('chegouai_token') || null;
 var currentUser = JSON.parse(localStorage.getItem('chegouai_user') || 'null');
+// Detectar ?acompanhar=UUID na URL antes de qualquer timeout
+(function() {
+  var _p = new URLSearchParams(window.location.search);
+  var _a = _p.get('acompanhar');
+  if(_a && /^[0-9a-f-]{36}$/.test(_a)) {
+    localStorage.setItem('chegouai_pedido_id', _a);
+    window.history.replaceState({}, '', '/app');
+  }
+})();
 var pedidoAtualId = localStorage.getItem('chegouai_pedido_id') || null;
 
 // Helper para chamadas autenticadas à API
@@ -5390,10 +5399,7 @@ if(isAndroid && !isStandalone && !bannerDispensado && !deferredInstallPrompt) {
   var acompanhar = params.get('acompanhar'); // link de rastreio para guest
 
   if(acompanhar && /^[0-9a-f-]{36}$/.test(acompanhar)) {
-    window.history.replaceState({}, '', '/app');
-    pedidoAtualId = acompanhar;
-    localStorage.setItem('chegouai_pedido_id', pedidoAtualId);
-    setTimeout(function() { irTela('tela-confirmado'); ultimoStatusConhecido = {}; iniciarPollingPedidos(); }, 600);
+    // já tratado no início do script — só garantir que a tela seja exibida
     return;
   }
 
