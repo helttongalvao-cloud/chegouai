@@ -20,13 +20,14 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 async function enviarPush(userId, titulo, corpo, dados) {
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return;
   try {
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('push_subscriptions')
       .select('subscription')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
-    if (!data) return;
+    if (error) { console.error('[Push] Erro ao buscar subscription de', userId, error.message); return; }
+    if (!data) { console.warn('[Push] Sem subscription para user_id:', userId); return; }
 
     const sub = JSON.parse(data.subscription);
     const payload = JSON.stringify({ titulo, corpo, dados: dados || {} });

@@ -1038,6 +1038,7 @@ async function ativarNotificacoesPush() {
 
     var sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: convertedKey });
     await apiCall('/api/notifications/subscribe', { method: 'POST', body: { subscription: sub.toJSON() } });
+    console.log('[Push] Subscription salva com sucesso:', sub.endpoint.substring(0, 50));
   } catch(e) {
     console.warn('[Push] Não foi possível ativar notificações:', e.message);
   }
