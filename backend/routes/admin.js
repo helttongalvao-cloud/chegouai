@@ -1,5 +1,5 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 const { requireRole } = require('../middleware/auth');
 const { supabaseAdmin } = require('../config/supabase');
 const { calcularComissao } = require('../services/commission');
