@@ -3623,12 +3623,7 @@ async function renderEstabelecimento() {
         var corMoto = (p.status === 'saiu_para_entrega' || p.status === 'coletado') ? 'var(--verde)' : '#ffb400';
         motoboyProprioTag = '<div class="pedido-endereco" style="font-weight:600;color:' + corMoto + ';">🛵 ' + sanitizar(p.motoboys_proprios.nome) + '</div>';
       }
-      var codigoColetaTag = (p.status === 'pronto' && p.codigo_coleta)
-        ? '<div style="background:rgba(0,200,83,0.1);border:1.5px solid var(--verde);border-radius:10px;padding:8px 12px;margin:6px 0;display:flex;align-items:center;gap:10px;">' +
-            '<span style="font-size:13px;color:var(--texto2);">🔒 Código para o motoboy:</span>' +
-            '<span style="font-size:22px;font-weight:900;color:var(--verde);font-family:monospace;letter-spacing:4px;">' + p.codigo_coleta + '</span>' +
-          '</div>'
-        : '';
+      var codigoColetaTag = '';
       return '<div class="card-pedido"' + (isEncerrado ? ' style="opacity:0.65;"' : '') + '>' +
         '<div class="pedido-header"><span class="pedido-num">Pedido #' + p.id.substring(0,8) + mesaTag + '</span>' +
         '<span class="badge-status ' + sc + '">' + sl + '</span></div>' +
@@ -4576,18 +4571,19 @@ function renderFaseEntrega(pedido, fase) {
   }
 
   else if(fase === 'na_loja') {
+    var codigoPedido = pedido.id.substring(0,8).toUpperCase();
     conteudo =
       '<div style="background:var(--cinza2);border:2px solid var(--verde);border-radius:16px;padding:20px;text-align:center;margin-bottom:16px;">' +
-        '<div style="font-size:22px;margin-bottom:8px;">🔒</div>' +
-        '<div style="font-size:16px;font-weight:700;margin-bottom:6px;">Código de Coleta</div>' +
-        '<div style="font-size:13px;color:var(--texto2);line-height:1.5;">O lojista tem um código de <b style="color:var(--texto);">3 dígitos</b>.<br>Peça para ele te mostrar e digite abaixo.</div>' +
+        '<div style="font-size:13px;color:var(--texto2);margin-bottom:6px;">Mostre este código ao lojista</div>' +
+        '<div style="font-size:42px;font-weight:900;letter-spacing:6px;color:var(--verde);font-family:monospace;">' + codigoPedido + '</div>' +
+        '<div style="font-size:12px;color:var(--texto2);margin-top:6px);">🏪 ' + sanitizar(nomeLoja) + '</div>' +
       '</div>' +
       '<div style="background:var(--cinza2);border-radius:12px;padding:12px;margin-bottom:16px;">' +
         '<div style="font-size:12px;color:var(--texto2);margin-bottom:4px;">Entregando para:</div>' +
         '<div style="font-size:13px;font-weight:600;">👤 ' + sanitizar(nomeCliente) + '</div>' +
         '<div style="font-size:12px;color:var(--texto2);margin-top:2px;">📍 ' + sanitizar(pedido.endereco_entrega || '—') + '</div>' +
       '</div>' +
-      '<button class="btn-acao" style="width:100%;background:var(--verde);color:#000;" onclick="abrirModalCodigo(\'coleta\',\'' + pedido.id + '\',this)">🔢 Digitar código do lojista</button>';
+      '<button class="btn-acao" style="width:100%;background:var(--verde);color:#000;" onclick="confirmarColeta(\'' + pedido.id + '\',this)">✅ Coletei o pedido</button>';
   }
 
   else if(fase === 'indo_cliente') {
@@ -4638,6 +4634,17 @@ function retiroupedido() {
   el.innerHTML = renderFaseEntrega(pedidoAtivoMotoboy, 'indo_cliente');
   inicializarMapaMotoboy(pedidoAtivoMotoboy.endereco_entrega, null);
   iniciarRastreio(pedidoAtivoMotoboy.id);
+}
+
+async function confirmarColeta(pedidoId, btn) {
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ Confirmando...'; }
+  try {
+    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'coletado' } });
+    retiroupedido();
+  } catch(e) {
+    showToast('⚠️', 'Erro', e.message);
+    if(btn) { btn.disabled = false; btn.textContent = '✅ Coletei o pedido'; }
+  }
 }
 
 function confirmarEntregaReal(pedidoId, btn) {
