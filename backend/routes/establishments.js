@@ -99,25 +99,6 @@ router.get('/', async (req, res, next) => {
       return est;
     });
 
-    // Contar pedidos de hoje por estabelecimento (prova social)
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const estIds = resultado.map(e => e.id);
-    if (estIds.length > 0) {
-      const { data: contagemHoje } = await supabaseAdmin
-        .from('pedidos')
-        .select('estabelecimento_id')
-        .in('estabelecimento_id', estIds)
-        .gte('criado_em', hoje.toISOString())
-        .eq('pagamento_status', 'aprovado')
-        .neq('status', 'cancelado');
-      const pedidosHojeMap = {};
-      (contagemHoje || []).forEach(p => {
-        pedidosHojeMap[p.estabelecimento_id] = (pedidosHojeMap[p.estabelecimento_id] || 0) + 1;
-      });
-      resultado.forEach(e => { e.pedidos_hoje = pedidosHojeMap[e.id] || 0; });
-    }
-
     res.json(resultado);
   } catch (err) {
     next(err);
