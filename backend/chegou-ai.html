@@ -422,28 +422,26 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 /* CARD PRODUTO — badge desconto */
 .badge-desconto { position:absolute; top:8px; left:8px; background:#e53935; color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px; }
 
-/* HOME — cards maiores */
-.card-est-img { height:160px; position:relative; }
+/* HOME — cards compactos (estilo lista) */
+.card-est { display:flex; flex-direction:row; align-items:center; gap:14px; padding:12px 14px; border-radius:16px; }
+.card-est-img { width:80px; height:80px; border-radius:12px; flex-shrink:0; overflow:hidden; position:relative; }
 .card-est-img img { width:100%; height:100%; object-fit:cover; display:block; }
-.card-est-placeholder { width:100%; height:160px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
-.card-est-placeholder .pl-emoji { font-size:56px; line-height:1; }
-.card-est-placeholder .pl-inicial {
-  font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
-  opacity:0.7;
-}
-.card-est-nome { font-size:17px; }
-.card-est-meta { font-size:12px; }
+.card-est-placeholder { width:80px; height:80px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; border-radius:12px; flex-shrink:0; }
+.card-est-placeholder .pl-emoji { font-size:32px; line-height:1; }
+.card-est-placeholder .pl-inicial { font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase; opacity:0.6; text-align:center; padding:0 4px; }
+.card-est-info { flex:1; min-width:0; padding:0; }
+.card-est-nome { font-size:15px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+.card-est-meta { display:flex; flex-wrap:wrap; gap:6px; color:var(--texto2); font-size:12px; align-items:center; }
 
 /* HOME — skeleton loader */
 .skeleton { background:linear-gradient(90deg, var(--cinza2) 25%, var(--cinza3) 50%, var(--cinza2) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:10px; }
 @keyframes shimmer { from{background-position:200% 0} to{background-position:-200% 0} }
-.card-est-skeleton { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:18px; overflow:hidden; }
-.card-est-skeleton .sk-img { height:160px; }
-.card-est-skeleton .sk-body { padding:14px; display:flex; flex-direction:column; gap:8px; }
-.card-est-skeleton .sk-linha { height:14px; }
-.card-est-skeleton .sk-linha.larga { width:70%; }
-.card-est-skeleton .sk-linha.curta { width:45%; }
+.card-est-skeleton { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:16px; display:flex; flex-direction:row; align-items:center; gap:14px; padding:12px 14px; }
+.card-est-skeleton .sk-img { width:80px; height:80px; border-radius:12px; flex-shrink:0; }
+.card-est-skeleton .sk-body { flex:1; display:flex; flex-direction:column; gap:8px; }
+.card-est-skeleton .sk-linha { height:13px; border-radius:8px; }
+.card-est-skeleton .sk-linha.larga { width:65%; }
+.card-est-skeleton .sk-linha.curta { width:40%; }
 
 /* CONFIRMADO */
 #tela-confirmado { background:var(--preto); align-items:center; justify-content:center; text-align:center; padding:40px 24px; }
@@ -1689,10 +1687,8 @@ function irLogin() {
 
 function cardEstImg(e) {
   if(e.foto_url) {
-    var u = e.foto_url;
-    return '<div class="card-est-img" style="position:relative;overflow:hidden;">' +
-      '<div style="position:absolute;inset:0;background-image:url(\'' + u + '\');background-size:cover;background-position:center;filter:blur(12px) brightness(0.7);transform:scale(1.1);"></div>' +
-      '<img src="' + u + '" alt="' + sanitizar(e.nome) + '" loading="lazy" style="position:relative;width:100%;height:100%;object-fit:contain;">' +
+    return '<div class="card-est-img">' +
+      '<img src="' + e.foto_url + '" alt="' + sanitizar(e.nome) + '" loading="lazy">' +
     '</div>';
   }
   var gradientes = {
@@ -1702,10 +1698,9 @@ function cardEstImg(e) {
     lanche:      'linear-gradient(135deg,#1a1200,#3d2d00)',
   };
   var bg = gradientes[e.categoria] || 'linear-gradient(135deg,#0d1a0d,#1a3320)';
-  var emoji = e.emoji || '🏪';
   return '<div class="card-est-placeholder" style="background:' + bg + ';">' +
-    '<div class="pl-emoji">' + emoji + '</div>' +
-    '<div class="pl-inicial">' + sanitizar(e.nome).substring(0,18) + '</div>' +
+    '<div class="pl-emoji">' + (e.emoji || '🏪') + '</div>' +
+    '<div class="pl-inicial">' + sanitizar(e.nome).substring(0,10) + '</div>' +
   '</div>';
 }
 
@@ -1735,7 +1730,7 @@ async function irHome() {
 
 async function carregarEstabelecimentos(cat) {
   const lista = document.getElementById('lista-estabelecimentos');
-  lista.innerHTML = [1,2,3].map(function(){ return '<div class="card-est-skeleton"><div class="sk-img skeleton"></div><div class="sk-body"><div class="sk-linha larga skeleton"></div><div class="sk-linha curta skeleton"></div></div></div>'; }).join('');
+  lista.innerHTML = [1,2,3,4,5].map(function(){ return '<div class="card-est-skeleton"><div class="sk-img skeleton"></div><div class="sk-body"><div class="sk-linha larga skeleton"></div><div class="sk-linha curta skeleton"></div></div></div>'; }).join('');
   try {
     var params = cat && cat !== 'todos' ? '?categoria=' + cat : '';
     var data = await apiCall('/api/establishments' + params);
@@ -1767,15 +1762,17 @@ function renderEstabelecimentos(cat) {
     var novoBadge = isNovo ? '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;">🆕 Novo</span>' : '';
     var pedidosHoje = e.pedidos_hoje > 0 ? '<span style="background:#fff3e0;color:#e65100;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;">🔥 ' + e.pedidos_hoje + ' pedidos hoje</span>' : '';
     var isFav = favoritosIds.has(e.id);
-    var heartBtn = currentUser ? '<button onclick="toggleFavorito(\'' + e.id + '\',event)" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.4);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;" title="' + (isFav ? 'Remover favorito' : 'Favoritar') + '">' + (isFav ? '❤️' : '🤍') + '</button>' : '';
-    return '<div class="card-est" onclick="abrirCardapio(\'' + e.id + '\')" ' + esmaecido + ' style="position:relative;">' +
-      cardEstImg(e) + heartBtn +
+    var heartBtn = currentUser ? '<button onclick="toggleFavorito(\'' + e.id + '\',event)" style="background:none;border:none;font-size:18px;cursor:pointer;padding:0;line-height:1;flex-shrink:0;" title="' + (isFav ? 'Remover favorito' : 'Favoritar') + '">' + (isFav ? '❤️' : '🤍') + '</button>' : '';
+    return '<div class="card-est" onclick="abrirCardapio(\'' + e.id + '\')" ' + esmaecido + '>' +
+      cardEstImg(e) +
       '<div class="card-est-info">' +
-        '<div class="card-est-nome">' + sanitizar(e.nome) + '</div>' +
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:3px;">' +
+          '<div class="card-est-nome">' + sanitizar(e.nome) + '</div>' +
+          heartBtn +
+        '</div>' +
         '<div class="card-est-meta">' +
           (ratingHtml ? ratingHtml + '<span>·</span>' : '') +
           '<span>🕐 ' + (e.tempo_entrega || '30-45 min') + '</span>' +
-          '<span>🛵 R$2-4</span>' +
           '<span class="' + badge + '">' + status + '</span>' +
         '</div>' +
         (novoBadge || pedidosHoje ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">' + novoBadge + pedidosHoje + '</div>' : '') +
