@@ -199,7 +199,6 @@ router.get('/monitor', async (req, res, next) => {
     }));
 
     // Calcular minutos desde criação para cada pedido
-    const agora = new Date();
     const pedidosEnriquecidos = (pedidos || []).map(p => ({
       ...p,
       minutos_ativo: Math.floor((agora - new Date(p.criado_em)) / 60000),
