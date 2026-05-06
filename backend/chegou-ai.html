@@ -1426,6 +1426,27 @@ function fecharModalPagamento() {
 
 // Lista global vazia (será preenchida pela API)
 let estabelecimentos = [];
+var favoritosIds = new Set();
+var categoriaAtual = 'todos';
+
+async function carregarFavoritos() {
+  if(!authToken) return;
+  try {
+    var ids = await apiCall('/api/establishments/favoritos/meus');
+    favoritosIds = new Set(Array.isArray(ids) ? ids : []);
+  } catch(e) {}
+}
+
+async function toggleFavorito(estId, event) {
+  if(event) event.stopPropagation();
+  if(!currentUser) { showToast('ℹ️', 'Login necessário', 'Entre para favoritar estabelecimentos.'); return; }
+  try {
+    var r = await apiCall('/api/establishments/' + estId + '/favoritar', { method: 'POST' });
+    if(r.favoritado) { favoritosIds.add(estId); showToast('❤️', 'Favoritado!', 'Você receberá notificação quando a loja abrir.'); }
+    else { favoritosIds.delete(estId); showToast('🤍', 'Removido dos favoritos', ''); }
+    renderEstabelecimentos(categoriaAtual);
+  } catch(e) { showToast('⚠️', 'Erro', e.message); }
+}
 
 // Haversine — distância real entre dois pontos GPS em km
 function haversine(lat1, lng1, lat2, lng2) {
@@ -1512,6 +1533,7 @@ function entrarComo(perfil) {
   perfilAtual = perfil;
   pararRealtime();
   if(perfil === 'cliente') {
+    carregarFavoritos();
     irHome();
     var primeiroNome = currentUser && currentUser.nome ? currentUser.nome.split(' ')[0] : '';
     var el = document.getElementById('home-greeting');
@@ -1725,6 +1747,7 @@ async function carregarEstabelecimentos(cat) {
 }
 
 function renderEstabelecimentos(cat) {
+  categoriaAtual = cat || 'todos';
   const lista = document.getElementById('lista-estabelecimentos');
   const filtrados = (cat === 'todos' || !cat) ? estabelecimentos
     : estabelecimentos.filter(function(e){ return e.categoria === cat; });
@@ -1733,13 +1756,20 @@ function renderEstabelecimentos(cat) {
     lista.innerHTML = '<div class="vazio"><div class="vazio-icon">🏪</div>Nenhum estabelecimento encontrado</div>';
     return;
   }
+  var agora = Date.now();
+  var diasNovoMs = 14 * 24 * 60 * 60 * 1000;
   lista.innerHTML = filtrados.map(function(e) {
     var badge = e.pausado ? 'badge-pausado' : (e.aberto ? 'badge-aberto' : 'badge-fechado');
     var status = e.pausado ? 'Pausado' : (e.aberto ? 'Aberto' : 'Fechado');
     var esmaecido = (!e.aberto || e.pausado) ? 'style="opacity: 0.5; filter: grayscale(1);"' : '';
     var ratingHtml = e.avaliacao > 0 ? '<span class="card-est-rating">⭐ ' + parseFloat(e.avaliacao).toFixed(1) + '</span>' : '';
-    return '<div class="card-est" onclick="abrirCardapio(\'' + e.id + '\')" ' + esmaecido + '>' +
-      cardEstImg(e) +
+    var isNovo = e.criado_em && (agora - new Date(e.criado_em).getTime() < diasNovoMs);
+    var novoBadge = isNovo ? '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;">🆕 Novo</span>' : '';
+    var pedidosHoje = e.pedidos_hoje > 0 ? '<span style="background:#fff3e0;color:#e65100;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;">🔥 ' + e.pedidos_hoje + ' pedidos hoje</span>' : '';
+    var isFav = favoritosIds.has(e.id);
+    var heartBtn = currentUser ? '<button onclick="toggleFavorito(\'' + e.id + '\',event)" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.4);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;" title="' + (isFav ? 'Remover favorito' : 'Favoritar') + '">' + (isFav ? '❤️' : '🤍') + '</button>' : '';
+    return '<div class="card-est" onclick="abrirCardapio(\'' + e.id + '\')" ' + esmaecido + ' style="position:relative;">' +
+      cardEstImg(e) + heartBtn +
       '<div class="card-est-info">' +
         '<div class="card-est-nome">' + sanitizar(e.nome) + '</div>' +
         '<div class="card-est-meta">' +
@@ -1748,6 +1778,7 @@ function renderEstabelecimentos(cat) {
           '<span>🛵 R$2-4</span>' +
           '<span class="' + badge + '">' + status + '</span>' +
         '</div>' +
+        (novoBadge || pedidosHoje ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">' + novoBadge + pedidosHoje + '</div>' : '') +
       '</div>' +
     '</div>';
   }).join('');
@@ -6052,25 +6083,57 @@ async function abrirHistorico() {
       lista.innerHTML = '<div class="vazio"><div class="vazio-icon">📋</div>Nenhum pedido ainda. Faça seu primeiro pedido!</div>';
       return;
     }
-    lista.innerHTML = pedidos.map(function(p) {
+
+    // Agrupar por estabelecimento
+    var grupos = {};
+    var ordemGrupos = [];
+    pedidos.forEach(function(p) {
+      var estId = (p.estabelecimentos && p.estabelecimentos.id) || p.estabelecimento_id || 'sem-loja';
+      if(!grupos[estId]) {
+        grupos[estId] = { est: p.estabelecimentos || {}, pedidos: [] };
+        ordemGrupos.push(estId);
+      }
+      grupos[estId].pedidos.push(p);
+    });
+
+    function renderPedidoHistorico(p, compacto) {
       var data = new Date(p.criado_em).toLocaleDateString('pt-BR');
-      var loja = p.estabelecimentos ? (p.estabelecimentos.emoji || '🏪') + ' ' + p.estabelecimentos.nome : 'Loja';
       var statusCor = p.status === 'entregue' ? 'color:var(--verde)' : p.status === 'cancelado' ? 'color:var(--erro)' : 'color:var(--laranja)';
       var statusTxt = p.status === 'entregue' ? '✅ Entregue' : p.status === 'cancelado' ? '❌ Cancelado' : '⏳ ' + p.status;
       var itens = p.tipo === 'lista' ? '📝 Lista de compras' : (p.itens_pedido || []).map(function(i) { return i.quantidade + 'x ' + i.nome; }).join(', ');
       var total = p.total > 0 ? 'R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') : 'A definir';
       var btnAvaliar = p.status === 'entregue' ? '<button class="btn-acao" onclick="avaliarPedido(\'' + p.id + '\',\'' + (p.estabelecimentos?.id || p.estabelecimento_id) + '\')" style="padding:6px 12px;font-size:12px;">⭐ Avaliar</button>' : '';
       var btnPedirNov = p.status === 'entregue' && p.estabelecimentos ? '<button onclick="pedirNovamente(' + JSON.stringify(p).replace(/"/g,'&quot;') + ')" style="padding:6px 12px;font-size:12px;border-radius:8px;border:1.5px solid var(--verde);background:transparent;color:var(--verde);cursor:pointer;font-weight:600;">🔄 Pedir novamente</button>' : '';
-      return '<div class="card-item" style="flex-direction:column;align-items:stretch;gap:6px;">' +
+      return '<div class="card-item" style="flex-direction:column;align-items:stretch;gap:4px;' + (compacto ? 'padding:10px 12px;' : '') + '">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-          '<div style="font-weight:700;font-size:14px;">' + loja + '</div>' +
+          '<div style="font-size:12px;color:var(--texto2);">' + data + '</div>' +
           '<span style="font-size:12px;' + statusCor + '">' + statusTxt + '</span>' +
         '</div>' +
-        '<div style="font-size:12px;color:var(--texto2);">' + data + ' • ' + itens + '</div>' +
+        '<div style="font-size:12px;color:var(--texto2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + itens + '</div>' +
         '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">' +
           '<span style="font-weight:700;color:var(--verde);">' + total + '</span>' +
           '<div style="display:flex;gap:6px;">' + btnPedirNov + btnAvaliar + '</div>' +
         '</div>' +
+      '</div>';
+    }
+
+    lista.innerHTML = ordemGrupos.map(function(estId) {
+      var g = grupos[estId];
+      var nomeEst = (g.est.emoji || '🏪') + ' ' + (g.est.nome || 'Loja');
+      var qtd = g.pedidos.length;
+      var ultimo = g.pedidos[0];
+      var resto = g.pedidos.slice(1);
+      var recolhidoId = 'hist-' + estId.substring(0,8);
+      return '<div style="margin-bottom:12px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 4px 4px;">' +
+          '<div style="font-weight:700;font-size:15px;">' + sanitizar(nomeEst) + '</div>' +
+          '<span style="font-size:12px;color:var(--texto2);">' + qtd + ' pedido' + (qtd > 1 ? 's' : '') + '</span>' +
+        '</div>' +
+        renderPedidoHistorico(ultimo, false) +
+        (resto.length > 0 ?
+          '<button onclick="var el=document.getElementById(\'' + recolhidoId + '\');el.style.display=el.style.display===\'none\'?\'block\':\'none\';this.textContent=el.style.display===\'none\'?\'Ver mais (' + resto.length + ')...\':\'Recolher\';" style="width:100%;padding:6px;border:none;background:transparent;color:var(--texto2);font-size:12px;cursor:pointer;text-align:left;">Ver mais (' + resto.length + ')...</button>' +
+          '<div id="' + recolhidoId + '" style="display:none;">' + resto.map(function(p) { return renderPedidoHistorico(p, true); }).join('') + '</div>'
+        : '') +
       '</div>';
     }).join('');
   } catch(e) {

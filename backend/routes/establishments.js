@@ -3,6 +3,7 @@ const { body, param, validationResult } = require('express-validator');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { supabaseAdmin } = require('../config/supabase');
 const { calcularComissao } = require('../services/commission');
+const { enviarPush } = require('./notifications');
 
 const router = express.Router();
 
@@ -61,7 +62,7 @@ router.get('/', async (req, res, next) => {
 
     let query = supabaseAdmin
       .from('estabelecimentos')
-      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp, pausado')
+      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp, pausado, criado_em')
       .eq('ativo', true)
       .order('nome');
 
@@ -97,6 +98,25 @@ router.get('/', async (req, res, next) => {
       if (est.pausado) est.aberto = false;
       return est;
     });
+
+    // Contar pedidos de hoje por estabelecimento (prova social)
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const estIds = resultado.map(e => e.id);
+    if (estIds.length > 0) {
+      const { data: contagemHoje } = await supabaseAdmin
+        .from('pedidos')
+        .select('estabelecimento_id')
+        .in('estabelecimento_id', estIds)
+        .gte('criado_em', hoje.toISOString())
+        .eq('pagamento_status', 'aprovado')
+        .neq('status', 'cancelado');
+      const pedidosHojeMap = {};
+      (contagemHoje || []).forEach(p => {
+        pedidosHojeMap[p.estabelecimento_id] = (pedidosHojeMap[p.estabelecimento_id] || 0) + 1;
+      });
+      resultado.forEach(e => { e.pedidos_hoje = pedidosHojeMap[e.id] || 0; });
+    }
 
     res.json(resultado);
   } catch (err) {
@@ -269,6 +289,14 @@ router.put(
     });
 
     try {
+      // Verificar estado anterior de aberto para detectar abertura e notificar favoritos
+      let estaAbrindo = false;
+      if (campos.aberto === true) {
+        const { data: estAtual } = await supabaseAdmin
+          .from('estabelecimentos').select('id, aberto').eq('user_id', req.user.id).single();
+        estaAbrindo = estAtual && estAtual.aberto === false;
+      }
+
       const { data, error } = await supabaseAdmin
         .from('estabelecimentos')
         .update(campos)
@@ -277,6 +305,22 @@ router.put(
         .single();
 
       if (error) throw error;
+
+      // Notificar usuários que favoritaram esta loja quando ela abre
+      if (estaAbrindo && data) {
+        setImmediate(async () => {
+          try {
+            const { data: favs } = await supabaseAdmin
+              .from('favoritos').select('user_id').eq('estabelecimento_id', data.id);
+            if (favs && favs.length > 0) {
+              await Promise.allSettled(favs.map(f =>
+                enviarPush(f.user_id, `${data.emoji || '🏪'} ${data.nome} está aberto!`, 'Seu favorito acabou de abrir. Faça seu pedido agora!', { estId: data.id })
+              ));
+            }
+          } catch (e) { console.error('[favoritos push]', e.message); }
+        });
+      }
+
       res.json(data);
     } catch (err) {
       next(err);
@@ -945,6 +989,36 @@ router.post('/me/repasses-motoboys/pagar', requireRole('estabelecimento'), [
       .eq('motoboy_repasse_pago', false);
 
     res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// POST /api/establishments/:id/favoritar — Toggle favorito
+// =============================================
+router.post('/:id/favoritar', requireAuth, [param('id').isUUID()], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+  try {
+    const { data: existente } = await supabaseAdmin
+      .from('favoritos').select('id').eq('user_id', req.user.id).eq('estabelecimento_id', req.params.id).maybeSingle();
+    if (existente) {
+      await supabaseAdmin.from('favoritos').delete().eq('id', existente.id);
+      res.json({ favoritado: false });
+    } else {
+      await supabaseAdmin.from('favoritos').insert({ user_id: req.user.id, estabelecimento_id: req.params.id });
+      res.json({ favoritado: true });
+    }
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// GET /api/establishments/favoritos — IDs dos favoritos do usuário
+// =============================================
+router.get('/favoritos/meus', requireAuth, async (req, res, next) => {
+  try {
+    const { data } = await supabaseAdmin
+      .from('favoritos').select('estabelecimento_id').eq('user_id', req.user.id);
+    res.json((data || []).map(f => f.estabelecimento_id));
   } catch (err) { next(err); }
 });
 
