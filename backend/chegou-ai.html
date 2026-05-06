@@ -3091,7 +3091,7 @@ async function renderInfoLoja() {
     '<input type="hidden" id="loja-foto-url" value="' + (est.foto_url || '') + '">' +
     '</div>' +
     '<div class="form-grupo"><label>Nome da loja</label>' +
-    '<input type="text" id="loja-nome-input" class="modal-campo" style="margin:0;" value="' + (est.nome || '') + '"></div>' +
+    '<input type="text" id="loja-nome-input" class="modal-campo" style="margin:0;" autocomplete="off" value="' + (est.nome || '') + '"></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Emoji da loja</label>' +
     '<input type="text" id="loja-emoji-input" class="modal-campo" style="margin:0;font-size:22px;" maxlength="4" value="' + (est.emoji || '🏪') + '"></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Categoria</label>' +
@@ -3225,7 +3225,10 @@ function toggleHorario(dia) {
 }
 
 async function salvarInfoLoja() {
-  var nome = document.getElementById('loja-nome-input') ? document.getElementById('loja-nome-input').value.trim() : null;
+  var nomeInput = document.getElementById('loja-nome-input');
+  var nome = nomeInput ? nomeInput.value.trim() : null;
+  // Validar: nome deve ter pelo menos 2 caracteres para ser enviado
+  if(nome && nome.length < 2) { showToast('⚠️', 'Nome inválido', 'O nome da loja deve ter pelo menos 2 caracteres.'); return; }
   var emoji = document.getElementById('loja-emoji-input') ? document.getElementById('loja-emoji-input').value.trim() : null;
   var cat = document.getElementById('loja-cat-select') ? document.getElementById('loja-cat-select').value : null;
   var tempo = document.getElementById('loja-tempo-input') ? document.getElementById('loja-tempo-input').value.trim() : null;
