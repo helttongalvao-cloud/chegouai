@@ -108,6 +108,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1d',
   etag: true,
+  dotfiles: 'allow', // necessário para servir /.well-known/assetlinks.json (TWA Android)
 }));
 
 // Landing page — página inicial pública
