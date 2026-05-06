@@ -825,6 +825,10 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <button class="header-acao" onclick="irLogin()">Sair</button>
     <div class="btn-icone" id="btn-instalar-est" onclick="instalarApp()" title="Instalar app" style="display:none;">📲</div>
   </div>
+  <div id="banner-push-est" style="display:none;background:#b71c1c;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;justify-content:space-between;">
+    <span>🔕 Notificações desativadas — você pode perder pedidos!</span>
+    <button onclick="ativarNotificacoesPush().then(verificarBannerPush)" style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Ativar</button>
+  </div>
   <div class="nav-admin" style="padding:12px 20px 0;">
     <div class="nav-btn ativo" id="est-nav-pedidos" onclick="estNav(this,'pedidos')">📋 Pedidos</div>
     <div class="nav-btn" id="est-nav-cardapio" onclick="estNav(this,'cardapio')">🍽️ Cardápio</div>
@@ -867,6 +871,10 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     </div>
     <button class="header-acao" onclick="irLogin()">Sair</button>
     <div class="btn-icone" id="btn-instalar-moto" onclick="instalarApp()" title="Instalar app" style="display:none;">📲</div>
+  </div>
+  <div id="banner-push-moto" style="display:none;background:#b71c1c;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;justify-content:space-between;">
+    <span>🔕 Notificações desativadas — você pode perder entregas!</span>
+    <button onclick="ativarNotificacoesPush().then(verificarBannerPush)" style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Ativar</button>
   </div>
   <div class="motoboy-content">
     <div class="status-toggle">
@@ -1040,6 +1048,14 @@ async function ativarNotificacoesPush() {
   } catch(e) {
     console.warn('[Push] Não foi possível ativar notificações:', e.message);
   }
+}
+
+function verificarBannerPush() {
+  var concedido = ('Notification' in window) && Notification.permission === 'granted';
+  var bannerEst = document.getElementById('banner-push-est');
+  var bannerMoto = document.getElementById('banner-push-moto');
+  if(bannerEst) bannerEst.style.display = concedido ? 'none' : 'flex';
+  if(bannerMoto) bannerMoto.style.display = concedido ? 'none' : 'flex';
 }
 
 function urlBase64ToUint8Array(base64String) {
@@ -1561,13 +1577,15 @@ function entrarComo(perfil) {
     setTimeout(function() { renderEstabelecimento(); }, 50);
     if(window.estPollingTimer) clearInterval(window.estPollingTimer);
     window.estPollingTimer = setInterval(function() { renderEstabelecimento(); }, 20000);
-    ativarNotificacoesPush();
+    ativarNotificacoesPush().then(verificarBannerPush);
+    verificarBannerPush();
   }
   else if(perfil === 'motoboy') {
     irTela('tela-motoboy');
     renderMotoboy();
     iniciarRealtimeMotoboy();
-    ativarNotificacoesPush();
+    ativarNotificacoesPush().then(verificarBannerPush);
+    verificarBannerPush();
   }
   else if(perfil === 'admin') { renderAdmin('pedidos'); irTela('tela-admin'); }
 }
