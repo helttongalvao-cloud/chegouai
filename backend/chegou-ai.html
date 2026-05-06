@@ -4860,7 +4860,7 @@ async function renderAdminMonitor() {
 
       // ── PEDIDOS ATIVOS ──────────────────────────────────────
       // Thresholds de alerta por fase (minutos)
-      var ALERTA = { pendente: 5, aceito: 10, preparando: 30, pronto: 10, coletado: 35, saiu_para_entrega: 35 };
+      var ALERTA = { pendente: 1, aceito: 1, preparando: 1, pronto: 1, coletado: 1, saiu_para_entrega: 1 };
       var FASE = {
         pendente:           { label: '⏳ Aguardando lojista', cor: '#ff9800' },
         aceito:             { label: '✅ Aceito',             cor: '#4caf50' },
