@@ -3623,7 +3623,12 @@ async function renderEstabelecimento() {
         var corMoto = (p.status === 'saiu_para_entrega' || p.status === 'coletado') ? 'var(--verde)' : '#ffb400';
         motoboyProprioTag = '<div class="pedido-endereco" style="font-weight:600;color:' + corMoto + ';">🛵 ' + sanitizar(p.motoboys_proprios.nome) + '</div>';
       }
-      var codigoColetaTag = '';
+      var codigoColetaTag = (p.status === 'pronto' && p.codigo_coleta)
+        ? '<div style="background:rgba(0,200,83,0.1);border:1.5px solid var(--verde);border-radius:10px;padding:8px 12px;margin:6px 0;display:flex;align-items:center;gap:10px;">' +
+            '<span style="font-size:13px;color:var(--texto2);">🔒 Código do pedido:</span>' +
+            '<span style="font-size:22px;font-weight:900;color:var(--verde);font-family:monospace;letter-spacing:4px;">' + p.codigo_coleta + '</span>' +
+          '</div>'
+        : '';
       return '<div class="card-pedido"' + (isEncerrado ? ' style="opacity:0.65;"' : '') + '>' +
         '<div class="pedido-header"><span class="pedido-num">Pedido #' + p.id.substring(0,8) + mesaTag + '</span>' +
         '<span class="badge-status ' + sc + '">' + sl + '</span></div>' +
@@ -4571,12 +4576,12 @@ function renderFaseEntrega(pedido, fase) {
   }
 
   else if(fase === 'na_loja') {
-    var codigoPedido = pedido.id.substring(0,8).toUpperCase();
+    var codigoColeta = pedido.codigo_coleta || '—';
     conteudo =
       '<div style="background:var(--cinza2);border:2px solid var(--verde);border-radius:16px;padding:20px;text-align:center;margin-bottom:16px;">' +
-        '<div style="font-size:13px;color:var(--texto2);margin-bottom:6px;">Mostre este código ao lojista</div>' +
-        '<div style="font-size:42px;font-weight:900;letter-spacing:6px;color:var(--verde);font-family:monospace;">' + codigoPedido + '</div>' +
-        '<div style="font-size:12px;color:var(--texto2);margin-top:6px);">🏪 ' + sanitizar(nomeLoja) + '</div>' +
+        '<div style="font-size:13px;color:var(--texto2);margin-bottom:6px;">Fale este código ao lojista</div>' +
+        '<div style="font-size:56px;font-weight:900;letter-spacing:10px;color:var(--verde);font-family:monospace;">' + codigoColeta + '</div>' +
+        '<div style="font-size:12px;color:var(--texto2);margin-top:8px;">🏪 ' + sanitizar(nomeLoja) + '</div>' +
       '</div>' +
       '<div style="background:var(--cinza2);border-radius:12px;padding:12px;margin-bottom:16px;">' +
         '<div style="font-size:12px;color:var(--texto2);margin-bottom:4px;">Entregando para:</div>' +
