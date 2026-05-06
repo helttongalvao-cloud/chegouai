@@ -191,6 +191,7 @@ router.post(
         total: totalFinal,
         forma_pagamento: formaPagamento,
         pagamento_status: 'pendente',
+        codigo_coleta: String(Math.floor(Math.random() * 900) + 100),
       };
       if (desconto > 0) { pedidoInsert.desconto = desconto; pedidoInsert.cupom_codigo = cupomCodigo; }
       if (!req.user) {

@@ -3623,7 +3623,7 @@ async function renderEstabelecimento() {
         var corMoto = (p.status === 'saiu_para_entrega' || p.status === 'coletado') ? 'var(--verde)' : '#ffb400';
         motoboyProprioTag = '<div class="pedido-endereco" style="font-weight:600;color:' + corMoto + ';">🛵 ' + sanitizar(p.motoboys_proprios.nome) + '</div>';
       }
-      var codigoColetaTag = (p.status === 'pronto' && p.codigo_coleta)
+      var codigoColetaTag = p.codigo_coleta && !isEncerrado
         ? '<div style="background:rgba(0,200,83,0.1);border:1.5px solid var(--verde);border-radius:10px;padding:8px 12px;margin:6px 0;display:flex;align-items:center;gap:10px;">' +
             '<span style="font-size:13px;color:var(--texto2);">🔒 Código do pedido:</span>' +
             '<span style="font-size:22px;font-weight:900;color:var(--verde);font-family:monospace;letter-spacing:4px;">' + p.codigo_coleta + '</span>' +
