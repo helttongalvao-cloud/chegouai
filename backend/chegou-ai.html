@@ -1075,8 +1075,8 @@ function iniciarRealtimeLojista(estId) {
       table: 'pedidos',
       filter: 'estabelecimento_id=eq.' + estId,
     }, function() {
-      // Novo pedido chegou — tocar alerta e re-renderizar
-      tocarSomNovoPedido();
+      // Novo pedido chegou — iniciar loop de alerta e re-renderizar
+      iniciarLoopSom();
       renderEstabelecimento();
     })
     .on('postgres_changes', {
@@ -5491,6 +5491,17 @@ async function tocarSomNovoPedido() {
   } catch(e) {}
 }
 
+// Loop de alerta — toca a cada 4s enquanto houver pedido pendente
+var _somLoopId = null;
+function iniciarLoopSom() {
+  if(_somLoopId) return;
+  tocarSomNovoPedido();
+  _somLoopId = setInterval(tocarSomNovoPedido, 4000);
+}
+function pararLoopSom() {
+  if(_somLoopId) { clearInterval(_somLoopId); _somLoopId = null; }
+}
+
 // ============================================================
 // ALERTA SONORO + VIBRAÇÃO — novo pedido para o motoboy
 // ============================================================
@@ -5642,7 +5653,7 @@ function iniciarPollingPedidos() {
           pedidos.forEach(function(p) {
             if(!ultimoStatusConhecido[p.id]) {
               var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : (p.guest_nome || 'Cliente');
-              tocarSomNovoPedido();
+              iniciarLoopSom();
               showToast('🔔', 'Novo pedido de ' + nomeCliente + '!', 'R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') + ' · ' + (p.endereco_entrega || '').substring(0, 35));
             }
           });
@@ -5651,6 +5662,9 @@ function iniciarPollingPedidos() {
         // Detectar mudanças de status em pedidos existentes e sempre atualizar tela
         var mudou = pedidos.some(function(p) { return ultimoStatusConhecido[p.id] !== p.status; });
         pedidos.forEach(function(p) { ultimoStatusConhecido[p.id] = p.status; });
+        // Parar loop de som quando não há mais pedidos pendentes
+        var temPendente = pedidos.some(function(p) { return p.status === 'pendente'; });
+        if(temPendente) iniciarLoopSom(); else pararLoopSom();
         if(mudou) {
           if(document.getElementById('tela-estabelecimento').classList.contains('ativa')) {
             renderEstabelecimento();
@@ -5680,7 +5694,14 @@ function iniciarPollingPedidos() {
           // Botão confirmar recebimento (entrega própria)
           var btnConf = document.getElementById('btn-confirmar-recebimento-wrap');
           if(btnConf) btnConf.style.display = novoStatus === 'saiu_para_entrega' ? 'block' : 'none';
-          if(novoStatus === 'entregue') { localStorage.removeItem('chegouai_pedido_id'); }
+          if(novoStatus === 'entregue') {
+            localStorage.removeItem('chegouai_pedido_id');
+            if(resp.motoboys && resp.motoboys.id) {
+              var _pedRating = pedidoAtualId;
+              var _mbRating = resp.motoboys;
+              setTimeout(function() { mostrarModalAvaliacaoEntrega(_pedRating, resp.estabelecimento_id || (resp.estabelecimentos && resp.estabelecimentos.id), _mbRating.id, _mbRating.nome); }, 2000);
+            }
+          }
         }
         // Mapa em tempo real
         var boxRastreio = document.getElementById('box-rastreio');
@@ -5801,9 +5822,9 @@ function atualizarRastreioPedido(status) {
   var btnCancelar = document.getElementById('btn-cancelar-pedido-wrap');
   if(btnCancelar) btnCancelar.style.display = (status === 'pendente') ? 'block' : 'none';
 
-  // Botão de chat — só quando motoboy está entregando
+  // Botão de chat — disponível desde o aceite do pedido
   var btnChatRastreio = document.getElementById('btn-chat-rastreio');
-  var chatAtivo = (status === 'coletado' || status === 'saiu_para_entrega');
+  var chatAtivo = (status === 'aceito' || status === 'preparando' || status === 'pronto' || status === 'coletado' || status === 'saiu_para_entrega');
   if(btnChatRastreio) btnChatRastreio.style.display = chatAtivo ? 'flex' : 'none';
   if(chatAtivo && currentUser && currentUser.perfil === 'cliente' && pedidoAtualId) {
     mostrarChatFab(pedidoAtualId, 'cliente');
@@ -7200,6 +7221,114 @@ async function mpConfirmar() {
 function mpMostrarErro(msg) {
   var lista = document.getElementById('mp-lista');
   if(lista) lista.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#e53935;">' + msg + '</div>';
+}
+</script>
+
+<!-- Modal avaliação de entrega (estabelecimento + motoboy) -->
+<div id="modal-avaliacao-entrega" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:flex-end;justify-content:center;">
+  <div style="background:var(--card);border-radius:20px 20px 0 0;padding:28px 24px 40px;width:100%;max-width:480px;">
+    <div style="text-align:center;font-size:36px;margin-bottom:4px;">🎉</div>
+    <div style="font-size:18px;font-weight:800;color:var(--texto);text-align:center;margin-bottom:4px;">Pedido entregue!</div>
+    <div style="font-size:13px;color:var(--texto2);text-align:center;margin-bottom:24px;">Avalie sua experiência</div>
+
+    <div id="avaliacao-secao-est" style="margin-bottom:20px;">
+      <div style="font-size:14px;font-weight:700;color:var(--texto);margin-bottom:10px;">🏪 Como foi o estabelecimento?</div>
+      <div id="estrelas-est" style="display:flex;gap:8px;justify-content:center;margin-bottom:8px;">
+        <span onclick="selecionarEstrela('est',1)" style="font-size:36px;cursor:pointer;transition:transform 0.1s;">☆</span>
+        <span onclick="selecionarEstrela('est',2)" style="font-size:36px;cursor:pointer;transition:transform 0.1s;">☆</span>
+        <span onclick="selecionarEstrela('est',3)" style="font-size:36px;cursor:pointer;transition:transform 0.1s;">☆</span>
+        <span onclick="selecionarEstrela('est',4)" style="font-size:36px;cursor:pointer;transition:transform 0.1s;">☆</span>
+        <span onclick="selecionarEstrela('est',5)" style="font-size:36px;cursor:pointer;transition:transform 0.1s;">☆</span>
+      </div>
+    </div>
+
+    <div id="avaliacao-secao-mb" style="margin-bottom:24px;">
+      <div id="avaliacao-mb-titulo" style="font-size:14px;font-weight:700;color:var(--texto);margin-bottom:10px;">🛵 Como foi o motoboy?</div>
+      <div id="estrelas-mb" style="display:flex;gap:8px;justify-content:center;">
+        <span onclick="selecionarEstrela('mb',1)" style="font-size:36px;cursor:pointer;transition:transform 0.1s;">☆</span>
+        <span onclick="selecionarEstrela('mb',2)" style="font-size:36px;cursor:pointer;transition:transform 0.1s;">☆</span>
+        <span onclick="selecionarEstrela('mb',3)" style="font-size:36px;cursor:pointer;transition:transform 0.1s;">☆</span>
+        <span onclick="selecionarEstrela('mb',4)" style="font-size:36px;cursor:pointer;transition:transform 0.1s;">☆</span>
+        <span onclick="selecionarEstrela('mb',5)" style="font-size:36px;cursor:pointer;transition:transform 0.1s;">☆</span>
+      </div>
+    </div>
+
+    <button id="btn-enviar-avaliacao" onclick="enviarAvaliacaoEntrega()" style="width:100%;padding:14px;border-radius:12px;background:var(--verde);border:none;color:#fff;font-size:16px;font-weight:700;cursor:pointer;opacity:0.5;" disabled>Enviar avaliação</button>
+    <button onclick="fecharModalAvaliacaoEntrega()" style="width:100%;padding:10px;border-radius:12px;background:transparent;border:none;color:var(--texto2);font-size:14px;cursor:pointer;margin-top:8px;">Agora não</button>
+  </div>
+</div>
+
+<script>
+var _avalPedidoId = null, _avalEstId = null, _avalMbId = null;
+var _avalNotaEst = 0, _avalNotaMb = 0;
+
+function mostrarModalAvaliacaoEntrega(pedidoId, estId, mbId, mbNome) {
+  _avalPedidoId = pedidoId;
+  _avalEstId = estId;
+  _avalMbId = mbId;
+  _avalNotaEst = 0;
+  _avalNotaMb = 0;
+  // Atualizar título do motoboy com nome
+  var tit = document.getElementById('avaliacao-mb-titulo');
+  if(tit) tit.textContent = '🛵 Como foi ' + (mbNome || 'o motoboy') + '?';
+  // Resetar estrelas
+  ['est','mb'].forEach(function(tipo) {
+    var cont = document.getElementById('estrelas-' + tipo);
+    if(cont) cont.querySelectorAll('span').forEach(function(s) { s.textContent = '☆'; });
+  });
+  // Esconder seção motoboy se não há mb
+  var secMb = document.getElementById('avaliacao-secao-mb');
+  if(secMb) secMb.style.display = mbId ? 'block' : 'none';
+  var m = document.getElementById('modal-avaliacao-entrega');
+  if(m) { m.style.display = 'flex'; }
+}
+
+function fecharModalAvaliacaoEntrega() {
+  var m = document.getElementById('modal-avaliacao-entrega');
+  if(m) m.style.display = 'none';
+}
+
+function selecionarEstrela(tipo, nota) {
+  if(tipo === 'est') _avalNotaEst = nota;
+  else _avalNotaMb = nota;
+  var cont = document.getElementById('estrelas-' + tipo);
+  if(cont) {
+    cont.querySelectorAll('span').forEach(function(s, i) {
+      s.textContent = i < nota ? '⭐' : '☆';
+      s.style.transform = i < nota ? 'scale(1.1)' : 'scale(1)';
+    });
+  }
+  var btn = document.getElementById('btn-enviar-avaliacao');
+  if(btn) {
+    var pronto = _avalNotaEst > 0 && (_avalMbId ? _avalNotaMb > 0 : true);
+    btn.disabled = !pronto;
+    btn.style.opacity = pronto ? '1' : '0.5';
+  }
+}
+
+async function enviarAvaliacaoEntrega() {
+  var btn = document.getElementById('btn-enviar-avaliacao');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
+  try {
+    var promises = [];
+    if(_avalPedidoId && _avalEstId && _avalNotaEst > 0) {
+      promises.push(apiCall('/api/features/avaliar', {
+        method: 'POST',
+        body: { pedido_id: _avalPedidoId, estabelecimento_id: _avalEstId, nota: _avalNotaEst, comentario: '' }
+      }).catch(function(){}));
+    }
+    if(_avalPedidoId && _avalMbId && _avalNotaMb > 0) {
+      promises.push(apiCall('/api/features/avaliar-motoboy', {
+        method: 'POST',
+        body: { pedido_id: _avalPedidoId, motoboy_id: _avalMbId, nota: _avalNotaMb }
+      }).catch(function(){}));
+    }
+    await Promise.all(promises);
+    fecharModalAvaliacaoEntrega();
+    showToast('⭐', 'Avaliação enviada!', 'Obrigado pelo feedback!');
+  } catch(e) {
+    if(btn) { btn.disabled = false; btn.textContent = 'Enviar avaliação'; }
+  }
 }
 </script>
 

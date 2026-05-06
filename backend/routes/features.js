@@ -74,6 +74,33 @@ router.post('/avaliar', requireAuth, [
 });
 
 // =============================================
+// POST /api/features/avaliar-motoboy — Avaliar motoboy
+// =============================================
+router.post('/avaliar-motoboy', requireAuth, [
+  body('pedido_id').isUUID(),
+  body('motoboy_id').isUUID(),
+  body('nota').isInt({ min: 1, max: 5 }),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+  try {
+    const { pedido_id, nota } = req.body;
+
+    const { error } = await supabaseAdmin
+      .from('pedidos')
+      .update({ nota_motoboy: nota })
+      .eq('id', pedido_id)
+      .eq('cliente_id', req.user.id);
+
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================================
 // GET /api/features/avaliacoes/:estId — Média de avaliações de um estabelecimento
 // =============================================
 router.get('/avaliacoes/:estId', async (req, res) => {
