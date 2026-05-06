@@ -4859,38 +4859,60 @@ async function renderAdminMonitor() {
       }).join('');
 
       // ── PEDIDOS ATIVOS ──────────────────────────────────────
+      // Thresholds de alerta por fase (minutos)
+      var ALERTA = { pendente: 5, aceito: 10, preparando: 30, pronto: 10, coletado: 35, saiu_para_entrega: 35 };
+      var FASE = {
+        pendente:           { label: '⏳ Aguardando lojista', cor: '#ff9800' },
+        aceito:             { label: '✅ Aceito',             cor: '#4caf50' },
+        preparando:         { label: '👨‍🍳 Preparando',         cor: '#2196f3' },
+        pronto:             { label: '📦 Pronto p/ coleta',   cor: '#9c27b0' },
+        coletado:           { label: '🛵 A caminho',          cor: '#00bcd4' },
+        saiu_para_entrega:  { label: '🛵 Saiu p/ entrega',    cor: '#00bcd4' },
+      };
+
+      function alertaStr(status, min) {
+        var limite = ALERTA[status] || 60;
+        if(min < limite) return '';
+        if(status === 'pendente') return '🚨 Lojista não aceitou há ' + min + 'min';
+        if(status === 'pronto')   return '🚨 Sem motoboy há ' + min + 'min';
+        if(status === 'coletado' || status === 'saiu_para_entrega') return '⚠️ Entrega há ' + min + 'min';
+        return '⚠️ Em ' + status + ' há ' + min + 'min';
+      }
+
       var pedsHtml = peds.length === 0
-        ? '<div style="text-align:center;padding:24px;color:var(--texto2);font-size:14px;">Nenhum pedido ativo no momento</div>'
+        ? '<div style="text-align:center;padding:24px;color:var(--texto2);font-size:14px;">✅ Nenhum pedido ativo no momento</div>'
         : peds.map(function(p) {
-            var st = STATUS_MONITOR[p.status] || { label: p.status, cor: '#888' };
-            var elapsed = Math.floor((agora - new Date(p.criado_em)) / 60000);
-            var elapsedStr = elapsed < 60 ? elapsed + ' min' : Math.floor(elapsed/60) + 'h ' + (elapsed%60) + 'min';
-            var travado = elapsed > 120; // mais de 2h = suspeito
+            var min = p.minutos_ativo || Math.floor((agora - new Date(p.criado_em)) / 60000);
+            var minStr = min < 60 ? min + 'min' : Math.floor(min/60) + 'h ' + (min%60) + 'min';
+            var alerta = alertaStr(p.status, min);
+            var limite = ALERTA[p.status] || 60;
+            var urgente = min >= limite;
+            var fase = FASE[p.status] || { label: p.status, cor: '#888' };
             var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : (p.guest_nome || 'Visitante');
-            var nomeMotoboy = p.motoboys ? p.motoboys.nome : '—';
-            var temGpsMoto = p.motoboys && p.motoboys.lat && p.motoboys.lng;
+            var nomeMotoboy = p.motoboys ? p.motoboys.nome : (p.status === 'pronto' ? '— aguardando' : '—');
+            var temGps = p.motoboys && p.motoboys.lat;
             var pagIcone = p.forma_pagamento === 'pix' ? '⚡ Pix' : '💳 Cartão';
-            var bordaTravado = travado ? 'border-color:#ff4444;' : '';
-            return '<div style="background:var(--cinza2);border-radius:14px;padding:14px;margin-bottom:10px;border:1.5px solid var(--cinza3);' + bordaTravado + '">' +
-              '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">' +
-                '<div>' +
+            var borda = urgente ? 'border-color:#ff4444;' : '';
+            var bgAlerta = urgente ? 'background:#ff444412;' : '';
+            return '<div style="border-radius:14px;padding:14px;margin-bottom:10px;border:1.5px solid var(--cinza3);' + borda + bgAlerta + '">' +
+              '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
+                '<div style="flex:1;">' +
                   '<div style="font-size:13px;font-weight:700;">' + sanitizar(p.estabelecimentos?.nome || 'Loja') + '</div>' +
-                  '<div style="font-size:11px;color:var(--texto2);">Cliente: ' + sanitizar(nomeCliente) + ' · ' + pagIcone + '</div>' +
+                  '<div style="font-size:11px;color:var(--texto2);">' + sanitizar(nomeCliente) + ' · ' + pagIcone + '</div>' +
                 '</div>' +
-                '<div style="text-align:right;">' +
-                  '<div style="font-size:15px;font-weight:800;color:var(--verde);">R$ ' + parseFloat(p.total||0).toFixed(2).replace('.',',') + '</div>' +
-                  '<div style="font-size:11px;color:' + (travado ? '#ff4444' : 'var(--texto2)') + ';">⏱ ' + elapsedStr + (travado ? ' ⚠️' : '') + '</div>' +
-                '</div>' +
-              '</div>' +
-              '<div style="display:flex;align-items:center;justify-content:space-between;">' +
-                '<div style="display:flex;align-items:center;gap:8px;">' +
-                  '<span style="background:' + st.cor + '22;color:' + st.cor + ';font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid ' + st.cor + '44;">' + st.label + '</span>' +
-                '</div>' +
-                '<div style="display:flex;align-items:center;gap:8px;">' +
-                  '<div style="font-size:12px;color:var(--texto2);">🛵 ' + sanitizar(nomeMotoboy) + (temGpsMoto ? ' <span style="color:var(--verde);">📍</span>' : '') + '</div>' +
-                  '<button onclick="encerrarPedidoAdmin(\'' + p.id + '\',this)" style="padding:4px 10px;border-radius:8px;border:1px solid #ff444488;background:#ff444415;color:#ff4444;font-size:11px;font-weight:700;cursor:pointer;">Encerrar</button>' +
+                '<div style="text-align:right;flex-shrink:0;margin-left:8px;">' +
+                  '<div style="font-size:14px;font-weight:800;color:var(--verde);">R$ ' + parseFloat(p.total||0).toFixed(2).replace('.',',') + '</div>' +
+                  '<div style="font-size:11px;color:' + (urgente ? '#ff4444' : 'var(--texto2)') + ';">⏱ ' + minStr + '</div>' +
                 '</div>' +
               '</div>' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+                '<span style="background:' + fase.cor + '22;color:' + fase.cor + ';font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid ' + fase.cor + '44;">' + fase.label + '</span>' +
+                '<div style="font-size:11px;color:var(--texto2);">🛵 ' + sanitizar(nomeMotoboy) + (temGps ? ' 📍' : '') + '</div>' +
+              '</div>' +
+              (alerta ? '<div style="margin-top:8px;background:#ff444420;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;color:#ff4444;display:flex;justify-content:space-between;align-items:center;">' +
+                alerta +
+                '<button onclick="encerrarPedidoAdmin(\'' + p.id + '\',this)" style="padding:3px 10px;border-radius:8px;border:1px solid #ff444488;background:#ff444420;color:#ff4444;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;margin-left:8px;">Encerrar</button>' +
+              '</div>' : '') +
             '</div>';
           }).join('');
 

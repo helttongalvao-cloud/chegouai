@@ -146,9 +146,9 @@ router.patch('/repasses/:id/pagar', async (req, res, next) => {
 // =============================================
 router.get('/monitor', async (req, res, next) => {
   try {
-    const statusAtivos = ['pendente', 'aprovado', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega'];
-    // Mostrar apenas pedidos das últimas 8 horas — pedidos mais velhos são travados
-    const limiteHoras = new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString();
+    const statusAtivos = ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega'];
+    // Tempo máximo razoável por status — pedidos mais velhos que isso estão travados
+    const limiteAtivo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(); // 3h
 
     const [{ data: pedidos }, { data: motoboys }, { data: estabelecimentos }] = await Promise.all([
       supabaseAdmin
@@ -162,7 +162,7 @@ router.get('/monitor', async (req, res, next) => {
         `)
         .in('status', statusAtivos)
         .eq('pagamento_status', 'aprovado')
-        .gte('criado_em', limiteHoras)
+        .gte('criado_em', limiteAtivo)
         .order('criado_em', { ascending: false }),
 
       supabaseAdmin
@@ -198,8 +198,15 @@ router.get('/monitor', async (req, res, next) => {
       max_espera_min: statsLoja[e.id]?.max_espera_min || 0,
     }));
 
+    // Calcular minutos desde criação para cada pedido
+    const agora = new Date();
+    const pedidosEnriquecidos = (pedidos || []).map(p => ({
+      ...p,
+      minutos_ativo: Math.floor((agora - new Date(p.criado_em)) / 60000),
+    }));
+
     res.json({
-      pedidos_ativos: pedidos || [],
+      pedidos_ativos: pedidosEnriquecidos,
       motoboys: motoboys || [],
       estabelecimentos: estabelecimentosComStats,
       atualizado_em: new Date().toISOString(),
