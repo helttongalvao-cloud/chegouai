@@ -4865,11 +4865,13 @@ async function renderAdminMonitor() {
             var st = STATUS_MONITOR[p.status] || { label: p.status, cor: '#888' };
             var elapsed = Math.floor((agora - new Date(p.criado_em)) / 60000);
             var elapsedStr = elapsed < 60 ? elapsed + ' min' : Math.floor(elapsed/60) + 'h ' + (elapsed%60) + 'min';
+            var travado = elapsed > 120; // mais de 2h = suspeito
             var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : (p.guest_nome || 'Visitante');
             var nomeMotoboy = p.motoboys ? p.motoboys.nome : '—';
             var temGpsMoto = p.motoboys && p.motoboys.lat && p.motoboys.lng;
             var pagIcone = p.forma_pagamento === 'pix' ? '⚡ Pix' : '💳 Cartão';
-            return '<div style="background:var(--cinza2);border-radius:14px;padding:14px;margin-bottom:10px;border:1.5px solid var(--cinza3);">' +
+            var bordaTravado = travado ? 'border-color:#ff4444;' : '';
+            return '<div style="background:var(--cinza2);border-radius:14px;padding:14px;margin-bottom:10px;border:1.5px solid var(--cinza3);' + bordaTravado + '">' +
               '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">' +
                 '<div>' +
                   '<div style="font-size:13px;font-weight:700;">' + sanitizar(p.estabelecimentos?.nome || 'Loja') + '</div>' +
@@ -4877,16 +4879,16 @@ async function renderAdminMonitor() {
                 '</div>' +
                 '<div style="text-align:right;">' +
                   '<div style="font-size:15px;font-weight:800;color:var(--verde);">R$ ' + parseFloat(p.total||0).toFixed(2).replace('.',',') + '</div>' +
-                  '<div style="font-size:11px;color:var(--texto2);">⏱ ' + elapsedStr + '</div>' +
+                  '<div style="font-size:11px;color:' + (travado ? '#ff4444' : 'var(--texto2)') + ';">⏱ ' + elapsedStr + (travado ? ' ⚠️' : '') + '</div>' +
                 '</div>' +
               '</div>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;">' +
                 '<div style="display:flex;align-items:center;gap:8px;">' +
                   '<span style="background:' + st.cor + '22;color:' + st.cor + ';font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid ' + st.cor + '44;">' + st.label + '</span>' +
                 '</div>' +
-                '<div style="font-size:12px;color:var(--texto2);">' +
-                  '🛵 ' + sanitizar(nomeMotoboy) +
-                  (temGpsMoto ? ' <span style="color:var(--verde);">📍</span>' : '') +
+                '<div style="display:flex;align-items:center;gap:8px;">' +
+                  '<div style="font-size:12px;color:var(--texto2);">🛵 ' + sanitizar(nomeMotoboy) + (temGpsMoto ? ' <span style="color:var(--verde);">📍</span>' : '') + '</div>' +
+                  '<button onclick="encerrarPedidoAdmin(\'' + p.id + '\',this)" style="padding:4px 10px;border-radius:8px;border:1px solid #ff444488;background:#ff444415;color:#ff4444;font-size:11px;font-weight:700;cursor:pointer;">Encerrar</button>' +
                 '</div>' +
               '</div>' +
             '</div>';
@@ -4928,6 +4930,19 @@ async function renderAdminMonitor() {
   el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Iniciando monitor...</div>';
   await atualizar();
   adminMonitorTimer = setInterval(atualizar, 15000);
+}
+
+async function encerrarPedidoAdmin(pedidoId, btn) {
+  if(!confirm('Encerrar (cancelar) este pedido?')) return;
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    await apiCall('/api/admin/pedidos/' + pedidoId + '/encerrar', { method: 'POST' });
+    showToast('✅', 'Pedido encerrado', 'Status alterado para cancelado.');
+    btn.closest('div[style*="border-radius:14px"]').style.opacity = '0.4';
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Encerrar';
+    showToast('⚠️', 'Erro', e.message);
+  }
 }
 
 // ADMIN CUPONS

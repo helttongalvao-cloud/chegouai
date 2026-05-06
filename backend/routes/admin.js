@@ -146,7 +146,9 @@ router.patch('/repasses/:id/pagar', async (req, res, next) => {
 // =============================================
 router.get('/monitor', async (req, res, next) => {
   try {
-    const statusAtivos = ['pendente', 'aprovado', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega'];
+    const statusAtivos = ['pendente', 'aprovado', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega'];
+    // Mostrar apenas pedidos das últimas 8 horas — pedidos mais velhos são travados
+    const limiteHoras = new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString();
 
     const [{ data: pedidos }, { data: motoboys }, { data: estabelecimentos }] = await Promise.all([
       supabaseAdmin
@@ -160,6 +162,7 @@ router.get('/monitor', async (req, res, next) => {
         `)
         .in('status', statusAtivos)
         .eq('pagamento_status', 'aprovado')
+        .gte('criado_em', limiteHoras)
         .order('criado_em', { ascending: false }),
 
       supabaseAdmin
@@ -201,6 +204,22 @@ router.get('/monitor', async (req, res, next) => {
       estabelecimentos: estabelecimentosComStats,
       atualizado_em: new Date().toISOString(),
     });
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// POST /api/admin/pedidos/:id/encerrar — Forçar cancelamento de pedido travado
+// =============================================
+router.post('/pedidos/:id/encerrar', [param('id').isUUID()], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+  try {
+    const { error } = await supabaseAdmin
+      .from('pedidos')
+      .update({ status: 'cancelado', atualizado_em: new Date().toISOString() })
+      .eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ ok: true });
   } catch (err) { next(err); }
 });
 
