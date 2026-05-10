@@ -5422,26 +5422,45 @@ window.addEventListener('appinstalled', function() {
   fecharBannerInstall(true);
 });
 
+function abrirNoChrome() {
+  var url = 'https://chegouaiapp.com.br/app';
+  var intent = 'intent://' + url.replace('https://', '') + '#Intent;scheme=https;package=com.android.chrome;end';
+  window.location.href = intent;
+  // fallback: tentar abrir no browser padrão após pequeno delay
+  setTimeout(function() { window.open(url, '_blank'); }, 800);
+}
+
 function mostrarBannerInstall(tipo) {
   var banner = document.getElementById('install-banner');
   if(!banner) return;
-  document.getElementById('inapp-instrucoes').classList.remove('visivel');
+  document.getElementById('inapp-instrucoes-ios').classList.remove('visivel');
+  document.getElementById('inapp-instrucoes-android').classList.remove('visivel');
   document.getElementById('ios-instrucoes').classList.remove('visivel');
   document.getElementById('android-instrucoes').classList.remove('visivel');
-  if(tipo === 'inapp') {
-    document.getElementById('inapp-instrucoes').classList.add('visivel');
-    document.getElementById('banner-btn-acao').textContent = 'Entendi ✓';
-    document.getElementById('banner-subtexto').textContent = 'Você está num browser do app. Siga os passos:';
+  var btnAcao = document.getElementById('banner-btn-acao');
+  if(tipo === 'inapp-ios') {
+    document.getElementById('inapp-instrucoes-ios').classList.add('visivel');
+    btnAcao.textContent = 'Entendi ✓';
+    btnAcao.onclick = function(){ fecharBannerInstall(false); };
+    document.getElementById('banner-subtexto').textContent = 'Você está no Instagram. Siga os passos:';
+  } else if(tipo === 'inapp-android') {
+    document.getElementById('inapp-instrucoes-android').classList.add('visivel');
+    btnAcao.textContent = '🌐 Abrir no Chrome';
+    btnAcao.onclick = abrirNoChrome;
+    document.getElementById('banner-subtexto').textContent = 'Você está no Instagram. Para instalar:';
   } else if(tipo === 'ios') {
     document.getElementById('ios-instrucoes').classList.add('visivel');
-    document.getElementById('banner-btn-acao').textContent = 'Entendi ✓';
+    btnAcao.textContent = 'Entendi ✓';
+    btnAcao.onclick = function(){ fecharBannerInstall(false); };
     document.getElementById('banner-subtexto').textContent = 'Siga os passos abaixo para instalar no Safari:';
   } else if(tipo === 'android-manual') {
     document.getElementById('android-instrucoes').classList.add('visivel');
-    document.getElementById('banner-btn-acao').textContent = 'Entendi ✓';
+    btnAcao.textContent = 'Entendi ✓';
+    btnAcao.onclick = function(){ fecharBannerInstall(false); };
     document.getElementById('banner-subtexto').textContent = 'Siga os passos abaixo para instalar no Chrome:';
   } else {
-    document.getElementById('banner-btn-acao').textContent = 'Instalar agora';
+    btnAcao.textContent = 'Instalar agora';
+    btnAcao.onclick = clicarBannerInstall;
     document.getElementById('banner-subtexto').textContent = 'Adicione à tela inicial para receber notificações e usar offline.';
   }
   banner.classList.add('visivel');
@@ -5469,7 +5488,7 @@ function clicarBannerInstall() {
 function instalarApp() {
   if(isStandalone) { showToast('✅','Já instalado','O app já está na sua tela inicial!'); return; }
   if(isInApp) {
-    mostrarBannerInstall('inapp');
+    mostrarBannerInstall(isIOS ? 'inapp-ios' : 'inapp-android');
   } else if(deferredInstallPrompt) {
     mostrarBannerInstall('android');
   } else if(isIOS) {
@@ -5511,7 +5530,7 @@ atualizarBtnInstalar();
 if(!isStandalone && !bannerDispensado) {
   setTimeout(function() {
     if(isInApp) {
-      mostrarBannerInstall('inapp');
+      mostrarBannerInstall(isIOS ? 'inapp-ios' : 'inapp-android');
     } else if(isIOS) {
       mostrarBannerInstall('ios');
     } else if(isAndroid && !deferredInstallPrompt) {
@@ -5560,10 +5579,13 @@ if(!isStandalone && !bannerDispensado) {
     </div>
     <button class="banner-btn-fechar" onclick="fecharBannerInstall()">✕</button>
   </div>
-  <div id="inapp-instrucoes">
+  <div id="inapp-instrucoes-ios">
     <div class="ios-passo">1️⃣ <span>Toque nos <strong>três pontos ···</strong> no canto inferior direito</span></div>
-    <div class="ios-passo">2️⃣ <span>Escolha <strong>"Abrir no Safari"</strong> (ou "Abrir no navegador")</span></div>
+    <div class="ios-passo">2️⃣ <span>Escolha <strong>"Abrir no Safari"</strong></span></div>
     <div class="ios-passo">3️⃣ <span>No Safari, toque em <strong>Compartilhar ⬆️ → Adicionar à Tela de Início</strong></span></div>
+  </div>
+  <div id="inapp-instrucoes-android">
+    <div class="ios-passo" style="margin-bottom:10px;">Toque no botão abaixo para abrir no Chrome e instalar:</div>
   </div>
   <div id="ios-instrucoes">
     <div class="ios-passo">1️⃣ <span>Toque no ícone <strong>Compartilhar</strong> ⬆️ na barra inferior do Safari</span></div>
