@@ -1070,9 +1070,10 @@ async function ativarNotificacoesPush() {
     }
 
     await apiCall('/api/notifications/subscribe', { method: 'POST', body: { subscription: existingSub.toJSON() } });
-    console.log('[Push] Subscription ativa:', existingSub.endpoint.substring(0, 60));
+    console.log('[Push] ✓ Subscription registrada no servidor:', existingSub.endpoint.substring(0, 60));
   } catch(e) {
-    console.warn('[Push] Erro ao ativar notificações:', e.message);
+    console.error('[Push] ✗ Falha ao ativar notificações:', e.message);
+    showToast('⚠️', 'Erro nas notificações', 'Não foi possível registrar: ' + e.message);
   }
 }
 

@@ -18,7 +18,10 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 // Exportada: enviar push para um user_id
 // =============================================
 async function enviarPush(userId, titulo, corpo, dados) {
-  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return;
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    console.warn('[Push] VAPID keys não configuradas — push ignorado');
+    return;
+  }
   try {
     const { data, error } = await supabaseAdmin
       .from('push_subscriptions')
@@ -26,18 +29,20 @@ async function enviarPush(userId, titulo, corpo, dados) {
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (error) { console.error('[Push] Erro ao buscar subscription de', userId, error.message); return; }
-    if (!data) { console.warn('[Push] Sem subscription para user_id:', userId); return; }
+    if (error) { console.error('[Push] Erro DB ao buscar subscription:', userId, error.message); return; }
+    if (!data) { console.warn('[Push] Nenhuma subscription salva para user_id:', userId); return; }
 
     const sub = JSON.parse(data.subscription);
     const payload = JSON.stringify({ titulo, corpo, dados: dados || {} });
 
     await webpush.sendNotification(sub, payload, { urgency: 'high', TTL: 3600 });
+    console.log('[Push] ✓ Enviado para', userId, '|', titulo);
   } catch (e) {
     if (e.statusCode === 410 || e.statusCode === 404) {
+      console.warn('[Push] Subscription expirada (', e.statusCode, ') — removendo para', userId);
       await supabaseAdmin.from('push_subscriptions').delete().eq('user_id', userId);
     } else {
-      console.error('[Push] Falha ao enviar para', userId, '— status:', e.statusCode, e.message);
+      console.error('[Push] ✗ Falha ao enviar para', userId, '— HTTP', e.statusCode, '—', e.message);
     }
   }
 }
@@ -53,13 +58,19 @@ router.post('/subscribe', requireAuth, async (req, res, next) => {
     const { subscription } = req.body;
     if (!subscription?.endpoint) return res.status(400).json({ error: 'Subscription inválida' });
 
-    await supabaseAdmin.from('push_subscriptions').upsert({
+    const { error } = await supabaseAdmin.from('push_subscriptions').upsert({
       user_id: req.user.id,
       endpoint: subscription.endpoint,
       subscription: JSON.stringify(subscription),
       atualizado_em: new Date().toISOString(),
     }, { onConflict: 'user_id' });
 
+    if (error) {
+      console.error('[Push] Erro ao salvar subscription para', req.user.id, error.message);
+      return res.status(500).json({ error: 'Erro ao salvar subscription' });
+    }
+
+    console.log('[Push] Subscription salva para user_id:', req.user.id);
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
