@@ -990,6 +990,7 @@ async function apiCall(path, options) {
     currentUser = null;
     localStorage.removeItem('chegouai_token');
     localStorage.removeItem('chegouai_user');
+    localStorage.removeItem('chegouai_refresh');
     if(pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
     if (typeof irTela === 'function') irTela('tela-login');
     throw new Error('Sessão expirada. Faça login novamente.');
@@ -1673,6 +1674,7 @@ async function entrar() {
     currentUser = resp.user;
     localStorage.setItem('chegouai_token', authToken);
     localStorage.setItem('chegouai_user', JSON.stringify(currentUser));
+    if(resp.refreshToken) localStorage.setItem('chegouai_refresh', resp.refreshToken);
 
     entrarComo(resp.user.perfil);
     ativarNotificacoesPush();
@@ -1700,6 +1702,7 @@ function irLogin() {
   pedidoAtualId = null;
   localStorage.removeItem('chegouai_token');
   localStorage.removeItem('chegouai_user');
+  localStorage.removeItem('chegouai_refresh');
   irTela('tela-login');
 }
 
@@ -5347,29 +5350,43 @@ if('serviceWorker' in navigator) {
   var token = localStorage.getItem('chegouai_token');
   var user = JSON.parse(localStorage.getItem('chegouai_user') || 'null');
   if(token && user) {
-    // Validar o token com o servidor antes de auto-logar
     try {
       authToken = token;
       var resp = await apiCall('/api/auth/me');
       if(resp && resp.id) {
         currentUser = user;
-        setTimeout(function() {
-          entrarComo(user.perfil);
-        }, 1800);
-      } else {
-        // Token inválido: limpar tudo
-        authToken = null;
-        currentUser = null;
-        localStorage.removeItem('chegouai_token');
-        localStorage.removeItem('chegouai_user');
+        setTimeout(function() { entrarComo(user.perfil); }, 1800);
+        return;
       }
-    } catch(e) {
-      // Token expirado ou inválido
-      authToken = null;
-      currentUser = null;
-      localStorage.removeItem('chegouai_token');
-      localStorage.removeItem('chegouai_user');
+    } catch(e) { /* token expirado — tentar refresh abaixo */ }
+
+    // Token expirado: tentar renovar com refreshToken
+    var refreshToken = localStorage.getItem('chegouai_refresh');
+    if(refreshToken) {
+      try {
+        var renewed = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        }).then(function(r){ return r.json(); });
+
+        if(renewed.token) {
+          authToken = renewed.token;
+          localStorage.setItem('chegouai_token', renewed.token);
+          if(renewed.refreshToken) localStorage.setItem('chegouai_refresh', renewed.refreshToken);
+          currentUser = user;
+          setTimeout(function() { entrarComo(user.perfil); }, 1800);
+          return;
+        }
+      } catch(e2) { /* refresh falhou */ }
     }
+
+    // Tudo falhou: limpar sessão
+    authToken = null;
+    currentUser = null;
+    localStorage.removeItem('chegouai_token');
+    localStorage.removeItem('chegouai_user');
+    localStorage.removeItem('chegouai_refresh');
   }
 })();
 
