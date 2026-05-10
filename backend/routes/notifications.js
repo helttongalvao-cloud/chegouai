@@ -64,6 +64,14 @@ router.post('/subscribe', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/notifications/test — envia push para o próprio usuário logado
+router.post('/test', requireAuth, async (req, res, next) => {
+  try {
+    await enviarPush(req.user.id, '🔔 Teste Chegou Aí', 'Notificações estão funcionando!', {});
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 // POST /api/notifications/unsubscribe
 router.post('/unsubscribe', requireAuth, async (req, res, next) => {
   try {

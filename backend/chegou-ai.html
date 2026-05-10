@@ -825,9 +825,15 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <button class="header-acao" onclick="irLogin()">Sair</button>
     <div class="btn-icone" id="btn-instalar-est" onclick="instalarApp()" title="Instalar app" style="display:none;">📲</div>
   </div>
-  <div id="banner-push-est" style="display:none;background:#b71c1c;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;justify-content:space-between;">
-    <span>🔕 Notificações desativadas — você pode perder pedidos!</span>
-    <button onclick="ativarNotificacoesPush().then(verificarBannerPush)" style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Ativar</button>
+  <div id="banner-push-est" style="display:none;background:#b71c1c;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;flex-direction:column;gap:8px;">
+    <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;">
+      <span>🔕 Notificações desativadas — você pode perder pedidos!</span>
+      <button onclick="ativarNotificacoesPush().then(verificarBannerPush)" style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Ativar</button>
+    </div>
+  </div>
+  <div id="banner-push-est-ok" style="display:none;background:#1b5e20;color:#fff;padding:8px 16px;font-size:12px;display:flex;align-items:center;gap:10px;justify-content:space-between;">
+    <span>🔔 Notificações ativas</span>
+    <button onclick="testarPush()" style="background:#fff;color:#1b5e20;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">Testar</button>
   </div>
   <div class="nav-admin" style="padding:12px 20px 0;">
     <div class="nav-btn ativo" id="est-nav-pedidos" onclick="estNav(this,'pedidos')">📋 Pedidos</div>
@@ -872,9 +878,15 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <button class="header-acao" onclick="irLogin()">Sair</button>
     <div class="btn-icone" id="btn-instalar-moto" onclick="instalarApp()" title="Instalar app" style="display:none;">📲</div>
   </div>
-  <div id="banner-push-moto" style="display:none;background:#b71c1c;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;justify-content:space-between;">
-    <span>🔕 Notificações desativadas — você pode perder entregas!</span>
-    <button onclick="ativarNotificacoesPush().then(verificarBannerPush)" style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Ativar</button>
+  <div id="banner-push-moto" style="display:none;background:#b71c1c;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;flex-direction:column;gap:8px;">
+    <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;">
+      <span>🔕 Notificações desativadas — você pode perder entregas!</span>
+      <button onclick="ativarNotificacoesPush().then(verificarBannerPush)" style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Ativar</button>
+    </div>
+  </div>
+  <div id="banner-push-moto-ok" style="display:none;background:#1b5e20;color:#fff;padding:8px 16px;font-size:12px;display:flex;align-items:center;gap:10px;justify-content:space-between;">
+    <span>🔔 Notificações ativas</span>
+    <button onclick="testarPush()" style="background:#fff;color:#1b5e20;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">Testar</button>
   </div>
   <div class="motoboy-content">
     <div class="status-toggle">
@@ -1031,23 +1043,36 @@ async function ativarNotificacoesPush() {
     var perm = await Notification.requestPermission();
     if(perm !== 'granted') return;
 
-    var reg = await navigator.serviceWorker.ready;
-    var existingSub = await reg.pushManager.getSubscription();
-    if(existingSub) {
-      // já inscrito, só garantir que o servidor tem
-      await apiCall('/api/notifications/subscribe', { method: 'POST', body: { subscription: existingSub.toJSON() } });
-      return;
-    }
-
     var keyResp = await fetch('/api/notifications/vapid-public-key').then(function(r){ return r.json(); });
     var appKey = keyResp.publicKey;
+    if(!appKey) { console.warn('[Push] VAPID key não configurada no servidor'); return; }
     var convertedKey = urlBase64ToUint8Array(appKey);
 
-    var sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: convertedKey });
-    await apiCall('/api/notifications/subscribe', { method: 'POST', body: { subscription: sub.toJSON() } });
-    console.log('[Push] Subscription salva com sucesso:', sub.endpoint.substring(0, 50));
+    var reg = await navigator.serviceWorker.ready;
+    var existingSub = await reg.pushManager.getSubscription();
+
+    // Verificar se a subscription existente usa a mesma chave VAPID
+    if(existingSub) {
+      var existingKey = existingSub.options && existingSub.options.applicationServerKey
+        ? btoa(String.fromCharCode.apply(null, new Uint8Array(existingSub.options.applicationServerKey)))
+            .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')
+        : null;
+      // Se a chave mudou, desinscrever e recriar
+      if(existingKey && existingKey !== appKey) {
+        await existingSub.unsubscribe();
+        existingSub = null;
+        console.log('[Push] Chave VAPID mudou — reinscrevendo');
+      }
+    }
+
+    if(!existingSub) {
+      existingSub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: convertedKey });
+    }
+
+    await apiCall('/api/notifications/subscribe', { method: 'POST', body: { subscription: existingSub.toJSON() } });
+    console.log('[Push] Subscription ativa:', existingSub.endpoint.substring(0, 60));
   } catch(e) {
-    console.warn('[Push] Não foi possível ativar notificações:', e.message);
+    console.warn('[Push] Erro ao ativar notificações:', e.message);
   }
 }
 
@@ -1055,8 +1080,21 @@ function verificarBannerPush() {
   var concedido = ('Notification' in window) && Notification.permission === 'granted';
   var bannerEst = document.getElementById('banner-push-est');
   var bannerMoto = document.getElementById('banner-push-moto');
+  var bannerEstOk = document.getElementById('banner-push-est-ok');
+  var bannerMotoOk = document.getElementById('banner-push-moto-ok');
   if(bannerEst) bannerEst.style.display = concedido ? 'none' : 'flex';
   if(bannerMoto) bannerMoto.style.display = concedido ? 'none' : 'flex';
+  if(bannerEstOk) bannerEstOk.style.display = concedido ? 'flex' : 'none';
+  if(bannerMotoOk) bannerMotoOk.style.display = concedido ? 'flex' : 'none';
+}
+
+async function testarPush() {
+  try {
+    await apiCall('/api/notifications/test', { method: 'POST' });
+    showToast('🔔', 'Teste enviado', 'Se não chegar em 5 segundos, há um problema na subscription.');
+  } catch(e) {
+    showToast('❌', 'Erro no teste', e.message);
+  }
 }
 
 function urlBase64ToUint8Array(base64String) {
