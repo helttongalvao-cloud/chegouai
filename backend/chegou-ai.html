@@ -5402,6 +5402,9 @@ var isStandalone = window.matchMedia('(display-mode: standalone)').matches
 // Detecta iOS e Android
 var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
 var isAndroid = /android/i.test(navigator.userAgent);
+// Browser embutido (Instagram, Facebook, TikTok, WhatsApp, etc.)
+var isInApp = /Instagram|FBAN|FBAV|Twitter|TikTok|Snapchat|LinkedIn|Line\/|KAKAOTALK|WhatsApp/i.test(navigator.userAgent)
+  || (isIOS && !/Safari/i.test(navigator.userAgent));
 
 // Já dispensou antes?
 var bannerDispensado = localStorage.getItem('chegouai_install_dispensado');
@@ -5422,9 +5425,14 @@ window.addEventListener('appinstalled', function() {
 function mostrarBannerInstall(tipo) {
   var banner = document.getElementById('install-banner');
   if(!banner) return;
+  document.getElementById('inapp-instrucoes').classList.remove('visivel');
   document.getElementById('ios-instrucoes').classList.remove('visivel');
   document.getElementById('android-instrucoes').classList.remove('visivel');
-  if(tipo === 'ios') {
+  if(tipo === 'inapp') {
+    document.getElementById('inapp-instrucoes').classList.add('visivel');
+    document.getElementById('banner-btn-acao').textContent = 'Entendi ✓';
+    document.getElementById('banner-subtexto').textContent = 'Você está num browser do app. Siga os passos:';
+  } else if(tipo === 'ios') {
     document.getElementById('ios-instrucoes').classList.add('visivel');
     document.getElementById('banner-btn-acao').textContent = 'Entendi ✓';
     document.getElementById('banner-subtexto').textContent = 'Siga os passos abaixo para instalar no Safari:';
@@ -5460,12 +5468,12 @@ function clicarBannerInstall() {
 
 function instalarApp() {
   if(isStandalone) { showToast('✅','Já instalado','O app já está na sua tela inicial!'); return; }
-  if(deferredInstallPrompt) {
+  if(isInApp) {
+    mostrarBannerInstall('inapp');
+  } else if(deferredInstallPrompt) {
     mostrarBannerInstall('android');
   } else if(isIOS) {
     mostrarBannerInstall('ios');
-  } else if(isAndroid) {
-    mostrarBannerInstall('android-manual');
   } else {
     mostrarBannerInstall('android-manual');
   }
@@ -5499,15 +5507,17 @@ function atualizarBtnInstalar() {
 }
 // Exibir botão imediatamente se não instalado
 atualizarBtnInstalar();
-// Exibir banner automaticamente para iOS não-instalado (com delay após o splash)
-if(isIOS && !isStandalone && !bannerDispensado) {
-  setTimeout(function() { mostrarBannerInstall('ios'); }, 4000);
-}
-// Android sem prompt nativo: mostrar instruções manuais após delay
-if(isAndroid && !isStandalone && !bannerDispensado && !deferredInstallPrompt) {
+// Exibir banner automaticamente após delay
+if(!isStandalone && !bannerDispensado) {
   setTimeout(function() {
-    if(!deferredInstallPrompt) mostrarBannerInstall('android-manual');
-  }, 5000);
+    if(isInApp) {
+      mostrarBannerInstall('inapp');
+    } else if(isIOS) {
+      mostrarBannerInstall('ios');
+    } else if(isAndroid && !deferredInstallPrompt) {
+      mostrarBannerInstall('android-manual');
+    }
+  }, 4000);
 }
 
 // Verificar retorno do callback de pagamento por cartão
@@ -5549,6 +5559,11 @@ if(isAndroid && !isStandalone && !bannerDispensado && !deferredInstallPrompt) {
       <span id="banner-subtexto">Adicione à tela inicial para receber notificações e usar offline.</span>
     </div>
     <button class="banner-btn-fechar" onclick="fecharBannerInstall()">✕</button>
+  </div>
+  <div id="inapp-instrucoes">
+    <div class="ios-passo">1️⃣ <span>Toque nos <strong>três pontos ···</strong> no canto inferior direito</span></div>
+    <div class="ios-passo">2️⃣ <span>Escolha <strong>"Abrir no Safari"</strong> (ou "Abrir no navegador")</span></div>
+    <div class="ios-passo">3️⃣ <span>No Safari, toque em <strong>Compartilhar ⬆️ → Adicionar à Tela de Início</strong></span></div>
   </div>
   <div id="ios-instrucoes">
     <div class="ios-passo">1️⃣ <span>Toque no ícone <strong>Compartilhar</strong> ⬆️ na barra inferior do Safari</span></div>
