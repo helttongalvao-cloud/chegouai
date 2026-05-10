@@ -1516,13 +1516,10 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Taxa de entrega por distância (intervalos de 1,5km, +R$0,50 por faixa)
+// Taxa de entrega por distância
 function calcularTaxaEntrega(distanciaKm) {
-  if (distanciaKm <= 1.5) return 2.00;
-  if (distanciaKm <= 3.0) return 2.50;
-  if (distanciaKm <= 4.5) return 3.00;
-  if (distanciaKm <= 6.0) return 3.50;
-  return 4.00;
+  if (distanciaKm <= 5.0) return 2.00;
+  return 3.00;
 }
 
 // Coordenadas GPS do cliente (capturadas ao usar "minha localização")
