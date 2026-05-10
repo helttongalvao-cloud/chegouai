@@ -163,8 +163,16 @@ router.post(
           desconto = Math.min(parseFloat(cupomData.desconto_valor), subtotal);
         }
         cupomCodigo = cupomData.codigo;
-        // Incrementar uso (não bloqueia em caso de falha)
-        supabaseAdmin.from('cupons').update({ usos_atual: cupomData.usos_atual + 1 }).eq('id', cupomData.id).then(() => {});
+        // Incrementar uso atomicamente — só atualiza se ainda abaixo do limite (evita race condition)
+        const { data: cupomAtualizado } = await supabaseAdmin
+          .from('cupons')
+          .update({ usos_atual: cupomData.usos_atual + 1 })
+          .eq('id', cupomData.id)
+          .lt('usos_atual', cupomData.usos_max)
+          .select('id');
+        if (!cupomAtualizado || cupomAtualizado.length === 0) {
+          return res.status(400).json({ error: 'Cupom esgotado' });
+        }
       }
 
       // 5. Calcular taxa de entrega final — calculada por distância para ambos os tipos
@@ -515,7 +523,10 @@ router.patch(
         const { data: pedCheck } = await supabaseAdmin
           .from('pedidos').select('telefone_cliente').eq('id', orderId).single();
         const tel = (pedCheck?.telefone_cliente || '').replace(/\D/g, '');
-        if (tel.length < 4 || tel.slice(-4) !== codigoEntrega) {
+        if (!tel || tel.length < 4) {
+          return res.status(400).json({ error: 'Telefone do cliente não disponível para verificação' });
+        }
+        if (tel.slice(-4) !== codigoEntrega) {
           return res.status(400).json({ error: 'Código incorreto. Peça ao cliente os 4 últimos dígitos do telefone.' });
         }
       }
@@ -622,8 +633,8 @@ router.patch(
             valor: valorRepasse,
             status: 'pendente',
           });
-        } else if (!repasseExistente.motoboy_id) {
-          // Repasse criado pelo webhook sem motoboy_id — atualiza agora que sabemos o motoboy
+        } else if (!repasseExistente.motoboy_id || repasseExistente.motoboy_id !== pedido.motoboy_id) {
+          // Sem motoboy ou motoboy diferente (reatribuição) — corrigir
           await supabaseAdmin.from('repasses')
             .update({ motoboy_id: pedido.motoboy_id, atualizado_em: new Date().toISOString() })
             .eq('id', repasseExistente.id);

@@ -41,7 +41,10 @@ async function salvarCobranca(pedidoId, pagarmeOrderId, split) {
     total: split.total,
     pagamento_status: 'aguardando',
   }).eq('id', pedidoId);
-  if (error) console.error('[salvarCobranca] Falha ao salvar pedido', pedidoId, error.message);
+  if (error) {
+    console.error('[salvarCobranca] Falha ao salvar pedido', pedidoId, error.message);
+    throw Object.assign(new Error('Erro ao registrar cobrança'), { status: 500 });
+  }
 }
 
 // ─── Helper: processar pagamento aprovado (idempotente) ──────────────────

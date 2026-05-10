@@ -1775,8 +1775,8 @@ async function irHome() {
   atualizarCarrinho();
   irTela('tela-home');
   // Limpar polling se houver (ex: checagem de pix/pagamento ou status do pedido)
-  if(window.pixCheckInterval) clearInterval(window.pixCheckInterval);
-  if(typeof pollingInterval !== 'undefined') clearInterval(pollingInterval);
+  if(window.pixCheckInterval) { clearInterval(window.pixCheckInterval); window.pixCheckInterval = null; }
+  if(pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
   // Limpar busca de produto ao voltar para home
   var inpProd = document.getElementById('busca-produto-input');
   if(inpProd) inpProd.value = '';
