@@ -1053,15 +1053,18 @@ async function ativarNotificacoesPush() {
 
     // Verificar se a subscription existente usa a mesma chave VAPID
     if(existingSub) {
-      var existingKey = existingSub.options && existingSub.options.applicationServerKey
-        ? btoa(String.fromCharCode.apply(null, new Uint8Array(existingSub.options.applicationServerKey)))
-            .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')
-        : null;
-      // Se a chave mudou, desinscrever e recriar
-      if(existingKey && existingKey !== appKey) {
+      var existingKey = null;
+      try {
+        if(existingSub.options && existingSub.options.applicationServerKey) {
+          existingKey = btoa(String.fromCharCode.apply(null, new Uint8Array(existingSub.options.applicationServerKey)))
+            .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+        }
+      } catch(_) {}
+      // Recriar se: não tem chave, chave diferente, ou chave vazia
+      if(!existingKey || existingKey !== appKey) {
         await existingSub.unsubscribe();
         existingSub = null;
-        console.log('[Push] Chave VAPID mudou — reinscrevendo');
+        console.log('[Push] Subscription inválida ou com chave diferente — reinscrevendo');
       }
     }
 
@@ -6353,14 +6356,6 @@ var _finalizarPedidoOriginal = typeof finalizarPedido === 'function' ? finalizar
 })();
 
 
-// === REGISTRAR SERVICE WORKER ===
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').then(function() {
-    console.log('SW registrado');
-  }).catch(function(e) {
-    console.log('SW falhou:', e);
-  });
-}
 
 // ============================================================
 // MODO MESA — QR Code salão (sem login)
