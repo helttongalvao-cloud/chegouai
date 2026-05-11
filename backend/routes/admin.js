@@ -383,8 +383,8 @@ router.post(
         // Perfil de tentativa anterior com outro userId — remover o auth duplicado e reutilizar o existente
         await supabaseAdmin.auth.admin.deleteUser(userId);
         userId = perfilExistente.id;
-        // Atualizar senha do auth user original
-        await supabaseAdmin.auth.admin.updateUserById(userId, { password: senha });
+        // Atualizar e-mail e senha do auth user original
+        await supabaseAdmin.auth.admin.updateUserById(userId, { email, password: senha });
       }
 
       const { error: profileErr } = await supabaseAdmin
