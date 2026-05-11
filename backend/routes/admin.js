@@ -357,7 +357,7 @@ router.post(
 
       if (perfilExistente) {
         userId = perfilExistente.id;
-        await supabaseAdmin.auth.admin.updateUserById(userId, { password: senha });
+        await supabaseAdmin.auth.admin.updateUserById(userId, { email: emailInterno, password: senha });
       } else {
         // Novo cadastro — NÃO passar telefone no user_metadata para não conflitar com o trigger
         const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
