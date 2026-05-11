@@ -1038,9 +1038,16 @@ inicializarApp();
 // PUSH NOTIFICATIONS
 // ============================================
 async function ativarNotificacoesPush() {
-  if(!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    showToast('⚠️', 'Notificações não suportadas', 'Instale o app na tela inicial e abra por lá para ativar notificações.');
+    return;
+  }
   try {
     var perm = await Notification.requestPermission();
+    if(perm === 'denied') {
+      showToast('🔕', 'Permissão negada', 'Vá nas configurações do navegador e permita notificações para este site.');
+      return;
+    }
     if(perm !== 'granted') return;
 
     var keyResp = await fetch('/api/notifications/vapid-public-key').then(function(r){ return r.json(); });
