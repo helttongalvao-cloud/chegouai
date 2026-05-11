@@ -519,6 +519,29 @@ router.put('/motoboys/:id', async (req, res, next) => {
 });
 
 // =============================================
+// POST /api/admin/motoboys/:id/reset-senha — Redefinir senha do motoboy
+// =============================================
+router.post('/motoboys/:id/reset-senha', async (req, res, next) => {
+  try {
+    const { senha } = req.body;
+    if (!senha || senha.length < 6) return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres' });
+
+    const { data: motoboy } = await supabaseAdmin
+      .from('motoboys')
+      .select('user_id')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!motoboy?.user_id) return res.status(404).json({ error: 'Motoboy não encontrado' });
+
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(motoboy.user_id, { password: senha });
+    if (error) throw error;
+
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // PATCH /api/admin/motoboys/:id/toggle — Ativar/desativar motoboy
 // =============================================
 router.patch('/motoboys/:id/toggle', async (req, res, next) => {

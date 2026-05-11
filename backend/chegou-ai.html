@@ -4130,7 +4130,9 @@ function adminEditarMotoboy(mJson) {
     '<div style="display:flex;gap:8px;margin-top:16px;">' +
     '<button class="btn-principal" style="flex:1;" onclick="adminSalvarMotoboy(\'' + m.id + '\')">Salvar</button>' +
     '<button class="btn-acao secundario" style="flex:1;" onclick="document.getElementById(\'modal-admin-motoboy\').remove()">Cancelar</button>' +
-    '</div></div></div>';
+    '</div>' +
+    '<button class="btn-acao secundario" style="width:100%;margin-top:10px;color:#ff9800;border-color:#ff980040;" onclick="adminRedefinirSenhaMotoboy(\'' + m.id + '\', \'' + sanitizar(m.nome || '') + '\')">🔑 Redefinir senha</button>' +
+    '</div></div>';
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
@@ -4146,6 +4148,17 @@ async function adminSalvarMotoboy(id) {
     await apiCall('/api/admin/motoboys/' + id, { method: 'PUT', body });
     document.getElementById('modal-admin-motoboy').remove();
     renderAdmin('motoboys');
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function adminRedefinirSenhaMotoboy(id, nome) {
+  var novaSenha = prompt('Nova senha para ' + nome + ' (mínimo 6 caracteres):');
+  if (!novaSenha) return;
+  if (novaSenha.length < 6) return alert('Senha deve ter pelo menos 6 caracteres');
+  try {
+    await apiCall('/api/admin/motoboys/' + id + '/reset-senha', { method: 'POST', body: { senha: novaSenha } });
+    document.getElementById('modal-admin-motoboy').remove();
+    showToast('🔑', 'Senha redefinida', 'Nova senha salva para ' + nome);
   } catch(e) { alert('Erro: ' + e.message); }
 }
 
