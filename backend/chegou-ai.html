@@ -7182,11 +7182,12 @@ async function confirmarCodigo() {
       fecharModalCodigo();
       retiroupedido();
     } else {
-      // modo entrega: passa o código para confirmarEntregaReal
+      // modo entrega: salvar valores antes de fechar o modal (fecharModalCodigo zera _codigoPedidoId)
       var codigo = _codigoBuffer;
+      var pedidoIdEntrega = _codigoPedidoId;
       fecharModalCodigo();
       if(_codigoBtn) { _codigoBtn.disabled = true; _codigoBtn.textContent = 'Confirmando...'; }
-      await apiCall('/api/orders/' + _codigoPedidoId + '/status', { method: 'PATCH', body: { status: 'entregue', codigoEntrega: codigo } });
+      await apiCall('/api/orders/' + pedidoIdEntrega + '/status', { method: 'PATCH', body: { status: 'entregue', codigoEntrega: codigo } });
       pararRastreio();
       salvarFaseMotoboy(null, null);
       esconderChatFab();
