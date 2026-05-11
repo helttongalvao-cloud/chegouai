@@ -119,12 +119,27 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
 
     let emailLogin = profileEmail?.email || null;
 
-    // Se o perfil não tem e-mail (motoboy cadastrado pelo admin com perfil incompleto),
-    // buscar o e-mail diretamente no Supabase Auth via user_id do perfil
+    // Se o perfil não tem e-mail, buscar via user_id do próprio perfil
     if (!emailLogin && profileEmail?.id) {
       try {
         const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(profileEmail.id);
         if (authUser?.user?.email) emailLogin = authUser.user.email;
+      } catch (_) {}
+    }
+
+    // Se o perfil sequer tem o telefone (motoboy com perfil incompleto),
+    // buscar na tabela motoboys pelo telefone para obter o user_id
+    if (!emailLogin) {
+      try {
+        const { data: mb } = await supabaseAdmin
+          .from('motoboys')
+          .select('user_id')
+          .eq('telefone', telLimpo)
+          .maybeSingle();
+        if (mb?.user_id) {
+          const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(mb.user_id);
+          if (authUser?.user?.email) emailLogin = authUser.user.email;
+        }
       } catch (_) {}
     }
 
