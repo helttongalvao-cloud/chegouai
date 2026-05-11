@@ -120,10 +120,20 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
     const emailLogin = profileEmail?.email || `tel_${telLimpo}@chegouai.app`;
 
     // supabaseAnon nunca faz queries de DB — contaminação com JWT de usuário é inofensiva
-    const { data, error } = await supabaseAnon.auth.signInWithPassword({
+    let { data, error } = await supabaseAnon.auth.signInWithPassword({
       email: emailLogin,
       password: senha,
     });
+
+    // Fallback: perfil pode ter e-mail diferente do padrão (ex: motoboy cadastrado pelo admin)
+    if (error && profileEmail?.email && emailLogin !== `tel_${telLimpo}@chegouai.app`) {
+      console.warn('[Auth/login] Tentando fallback tel_ para', telLimpo);
+      const fallback = await supabaseAnon.auth.signInWithPassword({
+        email: `tel_${telLimpo}@chegouai.app`,
+        password: senha,
+      });
+      if (!fallback.error) { data = fallback.data; error = null; }
+    }
 
     if (error) {
       console.error('[Auth/login] signInWithPassword error:', error.message, '| email usado:', emailLogin);

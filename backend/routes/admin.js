@@ -379,7 +379,8 @@ router.post(
 
       if (profileErr) {
         console.error('[Admin] Erro update profile:', profileErr.message);
-        // Nao bloquear — tentar inserir motoboy mesmo assim
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        return res.status(500).json({ error: 'Erro ao salvar perfil do motoboy: ' + profileErr.message });
       }
 
       // PASSO 3: Inserir na tabela motoboys (verificar se ja existe)
