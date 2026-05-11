@@ -343,55 +343,49 @@ router.post(
     }
 
     const { nome, telefone, email, senha, moto, chave_pix, mpUserId } = req.body;
+    const emailInterno = `tel_${telefone}@chegouai.app`;
 
     try {
-      // PASSO 1: Criar usuario no Supabase Auth
-      let userId;
-      const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password: senha,
-        email_confirm: true,
-        user_metadata: { nome, telefone },
-      });
-
-      if (authErr) {
-        // Se usuario ja existe, tentar buscar o id dele
-        if (authErr.message && authErr.message.includes('already')) {
-          const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-          const existing = users.find(u => u.email === email);
-          if (existing) {
-            userId = existing.id;
-            // Atualizar senha do usuário existente
-            await supabaseAdmin.auth.admin.updateUserById(userId, { password: senha });
-          } else {
-            return res.status(409).json({ error: 'E-mail já cadastrado no sistema' });
-          }
-        } else {
-          console.error('[Admin] Erro createUser:', authErr.message);
-          return res.status(400).json({ error: 'Erro ao criar usuario: ' + authErr.message });
-        }
-      } else {
-        userId = authData.user.id;
-      }
-
-      // PASSO 2: Upsert do perfil — se já existe perfil com esse telefone, atualizar em vez de conflitar
+      // PASSO 1: Se já existe perfil com esse telefone, só atualizar a senha
       const { data: perfilExistente } = await supabaseAdmin
         .from('profiles')
         .select('id')
         .eq('telefone', telefone)
         .maybeSingle();
 
-      if (perfilExistente && perfilExistente.id !== userId) {
-        // Perfil de tentativa anterior com outro userId — remover o auth duplicado e reutilizar o existente
-        await supabaseAdmin.auth.admin.deleteUser(userId);
+      let userId;
+
+      if (perfilExistente) {
         userId = perfilExistente.id;
-        // Atualizar e-mail e senha do auth user original
-        await supabaseAdmin.auth.admin.updateUserById(userId, { email, password: senha });
+        await supabaseAdmin.auth.admin.updateUserById(userId, { password: senha });
+      } else {
+        // Novo cadastro — NÃO passar telefone no user_metadata para não conflitar com o trigger
+        const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+          email: emailInterno,
+          password: senha,
+          email_confirm: true,
+          user_metadata: { nome },
+        });
+        if (authErr) {
+          if (authErr.message && authErr.message.includes('already')) {
+            // emailInterno já existe — buscar userId via listUsers
+            const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+            const existing = users.find(u => u.email === emailInterno);
+            if (!existing) return res.status(409).json({ error: 'Telefone já cadastrado' });
+            userId = existing.id;
+            await supabaseAdmin.auth.admin.updateUserById(userId, { password: senha });
+          } else {
+            throw authErr;
+          }
+        } else {
+          userId = authData.user.id;
+        }
       }
 
+      // PASSO 2: Upsert do perfil com telefone e e-mail interno
       const { error: profileErr } = await supabaseAdmin
         .from('profiles')
-        .upsert({ id: userId, nome, telefone, email, perfil: 'motoboy' });
+        .upsert({ id: userId, nome, telefone, email: emailInterno, perfil: 'motoboy' });
 
       if (profileErr) {
         console.error('[Admin] Erro update profile:', profileErr.message);
