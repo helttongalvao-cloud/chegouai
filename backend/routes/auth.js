@@ -111,29 +111,31 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
     // Buscar e-mail interno pelo telefone
     const { data: profileEmail, error: profileLookupErr } = await supabaseAdmin
       .from('profiles')
-      .select('email')
+      .select('id, email')
       .eq('telefone', telLimpo)
       .maybeSingle();
 
     console.log('[Auth/login] profileLookup:', { tel: telLimpo, email: profileEmail?.email || null, err: profileLookupErr?.message || null });
 
-    const emailLogin = profileEmail?.email || `tel_${telLimpo}@chegouai.app`;
+    let emailLogin = profileEmail?.email || null;
+
+    // Se o perfil não tem e-mail (motoboy cadastrado pelo admin com perfil incompleto),
+    // buscar o e-mail diretamente no Supabase Auth via user_id do perfil
+    if (!emailLogin && profileEmail?.id) {
+      try {
+        const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(profileEmail.id);
+        if (authUser?.user?.email) emailLogin = authUser.user.email;
+      } catch (_) {}
+    }
+
+    // Último fallback: formato padrão de clientes
+    if (!emailLogin) emailLogin = `tel_${telLimpo}@chegouai.app`;
 
     // supabaseAnon nunca faz queries de DB — contaminação com JWT de usuário é inofensiva
-    let { data, error } = await supabaseAnon.auth.signInWithPassword({
+    const { data, error } = await supabaseAnon.auth.signInWithPassword({
       email: emailLogin,
       password: senha,
     });
-
-    // Fallback: perfil pode ter e-mail diferente do padrão (ex: motoboy cadastrado pelo admin)
-    if (error && profileEmail?.email && emailLogin !== `tel_${telLimpo}@chegouai.app`) {
-      console.warn('[Auth/login] Tentando fallback tel_ para', telLimpo);
-      const fallback = await supabaseAnon.auth.signInWithPassword({
-        email: `tel_${telLimpo}@chegouai.app`,
-        password: senha,
-      });
-      if (!fallback.error) { data = fallback.data; error = null; }
-    }
 
     if (error) {
       console.error('[Auth/login] signInWithPassword error:', error.message, '| email usado:', emailLogin);
