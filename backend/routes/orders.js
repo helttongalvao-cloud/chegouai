@@ -1001,8 +1001,8 @@ router.post('/:id/chat', requireAuth, [param('id').isUUID()], async (req, res, n
   try {
     const pedido = await verificarAcessoChat(req.params.id, req.user);
     if (!pedido) return res.status(403).json({ error: 'Acesso negado' });
-    if (!['coletado', 'saiu_para_entrega'].includes(pedido.status)) {
-      return res.status(400).json({ error: 'Chat disponível apenas durante a entrega' });
+    if (!['aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega'].includes(pedido.status)) {
+      return res.status(400).json({ error: 'Chat disponível apenas após confirmação do pedido' });
     }
 
     const perfil = req.user.profile.perfil;

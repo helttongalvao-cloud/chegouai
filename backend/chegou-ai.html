@@ -7194,7 +7194,13 @@ async function confirmarCodigo() {
       renderMotoboy();
     }
   } catch(e) {
-    erroEl.textContent = e.message || 'Código inválido';
+    if (_codigoModo === 'entrega') {
+      // modal já fechado — mostrar toast e reabrir para nova tentativa
+      showToast('❌', 'Código incorreto', e.message || 'Verifique os 4 últimos dígitos do telefone');
+      abrirModalCodigo('entrega', pedidoIdEntrega, _codigoBtn);
+    } else {
+      erroEl.textContent = e.message || 'Código inválido';
+    }
     if(btn) { btn.disabled = false; btn.textContent = 'Confirmar'; }
     _codigoBuffer = '';
     atualizarDisplayCodigo();
