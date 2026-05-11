@@ -361,6 +361,8 @@ router.post(
           const existing = users.find(u => u.email === email);
           if (existing) {
             userId = existing.id;
+            // Atualizar senha do usuário existente
+            await supabaseAdmin.auth.admin.updateUserById(userId, { password: senha });
           } else {
             return res.status(409).json({ error: 'E-mail já cadastrado no sistema' });
           }
