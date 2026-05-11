@@ -372,14 +372,27 @@ router.post(
         userId = authData.user.id;
       }
 
-      // PASSO 2: Upsert do perfil para motoboy (sem sleep — idempotente)
+      // PASSO 2: Upsert do perfil — se já existe perfil com esse telefone, atualizar em vez de conflitar
+      const { data: perfilExistente } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('telefone', telefone)
+        .maybeSingle();
+
+      if (perfilExistente && perfilExistente.id !== userId) {
+        // Perfil de tentativa anterior com outro userId — remover o auth duplicado e reutilizar o existente
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        userId = perfilExistente.id;
+        // Atualizar senha do auth user original
+        await supabaseAdmin.auth.admin.updateUserById(userId, { password: senha });
+      }
+
       const { error: profileErr } = await supabaseAdmin
         .from('profiles')
         .upsert({ id: userId, nome, telefone, email, perfil: 'motoboy' });
 
       if (profileErr) {
         console.error('[Admin] Erro update profile:', profileErr.message);
-        await supabaseAdmin.auth.admin.deleteUser(userId);
         return res.status(500).json({ error: 'Erro ao salvar perfil do motoboy: ' + profileErr.message });
       }
 
