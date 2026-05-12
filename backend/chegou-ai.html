@@ -2461,8 +2461,10 @@ function irCheckout() {
   if(endSalvoEl && endSalvos.length > 0) {
     endSalvoEl.style.display = 'block';
     endSalvoEl.innerHTML = '<div style="font-size:12px;color:var(--texto2);margin-bottom:6px;">Endereços anteriores:</div>' +
-      endSalvos.slice(0,3).map(function(e) {
-        return '<div onclick="usarEnderecoSalvo(\'' + e.replace(/'/g, "\\'") + '\')" style="padding:8px 12px;border:1.5px solid var(--cinza3);border-radius:8px;font-size:13px;cursor:pointer;margin-bottom:4px;background:var(--cinza2);">📍 ' + sanitizar(e) + '</div>';
+      endSalvos.slice(0,3).map(function(e, idx) {
+        var ehCoordenada = /Lat:\s*[-\d.]+/i.test(e);
+        var label = ehCoordenada ? '📍 Localização no mapa' : sanitizar(e);
+        return '<div onclick="usarEnderecoSalvo(\'' + e.replace(/'/g, "\\'") + '\')" style="padding:8px 12px;border:1.5px solid var(--cinza3);border-radius:8px;font-size:13px;cursor:pointer;margin-bottom:4px;background:var(--cinza2);">' + label + '</div>';
       }).join('');
   } else if(endSalvoEl) {
     endSalvoEl.style.display = 'none';
@@ -2575,6 +2577,12 @@ async function aplicarCupom() {
 function usarEnderecoSalvo(end) {
   var endInput = document.getElementById('endereco-entrega');
   if(endInput) { endInput.value = end; simularFrete(end); }
+  // Se for coordenada, restaurar o mapa no ponto salvo
+  var m = end.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
+  if(m) {
+    clienteLat = parseFloat(m[1]); clienteLng = parseFloat(m[2]);
+    mostrarMapaPicker(clienteLat, clienteLng);
+  }
 }
 
 async function confirmarPedido() {
@@ -2715,9 +2723,10 @@ function abrirMapaSemGPS() {
   // Centraliza no estabelecimento atual ou em Guajará-AM como fallback
   var lat = (estAtual && estAtual.lat) ? parseFloat(estAtual.lat) : -1.4167;
   var lng = (estAtual && estAtual.lng) ? parseFloat(estAtual.lng) : -70.0333;
-  // Inicializa coords do cliente com o centro do mapa para cálculo de frete
   clienteLat = lat; clienteLng = lng;
   mostrarMapaPicker(lat, lng);
+  // Zoom 15 para ver a cidade — usuário navega até a casa
+  if(mapPicker) setTimeout(function(){ mapPicker.setZoom(15); }, 350);
   var endInput = document.getElementById('endereco-entrega');
   if(endInput && !endInput.value) endInput.placeholder = 'Adicione um ponto de referência (opcional)';
 }
@@ -2737,7 +2746,9 @@ function mostrarMapaPicker(lat, lng) {
 
   if(!mapPicker) {
     mapPicker = L.map('mapa-picker', { zoomControl: true, attributionControl: false }).setView([lat, lng], 17);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapPicker);
+    // Satélite Esri — melhor cobertura em cidades pequenas da Amazônia
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(mapPicker);
+    L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, opacity: 0.8 }).addTo(mapPicker);
     pinPicker = L.marker([lat, lng], { icon: pinIcon, draggable: true }).addTo(mapPicker);
     // Pin segue o centro do mapa ao arrastar o mapa (mais intuitivo no celular)
     mapPicker.on('move', function() {
