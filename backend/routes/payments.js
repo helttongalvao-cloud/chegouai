@@ -49,25 +49,20 @@ async function salvarCobranca(pedidoId, pagarmeOrderId, split) {
 
 // ─── Helper: processar pagamento aprovado (idempotente) ──────────────────
 async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
-  const { data: atual } = await supabaseAdmin
-    .from('pedidos')
-    .select('pagamento_status')
-    .eq('id', orderId)
-    .single();
-
-  if (!atual || atual.pagamento_status === 'aprovado') {
-    console.log(`[Pagar.me] Pedido ${orderId} já processado — ignorando`);
-    return;
-  }
-
+  // Atomic: WHERE pagamento_status != 'aprovado' garante que apenas uma execução
+  // concorrente (webhook duplicado ou cartão + webhook) insere os repasses
   const { data: pedido } = await supabaseAdmin
     .from('pedidos')
     .update({ pagamento_status: 'aprovado', status: 'aceito', pagarme_order_id: pagarmeOrderId })
     .eq('id', orderId)
+    .neq('pagamento_status', 'aprovado')
     .select('subtotal, taxa_entrega, forma_pagamento, estabelecimentos(tipo_entrega)')
-    .single();
+    .maybeSingle();
 
-  if (!pedido) return;
+  if (!pedido) {
+    console.log(`[Pagar.me] Pedido ${orderId} já processado — ignorando`);
+    return;
+  }
 
   const tipoEntrega = pedido.estabelecimentos?.tipo_entrega || 'app';
   const split = calcularSplit({
