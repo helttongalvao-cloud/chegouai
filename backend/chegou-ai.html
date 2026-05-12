@@ -1099,15 +1099,59 @@ async function ativarNotificacoesPush() {
 }
 
 function verificarBannerPush() {
-  var concedido = ('Notification' in window) && Notification.permission === 'granted';
+  var perm = ('Notification' in window) ? Notification.permission : 'denied';
+  var concedido = perm === 'granted';
+  var bloqueado = perm === 'denied';
   var bannerEst = document.getElementById('banner-push-est');
   var bannerMoto = document.getElementById('banner-push-moto');
   var bannerEstOk = document.getElementById('banner-push-est-ok');
   var bannerMotoOk = document.getElementById('banner-push-moto-ok');
-  if(bannerEst) bannerEst.style.display = concedido ? 'none' : 'flex';
-  if(bannerMoto) bannerMoto.style.display = concedido ? 'none' : 'flex';
+
+  // Atualizar conteúdo do banner dependendo do estado
+  [bannerEst, bannerMoto].forEach(function(b) {
+    if(!b) return;
+    var spanEl = b.querySelector('span');
+    var btnEl = b.querySelector('button');
+    if(bloqueado) {
+      if(spanEl) spanEl.textContent = '🔕 Notificações bloqueadas — pedidos chegam, mas sem alerta sonoro quando o app estiver fechado.';
+      if(btnEl) { btnEl.textContent = 'Como desbloquear'; btnEl.onclick = mostrarInstrucoesNotif; }
+    } else {
+      if(spanEl) spanEl.textContent = '🔕 Notificações desativadas — você pode perder pedidos!';
+      if(btnEl) {
+        btnEl.textContent = 'Ativar';
+        btnEl.onclick = function() { ativarNotificacoesPush().then(verificarBannerPush); };
+      }
+    }
+    b.style.display = concedido ? 'none' : 'flex';
+  });
   if(bannerEstOk) bannerEstOk.style.display = concedido ? 'flex' : 'none';
   if(bannerMotoOk) bannerMotoOk.style.display = concedido ? 'flex' : 'none';
+}
+
+function mostrarInstrucoesNotif() {
+  var ua = navigator.userAgent;
+  var isIOS = /iPhone|iPad|iPod/.test(ua);
+  var isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
+  var isAndroid = /Android/.test(ua);
+  var passos;
+  if(isIOS) {
+    passos = '1. Feche o navegador\n2. Abra o app <strong>Ajustes</strong> do iPhone\n3. Role até <strong>Safari</strong> → <strong>Configurações de Sites</strong> → <strong>Notificações</strong>\n4. Encontre <strong>chegouaiapp.com.br</strong> e toque em <strong>Permitir</strong>\n5. Volte ao app e toque em Ativar';
+  } else if(isSafari) {
+    passos = '1. No menu do Safari, vá em <strong>Safari → Configurações…</strong>\n2. Clique na aba <strong>Sites</strong>\n3. Clique em <strong>Notificações</strong> no menu lateral\n4. Encontre <strong>chegouaiapp.com.br</strong> e selecione <strong>Permitir</strong>\n5. Recarregue a página';
+  } else if(isAndroid) {
+    passos = '1. Toque no ícone de <strong>cadeado 🔒</strong> ou <strong>ⓘ</strong> na barra de endereço\n2. Toque em <strong>Permissões</strong> ou <strong>Configurações do site</strong>\n3. Toque em <strong>Notificações</strong> → <strong>Permitir</strong>\n4. Recarregue a página e toque em Ativar';
+  } else {
+    passos = '1. Clique no ícone de <strong>cadeado 🔒</strong> ou <strong>ⓘ</strong> na barra de endereço\n2. Clique em <strong>Permissões do site</strong> ou <strong>Notificações</strong>\n3. Selecione <strong>Permitir</strong>\n4. Recarregue a página e toque em Ativar';
+  }
+  var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;" onclick="this.remove()">' +
+    '<div style="background:var(--cinza2);border-radius:20px;padding:24px;max-width:340px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">' +
+      '<div style="font-size:18px;font-weight:700;margin-bottom:8px;">🔔 Como ativar notificações</div>' +
+      '<div style="font-size:12px;color:var(--texto2);margin-bottom:16px;line-height:1.5;white-space:pre-line;">' + passos + '</div>' +
+      '<div style="font-size:12px;color:var(--verde);background:rgba(0,200,83,0.1);border-radius:10px;padding:10px;margin-bottom:16px;">✅ Mesmo sem notificações, <strong>todos os pedidos chegam normalmente</strong> pelo app. O alerta sonoro funciona enquanto o app estiver aberto.</div>' +
+      '<button onclick="this.closest(\'[onclick]\').remove()" style="width:100%;padding:12px;border-radius:12px;border:none;background:var(--cinza3);color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;">Fechar</button>' +
+    '</div>' +
+  '</div>';
+  document.body.insertAdjacentHTML('beforeend', html);
 }
 
 async function testarPush() {
