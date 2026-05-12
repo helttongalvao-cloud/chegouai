@@ -643,9 +643,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value)">
       </div>
       <div style="display:flex;gap:8px;margin-top:8px;">
-        <button id="btn-localizacao" onclick="usarLocalizacao()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:12px;font-weight:600;cursor:pointer;">📡 Minha loc.</button>
-        <button onclick="mostrarInputLinkGMaps()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:12px;font-weight:600;cursor:pointer;">📎 Colar link</button>
-        <button onclick="abrirMapaSemGPS()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:12px;font-weight:600;cursor:pointer;">🗺️ Mapa</button>
+        <button id="btn-localizacao" onclick="usarLocalizacao()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📡 Minha localização</button>
+        <button onclick="mostrarInputLinkGMaps()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📎 Colar link</button>
       </div>
       <div id="link-gmaps-wrap" style="display:none;margin-top:10px;">
         <div style="font-size:12px;color:var(--texto2);margin-bottom:8px;line-height:1.4;">
@@ -655,12 +654,6 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
           style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;">
         <div id="link-gmaps-erro" style="font-size:12px;color:var(--erro);margin-top:4px;display:none;"></div>
         <button onclick="confirmarLinkGMaps(this)" style="width:100%;padding:12px;margin-top:8px;background:var(--verde);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;cursor:pointer;">📍 Confirmar localização</button>
-      </div>
-      <div id="mapa-picker-wrap" style="display:none;width:100%;height:220px;border-radius:12px;overflow:hidden;margin-top:10px;position:relative;">
-        <div id="mapa-picker" style="width:100%;height:100%;"></div>
-        <div style="position:absolute;bottom:8px;left:0;right:0;text-align:center;z-index:1000;pointer-events:none;">
-          <span style="background:rgba(0,0,0,0.65);color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;">📍 Mova o mapa até sua casa e solte</span>
-        </div>
       </div>
       <label style="display:flex;align-items:center;margin-top:8px;font-size:14px;color:var(--texto);cursor:pointer;">
         <input type="checkbox" id="salvar-endereco" checked style="margin-right:8px;accent-color:var(--verde);">
