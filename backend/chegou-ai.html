@@ -2724,10 +2724,13 @@ function usarLocalizacao() {
 }
 
 function abrirMapaSemGPS() {
-  var lat = (estAtual && estAtual.lat) ? parseFloat(estAtual.lat) : -1.4167;
-  var lng = (estAtual && estAtual.lng) ? parseFloat(estAtual.lng) : -70.0333;
+  var temCoords = estAtual && estAtual.lat && estAtual.lng;
+  var lat = temCoords ? parseFloat(estAtual.lat) : -1.4167;
+  var lng = temCoords ? parseFloat(estAtual.lng) : -70.0333;
+  // Zoom 16 quando a loja tem GPS (perto da loja), 13 quando é fallback (cidade toda visível)
+  var zoom = temCoords ? 16 : 13;
   clienteLat = lat; clienteLng = lng;
-  mostrarMapaPicker(lat, lng, 15);
+  mostrarMapaPicker(lat, lng, zoom);
 }
 
 function mostrarMapaPicker(lat, lng, zoom) {
