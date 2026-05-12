@@ -863,7 +863,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         </div>
         <button id="btn-toggle-pausar" onclick="togglePausar()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Pausar</button>
       </div>
-      <div class="secao-titulo">Pedidos em aberto</div>
+      <div id="tabs-pedido" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;"></div>
       <div class="pedidos-lista" id="pedidos-estabelecimento"></div>
     </div>
     <div id="est-secao-cardapio" style="display:none;"></div>
@@ -3664,7 +3664,7 @@ async function renderEstabelecimento() {
         '<button id="btn-toggle-pausar" onclick="togglePausar()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Pausar</button>' +
       '</div>' +
       (('Notification' in window && Notification.permission !== 'granted') ? '<div style="margin-bottom:12px;padding:12px 16px;border-radius:14px;background:rgba(255,180,0,0.12);border:1.5px solid #ffb400;display:flex;align-items:center;justify-content:space-between;gap:10px;"><div style="font-size:13px;font-weight:600;color:#ffb400;">🔔 Notificações desativadas</div><button onclick="ativarNotificacoesPush().then(function(){ renderEstabelecimento(); })" style="padding:8px 14px;border-radius:10px;border:none;background:#ffb400;color:#000;font-weight:700;font-size:12px;cursor:pointer;">Ativar</button></div>' : '') +
-      '<div class="secao-titulo">Pedidos em aberto</div>' +
+      '<div id="tabs-pedido" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;"></div>' +
       '<div class="pedidos-lista" id="pedidos-estabelecimento"></div>';
   }
   var lista = document.getElementById('pedidos-estabelecimento');
@@ -3734,10 +3734,17 @@ async function renderEstabelecimento() {
         itensTxt = '📝 <em style="color:var(--texto2);">' + sanitizar(p.lista_compras).replace(/\n/g,'<br>') + '</em>';
       } else {
         itensTxt = (p.itens_pedido || []).map(function(i){
-          var obs = i.observacao ? ' <em style="color:var(--verde);font-size:11px;">(' + sanitizar(i.observacao) + ')</em>' : '';
-          var comps = (i.complementos && i.complementos.length) ? ' <span style="color:var(--texto2);font-size:11px;">[' + i.complementos.map(function(c){ return sanitizar(c.nome); }).join(', ') + ']</span>' : '';
-          return i.quantidade + 'x ' + sanitizar(i.nome) + comps + obs;
-        }).join('<br>');
+          var linhas = '<div style="padding:5px 0;border-bottom:1px solid var(--cinza3);">' +
+            '<span style="font-weight:700;color:var(--texto);">' + i.quantidade + 'x ' + sanitizar(i.nome) + '</span>';
+          if(i.complementos && i.complementos.length) {
+            linhas += '<div style="color:var(--texto2);font-size:12px;padding-left:10px;margin-top:2px;">› ' +
+              i.complementos.map(function(c){ return sanitizar(c.nome); }).join(' · ') + '</div>';
+          }
+          if(i.observacao) {
+            linhas += '<div style="color:var(--verde);font-size:12px;padding-left:10px;">✎ ' + sanitizar(i.observacao) + '</div>';
+          }
+          return linhas + '</div>';
+        }).join('');
       }
       var telNum = p.telefone_cliente ? p.telefone_cliente.replace(/\D/g,'') : '';
       var waMsg = encodeURIComponent('Olá! Sou da ' + (data.estabelecimento ? sanitizar(data.estabelecimento.nome) : 'loja') + '. Seu pedido está a caminho! 🛵');
@@ -3764,7 +3771,7 @@ async function renderEstabelecimento() {
             '<span style="font-size:22px;font-weight:900;color:var(--verde);font-family:monospace;letter-spacing:4px;">' + p.codigo_coleta + '</span>' +
           '</div>'
         : '';
-      return '<div class="card-pedido"' + (isEncerrado ? ' style="opacity:0.65;"' : '') + '>' +
+      return '<div class="card-pedido" data-status="' + p.status + '"' + (isEncerrado ? ' style="opacity:0.65;"' : '') + '>' +
         '<div class="pedido-header"><span class="pedido-num">Pedido #' + p.id.substring(0,8) + mesaTag + '</span>' +
         '<span class="badge-status ' + sc + '">' + sl + '</span></div>' +
         (nomeCliente ? '<div class="pedido-endereco" style="font-weight:600;color:var(--texto);">👤 ' + nomeCliente + '</div>' : '') +
@@ -3779,6 +3786,7 @@ async function renderEstabelecimento() {
         '</div></div>' +
       '</div>';
     }).join('');
+    renderTabsPedido(pedidos);
   } catch(e) {
     if(lista) lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar pedidos. Verifique a conexão.</div>';
   }
@@ -3839,6 +3847,66 @@ function imprimirComanda(id) {
   win.document.close();
   win.focus();
   setTimeout(function(){ win.print(); win.close(); }, 400);
+}
+
+// === ABAS DE STATUS DE PEDIDOS ===
+var _tabPedidoAtiva = 'novos';
+
+var _tabsCfg = [
+  { id: 'novos',   label: '🔔 Novos',    statuses: ['pendente','aceito'] },
+  { id: 'fazendo', label: '👨‍🍳 Fazendo',  statuses: ['preparando'] },
+  { id: 'prontos', label: '✅ Prontos',   statuses: ['pronto'] },
+  { id: 'saindo',  label: '🛵 Saindo',   statuses: ['coletado','saiu_para_entrega'] },
+  { id: 'todos',   label: '📋 Todos',    statuses: null },
+];
+
+function renderTabsPedido(pedidos) {
+  var wrap = document.getElementById('tabs-pedido');
+  if(!wrap) return;
+  // Contar por grupo
+  var contagem = {};
+  _tabsCfg.forEach(function(t) {
+    if(t.statuses) contagem[t.id] = pedidos.filter(function(p){ return t.statuses.includes(p.status); }).length;
+  });
+  // Determinar aba padrão: primeiro grupo com pedidos
+  var primaria = _tabsCfg.find(function(t){ return t.statuses && contagem[t.id] > 0; });
+  if(primaria) _tabPedidoAtiva = primaria.id;
+  else _tabPedidoAtiva = 'todos';
+
+  wrap.innerHTML = _tabsCfg.map(function(t) {
+    var cnt = t.statuses ? (contagem[t.id] || 0) : '';
+    var badge = (cnt > 0) ? ' <span style="background:var(--verde);color:#000;border-radius:10px;padding:1px 6px;font-size:11px;font-weight:800;">' + cnt + '</span>' : '';
+    var ativo = t.id === _tabPedidoAtiva;
+    return '<button onclick="filtrarTabPedido(\'' + t.id + '\')" id="tab-ped-' + t.id + '" style="white-space:nowrap;padding:7px 12px;border-radius:10px;border:' + (ativo ? 'none' : '1.5px solid var(--cinza3)') + ';background:' + (ativo ? 'var(--verde)' : 'var(--cinza2)') + ';color:' + (ativo ? 'var(--preto)' : 'var(--texto2)') + ';font-size:12px;font-weight:700;cursor:pointer;">' + t.label + badge + '</button>';
+  }).join('');
+  filtrarTabPedido(_tabPedidoAtiva, true);
+}
+
+function filtrarTabPedido(tabId, silencioso) {
+  _tabPedidoAtiva = tabId;
+  var cfg = _tabsCfg.find(function(t){ return t.id === tabId; });
+  // Atualizar visual dos botões
+  _tabsCfg.forEach(function(t) {
+    var b = document.getElementById('tab-ped-' + t.id);
+    if(!b) return;
+    var ativo = t.id === tabId;
+    b.style.background = ativo ? 'var(--verde)' : 'var(--cinza2)';
+    b.style.color = ativo ? 'var(--preto)' : 'var(--texto2)';
+    b.style.border = ativo ? 'none' : '1.5px solid var(--cinza3)';
+  });
+  // Mostrar/ocultar cards
+  var cards = document.querySelectorAll('#pedidos-estabelecimento .card-pedido');
+  var visiveis = 0;
+  cards.forEach(function(card) {
+    var s = card.getAttribute('data-status');
+    var mostrar = !cfg || !cfg.statuses || cfg.statuses.includes(s);
+    card.style.display = mostrar ? '' : 'none';
+    if(mostrar) visiveis++;
+  });
+  if(!silencioso && visiveis === 0) {
+    var lista = document.getElementById('pedidos-estabelecimento');
+    if(lista) lista.innerHTML = '<div class="vazio"><div class="vazio-icon">✅</div>Nenhum pedido nessa etapa</div>';
+  }
 }
 
 // === DASHBOARD STATS POR PERÍODO ===
