@@ -496,12 +496,26 @@ router.patch('/establishments/:id/toggle', async (req, res, next) => {
 // =============================================
 router.delete('/establishments/:id', async (req, res, next) => {
   try {
+    // Buscar user_id antes de deletar
+    const { data: est } = await supabaseAdmin
+      .from('estabelecimentos')
+      .select('user_id')
+      .eq('id', req.params.id)
+      .single();
+
     const { error } = await supabaseAdmin
       .from('estabelecimentos')
       .delete()
       .eq('id', req.params.id);
 
     if (error) throw error;
+
+    // Deletar perfil e usuário auth para impedir login fantasma
+    if (est?.user_id) {
+      await supabaseAdmin.from('profiles').delete().eq('id', est.user_id);
+      await supabaseAdmin.auth.admin.deleteUser(est.user_id);
+    }
+
     res.json({ ok: true, message: 'Loja excluída com sucesso' });
   } catch (err) {
     next(err);
