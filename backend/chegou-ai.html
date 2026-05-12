@@ -1051,7 +1051,7 @@ inicializarApp();
 async function ativarNotificacoesPush() {
   if(!('serviceWorker' in navigator) || !('PushManager' in window)) {
     showToast('⚠️', 'Notificações não suportadas', 'Instale o app na tela inicial e abra por lá para ativar notificações.');
-    return;
+    return; // Promise resolve implícita — .then() não quebra
   }
   try {
     var perm = await Notification.requestPermission();
