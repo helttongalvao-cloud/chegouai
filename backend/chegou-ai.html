@@ -2753,9 +2753,8 @@ function mostrarMapaPicker(lat, lng, zoom) {
 
   if(!mapPicker) {
     mapPicker = L.map('mapa-picker', { zoomControl: true, attributionControl: false }).setView([lat, lng], zoomInicial);
-    // Satélite Esri — melhor cobertura em cidades pequenas da Amazônia
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(mapPicker);
-    L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, opacity: 0.8 }).addTo(mapPicker);
+    // Google Maps híbrido — satélite + ruas + nomes (melhor para cidades da Amazônia)
+    L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['0','1','2','3'] }).addTo(mapPicker);
     pinPicker = L.marker([lat, lng], { icon: pinIcon, draggable: true }).addTo(mapPicker);
     // Pin segue o centro do mapa ao arrastar o mapa (mais intuitivo no celular)
     mapPicker.on('move', function() {
