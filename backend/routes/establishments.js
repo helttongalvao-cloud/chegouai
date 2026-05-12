@@ -198,6 +198,23 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
       .eq('pagamento_status', 'aprovado') // Só conta como pedido real se foi pago
       .neq('status', 'cancelado');
 
+    // Pedidos dos últimos 7 dias
+    const inicioSemana = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+    inicioSemana.setHours(0, 0, 0, 0);
+    const { data: pedidosSemana } = await supabaseAdmin
+      .from('pedidos').select('id, subtotal')
+      .eq('estabelecimento_id', est.id)
+      .gte('criado_em', inicioSemana.toISOString())
+      .eq('pagamento_status', 'aprovado').neq('status', 'cancelado');
+
+    // Pedidos do mês corrente
+    const inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
+    const { data: pedidosMes } = await supabaseAdmin
+      .from('pedidos').select('id, subtotal')
+      .eq('estabelecimento_id', est.id)
+      .gte('criado_em', inicioMes.toISOString())
+      .eq('pagamento_status', 'aprovado').neq('status', 'cancelado');
+
     const { data: pedidosAbertos, error: errPedidos } = await supabaseAdmin
       .from('pedidos')
       .select(`
@@ -227,6 +244,10 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
       stats: {
         pedidosHoje: pedidosHoje?.length || 0,
         faturamento: parseFloat(faturamento.toFixed(2)),
+        pedidosSemana: pedidosSemana?.length || 0,
+        faturamentoSemana: parseFloat(((pedidosSemana || []).reduce((s, p) => s + (p.subtotal || 0), 0)).toFixed(2)),
+        pedidosMes: pedidosMes?.length || 0,
+        faturamentoMes: parseFloat(((pedidosMes || []).reduce((s, p) => s + (p.subtotal || 0), 0)).toFixed(2)),
         comissaoPaga: parseFloat((faturamento * comissao.taxa / 100).toFixed(2)),
         saldoLiquido: parseFloat((faturamento * (1 - comissao.taxa / 100)).toFixed(2)),
       },

@@ -844,9 +844,14 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   </div>
   <div class="est-content" id="est-conteudo">
     <div id="est-secao-pedidos">
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button onclick="mudarPeriodoDash('hoje')" id="dash-btn-hoje" style="flex:1;padding:7px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-size:12px;font-weight:700;cursor:pointer;">Hoje</button>
+        <button onclick="mudarPeriodoDash('semana')" id="dash-btn-semana" style="flex:1;padding:7px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto2);font-size:12px;font-weight:700;cursor:pointer;">7 dias</button>
+        <button onclick="mudarPeriodoDash('mes')" id="dash-btn-mes" style="flex:1;padding:7px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto2);font-size:12px;font-weight:700;cursor:pointer;">Mês</button>
+      </div>
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-valor" id="est-pedidos-hoje">—</div><div class="stat-label">Pedidos hoje</div></div>
-        <div class="stat-card"><div class="stat-valor" id="est-faturamento">—</div><div class="stat-label">Faturamento hoje</div></div>
+        <div class="stat-card"><div class="stat-valor" id="est-pedidos-periodo">—</div><div class="stat-label" id="dash-label-pedidos">Pedidos hoje</div></div>
+        <div class="stat-card"><div class="stat-valor" id="est-faturamento-periodo">—</div><div class="stat-label" id="dash-label-fat">Faturamento hoje</div></div>
       </div>
       <div id="loja-status-bar" style="margin-bottom:16px;padding:12px 16px;border-radius:14px;border:1.5px solid var(--cinza3);background:var(--cinza2);display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <div>
@@ -3055,6 +3060,7 @@ async function renderCardapioEst(manterDestaque) {
       '<div class="prod-acoes">' +
         btnFoto +
         '<button class="btn-editar" onclick="gerenciarComplementos(\'' + p.id + '\', \'' + sanitizar(p.nome).replace(/'/g,"\\'") + '\')">🔧 Complementos</button>' +
+        '<button class="btn-editar" onclick="toggleDisponivel(\'' + p.id + '\',' + (!p.disponivel) + ',this)" style="background:' + (p.disponivel ? '#FF525215' : '#00C85315') + ';color:' + (p.disponivel ? 'var(--erro)' : 'var(--verde)') + ';">' + (p.disponivel ? '⏸ Pausar' : '▶ Disponível') + '</button>' +
         '<button class="btn-deletar" onclick="deletarProduto(\'' + p.id + '\')">🗑️ Remover</button>' +
       '</div>' +
     '</div>';
@@ -3618,9 +3624,14 @@ async function renderEstabelecimento() {
   if(!document.getElementById('pedidos-estabelecimento')) {
     var secao = document.getElementById('est-secao-pedidos');
     if(secao) secao.innerHTML =
+      '<div style="display:flex;gap:6px;margin-bottom:10px;">' +
+        '<button onclick="mudarPeriodoDash(\'hoje\')" id="dash-btn-hoje" style="flex:1;padding:7px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-size:12px;font-weight:700;cursor:pointer;">Hoje</button>' +
+        '<button onclick="mudarPeriodoDash(\'semana\')" id="dash-btn-semana" style="flex:1;padding:7px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto2);font-size:12px;font-weight:700;cursor:pointer;">7 dias</button>' +
+        '<button onclick="mudarPeriodoDash(\'mes\')" id="dash-btn-mes" style="flex:1;padding:7px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto2);font-size:12px;font-weight:700;cursor:pointer;">Mês</button>' +
+      '</div>' +
       '<div class="stats-grid">' +
-        '<div class="stat-card"><div class="stat-valor" id="est-pedidos-hoje">—</div><div class="stat-label">Pedidos hoje</div></div>' +
-        '<div class="stat-card"><div class="stat-valor" id="est-faturamento">—</div><div class="stat-label">Faturamento hoje</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" id="est-pedidos-periodo">—</div><div class="stat-label" id="dash-label-pedidos">Pedidos hoje</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" id="est-faturamento-periodo">—</div><div class="stat-label" id="dash-label-fat">Faturamento hoje</div></div>' +
       '</div>' +
       '<div id="loja-status-bar" style="margin-bottom:16px;padding:12px 16px;border-radius:14px;border:1.5px solid var(--cinza3);background:var(--cinza2);display:flex;align-items:center;justify-content:space-between;gap:10px;">' +
         '<div><div style="font-weight:600;font-size:14px;" id="loja-status-label">🟢 Loja aberta</div>' +
@@ -3638,8 +3649,8 @@ async function renderEstabelecimento() {
     // Atualizar stats do dashboard
     var stats = data.stats || {};
     var el;
-    el = document.getElementById('est-pedidos-hoje'); if(el) el.textContent = stats.pedidosHoje || 0;
-    el = document.getElementById('est-faturamento'); if(el) el.textContent = 'R$ ' + (stats.faturamento || 0).toFixed(2).replace('.',',');
+    _dashStats = stats;
+    atualizarStatsPeriodo();
     // Atualizar label cardápio pela categoria real
     if(data.estabelecimento) {
       window._lojistaEstId = data.estabelecimento.id;
@@ -3652,6 +3663,7 @@ async function renderEstabelecimento() {
       var labelPausado = document.getElementById('loja-status-label');
       if(btnPausar) { btnPausar.textContent = estasPausado ? 'Retomar' : 'Pausar'; btnPausar.style.background = estasPausado ? 'var(--erro)' : 'var(--verde)'; }
       if(labelPausado) labelPausado.textContent = estasPausado ? '🔴 Loja pausada' : '🟢 Loja aberta';
+      verificarHorarioAuto(data.estabelecimento);
     }
     var pedidos = data.pedidosAbertos || [];
     lista = document.getElementById('pedidos-estabelecimento');
@@ -3802,6 +3814,74 @@ function imprimirComanda(id) {
   win.document.close();
   win.focus();
   setTimeout(function(){ win.print(); win.close(); }, 400);
+}
+
+// === DASHBOARD STATS POR PERÍODO ===
+var _dashPeriodo = 'hoje';
+var _dashStats = {};
+var _ultimoEstadoAuto = null;
+
+function mudarPeriodoDash(p) {
+  _dashPeriodo = p;
+  ['hoje','semana','mes'].forEach(function(k) {
+    var b = document.getElementById('dash-btn-' + k);
+    if(!b) return;
+    if(k === p) { b.style.background = 'var(--verde)'; b.style.color = 'var(--preto)'; b.style.border = 'none'; }
+    else { b.style.background = 'var(--cinza2)'; b.style.color = 'var(--texto2)'; b.style.border = '1.5px solid var(--cinza3)'; }
+  });
+  atualizarStatsPeriodo();
+}
+
+function atualizarStatsPeriodo() {
+  var cfg = {
+    hoje:   { pedidos: 'pedidosHoje',    fat: 'faturamento',       lp: 'Pedidos hoje',    lf: 'Faturamento hoje' },
+    semana: { pedidos: 'pedidosSemana',  fat: 'faturamentoSemana', lp: 'Pedidos (7 dias)', lf: 'Fat. (7 dias)' },
+    mes:    { pedidos: 'pedidosMes',     fat: 'faturamentoMes',    lp: 'Pedidos (mês)',   lf: 'Fat. (mês)' },
+  };
+  var c = cfg[_dashPeriodo] || cfg.hoje;
+  var elP  = document.getElementById('est-pedidos-periodo');
+  var elF  = document.getElementById('est-faturamento-periodo');
+  var elLP = document.getElementById('dash-label-pedidos');
+  var elLF = document.getElementById('dash-label-fat');
+  if(elP)  elP.textContent  = _dashStats[c.pedidos] !== undefined ? _dashStats[c.pedidos] : '—';
+  if(elF)  elF.textContent  = _dashStats[c.fat]     !== undefined ? 'R$ ' + parseFloat(_dashStats[c.fat]).toFixed(2).replace('.',',') : '—';
+  if(elLP) elLP.textContent = c.lp;
+  if(elLF) elLF.textContent = c.lf;
+}
+
+// === ABERTURA/FECHAMENTO AUTOMÁTICO POR HORÁRIO ===
+function verificarHorarioAuto(est) {
+  if(!est || !est.horarios || !Object.keys(est.horarios).length) return;
+  if(est.pausado) return;
+  var agora = new Date();
+  var diaChave = ['dom','seg','ter','qua','qui','sex','sab'][agora.getDay()];
+  var h = est.horarios[diaChave];
+  var deveriaAbrir = false;
+  if(h && h.abre && h.fecha) {
+    var toMin = function(s) { var p = s.split(':'); return parseInt(p[0])*60 + parseInt(p[1]); };
+    var minAtual = agora.getHours()*60 + agora.getMinutes();
+    deveriaAbrir = minAtual >= toMin(h.abre) && minAtual < toMin(h.fecha);
+  }
+  var estado = deveriaAbrir ? 'aberto' : 'fechado';
+  if(_ultimoEstadoAuto === estado) return;
+  _ultimoEstadoAuto = estado;
+  if(deveriaAbrir !== !!est.aberto) {
+    apiCall('/api/establishments/me', { method: 'PUT', body: { aberto: deveriaAbrir } })
+      .then(function() { showToast(deveriaAbrir ? '🟢' : '🔴', deveriaAbrir ? 'Loja aberta automaticamente' : 'Loja fechada automaticamente', ''); })
+      .catch(function(){});
+  }
+}
+
+// === TOGGLE RÁPIDO DE DISPONIBILIDADE DE PRODUTO ===
+async function toggleDisponivel(prodId, novoDisponivel, btn) {
+  if(btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    await apiCall('/api/establishments/me/products/' + prodId, { method: 'PUT', body: { disponivel: novoDisponivel } });
+    renderCardapioEst(true);
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
+    if(btn) { btn.disabled = false; }
+  }
 }
 
 async function togglePausar() {
