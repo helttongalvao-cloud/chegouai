@@ -642,11 +642,14 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="campo" style="margin:0;">
         <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value)">
       </div>
-      <button id="btn-localizacao" onclick="usarLocalizacao()" style="width:100%;margin-top:8px;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📍 Usar minha localização atual</button>
-      <div id="mapa-picker-wrap" style="display:none;width:100%;height:200px;border-radius:12px;overflow:hidden;margin-top:10px;position:relative;">
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button id="btn-localizacao" onclick="usarLocalizacao()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📡 Minha localização</button>
+        <button onclick="abrirMapaSemGPS()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">🗺️ Escolher no mapa</button>
+      </div>
+      <div id="mapa-picker-wrap" style="display:none;width:100%;height:220px;border-radius:12px;overflow:hidden;margin-top:10px;position:relative;">
         <div id="mapa-picker" style="width:100%;height:100%;"></div>
         <div style="position:absolute;bottom:8px;left:0;right:0;text-align:center;z-index:1000;pointer-events:none;">
-          <span style="background:rgba(0,0,0,0.65);color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;">Arraste o pin para ajustar o local exato</span>
+          <span style="background:rgba(0,0,0,0.65);color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;">📍 Mova o mapa até sua casa e solte</span>
         </div>
       </div>
       <label style="display:flex;align-items:center;margin-top:8px;font-size:14px;color:var(--texto);cursor:pointer;">
@@ -2708,6 +2711,17 @@ function usarLocalizacao() {
   );
 }
 
+function abrirMapaSemGPS() {
+  // Centraliza no estabelecimento atual ou em Guajará-AM como fallback
+  var lat = (estAtual && estAtual.lat) ? parseFloat(estAtual.lat) : -1.4167;
+  var lng = (estAtual && estAtual.lng) ? parseFloat(estAtual.lng) : -70.0333;
+  // Inicializa coords do cliente com o centro do mapa para cálculo de frete
+  clienteLat = lat; clienteLng = lng;
+  mostrarMapaPicker(lat, lng);
+  var endInput = document.getElementById('endereco-entrega');
+  if(endInput && !endInput.value) endInput.placeholder = 'Adicione um ponto de referência (opcional)';
+}
+
 function mostrarMapaPicker(lat, lng) {
   var wrap = document.getElementById('mapa-picker-wrap');
   var endInput = document.getElementById('endereco-entrega');
@@ -2725,6 +2739,17 @@ function mostrarMapaPicker(lat, lng) {
     mapPicker = L.map('mapa-picker', { zoomControl: true, attributionControl: false }).setView([lat, lng], 17);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapPicker);
     pinPicker = L.marker([lat, lng], { icon: pinIcon, draggable: true }).addTo(mapPicker);
+    // Pin segue o centro do mapa ao arrastar o mapa (mais intuitivo no celular)
+    mapPicker.on('move', function() {
+      var c = mapPicker.getCenter();
+      pinPicker.setLatLng(c);
+    });
+    mapPicker.on('moveend', function() {
+      var c = mapPicker.getCenter();
+      clienteLat = c.lat; clienteLng = c.lng;
+      endInput.value = 'Lat: ' + c.lat.toFixed(6) + ', Lng: ' + c.lng.toFixed(6);
+      simularFrete(endInput.value);
+    });
     pinPicker.on('dragend', function(e) {
       var p = e.target.getLatLng();
       clienteLat = p.lat; clienteLng = p.lng;
