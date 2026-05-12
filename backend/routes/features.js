@@ -217,4 +217,46 @@ router.post('/pedido-lista', requireAuth, [
   }
 });
 
+// =============================================
+// POST /api/features/resolve-location — Resolve link do Google Maps para coordenadas
+// =============================================
+router.post('/resolve-location', async (req, res) => {
+  const { url } = req.body;
+  if (!url || typeof url !== 'string') return res.status(400).json({ error: 'URL obrigatória' });
+  if (url.length > 2048) return res.status(400).json({ error: 'URL muito longa' });
+
+  const extractCoords = (str) => {
+    let m;
+    m = str.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+    m = str.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+    m = str.match(/[?&]ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+    m = str.match(/maps\/place\/[^/]+\/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+    return null;
+  };
+
+  let coords = extractCoords(url);
+  if (coords) return res.json(coords);
+
+  // Tentar seguir redirect (links encurtados: maps.app.goo.gl, goo.gl, etc.)
+  try {
+    const https = require('https');
+    const expanded = await new Promise((resolve, reject) => {
+      const r = https.request(url, { method: 'HEAD', timeout: 5000 }, (resp) => {
+        resolve(resp.headers['location'] || url);
+      });
+      r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); });
+      r.on('error', reject);
+      r.end();
+    });
+    coords = extractCoords(expanded);
+    if (coords) return res.json(coords);
+  } catch (_) {}
+
+  return res.status(422).json({ error: 'Não foi possível extrair as coordenadas deste link' });
+});
+
 module.exports = router;

@@ -643,8 +643,18 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value)">
       </div>
       <div style="display:flex;gap:8px;margin-top:8px;">
-        <button id="btn-localizacao" onclick="usarLocalizacao()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📡 Minha localização</button>
-        <button onclick="abrirMapaSemGPS()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">🗺️ Escolher no mapa</button>
+        <button id="btn-localizacao" onclick="usarLocalizacao()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:12px;font-weight:600;cursor:pointer;">📡 Minha loc.</button>
+        <button onclick="mostrarInputLinkGMaps()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:12px;font-weight:600;cursor:pointer;">📎 Colar link</button>
+        <button onclick="abrirMapaSemGPS()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:12px;font-weight:600;cursor:pointer;">🗺️ Mapa</button>
+      </div>
+      <div id="link-gmaps-wrap" style="display:none;margin-top:10px;">
+        <div style="font-size:12px;color:var(--texto2);margin-bottom:8px;line-height:1.4;">
+          Peça para quem vai receber abrir o <strong style="color:var(--texto);">Google Maps</strong> → pressionar a localização da casa → tocar em <strong style="color:var(--texto);">Compartilhar</strong> → enviar o link pelo WhatsApp. Cole o link abaixo:
+        </div>
+        <input type="text" id="input-link-gmaps" placeholder="Cole o link do Google Maps aqui..."
+          style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;">
+        <div id="link-gmaps-erro" style="font-size:12px;color:var(--erro);margin-top:4px;display:none;"></div>
+        <button onclick="confirmarLinkGMaps(this)" style="width:100%;padding:12px;margin-top:8px;background:var(--verde);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;cursor:pointer;">📍 Confirmar localização</button>
       </div>
       <div id="mapa-picker-wrap" style="display:none;width:100%;height:220px;border-radius:12px;overflow:hidden;margin-top:10px;position:relative;">
         <div id="mapa-picker" style="width:100%;height:100%;"></div>
@@ -2470,10 +2480,12 @@ function irCheckout() {
     endSalvoEl.style.display = 'none';
   }
   
-  // Resetar mapa picker ao abrir checkout
+  // Resetar mapa picker e link ao abrir checkout
   if(mapPicker) { mapPicker.remove(); mapPicker = null; pinPicker = null; }
   var pickerWrap = document.getElementById('mapa-picker-wrap');
   if(pickerWrap) pickerWrap.style.display = 'none';
+  var linkWrap = document.getElementById('link-gmaps-wrap');
+  if(linkWrap) linkWrap.style.display = 'none';
   var btnLoc = document.getElementById('btn-localizacao');
   if(btnLoc) { btnLoc.textContent = '📡 Minha localização'; btnLoc.style.color = 'var(--texto2)'; btnLoc.style.borderColor = 'var(--cinza3)'; }
   var endEl = document.getElementById('endereco-entrega');
@@ -2729,8 +2741,95 @@ function abrirMapaSemGPS() {
   var lng = temCoords ? parseFloat(estAtual.lng) : -70.0333;
   // Zoom 14 quando a loja tem GPS (vê a cidade), 13 quando é fallback
   var zoom = temCoords ? 14 : 13;
+  // Ocultar seção de link ao abrir mapa
+  var linkWrap = document.getElementById('link-gmaps-wrap');
+  if(linkWrap) linkWrap.style.display = 'none';
   clienteLat = lat; clienteLng = lng;
   mostrarMapaPicker(lat, lng, zoom);
+}
+
+function mostrarInputLinkGMaps() {
+  var wrap = document.getElementById('link-gmaps-wrap');
+  if(!wrap) return;
+  var aberto = wrap.style.display !== 'none';
+  wrap.style.display = aberto ? 'none' : 'block';
+  if(!aberto) {
+    // Ocultar mapa picker se estiver aberto
+    var mapaWrap = document.getElementById('mapa-picker-wrap');
+    if(mapaWrap) mapaWrap.style.display = 'none';
+    if(mapPicker) { mapPicker.remove(); mapPicker = null; pinPicker = null; }
+    setTimeout(function(){ var inp = document.getElementById('input-link-gmaps'); if(inp) inp.focus(); }, 150);
+  }
+}
+
+function _extrairCoordsTexto(texto) {
+  texto = texto.trim();
+  var m;
+  // @lat,lng — formato padrão Google Maps com câmera
+  m = texto.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if(m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  // ?q=lat,lng
+  m = texto.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if(m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  // &ll=lat,lng
+  m = texto.match(/[?&]ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if(m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  // /place/.../@lat,lng
+  m = texto.match(/place\/[^/]+\/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if(m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  // geo:lat,lng
+  m = texto.match(/geo:(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if(m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  // Coordenadas puras: "-1.4165, -70.0335" ou "-1.4165,-70.0335"
+  m = texto.match(/^(-?\d{1,3}\.?\d+)\s*,\s*(-?\d{1,3}\.?\d+)$/);
+  if(m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  return null;
+}
+
+async function confirmarLinkGMaps(btn) {
+  var input = document.getElementById('input-link-gmaps');
+  var erroEl = document.getElementById('link-gmaps-erro');
+  var texto = (input.value || '').trim();
+  erroEl.style.display = 'none';
+  if(!texto) { erroEl.textContent = 'Cole um link ou coordenadas'; erroEl.style.display = 'block'; return; }
+
+  var coords = _extrairCoordsTexto(texto);
+  if(coords) { _aplicarCoordsEntrega(coords.lat, coords.lng); return; }
+
+  // Link encurtado — pedir ao backend para resolver
+  if(/goo\.gl|maps\.app\.goo\.gl|bit\.ly/.test(texto)) {
+    btn.disabled = true; btn.textContent = 'Resolvendo...';
+    try {
+      var resp = await apiCall('/api/features/resolve-location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: texto })
+      });
+      if(resp && resp.lat && resp.lng) { _aplicarCoordsEntrega(resp.lat, resp.lng); return; }
+      erroEl.textContent = 'Não foi possível extrair as coordenadas. Abra o link no navegador e copie a URL da barra de endereço.';
+    } catch(e) {
+      erroEl.textContent = 'Erro ao resolver o link. Tente outro formato.';
+    }
+    erroEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = '📍 Confirmar localização';
+    return;
+  }
+
+  erroEl.textContent = 'Link não reconhecido. Abra o link no navegador, copie a URL completa da barra de endereço e cole aqui.';
+  erroEl.style.display = 'block';
+}
+
+function _aplicarCoordsEntrega(lat, lng) {
+  var endInput = document.getElementById('endereco-entrega');
+  if(!endInput) return;
+  endInput.dataset.latLng = 'Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6);
+  endInput.value = '📍 Localização confirmada via link';
+  endInput.readOnly = true;
+  endInput.style.color = 'var(--verde)';
+  clienteLat = lat; clienteLng = lng;
+  simularFrete(endInput.dataset.latLng);
+  document.getElementById('link-gmaps-wrap').style.display = 'none';
+  showToast('✅', 'Localização confirmada', 'Coordenadas extraídas com sucesso');
 }
 
 function mostrarMapaPicker(lat, lng, zoom) {
@@ -3794,7 +3893,11 @@ async function renderEstabelecimento() {
         (nomeCliente ? '<div class="pedido-endereco" style="font-weight:600;color:var(--texto);">👤 ' + nomeCliente + '</div>' : '') +
         motoboyProprioTag +
         codigoColetaTag +
-        (p.tipo_pedido !== 'mesa' ? '<div class="pedido-endereco">📍 ' + (p.endereco_entrega || '') + '</div>' : '') +
+        (p.tipo_pedido !== 'mesa' ? (function(end){
+          var cm = end && end.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
+          if(cm) return '<div class="pedido-endereco">📍 <a href="https://maps.google.com/?q=' + cm[1] + ',' + cm[2] + '" target="_blank" style="color:var(--verde);text-decoration:none;font-weight:600;">Ver localização no Maps 🗺️</a></div>';
+          return '<div class="pedido-endereco">📍 ' + sanitizar(end || '') + '</div>';
+        })(p.endereco_entrega) : '') +
         tel +
         '<div class="pedido-itens">' + (itensTxt || '—') + '</div>' +
         '<div class="pedido-footer"><span class="pedido-total">R$ ' + parseFloat(p.subtotal || (p.total - (p.taxa_entrega || 0)) || 0).toFixed(2).replace('.',',') + pagBadge + '</span>' +
