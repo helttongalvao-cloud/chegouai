@@ -2475,7 +2475,9 @@ function irCheckout() {
   var pickerWrap = document.getElementById('mapa-picker-wrap');
   if(pickerWrap) pickerWrap.style.display = 'none';
   var btnLoc = document.getElementById('btn-localizacao');
-  if(btnLoc) { btnLoc.textContent = '📍 Usar minha localização atual'; btnLoc.style.color = 'var(--texto2)'; btnLoc.style.borderColor = 'var(--cinza3)'; }
+  if(btnLoc) { btnLoc.textContent = '📡 Minha localização'; btnLoc.style.color = 'var(--texto2)'; btnLoc.style.borderColor = 'var(--cinza3)'; }
+  var endEl = document.getElementById('endereco-entrega');
+  if(endEl) { endEl.readOnly = false; endEl.style.color = ''; endEl.dataset.latLng = ''; }
 
   irTela('tela-checkout');
 
@@ -2586,7 +2588,9 @@ function usarEnderecoSalvo(end) {
 }
 
 async function confirmarPedido() {
-  const end = document.getElementById('endereco-entrega').value.trim();
+  var endEl = document.getElementById('endereco-entrega');
+  // Se o campo está em modo mapa (readOnly), usar as coords guardadas no dataset
+  const end = (endEl.readOnly && endEl.dataset.latLng) ? endEl.dataset.latLng : endEl.value.trim();
   const tel = document.getElementById('checkout-telefone').value.replace(/[^0-9]/g,'');
   const isGuest = !authToken;
 
@@ -2720,23 +2724,23 @@ function usarLocalizacao() {
 }
 
 function abrirMapaSemGPS() {
-  // Centraliza no estabelecimento atual ou em Guajará-AM como fallback
   var lat = (estAtual && estAtual.lat) ? parseFloat(estAtual.lat) : -1.4167;
   var lng = (estAtual && estAtual.lng) ? parseFloat(estAtual.lng) : -70.0333;
   clienteLat = lat; clienteLng = lng;
-  mostrarMapaPicker(lat, lng);
-  // Zoom 15 para ver a cidade — usuário navega até a casa
-  if(mapPicker) setTimeout(function(){ mapPicker.setZoom(15); }, 350);
-  var endInput = document.getElementById('endereco-entrega');
-  if(endInput && !endInput.value) endInput.placeholder = 'Adicione um ponto de referência (opcional)';
+  mostrarMapaPicker(lat, lng, 15);
 }
 
-function mostrarMapaPicker(lat, lng) {
+function mostrarMapaPicker(lat, lng, zoom) {
   var wrap = document.getElementById('mapa-picker-wrap');
   var endInput = document.getElementById('endereco-entrega');
   if(!wrap) return;
+  var zoomInicial = zoom || 17;
   wrap.style.display = 'block';
-  endInput.value = 'Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6);
+  // Guardar lat/lng no dataset do campo; exibir label amigável
+  endInput.dataset.latLng = 'Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6);
+  endInput.value = '📍 Localização selecionada no mapa';
+  endInput.readOnly = true;
+  endInput.style.color = 'var(--verde)';
 
   var pinIcon = L.divIcon({
     className: '',
@@ -2745,7 +2749,7 @@ function mostrarMapaPicker(lat, lng) {
   });
 
   if(!mapPicker) {
-    mapPicker = L.map('mapa-picker', { zoomControl: true, attributionControl: false }).setView([lat, lng], 17);
+    mapPicker = L.map('mapa-picker', { zoomControl: true, attributionControl: false }).setView([lat, lng], zoomInicial);
     // Satélite Esri — melhor cobertura em cidades pequenas da Amazônia
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(mapPicker);
     L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, opacity: 0.8 }).addTo(mapPicker);
@@ -2758,22 +2762,22 @@ function mostrarMapaPicker(lat, lng) {
     mapPicker.on('moveend', function() {
       var c = mapPicker.getCenter();
       clienteLat = c.lat; clienteLng = c.lng;
-      endInput.value = 'Lat: ' + c.lat.toFixed(6) + ', Lng: ' + c.lng.toFixed(6);
-      simularFrete(endInput.value);
+      endInput.dataset.latLng = 'Lat: ' + c.lat.toFixed(6) + ', Lng: ' + c.lng.toFixed(6);
+      simularFrete(endInput.dataset.latLng);
     });
     pinPicker.on('dragend', function(e) {
       var p = e.target.getLatLng();
       clienteLat = p.lat; clienteLng = p.lng;
-      endInput.value = 'Lat: ' + p.lat.toFixed(6) + ', Lng: ' + p.lng.toFixed(6);
-      simularFrete(endInput.value);
+      endInput.dataset.latLng = 'Lat: ' + p.lat.toFixed(6) + ', Lng: ' + p.lng.toFixed(6);
+      simularFrete(endInput.dataset.latLng);
     });
     setTimeout(function() { if(mapPicker) mapPicker.invalidateSize(); }, 300);
   } else {
-    mapPicker.setView([lat, lng], 17);
+    mapPicker.setView([lat, lng], zoomInicial);
     pinPicker.setLatLng([lat, lng]);
     mapPicker.invalidateSize();
   }
-  simularFrete(endInput.value);
+  simularFrete(endInput.dataset.latLng || '');
 }
 
 // CACHE DO ESTABELECIMENTO
