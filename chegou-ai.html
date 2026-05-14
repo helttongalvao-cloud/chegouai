@@ -2728,8 +2728,15 @@ async function conectarMercadoPago(tipo) {
 
 // === REGISTRAR SERVICE WORKER ===
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').then(function() {
-    console.log('SW registrado');
+  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    reg.addEventListener('updatefound', function() {
+      var novoSW = reg.installing;
+      novoSW.addEventListener('statechange', function() {
+        if (novoSW.state === 'activated') {
+          window.location.reload();
+        }
+      });
+    });
   }).catch(function(e) {
     console.log('SW falhou:', e);
   });
