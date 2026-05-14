@@ -133,6 +133,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .item-nome { font-size:15px; font-weight:600; margin-bottom:3px; }
 .item-desc { font-size:13px; color:var(--texto2); margin-bottom:6px; }
 .item-preco { font-size:16px; font-weight:700; color:var(--verde); }
+.item-estoque { font-size:12px; color:var(--texto2); margin-top:2px; }
 .item-add { background:var(--verde); border:none; border-radius:10px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--preto); font-weight:700; transition:transform 0.15s; flex-shrink:0; }
 .item-add:active { transform:scale(0.9); }
 
@@ -1200,6 +1201,7 @@ function renderProdutos(produtos) {
         '<div class="item-nome">' + item.nome + '</div>' +
         '<div class="item-desc">' + (item.descricao || '') + '</div>' +
         '<div class="item-preco">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + '</div>' +
+        (item.estoque !== null && item.estoque !== undefined ? '<div class="item-estoque">' + item.estoque + ' em estoque</div>' : '') +
       '</div>' +
       '<button class="item-add" onclick="adicionarItem(' + i + ')">+</button>' +
     '</div>';
@@ -1461,6 +1463,7 @@ function renderCardapioEst() {
   var itensHtml = produtos.map(function(p, i) {
     var op = p.disponivel ? '1' : '0.4';
     var indisponivel = !p.disponivel ? '<div style="font-size:11px;color:var(--erro);margin-top:2px;">⛔ Indisponível</div>' : '';
+    var estoqueLabel = (p.estoque !== null && p.estoque !== undefined) ? '<div style="font-size:11px;color:var(--texto2);margin-top:2px;">📦 ' + p.estoque + ' em estoque</div>' : '';
     var preco = 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.',',');
     return '<div class="card-produto" data-id="' + p.id + '">' +
       '<div class="prod-emoji" style="opacity:' + op + '">' + (p.emoji || '🍽️') + '</div>' +
@@ -1468,6 +1471,7 @@ function renderCardapioEst() {
         '<div class="prod-nome">' + p.nome + '</div>' +
         '<div class="prod-desc">' + (p.descricao || '') + '</div>' +
         '<div class="prod-preco">' + preco + '</div>' +
+        estoqueLabel +
         indisponivel +
       '</div>' +
       '<div class="prod-acoes">' +
