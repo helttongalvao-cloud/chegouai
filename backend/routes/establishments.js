@@ -380,6 +380,7 @@ router.post(
     body('disponivel').optional().isBoolean(),
     body('categoria').optional().trim().isLength({ max: 50 }),
     body('imagem_url').optional().trim().isURL().withMessage('URL de imagem inválida'),
+    body('estoque').optional({ nullable: true }).isInt({ min: 0 }).withMessage('Estoque inválido'),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -396,7 +397,7 @@ router.post(
 
       if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
-      const { nome, descricao, preco, emoji, disponivel, categoria, imagem_url } = req.body;
+      const { nome, descricao, preco, emoji, disponivel, categoria, imagem_url, estoque } = req.body;
 
       const produtoData = {
         estabelecimento_id: est.id,
@@ -408,6 +409,7 @@ router.post(
       };
       if (categoria) produtoData.categoria = categoria;
       if (imagem_url) produtoData.imagem_url = imagem_url;
+      if (estoque !== undefined) produtoData.estoque = estoque === null ? null : parseInt(estoque);
 
       const { data, error } = await supabaseAdmin
         .from('produtos')
@@ -559,7 +561,7 @@ router.put(
       if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
       const campos = {};
-      ['nome', 'descricao', 'preco', 'emoji', 'disponivel', 'categoria', 'imagem_url'].forEach((key) => {
+      ['nome', 'descricao', 'preco', 'emoji', 'disponivel', 'categoria', 'imagem_url', 'estoque'].forEach((key) => {
         if (req.body[key] !== undefined) campos[key] = req.body[key];
       });
 

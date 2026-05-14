@@ -1548,6 +1548,7 @@ function abrirModalProduto(idx) {
     document.getElementById('prod-preco').value = p.preco;
     document.getElementById('prod-emoji').value = p.emoji || '🍽️';
     document.getElementById('prod-disponivel').checked = p.disponivel;
+    document.getElementById('prod-estoque').value = p.estoque !== null && p.estoque !== undefined ? p.estoque : '';
     emojiSelecionado = p.emoji || '🍽️';
     document.querySelectorAll('.emoji-op').forEach(function(e) {
       e.classList.toggle('selecionado', e.textContent === emojiSelecionado);
@@ -1557,6 +1558,7 @@ function abrirModalProduto(idx) {
     document.getElementById('prod-desc').value = '';
     document.getElementById('prod-preco').value = '';
     document.getElementById('prod-disponivel').checked = true;
+    document.getElementById('prod-estoque').value = '';
     emojiSelecionado = '🍔';
     document.querySelectorAll('.emoji-op').forEach(function(e,i){ e.classList.toggle('selecionado', i===0); });
   }
@@ -1581,6 +1583,8 @@ async function salvarProduto() {
   const precoRaw = parseFloat(document.getElementById('prod-preco').value);
   const preco = Math.round(precoRaw * 100) / 100; // sempre 2 casas decimais
   const disponivel = document.getElementById('prod-disponivel').checked;
+  const estoqueRaw = document.getElementById('prod-estoque').value.trim();
+  const estoque = estoqueRaw === '' ? null : parseInt(estoqueRaw);
   const idx = parseInt(document.getElementById('produto-idx').value);
 
   if(!nome) { document.getElementById('prod-nome').style.borderColor='var(--erro)'; return; }
@@ -1588,7 +1592,7 @@ async function salvarProduto() {
 
   btn.disabled = true; btn.textContent = 'Aguarde...';
 
-  const payload = { nome, descricao, preco, emoji: emojiSelecionado, disponivel };
+  const payload = { nome, descricao, preco, emoji: emojiSelecionado, disponivel, estoque };
   const produtos = estDataCache?.produtos || [];
   
   try {
@@ -2229,6 +2233,10 @@ function adminNav(btn, secao) {
         <div class="emoji-op" onclick="selecionarEmoji(this,'🍞')">🍞</div>
       </div>
       <input type="hidden" id="prod-emoji" value="🍔">
+    </div>
+    <div class="form-grupo">
+      <label>Quantidade em estoque <span style="color:var(--texto2);font-size:12px;">(deixe vazio = ilimitado)</span></label>
+      <input type="number" id="prod-estoque" placeholder="Ex: 50" min="0" step="1" style="width:100%;">
     </div>
     <div class="form-grupo">
       <div class="disponivel-toggle">

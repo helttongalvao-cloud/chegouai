@@ -76,7 +76,7 @@ router.post(
       const produtosIds = itens.map((i) => i.produtoId);
       const { data: produtos, error: prodErr } = await supabaseAdmin
         .from('produtos')
-        .select('id, nome, preco, disponivel')
+        .select('id, nome, preco, disponivel, estoque')
         .in('id', produtosIds)
         .eq('estabelecimento_id', estabelecimentoId)
         .eq('disponivel', true);
@@ -85,6 +85,16 @@ router.post(
         return res.status(400).json({
           error: 'Um ou mais produtos não encontrados ou indisponíveis',
         });
+      }
+
+      // Validar estoque disponível
+      const produtosMap0 = Object.fromEntries(produtos.map((p) => [p.id, p]));
+      for (const item of itens) {
+        const prod = produtosMap0[item.produtoId];
+        if (prod.estoque !== null && prod.estoque < item.quantidade) {
+          const restante = prod.estoque === 0 ? 'esgotado' : `apenas ${prod.estoque} disponível(is)`;
+          return res.status(400).json({ error: `"${prod.nome}" está ${restante}` });
+        }
       }
 
       // 3. Calcular subtotal

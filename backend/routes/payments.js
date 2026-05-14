@@ -81,6 +81,35 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
   }
   await supabaseAdmin.from('repasses').insert(repasses);
 
+  // Decrementar estoque dos produtos do pedido
+  const { data: itensPedido } = await supabaseAdmin
+    .from('itens_pedido')
+    .select('produto_id, quantidade')
+    .eq('pedido_id', orderId);
+
+  if (itensPedido?.length) {
+    const prodIds = itensPedido.map(i => i.produto_id);
+    const { data: prods } = await supabaseAdmin
+      .from('produtos')
+      .select('id, estoque')
+      .in('id', prodIds)
+      .not('estoque', 'is', null);
+
+    if (prods?.length) {
+      const estoqueMap = Object.fromEntries(prods.map(p => [p.id, p.estoque]));
+      for (const item of itensPedido) {
+        if (estoqueMap[item.produto_id] === undefined) continue;
+        const novoEstoque = Math.max(estoqueMap[item.produto_id] - item.quantidade, 0);
+        const update = { estoque: novoEstoque };
+        if (novoEstoque === 0) update.disponivel = false;
+        await supabaseAdmin
+          .from('produtos')
+          .update(update)
+          .eq('id', item.produto_id);
+      }
+    }
+  }
+
   console.log(
     `[Pagar.me] Pedido ${orderId} aprovado` +
     ` — lojista R$${split.valorLojista}` +
