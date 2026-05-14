@@ -1,4 +1,4 @@
-const CACHE = 'chegouai-v21';
+const CACHE = 'chegouai-v22';
 const PRECACHE = [
   '/app',
   '/manifest.json',
@@ -27,21 +27,31 @@ self.addEventListener('fetch', (e) => {
   // Rotas de API: sempre rede (sem cache)
   if (url.pathname.startsWith('/api/')) return;
 
-  // Recursos estáticos e o app shell: cache-first
+  // HTML do app: rede primeiro para garantir versão mais recente
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).then((resp) => {
+        if (resp.ok) {
+          const clone = resp.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, clone));
+        }
+        return resp;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Recursos estáticos (ícones, fontes): cache-first
   e.respondWith(
     caches.match(e.request).then((cached) => {
       if (cached) return cached;
       return fetch(e.request).then((resp) => {
-        // Cachear apenas respostas 200 do mesmo domínio
         if (resp.ok && (url.origin === self.location.origin || url.hostname.includes('googleapis'))) {
           const clone = resp.clone();
           caches.open(CACHE).then((c) => c.put(e.request, clone));
         }
         return resp;
-      }).catch(() => {
-        // Offline: retornar app shell para navegação
-        if (e.request.mode === 'navigate') return caches.match('/');
-      });
+      }).catch(() => null);
     })
   );
 });
