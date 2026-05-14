@@ -2734,6 +2734,26 @@ if ('serviceWorker' in navigator) {
     console.log('SW falhou:', e);
   });
 }
+
+// Safe area iOS: mede o valor real em pixels e aplica no header
+(function() {
+  function aplicarSafeArea() {
+    var probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:1px;height:1px;pointer-events:none;z-index:-1;';
+    document.body.appendChild(probe);
+    var safeTop = probe.getBoundingClientRect().top;
+    document.body.removeChild(probe);
+    if (safeTop > 0) {
+      var h = document.querySelector('.header');
+      if (h) h.style.paddingTop = (safeTop + 16) + 'px';
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', aplicarSafeArea);
+  } else {
+    aplicarSafeArea();
+  }
+})();
 </script>
 
 </body>
