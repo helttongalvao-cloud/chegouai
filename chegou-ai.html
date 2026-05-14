@@ -88,7 +88,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .perfil-btn .perfil-nome { font-size:11px; color:var(--texto2); font-weight:500; }
 
 /* HEADER */
-.header { background:var(--cinza1); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; border-bottom:1px solid var(--cinza3); }
+.header { background:var(--cinza1); padding:16px 20px; padding-top:calc(16px + env(safe-area-inset-top)); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; border-bottom:1px solid var(--cinza3); }
 .header-logo { display:flex; align-items:center; gap:10px; }
 .logo-mini { width:36px; height:36px; background:var(--verde); border-radius:10px; display:flex; align-items:center; justify-content:center; font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:800; color:var(--preto); }
 .header h3 { font-size:19px; font-weight:700; letter-spacing:-0.3px; }
