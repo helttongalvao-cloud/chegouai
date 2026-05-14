@@ -88,7 +88,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .perfil-btn .perfil-nome { font-size:11px; color:var(--texto2); font-weight:500; }
 
 /* HEADER */
-.header { background:var(--cinza1); padding:16px 20px; padding-top:calc(16px + env(safe-area-inset-top)); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; border-bottom:1px solid var(--cinza3); }
+.header { background:var(--cinza1); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; border-bottom:1px solid var(--cinza3); }
 .header-logo { display:flex; align-items:center; gap:10px; }
 .logo-mini { width:36px; height:36px; background:var(--verde); border-radius:10px; display:flex; align-items:center; justify-content:center; font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:800; color:var(--preto); }
 .header h3 { font-size:19px; font-weight:700; letter-spacing:-0.3px; }
@@ -2728,28 +2728,32 @@ async function conectarMercadoPago(tipo) {
 
 // === REGISTRAR SERVICE WORKER ===
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').then(function(reg) {
-    reg.addEventListener('updatefound', function() {
-      var novoSW = reg.installing;
-      novoSW.addEventListener('statechange', function() {
-        if (novoSW.state === 'activated') {
-          window.location.reload();
-        }
-      });
-    });
-  }).catch(function(e) {
+  // Recarrega automaticamente quando novo SW assume o controle
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    window.location.reload();
+  });
+
+  navigator.serviceWorker.register('/sw.js').catch(function(e) {
     console.log('SW falhou:', e);
   });
 }
 
-// Safe area iOS: mede o valor real em pixels e aplica no header
+// === SAFE AREA iOS ===
 (function() {
   function aplicarSafeArea() {
     var probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:1px;height:1px;pointer-events:none;z-index:-1;';
+    probe.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:1px;height:1px;pointer-events:none;z-index:-1;visibility:hidden;';
     document.body.appendChild(probe);
-    var safeTop = probe.getBoundingClientRect().top;
+    var safeTop = Math.round(probe.getBoundingClientRect().top);
     document.body.removeChild(probe);
+
+    if (safeTop === 0 && /iPhone/.test(navigator.userAgent)) {
+      var ph = window.screen.height * window.devicePixelRatio;
+      if (ph <= 1334) safeTop = 20;
+      else if (ph >= 2556) safeTop = 59;
+      else safeTop = 44;
+    }
+
     if (safeTop > 0) {
       var h = document.querySelector('.header');
       if (h) h.style.paddingTop = (safeTop + 16) + 'px';
@@ -2761,6 +2765,7 @@ if ('serviceWorker' in navigator) {
     aplicarSafeArea();
   }
 })();
+
 </script>
 
 </body>
