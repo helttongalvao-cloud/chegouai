@@ -142,7 +142,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .cat-btn.ativo, .cat-btn:hover { background:var(--verde); color:var(--preto); border-color:var(--verde); font-weight:600; }
 .estabelecimentos { display:flex; flex-direction:column; gap:14px; }
 .card-est { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:18px; overflow:hidden; cursor:pointer; transition:all 0.25s; }
-.card-est:hover { border-color:var(--verde); transform:translateY(-2px); }
+.card-est:hover { border-color:var(--verde); transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.35); }
 .card-est-img { width:100%; height:120px; object-fit:cover; background:var(--cinza3); display:flex; align-items:center; justify-content:center; font-size:48px; }
 .card-est-info { padding:14px; }
 .card-est-nome { font-size:16px; font-weight:700; margin-bottom:4px; }
@@ -424,7 +424,9 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .badge-desconto { position:absolute; top:8px; left:8px; background:#e53935; color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px; }
 
 /* HOME — cards compactos (estilo lista) */
-.card-est { display:flex; flex-direction:row; align-items:center; gap:14px; padding:12px 14px; border-radius:16px; }
+.card-est { display:flex; flex-direction:row; align-items:center; gap:14px; padding:12px 14px; border-radius:16px; box-shadow:0 2px 12px rgba(0,0,0,0.2); }
+.cardapio-banner { width:100%; height:160px; background:linear-gradient(135deg,var(--cinza2),var(--cinza3)); display:flex; align-items:center; justify-content:center; font-size:64px; overflow:hidden; position:relative; flex-shrink:0; }
+.cardapio-banner img { width:100%; height:100%; object-fit:cover; }
 .card-est-img { width:80px; height:80px; border-radius:12px; flex-shrink:0; overflow:hidden; position:relative; }
 .card-est-img img { width:100%; height:100%; object-fit:cover; display:block; }
 .card-est-placeholder { width:80px; height:80px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; border-radius:12px; flex-shrink:0; }
@@ -596,6 +598,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 <!-- CARDÁPIO -->
 <div class="tela" id="tela-cardapio">
+  <div id="est-banner" class="cardapio-banner">🏪</div>
   <div class="cardapio-header">
     <button class="btn-voltar" onclick="irHome()">← Voltar</button>
     <div class="est-destaque">
@@ -1658,8 +1661,10 @@ function entrarComo(perfil) {
     carregarFavoritos();
     irHome();
     var primeiroNome = currentUser && currentUser.nome ? currentUser.nome.split(' ')[0] : '';
+    var hora = new Date().getHours();
+    var saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
     var el = document.getElementById('home-greeting');
-    if(el) el.innerHTML = 'Olá' + (primeiroNome ? ', ' + primeiroNome + '!' : '!') + ' <span>O que vai pedir?</span>';
+    if(el) el.innerHTML = saudacao + (primeiroNome ? ', ' + primeiroNome + '!' : '!') + ' <span>O que vai pedir?</span>';
     if(pedidoAtualId) {
       // Verificar se o pedido ainda está ativo antes de redirecionar
       apiCall('/api/orders/' + pedidoAtualId).then(function(resp) {
@@ -2093,6 +2098,11 @@ async function abrirCardapio(id) {
 
     document.getElementById('est-avatar').textContent = estAtual.emoji || '🏪';
     document.getElementById('est-nome-cardapio').textContent = estAtual.nome;
+    var banner = document.getElementById('est-banner');
+    if(banner) {
+      if(estAtual.foto_url) { banner.innerHTML = '<img src="' + estAtual.foto_url + '" alt="">'; }
+      else { banner.innerHTML = estAtual.emoji || '🏪'; }
+    }
     var metaTxt = 'Aberto • ' + (estAtual.tempo_entrega || '30-45 min') + ' • Frete R$2-R$4';
     if(estAtual.valor_minimo && parseFloat(estAtual.valor_minimo) > 0) {
       metaTxt += ' • Mín. R$' + parseFloat(estAtual.valor_minimo).toFixed(2).replace('.',',');
