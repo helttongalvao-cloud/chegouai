@@ -212,6 +212,18 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .opcao-pag .pag-info .pag-desc { font-size:12px; color:var(--texto2); }
 .radio { width:20px; height:20px; border-radius:50%; border:2px solid var(--cinza4); margin-left:auto; transition:all 0.2s; }
 .opcao-pag.selecionado .radio { border-color:var(--verde); background:var(--verde); }
+/* Seletor débito/crédito e cartão salvo */
+.cartao-tipo-wrap { display:flex; gap:8px; margin-top:10px; }
+.btn-tipo-cartao { flex:1; padding:10px; border:1.5px solid var(--cinza4); border-radius:10px; background:var(--cinza2); color:var(--texto2); font-size:13px; font-weight:600; cursor:pointer; text-align:center; transition:all 0.2s; }
+.btn-tipo-cartao.ativo { border-color:var(--verde); color:var(--verde); background:#00C85310; }
+.cartao-salvo-opcao { background:var(--cinza3); border:1.5px solid var(--cinza4); border-radius:12px; padding:14px; display:flex; align-items:center; gap:12px; cursor:pointer; margin-top:10px; transition:all 0.2s; }
+.cartao-salvo-opcao.ativo { border-color:var(--verde); background:#00C85310; }
+.cartao-salvo-chip { background:linear-gradient(135deg,#1a2e1a,#003d1a); border-radius:8px; padding:6px 10px; font-size:11px; font-weight:700; letter-spacing:1px; color:var(--verde); }
+/* Modal cartão salvo */
+.modal-cartao-display { background:linear-gradient(135deg,#0d1f12,#003d1a); border-radius:16px; padding:20px; display:flex; flex-direction:column; gap:6px; }
+.modal-cartao-brand { font-size:12px; color:var(--texto2); text-transform:uppercase; letter-spacing:2px; }
+.modal-cartao-num { font-size:22px; font-weight:700; letter-spacing:4px; color:#fff; margin:4px 0; }
+.modal-cartao-info { font-size:12px; color:var(--texto2); }
 
 /* PEDIDO CONFIRMADO */
 #tela-confirmado { background:var(--preto); }
@@ -562,7 +574,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     </div>
     <button class="header-acao" onclick="irLogin()" style="margin-left:8px;">Sair</button>
     <div class="btn-icone" id="btn-instalar-home" onclick="instalarApp()" title="Instalar app" style="display:none;">📲</div>
-    <div class="btn-icone" onclick="abrirHistorico()">👤</div>
+    <div class="btn-icone" onclick="abrirGerenciarCartao()" title="Meu cartão">💳</div>
   </div>
   <div class="home-greeting" id="home-greeting">Olá! <span>O que vai pedir?</span></div>
   <div class="home-content">
@@ -702,6 +714,14 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
           </div>
           <div class="radio"></div>
         </div>
+      </div>
+      <!-- Tipo débito/crédito + cartão salvo — aparece ao selecionar Cartão -->
+      <div id="cartao-extras" style="display:none;margin-top:4px;">
+        <div class="cartao-tipo-wrap">
+          <button class="btn-tipo-cartao ativo" id="btn-credito" onclick="selecionarTipoCartao('credito')">Crédito</button>
+          <button class="btn-tipo-cartao" id="btn-debito" onclick="selecionarTipoCartao('debito')">Débito</button>
+        </div>
+        <div id="cartao-salvo-bloco"></div>
       </div>
       <div id="campo-cpf-pix" style="margin-top:12px;">
         <input type="text" id="checkout-cpf" placeholder="CPF (obrigatório para Pix)" maxlength="14" inputmode="numeric" oninput="mascaraCPF(this)" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;box-sizing:border-box;">
@@ -1354,13 +1374,137 @@ async function pagarPix(pedidoId) {
 // ============================================
 // PAGAMENTO CARTÃO — Checkout transparente Asaas
 // ============================================
+// ── Cartão salvo ────────────────────────────────────────────────────────────
+var _tipoCartaoSelecionado = 'credito';
+var _usarCartaoSalvo = false;
+
+function getCartaoSalvo() {
+  try { return JSON.parse(localStorage.getItem('chegouai_cartao_salvo')); } catch(_) { return null; }
+}
+
+function abrirGerenciarCartao() {
+  var cartao = getCartaoSalvo();
+  var corpo = document.getElementById('modal-cartao-corpo');
+  if (cartao) {
+    corpo.innerHTML =
+      '<div class="modal-cartao-display">' +
+        '<div class="modal-cartao-brand">' + (cartao.brand || 'Cartão') + '</div>' +
+        '<div class="modal-cartao-num">•••• •••• •••• ' + cartao.last4 + '</div>' +
+        '<div class="modal-cartao-info">' + cartao.holder_name + ' &nbsp;|&nbsp; ' + String(cartao.exp_month).padStart(2,'0') + '/' + cartao.exp_year + '</div>' +
+      '</div>' +
+      '<button onclick="removerCartaoSalvo()" style="width:100%;margin-top:14px;padding:13px;border-radius:12px;border:1.5px solid var(--erro);background:transparent;color:var(--erro);font-size:14px;font-weight:700;cursor:pointer;">Remover cartão</button>';
+  } else {
+    corpo.innerHTML =
+      '<p style="color:var(--texto2);font-size:13px;margin-bottom:14px;">Salve seu cartão para pagar mais rápido nas próximas compras.</p>' +
+      '<form id="form-salvar-cartao" onsubmit="salvarCartao(event)" autocomplete="off"><div style="display:grid;gap:10px;">' +
+        '<input id="sc-nome" placeholder="Nome no cartão" style="' + _estiloInput() + '" required>' +
+        '<input id="sc-numero" placeholder="Número do cartão" maxlength="19" oninput="mascaraCartao(this)" inputmode="numeric" style="' + _estiloInput() + '" required>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">' +
+          '<input id="sc-mes" placeholder="MM" maxlength="2" inputmode="numeric" style="' + _estiloInput() + '" required>' +
+          '<input id="sc-ano" placeholder="AAAA" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
+          '<input id="sc-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
+        '</div>' +
+        '<button type="submit" class="btn-principal" style="margin-top:4px;">💾 Salvar cartão</button>' +
+      '</div></form>';
+  }
+  document.getElementById('modal-cartao').classList.add('aberto');
+}
+
+async function salvarCartao(e) {
+  e.preventDefault();
+  var btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    var cartaoExistente = getCartaoSalvo();
+    var resp = await apiCall('/api/payments/salvar-cartao', {
+      method: 'POST',
+      body: {
+        holderName:  document.getElementById('sc-nome').value.trim(),
+        cardNumber:  document.getElementById('sc-numero').value.replace(/\D/g,''),
+        expiryMonth: document.getElementById('sc-mes').value.trim(),
+        expiryYear:  document.getElementById('sc-ano').value.trim(),
+        cvv:         document.getElementById('sc-cvv').value.trim(),
+        customerId:  cartaoExistente?.customer_id || null,
+      },
+    });
+    localStorage.setItem('chegouai_cartao_salvo', JSON.stringify({
+      customer_id: resp.customer_id,
+      card_id:     resp.card_id,
+      last4:       resp.last4,
+      brand:       resp.brand,
+      holder_name: resp.holder_name,
+      exp_month:   resp.exp_month,
+      exp_year:    resp.exp_year,
+    }));
+    document.getElementById('modal-cartao').classList.remove('aberto');
+    mostrarToast('Cartão salvo com sucesso! 💳');
+  } catch(err) {
+    btn.disabled = false; btn.textContent = '💾 Salvar cartão';
+    mostrarToast('Erro: ' + err.message, 'erro');
+  }
+}
+
+function removerCartaoSalvo() {
+  localStorage.removeItem('chegouai_cartao_salvo');
+  document.getElementById('modal-cartao').classList.remove('aberto');
+  mostrarToast('Cartão removido');
+}
+
+function selecionarTipoCartao(tipo) {
+  _tipoCartaoSelecionado = tipo;
+  document.getElementById('btn-credito').classList.toggle('ativo', tipo === 'credito');
+  document.getElementById('btn-debito').classList.toggle('ativo', tipo === 'debito');
+  // Parcelas só disponíveis no crédito
+  var parcelasEl = document.getElementById('cc-parcelas');
+  if (parcelasEl) parcelasEl.style.display = tipo === 'credito' ? '' : 'none';
+}
+
+function renderCartaoSalvoCheckout() {
+  var bloco = document.getElementById('cartao-salvo-bloco');
+  if (!bloco) return;
+  var cartao = getCartaoSalvo();
+  if (!cartao) { bloco.innerHTML = ''; _usarCartaoSalvo = false; return; }
+  _usarCartaoSalvo = true; // default: usar salvo
+  bloco.innerHTML =
+    '<div class="cartao-salvo-opcao ativo" id="opt-cartao-salvo" onclick="toggleUsarCartaoSalvo(true)">' +
+      '<span class="cartao-salvo-chip">•••• ' + cartao.last4 + '</span>' +
+      '<div style="flex:1;"><div style="font-size:13px;font-weight:600;">' + (cartao.brand||'Cartão') + ' salvo</div>' +
+        '<div style="font-size:11px;color:var(--texto2);">' + cartao.holder_name + '</div></div>' +
+      '<div class="radio" style="border-color:var(--verde);background:var(--verde);"></div>' +
+    '</div>' +
+    '<div class="cartao-salvo-opcao" id="opt-cartao-novo" onclick="toggleUsarCartaoSalvo(false)">' +
+      '<span style="font-size:20px;">➕</span>' +
+      '<div style="flex:1;font-size:13px;font-weight:600;">Usar outro cartão</div>' +
+      '<div class="radio"></div>' +
+    '</div>';
+}
+
+function toggleUsarCartaoSalvo(usar) {
+  _usarCartaoSalvo = usar;
+  var optSalvo = document.getElementById('opt-cartao-salvo');
+  var optNovo  = document.getElementById('opt-cartao-novo');
+  if (optSalvo) optSalvo.classList.toggle('ativo', usar);
+  if (optNovo)  optNovo.classList.toggle('ativo', !usar);
+  if (optSalvo) optSalvo.querySelector('.radio').style.cssText = usar ? 'border-color:var(--verde);background:var(--verde);margin-left:auto;' : 'margin-left:auto;';
+  if (optNovo)  optNovo.querySelector('.radio').style.cssText  = !usar ? 'border-color:var(--verde);background:var(--verde);margin-left:auto;' : 'margin-left:auto;';
+  // mostrar/esconder form de novo cartão dentro do modal de pagamento
+  var formNovo = document.getElementById('form-cartao-novo');
+  if (formNovo) formNovo.style.display = usar ? 'none' : 'block';
+}
+
+// ── pagarCartao modificado ───────────────────────────────────────────────────
 async function pagarCartao(pedidoId) {
   var total = document.getElementById('total-valor').textContent;
+  var cartao = getCartaoSalvo();
+  var ehDebito = _tipoCartaoSelecionado === 'debito';
+
   document.getElementById('modal-pagamento').classList.add('aberto');
-  document.getElementById('pag-tipo').textContent = 'Cartão de crédito';
+  document.getElementById('pag-tipo').textContent = ehDebito ? 'Cartão de débito' : 'Cartão de crédito';
   document.getElementById('pag-valor').textContent = total;
   document.getElementById('pag-instrucao').textContent = 'Pagamento 100% seguro';
-  document.getElementById('pag-detalhe').innerHTML =
+
+  var formNovo =
+    '<div id="form-cartao-novo" style="' + (cartao && _usarCartaoSalvo ? 'display:none;' : '') + '">' +
     '<form id="form-cartao" onsubmit="submitCartao(event,\'' + pedidoId + '\')" autocomplete="off">' +
     '<div style="display:grid;gap:10px;margin-top:4px;">' +
     '<input id="cc-nome" placeholder="Nome no cartão" style="' + _estiloInput() + '" required>' +
@@ -1371,11 +1515,40 @@ async function pagarCartao(pedidoId) {
       '<input id="cc-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
     '</div>' +
     '<input id="cc-cpf" placeholder="CPF do titular (somente números)" maxlength="14" oninput="mascaraCPF(this)" inputmode="numeric" style="' + _estiloInput() + '">' +
-    '<select id="cc-parcelas" style="' + _estiloInput() + '">' +
+    (ehDebito ? '' : '<select id="cc-parcelas" style="' + _estiloInput() + '">' +
       [1,2,3,4,5,6,7,8,9,10,11,12].map(function(n){ return '<option value="'+n+'">'+n+'x sem juros</option>'; }).join('') +
-    '</select>' +
-    '<button type="submit" class="btn-principal" style="margin-top:4px;">💳 Pagar agora</button>' +
-    '</div></form>';
+    '</select>') +
+    '</div></form></div>';
+
+  var cartaoSalvoUI = '';
+  if (cartao) {
+    cartaoSalvoUI =
+      '<div class="cartao-salvo-opcao ativo" id="modal-opt-salvo" onclick="toggleModalCartao(true)" style="margin-bottom:8px;">' +
+        '<span class="cartao-salvo-chip">•••• ' + cartao.last4 + '</span>' +
+        '<div style="flex:1;"><div style="font-size:13px;font-weight:600;">' + (cartao.brand||'Cartão') + ' •••• ' + cartao.last4 + '</div>' +
+          '<div style="font-size:11px;color:var(--texto2);">Cartão salvo</div></div>' +
+        '<div class="radio" style="border-color:var(--verde);background:var(--verde);margin-left:auto;"></div>' +
+      '</div>' +
+      '<div class="cartao-salvo-opcao" id="modal-opt-novo" onclick="toggleModalCartao(false)" style="margin-bottom:10px;">' +
+        '<span style="font-size:20px;">➕</span>' +
+        '<div style="flex:1;font-size:13px;font-weight:600;">Usar outro cartão</div>' +
+        '<div class="radio" style="margin-left:auto;"></div>' +
+      '</div>';
+  }
+
+  document.getElementById('pag-detalhe').innerHTML =
+    cartaoSalvoUI + formNovo +
+    '<button class="btn-principal" style="margin-top:10px;" onclick="submitCartaoSalvo(\'' + pedidoId + '\')">💳 Pagar agora</button>';
+}
+
+function toggleModalCartao(usarSalvo) {
+  _usarCartaoSalvo = usarSalvo;
+  var optSalvo = document.getElementById('modal-opt-salvo');
+  var optNovo  = document.getElementById('modal-opt-novo');
+  var formNovo = document.getElementById('form-cartao-novo');
+  if (optSalvo) { optSalvo.classList.toggle('ativo', usarSalvo); optSalvo.querySelector('.radio').style.cssText = usarSalvo ? 'border-color:var(--verde);background:var(--verde);margin-left:auto;' : 'margin-left:auto;'; }
+  if (optNovo)  { optNovo.classList.toggle('ativo', !usarSalvo); optNovo.querySelector('.radio').style.cssText = !usarSalvo ? 'border-color:var(--verde);background:var(--verde);margin-left:auto;' : 'margin-left:auto;'; }
+  if (formNovo) formNovo.style.display = usarSalvo ? 'none' : 'block';
 }
 
 function _estiloInput() {
@@ -1387,37 +1560,72 @@ function mascaraCartao(el) {
   el.value = v.replace(/(\d{4})/g,'$1 ').trim();
 }
 
+function _finalizarPagamentoCartao(resp) {
+  if (resp.status === 'approved') {
+    fecharModalPagamento();
+    irTela('tela-confirmado');
+    mostrarWhatsappEstabelecimento();
+    mostrarLinkRastreioGuest();
+    ultimoStatusConhecido = {};
+    iniciarPollingPedidos();
+  } else {
+    document.getElementById('pag-instrucao').textContent = 'Aguardando confirmação do pagamento...';
+    startPollingPagamento(resp.chargeId);
+  }
+}
+
+// Submissão quando usando cartão salvo ou formulário novo (via botão externo ao form)
+async function submitCartaoSalvo(pedidoId) {
+  var btn = document.querySelector('#pag-detalhe .btn-principal');
+  if (btn) { btn.disabled = true; btn.textContent = 'Processando...'; }
+  try {
+    var cartao = getCartaoSalvo();
+    var body = { pedidoId: pedidoId };
+
+    if (_usarCartaoSalvo && cartao) {
+      body.cardId = cartao.card_id;
+      body.savedCustomerId = cartao.customer_id;
+      body.installments = 1;
+    } else {
+      body.holderName  = document.getElementById('cc-nome')?.value.trim();
+      body.cardNumber  = document.getElementById('cc-numero')?.value.replace(/\D/g,'');
+      body.expiryMonth = document.getElementById('cc-mes')?.value.trim();
+      body.expiryYear  = document.getElementById('cc-ano')?.value.trim();
+      body.ccv         = document.getElementById('cc-cvv')?.value.trim();
+      body.cpf         = (document.getElementById('cc-cpf')?.value || '').replace(/\D/g,'');
+      body.installments = _tipoCartaoSelecionado === 'debito' ? 1 : (document.getElementById('cc-parcelas')?.value || 1);
+    }
+
+    var resp = await apiCall('/api/payments/cartao', { method: 'POST', body });
+    _finalizarPagamentoCartao(resp);
+  } catch(err) {
+    if (btn) { btn.disabled = false; btn.textContent = '💳 Pagar agora'; }
+    alert('Erro no pagamento: ' + err.message);
+  }
+}
+
+// Submissão legada via form (mantida para compatibilidade)
 async function submitCartao(e, pedidoId) {
   e.preventDefault();
   var btn = e.target.querySelector('button[type=submit]');
-  btn.disabled = true; btn.textContent = 'Processando...';
+  if (btn) { btn.disabled = true; btn.textContent = 'Processando...'; }
   try {
     var resp = await apiCall('/api/payments/cartao', {
       method: 'POST',
       body: {
-        pedidoId: pedidoId,
-        holderName: document.getElementById('cc-nome').value.trim(),
-        cardNumber: document.getElementById('cc-numero').value.replace(/\D/g,''),
+        pedidoId:    pedidoId,
+        holderName:  document.getElementById('cc-nome').value.trim(),
+        cardNumber:  document.getElementById('cc-numero').value.replace(/\D/g,''),
         expiryMonth: document.getElementById('cc-mes').value.trim(),
-        expiryYear: document.getElementById('cc-ano').value.trim(),
-        ccv: document.getElementById('cc-cvv').value.trim(),
-        cpf: document.getElementById('cc-cpf').value.replace(/\D/g,''),
-        installments: document.getElementById('cc-parcelas').value,
+        expiryYear:  document.getElementById('cc-ano').value.trim(),
+        ccv:         document.getElementById('cc-cvv').value.trim(),
+        cpf:         (document.getElementById('cc-cpf')?.value || '').replace(/\D/g,''),
+        installments: _tipoCartaoSelecionado === 'debito' ? 1 : (document.getElementById('cc-parcelas')?.value || 1),
       },
     });
-    if (resp.status === 'approved') {
-      fecharModalPagamento();
-      irTela('tela-confirmado');
-      mostrarWhatsappEstabelecimento();
-      mostrarLinkRastreioGuest();
-      ultimoStatusConhecido = {};
-      iniciarPollingPedidos();
-    } else {
-      document.getElementById('pag-instrucao').textContent = 'Aguardando confirmação do pagamento...';
-      startPollingPagamento(resp.chargeId);
-    }
+    _finalizarPagamentoCartao(resp);
   } catch(err) {
-    btn.disabled = false; btn.textContent = '💳 Pagar agora';
+    if (btn) { btn.disabled = false; btn.textContent = '💳 Pagar agora'; }
     alert('Erro no pagamento: ' + err.message);
   }
 }
@@ -2604,10 +2812,15 @@ function selecionarPag(el, tipo) {
     linhaConv.style.display = '';
     totalEl.textContent = 'R$ ' + (baseTotal + conv).toFixed(2).replace('.',',');
     window._conveniencia = conv;
+    // Mostrar seletor débito/crédito + cartão salvo
+    var extras = document.getElementById('cartao-extras');
+    if (extras) { extras.style.display = 'block'; renderCartaoSalvoCheckout(); }
   } else {
     linhaConv.style.display = 'none';
     totalEl.textContent = 'R$ ' + baseTotal.toFixed(2).replace('.',',');
     window._conveniencia = 0;
+    var extras = document.getElementById('cartao-extras');
+    if (extras) extras.style.display = 'none';
   }
   // CPF: sempre para Pix; para Cartão só se logado não precisa (já tem no perfil)
   var campoCpf = document.getElementById('campo-cpf-pix');
@@ -5703,6 +5916,15 @@ function adminNav(btn, secao) {
 </div>
 
 <!-- MODAL ENDEREÇO -->
+<!-- MODAL CARTÃO SALVO -->
+<div class="modal-overlay" id="modal-cartao">
+  <div class="modal-box">
+    <div class="modal-titulo">💳 Meu Cartão</div>
+    <div id="modal-cartao-corpo"></div>
+    <button onclick="document.getElementById('modal-cartao').classList.remove('aberto')" style="width:100%;background:transparent;border:none;color:var(--texto2);padding:14px;cursor:pointer;font-size:14px;font-family:'DM Sans',sans-serif;margin-top:4px;">Fechar</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-endereco">
   <div class="modal-box">
     <div class="modal-titulo">📍 Onde entregar?</div>

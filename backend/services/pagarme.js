@@ -202,16 +202,73 @@ async function criarCobrancaPix({ total, orderId, customerId, splitRules }) {
 }
 
 // =============================================
+// CARTÃO SALVO — tokenizar e salvar no cliente Pagar.me
+// =============================================
+async function salvarCartaoCliente(customerId, { holderName, number, expiryMonth, expiryYear, cvv }) {
+  const card = await pagarmeRequest('POST', `/customers/${customerId}/cards`, {
+    number: number.replace(/\D/g, ''),
+    holder_name: holderName,
+    exp_month: parseInt(expiryMonth),
+    exp_year: parseInt(expiryYear),
+    cvv,
+    billing_address: {
+      line_1: 'Endereco nao informado',
+      zip_code: '69000000',
+      city: 'Guajara',
+      state: 'AM',
+      country: 'BR',
+    },
+  });
+  return {
+    card_id:     card.id,
+    last4:       card.last_four_digits,
+    brand:       card.brand,
+    holder_name: card.holder_name,
+    exp_month:   card.exp_month,
+    exp_year:    card.exp_year,
+  };
+}
+
+// =============================================
 // CARTÃO — checkout transparente
 // O total já chega com o gross-up aplicado (commission.js)
+// Aceita card_id (cartão salvo) ou dados completos do cartão
 // =============================================
 async function criarCobrancaCartao({
   total, orderId, customerId,
   creditCard,    // { holderName, number, expiryMonth, expiryYear, ccv }
+  cardId,        // Pagar.me card_id — alternativa ao creditCard
   billingAddress,
   installments,
   splitRules,
 }) {
+  const defaultAddress = billingAddress || {
+    line_1: 'Endereco nao informado',
+    zip_code: '69000000',
+    city: 'Guajara',
+    state: 'AM',
+    country: 'BR',
+  };
+
+  const creditCardPayload = cardId
+    ? {
+        installments: parseInt(installments) || 1,
+        statement_descriptor: 'CHEGOUAI',
+        card_id: cardId,
+      }
+    : {
+        installments: parseInt(installments) || 1,
+        statement_descriptor: 'CHEGOUAI',
+        card: {
+          number:      creditCard.number.replace(/\D/g, ''),
+          holder_name: creditCard.holderName,
+          exp_month:   parseInt(creditCard.expiryMonth),
+          exp_year:    parseInt(creditCard.expiryYear),
+          cvv:         creditCard.ccv,
+          billing_address: defaultAddress,
+        },
+      };
+
   const body = {
     customer_id: customerId,
     items: [
@@ -226,24 +283,7 @@ async function criarCobrancaCartao({
       {
         payment_method: 'credit_card',
         amount: toCents(total),
-        credit_card: {
-          installments: parseInt(installments) || 1,
-          statement_descriptor: 'CHEGOUAI',
-          card: {
-            number: creditCard.number.replace(/\D/g, ''),
-            holder_name: creditCard.holderName,
-            exp_month: parseInt(creditCard.expiryMonth),
-            exp_year: parseInt(creditCard.expiryYear),
-            cvv: creditCard.ccv,
-            billing_address: billingAddress || {
-              line_1: 'Endereco nao informado',
-              zip_code: '69000000',
-              city: 'Guajara',
-              state: 'AM',
-              country: 'BR',
-            },
-          },
-        },
+        credit_card: creditCardPayload,
         ...(splitRules?.length > 0 && { split: splitRules }),
       },
     ],
@@ -385,6 +425,7 @@ function verificarWebhook(req) {
 
 module.exports = {
   criarOuBuscarCliente,
+  salvarCartaoCliente,
   criarCobrancaPix,
   criarCobrancaCartao,
   buscarPedido,

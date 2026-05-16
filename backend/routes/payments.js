@@ -5,6 +5,7 @@ const { paymentLimiter } = require('../middleware/security');
 const { supabaseAdmin } = require('../config/supabase');
 const {
   criarOuBuscarCliente,
+  salvarCartaoCliente,
   criarCobrancaPix,
   criarCobrancaCartao,
   montarSplitRules,
@@ -183,15 +184,60 @@ router.post('/pix', paymentLimiter, optionalAuth, [
 });
 
 // =============================================
-// POST /api/payments/cartao — Cartão transparente (com gross-up D+0)
+// POST /api/payments/salvar-cartao — Tokeniza e salva cartão no Pagar.me
+// Funciona sem conta (anonymous). Retorna card_id + metadados para o frontend guardar no localStorage.
 // =============================================
-router.post('/cartao', paymentLimiter, optionalAuth, [
-  body('pedidoId').isUUID().withMessage('pedidoId inválido'),
+router.post('/salvar-cartao', paymentLimiter, optionalAuth, [
   body('holderName').notEmpty().withMessage('Nome do titular obrigatório'),
   body('cardNumber').notEmpty().withMessage('Número do cartão obrigatório'),
   body('expiryMonth').matches(/^\d{2}$/).withMessage('Mês inválido'),
   body('expiryYear').matches(/^\d{4}$/).withMessage('Ano inválido'),
-  body('ccv').matches(/^\d{3,4}$/).withMessage('CVV inválido'),
+  body('cvv').matches(/^\d{3,4}$/).withMessage('CVV inválido'),
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+  try {
+    const { holderName, cardNumber, expiryMonth, expiryYear, cvv, customerId: existingCustomerId } = req.body;
+
+    // Reutiliza customer_id do localStorage se disponível, senão cria cliente mínimo
+    let customerId = existingCustomerId || null;
+    if (!customerId) {
+      const guestEmail = req.user?.email || `guest_${Date.now()}@guest.chegouai.com.br`;
+      customerId = await criarOuBuscarCliente({
+        nome:  holderName,
+        email: guestEmail,
+        cpf:   req.user?.profile?.cpf || null,
+      });
+    }
+
+    const cartao = await salvarCartaoCliente(customerId, {
+      holderName,
+      number:      cardNumber,
+      expiryMonth,
+      expiryYear,
+      cvv,
+    });
+
+    res.json({ ...cartao, customer_id: customerId });
+  } catch (err) {
+    console.error('[SalvarCartão]', err.message);
+    next(err);
+  }
+});
+
+// =============================================
+// POST /api/payments/cartao — Cartão transparente (com gross-up D+0)
+// Aceita card_id + customer_id (cartão salvo) ou dados completos do cartão
+// =============================================
+router.post('/cartao', paymentLimiter, optionalAuth, [
+  body('pedidoId').isUUID().withMessage('pedidoId inválido'),
+  // cardId OU dados completos do cartão
+  body('holderName').if(body('cardId').not().exists()).notEmpty().withMessage('Nome do titular obrigatório'),
+  body('cardNumber').if(body('cardId').not().exists()).notEmpty().withMessage('Número do cartão obrigatório'),
+  body('expiryMonth').if(body('cardId').not().exists()).matches(/^\d{2}$/).withMessage('Mês inválido'),
+  body('expiryYear').if(body('cardId').not().exists()).matches(/^\d{4}$/).withMessage('Ano inválido'),
+  body('ccv').if(body('cardId').not().exists()).matches(/^\d{3,4}$/).withMessage('CVV inválido'),
 ], async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
@@ -199,6 +245,7 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
   try {
     const {
       pedidoId, holderName, cardNumber, expiryMonth, expiryYear, ccv,
+      cardId, savedCustomerId,
       postalCode, installments,
     } = req.body;
 
@@ -212,13 +259,19 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
       tipoEntrega:    pedido.estabelecimentos?.tipo_entrega,
     });
 
-    const guestTel = (pedido.guest_telefone || pedido.telefone_cliente || '').replace(/\D/g, '');
-    const customerId = await criarOuBuscarCliente({
-      nome:     req.user ? req.user.profile.nome     : pedido.guest_nome,
-      email:    req.user ? req.user.email            : `${guestTel}@guest.chegouai.com.br`,
-      cpf:      req.user ? req.user.profile.cpf      : pedido.guest_cpf,
-      telefone: req.user ? (pedido.telefone_cliente || req.user.profile.telefone) : guestTel,
-    });
+    let customerId;
+    if (cardId && savedCustomerId) {
+      // Cartão salvo — usar customer_id do localStorage
+      customerId = savedCustomerId;
+    } else {
+      const guestTel = (pedido.guest_telefone || pedido.telefone_cliente || '').replace(/\D/g, '');
+      customerId = await criarOuBuscarCliente({
+        nome:     req.user ? req.user.profile.nome     : pedido.guest_nome,
+        email:    req.user ? req.user.email            : `${guestTel}@guest.chegouai.com.br`,
+        cpf:      req.user ? req.user.profile.cpf      : pedido.guest_cpf,
+        telefone: req.user ? (pedido.telefone_cliente || req.user.profile.telefone) : guestTel,
+      });
+    }
 
     // Lojista recebe 95% do subtotal original (sem markup de conveniência)
     // A taxa e a antecipação são cobradas do saldo da plataforma (charge_processing_fee: true)
@@ -229,23 +282,28 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
     });
 
     const cobranca = await criarCobrancaCartao({
-      total:    split.total, // valor gross-up cobrado do cliente
+      total:    split.total,
       orderId:  pedidoId,
       customerId,
-      creditCard: {
-        holderName,
-        number:      cardNumber.replace(/\D/g, ''),
-        expiryMonth,
-        expiryYear,
-        ccv,
-      },
-      billingAddress: postalCode ? {
-        line_1:   'Endereco nao informado',
-        zip_code: postalCode.replace(/\D/g, ''),
-        city:     'Guajara',
-        state:    'AM',
-        country:  'BR',
-      } : null,
+      ...(cardId
+        ? { cardId }
+        : {
+            creditCard: {
+              holderName,
+              number:      cardNumber.replace(/\D/g, ''),
+              expiryMonth,
+              expiryYear,
+              ccv,
+            },
+            billingAddress: postalCode ? {
+              line_1:   'Endereco nao informado',
+              zip_code: postalCode.replace(/\D/g, ''),
+              city:     'Guajara',
+              state:    'AM',
+              country:  'BR',
+            } : null,
+          }
+      ),
       installments: parseInt(installments || 1),
       splitRules,
     });
