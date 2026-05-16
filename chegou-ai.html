@@ -425,10 +425,11 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 /* HOME — cards compactos (estilo lista) */
 .card-est { display:flex; flex-direction:row; align-items:center; gap:14px; padding:12px 14px; border-radius:16px; box-shadow:0 2px 12px rgba(0,0,0,0.2); }
-.cardapio-banner { width:100%; height:140px; background:linear-gradient(135deg,#1a2a1a 0%,#0d1f0d 50%,#162616 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; position:relative; flex-shrink:0; overflow:hidden; }
-.cardapio-banner::before { content:''; position:absolute; inset:0; background:radial-gradient(circle at 50% 60%, rgba(0,200,83,0.15) 0%, transparent 70%); }
-.cardapio-banner .banner-emoji { font-size:56px; line-height:1; position:relative; z-index:1; }
-.cardapio-banner .banner-nome { font-size:18px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; color:#fff; position:relative; z-index:1; letter-spacing:-0.3px; }
+.cardapio-banner { width:100%; height:150px; position:relative; flex-shrink:0; overflow:hidden; background:#111; }
+.cardapio-banner .banner-bg { position:absolute; inset:-20px; background-size:cover; background-position:center; filter:blur(18px) brightness(0.35); transform:scale(1.1); }
+.cardapio-banner .banner-logo { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+.cardapio-banner .banner-logo img { width:80px; height:80px; border-radius:16px; object-fit:cover; border:3px solid rgba(255,255,255,0.15); box-shadow:0 4px 20px rgba(0,0,0,0.5); }
+.cardapio-banner .banner-logo .banner-emoji-icon { font-size:60px; line-height:1; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5)); }
 .card-est-img { width:80px; height:80px; border-radius:12px; flex-shrink:0; overflow:hidden; position:relative; }
 .card-est-img img { width:100%; height:100%; object-fit:cover; display:block; }
 .card-est-placeholder { width:80px; height:80px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; border-radius:12px; flex-shrink:0; }
@@ -2107,7 +2108,11 @@ async function abrirCardapio(id) {
     document.getElementById('est-nome-cardapio').textContent = estAtual.nome;
     var banner = document.getElementById('est-banner');
     if(banner) {
-      banner.innerHTML = '<div class="banner-emoji">' + (estAtual.emoji || '🏪') + '</div><div class="banner-nome">' + sanitizar(estAtual.nome) + '</div>';
+      var bgStyle = estAtual.foto_url ? 'background-image:url(' + estAtual.foto_url + ')' : 'background:linear-gradient(135deg,#1a2a1a,#0d1f0d)';
+      var logoHtml = estAtual.foto_url
+        ? '<img src="' + estAtual.foto_url + '" alt="">'
+        : '<div class="banner-emoji-icon">' + (estAtual.emoji || '🏪') + '</div>';
+      banner.innerHTML = '<div class="banner-bg" style="' + bgStyle + '"></div><div class="banner-logo">' + logoHtml + '</div>';
     }
     var metaTxt = 'Aberto • ' + (estAtual.tempo_entrega || '30-45 min') + ' • Frete R$2-R$4';
     if(estAtual.valor_minimo && parseFloat(estAtual.valor_minimo) > 0) {
