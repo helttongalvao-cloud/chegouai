@@ -160,6 +160,7 @@ app.use('/api/motoboy-proprio', motoboyProprioRoutes);
 // CONFIG PÚBLICA — Expõe chaves seguras ao frontend
 // =============================================
 app.get('/api/config', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
   res.json({
     supabaseUrl: process.env.SUPABASE_URL,
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
