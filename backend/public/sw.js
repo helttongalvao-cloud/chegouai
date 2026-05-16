@@ -1,6 +1,5 @@
-const CACHE = 'chegouai-v26';
+const CACHE = 'chegouai-v27';
 const PRECACHE = [
-  '/app',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -15,9 +14,15 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then((clients) => {
+        clients.forEach((client) => {
+          if (client.url.includes('/app')) client.navigate(client.url);
+        });
+      })
   );
 });
 
