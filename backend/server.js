@@ -111,15 +111,13 @@ app.use(express.static(path.join(__dirname, 'public'), {
   dotfiles: 'allow', // necessário para servir /.well-known/assetlinks.json (TWA Android)
 }));
 
-// Landing page — página de marketing
-app.get('/landing', (req, res) => {
+// Landing page — raiz e /landing servem a página de marketing
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
 
-// App — raiz e /app servem o mesmo HTML
-app.get('/', (req, res) => {
-  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.join(__dirname, '..', 'chegou-ai.html'));
+app.get('/landing', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
 
 app.get('/app', (req, res) => {
