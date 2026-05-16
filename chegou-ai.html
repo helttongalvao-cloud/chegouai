@@ -120,7 +120,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .perfil-btn .perfil-nome { font-size:11px; color:var(--texto2); font-weight:500; }
 
 /* HEADER */
-.header { background:var(--cinza1); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; border-bottom:1px solid var(--cinza3); }
+.header { background:var(--cinza1); padding:16px 20px; padding-top:max(16px,env(safe-area-inset-top,0px)); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; border-bottom:1px solid var(--cinza3); }
 .header-logo { display:flex; align-items:center; gap:10px; }
 .logo-mini { width:36px; height:36px; background:var(--preto); border:2px solid var(--verde); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; }
 .logo-mini span { display:inline-block; filter:hue-rotate(90deg) saturate(1.8); transform:scaleX(-1); }
@@ -346,15 +346,15 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .emoji-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-top:8px; }
 .emoji-op { background:var(--cinza3); border:2px solid transparent; border-radius:10px; padding:8px; text-align:center; font-size:22px; cursor:pointer; transition:all 0.15s; }
 .emoji-op.selecionado { border-color:var(--verde); background:#00C85315; }
-.card-produto { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:14px; padding:14px; display:flex; align-items:center; gap:12px; margin-bottom:10px; position:relative; }
-.card-produto .prod-emoji { font-size:32px; width:52px; height:52px; background:var(--cinza3); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.card-produto .prod-info { flex:1; }
-.card-produto .prod-nome { font-size:15px; font-weight:600; }
-.card-produto .prod-desc { font-size:12px; color:var(--texto2); margin-top:2px; }
-.card-produto .prod-preco { font-size:14px; font-weight:700; color:var(--verde); margin-top:4px; }
-.card-produto .prod-acoes { display:flex; flex-direction:column; gap:6px; }
-.btn-editar { background:var(--cinza3); border:none; border-radius:8px; padding:6px 12px; color:var(--texto); font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; }
-.btn-deletar { background:#FF525215; border:none; border-radius:8px; padding:6px 12px; color:var(--erro); font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+.card-produto { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:14px; padding:10px 12px; display:flex; align-items:center; gap:10px; margin-bottom:8px; position:relative; }
+.card-produto .prod-emoji { font-size:26px; width:44px; height:44px; background:var(--cinza3); border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.card-produto .prod-info { flex:1; min-width:0; }
+.card-produto .prod-nome { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.card-produto .prod-desc { font-size:11px; color:var(--texto2); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.card-produto .prod-preco { font-size:13px; font-weight:700; color:var(--verde); margin-top:3px; }
+.card-produto .prod-acoes { display:flex; flex-direction:row; flex-wrap:wrap; gap:4px; justify-content:flex-end; flex-shrink:0; max-width:96px; }
+.btn-editar { background:var(--cinza3); border:none; border-radius:7px; padding:5px 8px; color:var(--texto); font-size:11px; cursor:pointer; font-family:'DM Sans',sans-serif; white-space:nowrap; }
+.btn-deletar { background:#FF525215; border:none; border-radius:7px; padding:5px 8px; color:var(--erro); font-size:11px; cursor:pointer; font-family:'DM Sans',sans-serif; white-space:nowrap; }
 .disponivel-toggle { display:flex; align-items:center; gap:8px; }
 .disponivel-toggle label { font-size:13px; color:var(--texto2); }
 
@@ -5753,7 +5753,29 @@ if('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
       .then(function(reg) { console.log('[SW] Registrado:', reg.scope); })
       .catch(function(err) { console.error('[SW] Erro:', err); });
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      window.location.reload();
+    });
   });
+
+  // Safe area para iPhone (PWA) — JS robusto com fallback por hardware
+  (function aplicarSafeArea() {
+    var probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:1px;height:1px;pointer-events:none;z-index:-1;visibility:hidden;';
+    document.body.appendChild(probe);
+    var safeTop = Math.round(probe.getBoundingClientRect().top);
+    document.body.removeChild(probe);
+    if (safeTop === 0 && /iPhone/.test(navigator.userAgent)) {
+      var ph = window.screen.height * window.devicePixelRatio;
+      if (ph <= 1334) safeTop = 20;
+      else if (ph >= 2556) safeTop = 59;
+      else safeTop = 44;
+    }
+    if (safeTop > 0) {
+      var h = document.querySelector('.header');
+      if (h) h.style.paddingTop = (safeTop + 16) + 'px';
+    }
+  })();
 
   // Ao clicar na notificação, o SW envia mensagem para abrir o pedido
   navigator.serviceWorker.addEventListener('message', function(event) {
