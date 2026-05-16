@@ -111,9 +111,14 @@ app.use(express.static(path.join(__dirname, 'public'), {
   dotfiles: 'allow', // necessário para servir /.well-known/assetlinks.json (TWA Android)
 }));
 
-// Landing page — página inicial pública
-app.get('/', (req, res) => {
+// Landing page — página de marketing (acessível em /landing)
+app.get('/landing', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+// Raiz redireciona para o app
+app.get('/', (req, res) => {
+  res.redirect(301, '/app');
 });
 
 // PWA — app principal
