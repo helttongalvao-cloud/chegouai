@@ -83,10 +83,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 /* TELAS */
 .tela { display:none; min-height:100vh; flex-direction:column; }
-.tela.ativa { display:flex; animation: telaEntrar 0.28s cubic-bezier(0.22,1,0.36,1) both; }
-.tela.saindo { animation: telaSair 0.18s ease-in forwards; }
-@keyframes telaEntrar { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
-@keyframes telaSair  { from { opacity:1; } to { opacity:0; } }
+.tela.ativa { display:flex; animation: telaEntrar 0.25s ease both; }
+@keyframes telaEntrar { from { opacity:0; } to { opacity:1; } }
 
 /* SPLASH */
 #tela-splash { background:var(--preto); align-items:center; justify-content:center; flex-direction:column; gap:16px; }
