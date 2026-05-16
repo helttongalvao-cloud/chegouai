@@ -176,6 +176,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .item-nome { font-size:15px; font-weight:600; margin-bottom:3px; }
 .item-desc { font-size:13px; color:var(--texto2); margin-bottom:6px; }
 .item-preco { font-size:16px; font-weight:700; color:var(--verde); }
+.item-estoque { font-size:12px; color:var(--texto2); margin-top:2px; }
 .item-add { background:var(--verde); border:none; border-radius:10px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--preto); font-weight:700; transition:transform 0.15s; flex-shrink:0; }
 .item-add:active { transform:scale(0.9); }
 
@@ -2252,6 +2253,7 @@ function renderCardProduto(item, i) {
       '<div class="item-nome">' + sanitizar(item.nome) + '</div>' +
       '<div class="item-desc">' + sanitizar(item.descricao || '') + '</div>' +
       precoHtml +
+      (item.estoque !== null && item.estoque !== undefined ? '<div class="item-estoque">' + item.estoque + ' em estoque</div>' : '') +
     '</div>' +
     btnHtml +
   '</div>';
@@ -3238,6 +3240,7 @@ async function renderCardapioEst(manterDestaque) {
         '<div class="prod-nome">' + p.nome + '</div>' +
         '<div class="prod-desc">' + (p.desc || '') + '</div>' +
         '<div class="prod-preco">' + preco + '</div>' +
+        (p.estoque !== null && p.estoque !== undefined ? '<div style="font-size:11px;color:var(--texto2);margin-top:2px;">📦 ' + p.estoque + ' em estoque</div>' : '') +
         indisponivel +
       '</div>' +
       '<div class="prod-acoes">' +
@@ -3558,6 +3561,7 @@ function abrirModalProduto(idx) {
     document.getElementById('prod-preco').value = p.preco;
     document.getElementById('prod-emoji').value = p.emoji || '🍽️';
     document.getElementById('prod-disponivel').checked = p.disponivel;
+    document.getElementById('prod-estoque').value = p.estoque !== null && p.estoque !== undefined ? p.estoque : '';
     var catSel = document.getElementById('prod-categoria');
     if(catSel) catSel.value = p.categoria || 'principal';
     var imgInput = document.getElementById('prod-imagem');
@@ -3579,6 +3583,7 @@ function abrirModalProduto(idx) {
     document.getElementById('prod-nome').value = '';
     document.getElementById('prod-desc').value = '';
     document.getElementById('prod-preco').value = '';
+    document.getElementById('prod-estoque').value = '';
     document.getElementById('prod-disponivel').checked = true;
     var catSel = document.getElementById('prod-categoria');
     if(catSel) catSel.value = 'principal';
@@ -3667,7 +3672,9 @@ async function salvarProduto() {
   const categoria = document.getElementById('prod-categoria') ? document.getElementById('prod-categoria').value : 'principal';
   const imagem_url = document.getElementById('prod-imagem') ? document.getElementById('prod-imagem').value.trim() : '';
   try {
-    const body = { nome, descricao: descricao, preco, emoji: emojiSelecionado, disponivel, categoria };
+    const estoqueRaw = document.getElementById('prod-estoque').value.trim();
+    const estoque = estoqueRaw === '' ? null : parseInt(estoqueRaw);
+    const body = { nome, descricao: descricao, preco, emoji: emojiSelecionado, disponivel, categoria, estoque };
     if(imagem_url) body.imagem_url = imagem_url;
     if(idx >= 0 && cardapioEst[idx] && cardapioEst[idx].id) {
       await apiCall('/api/establishments/me/products/' + cardapioEst[idx].id, { method: 'PUT', body });
@@ -5615,6 +5622,10 @@ function adminNav(btn, secao) {
     <div class="form-grupo">
       <label>Preço (R$) *</label>
       <input type="number" id="prod-preco" placeholder="0,00" step="0.01" min="0">
+    </div>
+    <div class="form-grupo">
+      <label>Quantidade em estoque <span style="color:var(--texto2);font-size:12px;">(deixe vazio = ilimitado)</span></label>
+      <input type="number" id="prod-estoque" placeholder="Ex: 50" min="0" step="1" style="width:100%;">
     </div>
     <div class="form-grupo">
       <label>Categoria</label>
