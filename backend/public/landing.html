@@ -82,7 +82,7 @@ nav {
   font-size:18px; flex-shrink:0;
 }
 .nav-icon span { display:inline-block; filter:hue-rotate(90deg) saturate(1.8); transform:scaleX(-1); }
-.nav-brand { font-size:17px; font-weight:800; letter-spacing:-.3px; }
+.nav-brand { font-size:17px; font-weight:800; letter-spacing:-.3px; background:linear-gradient(90deg,var(--g) 0%,#ffffff 70%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 .nav-links { display:flex; align-items:center; gap:28px; }
 .nav-links a {
   font-size:14px; font-weight:500; color:var(--t2);
@@ -499,7 +499,7 @@ footer {
 <!-- ═══ NAVBAR ════════════════════════════════════════════════ -->
 <nav id="nav">
   <a class="nav-logo" href="/">
-    <div class="nav-icon"><span>🛵</span></div>
+    <img src="/icons/icon-192.png" style="width:36px;height:36px;border-radius:10px;object-fit:cover;flex-shrink:0;">
     <span class="nav-brand">Chegou Aí</span>
   </a>
   <div class="nav-links" id="nav-links">
@@ -605,7 +605,7 @@ footer {
       <div class="stat-lbl">Local e independente<br>feito em Guajará-AM</div>
     </div>
     <div class="stat-item appear" style="transition-delay:.08s">
-      <div class="stat-num">🛵</div>
+      <div class="stat-num"><img src="/icons/icon-192.png" style="width:52px;height:52px;border-radius:14px;object-fit:cover;"></div>
       <div class="stat-lbl">Motoboys rastreados<br>em tempo real</div>
     </div>
     <div class="stat-item appear" style="transition-delay:.16s">
@@ -898,8 +898,8 @@ footer {
 
       <div class="footer-brand">
         <div class="brand-logo">
-          <div class="nav-icon" style="width:34px;height:34px;font-size:17px"><span>🛵</span></div>
-          <h3>Chegou Aí</h3>
+          <img src="/icons/icon-192.png" style="width:34px;height:34px;border-radius:9px;object-fit:cover;">
+          <h3 style="background:linear-gradient(90deg,var(--g) 0%,#ffffff 70%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Chegou Aí</h3>
         </div>
         <p>Delivery rápido, rastreado e seguro. Conectando clientes, estabelecimentos e motoboys onde estiver.</p>
         <!-- SUBSTITUA 5568999508221 PELO SEU WHATSAPP -->
