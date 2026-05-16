@@ -3266,7 +3266,7 @@ async function renderCardapioEst(manterDestaque) {
       thumbHtml +
       '<div class="prod-info">' +
         '<div class="prod-nome">' + p.nome + '</div>' +
-        '<div class="prod-desc">' + (p.desc || '') + '</div>' +
+        '<div class="prod-desc">' + (p.descricao || p.desc || '') + '</div>' +
         '<div class="prod-preco">' + preco + '</div>' +
         (p.estoque !== null && p.estoque !== undefined ? '<div style="font-size:11px;color:var(--texto2);margin-top:2px;">📦 ' + p.estoque + ' em estoque</div>' : '') +
         indisponivel +
