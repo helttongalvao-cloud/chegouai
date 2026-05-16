@@ -1,4 +1,4 @@
-const CACHE = 'chegouai-v29';
+const CACHE = 'chegouai-v30';
 const PRECACHE = [
   '/manifest.json',
   '/icons/icon-192.png',
@@ -72,17 +72,22 @@ self.addEventListener('push', (e) => {
   const tag = dados.pedidoId ? 'pedido-' + dados.pedidoId : 'chegouai-' + Date.now();
 
   e.waitUntil(
-    self.registration.showNotification(data.titulo || 'Chegou Aí', {
-      body: data.corpo || '',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      data: dados,
-      tag,
-      renotify: true,
-      requireInteraction: true,       // fica na tela até o usuário dispensar
-      vibrate: [300, 100, 300, 100, 300],
-      silent: false,
-    })
+    // Avisar clientes em foreground para tocar beep (navegador suprime a notificação do sistema quando app está aberto)
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
+      cs.forEach((c) => c.postMessage({ type: 'PUSH_BEEP', dados }));
+    }).then(() =>
+      self.registration.showNotification(data.titulo || 'Chegou Aí', {
+        body: data.corpo || '',
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        data: dados,
+        tag,
+        renotify: true,
+        requireInteraction: true,
+        vibrate: [300, 100, 300, 100, 300],
+        silent: false,
+      })
+    )
   );
 });
 

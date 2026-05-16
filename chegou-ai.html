@@ -5991,8 +5991,35 @@ if('serviceWorker' in navigator) {
     }
   })();
 
+  // Beep via Web Audio API — toca mesmo com app em foreground
+  function tocarAlertaPedido() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      function beep(freq, start, dur, vol) {
+        var o = ctx.createOscillator();
+        var g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine';
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(vol || 0.6, ctx.currentTime + start);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+        o.start(ctx.currentTime + start);
+        o.stop(ctx.currentTime + start + dur + 0.05);
+      }
+      // Três bipes ascendentes — inconfundível
+      beep(880, 0,    0.15);
+      beep(1100, 0.2, 0.15);
+      beep(1320, 0.4, 0.25);
+    } catch(e) {}
+  }
+
   // Ao clicar na notificação, o SW envia mensagem para abrir o pedido
   navigator.serviceWorker.addEventListener('message', function(event) {
+    // Push recebido com app em foreground — tocar beep (navegador suprime som do sistema)
+    if(event.data && event.data.type === 'PUSH_BEEP') {
+      if(typeof tocarSomNovoPedido === 'function') tocarSomNovoPedido();
+      else if(typeof alertarNovoPedido === 'function') alertarNovoPedido();
+    }
     if(event.data && event.data.type === 'NOTIF_CLICK' && event.data.pedidoId) {
       var pedidoId = event.data.pedidoId;
       // Se for cliente com esse pedido aberto, atualizar rastreio
