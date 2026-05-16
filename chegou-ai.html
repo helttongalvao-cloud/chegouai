@@ -1660,11 +1660,7 @@ function entrarComo(perfil) {
   if(perfil === 'cliente') {
     carregarFavoritos();
     irHome();
-    var primeiroNome = currentUser && currentUser.nome ? currentUser.nome.split(' ')[0] : '';
-    var hora = new Date().getHours();
-    var saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
-    var el = document.getElementById('home-greeting');
-    if(el) el.innerHTML = saudacao + (primeiroNome ? ', ' + primeiroNome + '!' : '!') + ' <span>O que vai pedir?</span>';
+    atualizarSaudacao();
     if(pedidoAtualId) {
       // Verificar se o pedido ainda está ativo antes de redirecionar
       apiCall('/api/orders/' + pedidoAtualId).then(function(resp) {
@@ -1837,6 +1833,14 @@ function cardEstImg(e) {
   '</div>';
 }
 
+function atualizarSaudacao() {
+  var primeiroNome = currentUser && currentUser.nome ? currentUser.nome.split(' ')[0] : '';
+  var hora = new Date().getHours();
+  var saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+  var el = document.getElementById('home-greeting');
+  if(el) el.innerHTML = saudacao + (primeiroNome ? ', ' + primeiroNome + '!' : '!') + ' <span>O que vai pedir?</span>';
+}
+
 async function irHome() {
   carrinho = [];
   estAtual = null;
@@ -1844,6 +1848,7 @@ async function irHome() {
   localStorage.removeItem('chegouai_est_atual');
   atualizarCarrinho();
   irTela('tela-home');
+  atualizarSaudacao();
   // Limpar polling se houver (ex: checagem de pix/pagamento ou status do pedido)
   if(window.pixCheckInterval) { clearInterval(window.pixCheckInterval); window.pixCheckInterval = null; }
   if(pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
