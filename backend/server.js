@@ -119,17 +119,17 @@ app.get('/', (req, res) => {
 // PWA — app principal
 app.get('/app', (req, res) => {
   res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.join(__dirname, 'chegou-ai.html'));
+  res.sendFile(path.join(__dirname, '..', 'chegou-ai.html'));
 });
 
 // Mesa — cardápio público via QR Code (sem login)
 app.get('/mesa', (req, res) => {
-  res.sendFile(path.join(__dirname, 'chegou-ai.html'));
+  res.sendFile(path.join(__dirname, '..', 'chegou-ai.html'));
 });
 
 // Motoboy próprio — tela de entregas do motoboy do lojista (sem login)
 app.get('/motoboy', (req, res) => {
-  res.sendFile(path.join(__dirname, 'chegou-ai.html'));
+  res.sendFile(path.join(__dirname, '..', 'chegou-ai.html'));
 });
 
 // =============================================
