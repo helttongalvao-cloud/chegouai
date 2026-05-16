@@ -97,45 +97,63 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 /* HOME CLIENTE */
 #tela-home { background:var(--preto); }
 .home-content { padding:20px; flex:1; }
-.endereco-bar { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:10px; margin-bottom:24px; cursor:pointer; transition:border-color 0.2s; }
+.home-greeting { margin-bottom:20px; }
+.home-greeting .saudacao { font-size:26px; font-weight:800; letter-spacing:-0.5px; line-height:1.2; font-family:'Plus Jakarta Sans',sans-serif; }
+.home-greeting .saudacao span { color:var(--verde); }
+.home-greeting .sub { color:var(--texto2); font-size:14px; margin-top:4px; }
+.endereco-bar { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:10px; margin-bottom:20px; cursor:pointer; transition:border-color 0.2s; box-shadow:0 2px 12px rgba(0,0,0,0.2); }
 .endereco-bar:hover { border-color:var(--verde); }
 .endereco-bar .icon { font-size:20px; }
 .endereco-bar .info { flex:1; }
 .endereco-bar .info .label { font-size:11px; color:var(--texto2); }
 .endereco-bar .info .valor { font-size:14px; font-weight:500; }
-.secao-titulo { font-size:20px; font-weight:700; margin-bottom:16px; letter-spacing:-0.3px; }
+.secao-titulo { font-size:18px; font-weight:800; margin-bottom:14px; letter-spacing:-0.4px; font-family:'Plus Jakarta Sans',sans-serif; }
 .categorias { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; margin-bottom:24px; scrollbar-width:none; }
 .categorias::-webkit-scrollbar { display:none; }
-.cat-btn { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:12px; padding:10px 16px; white-space:nowrap; font-size:13px; cursor:pointer; color:var(--texto2); transition:all 0.2s; display:flex; align-items:center; gap:6px; font-family:'DM Sans',sans-serif; }
+.cat-btn { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:16px; padding:12px 18px; white-space:nowrap; font-size:13px; cursor:pointer; color:var(--texto2); transition:all 0.2s; display:flex; flex-direction:column; align-items:center; gap:4px; font-family:'DM Sans',sans-serif; min-width:72px; box-shadow:0 2px 8px rgba(0,0,0,0.15); }
+.cat-btn .cat-emoji { font-size:22px; }
+.cat-btn .cat-label { font-size:11px; font-weight:500; }
 .cat-btn.ativo, .cat-btn:hover { background:var(--verde); color:var(--preto); border-color:var(--verde); font-weight:600; }
-.estabelecimentos { display:flex; flex-direction:column; gap:14px; }
-.card-est { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:18px; overflow:hidden; cursor:pointer; transition:all 0.25s; }
-.card-est:hover { border-color:var(--verde); transform:translateY(-2px); }
-.card-est-img { width:100%; height:120px; object-fit:cover; background:var(--cinza3); display:flex; align-items:center; justify-content:center; font-size:48px; }
-.card-est-info { padding:14px; }
-.card-est-nome { font-size:16px; font-weight:700; margin-bottom:4px; }
-.card-est-meta { display:flex; gap:12px; color:var(--texto2); font-size:13px; }
-.badge-aberto { background:#00C85320; color:var(--verde); font-size:11px; padding:3px 8px; border-radius:6px; font-weight:600; }
-.badge-fechado { background:#FF525220; color:var(--erro); font-size:11px; padding:3px 8px; border-radius:6px; font-weight:600; }
+.estabelecimentos { display:flex; flex-direction:column; gap:16px; }
+.card-est { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:20px; overflow:hidden; cursor:pointer; transition:all 0.25s; box-shadow:0 4px 20px rgba(0,0,0,0.3); }
+.card-est:hover { border-color:var(--verde); transform:translateY(-3px); box-shadow:0 8px 32px rgba(0,0,0,0.4); }
+.card-est-img { width:100%; height:160px; background:linear-gradient(135deg,var(--cinza3),var(--cinza4)); display:flex; align-items:center; justify-content:center; font-size:56px; position:relative; overflow:hidden; }
+.card-est-img img { width:100%; height:100%; object-fit:cover; }
+.card-est-img .card-est-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,0.6) 0%,transparent 50%); }
+.card-est-info { padding:14px 16px; }
+.card-est-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:6px; }
+.card-est-nome { font-size:17px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; }
+.card-est-meta { display:flex; gap:8px; color:var(--texto2); font-size:12px; align-items:center; flex-wrap:wrap; margin-top:4px; }
+.card-est-meta span { display:flex; align-items:center; gap:3px; }
+.card-est-badges { display:flex; gap:6px; flex-wrap:wrap; }
+.badge-aberto { background:#00C85322; color:var(--verde); font-size:11px; padding:3px 10px; border-radius:20px; font-weight:700; }
+.badge-fechado { background:#FF525222; color:var(--erro); font-size:11px; padding:3px 10px; border-radius:20px; font-weight:700; }
+.badge-novo { background:#FF6D0022; color:var(--laranja); font-size:11px; padding:3px 10px; border-radius:20px; font-weight:700; }
 
 /* CARDÁPIO */
 #tela-cardapio { background:var(--preto); }
-.cardapio-header { padding:20px; }
-.btn-voltar { background:var(--cinza2); border:none; border-radius:10px; padding:8px 14px; color:var(--texto); font-size:14px; cursor:pointer; font-family:'DM Sans',sans-serif; margin-bottom:16px; display:inline-flex; align-items:center; gap:6px; }
-.est-destaque { display:flex; align-items:center; gap:14px; margin-bottom:20px; }
-.est-avatar { width:60px; height:60px; border-radius:16px; background:var(--cinza3); display:flex; align-items:center; justify-content:center; font-size:28px; }
-.est-destaque-info h2 { font-size:22px; font-weight:800; }
-.est-destaque-info p { color:var(--texto2); font-size:13px; }
-.itens-cardapio { padding:0 20px 120px; display:flex; flex-direction:column; gap:12px; }
-.card-item { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:14px; padding:14px; display:flex; align-items:center; gap:14px; }
-.item-emoji { font-size:36px; width:56px; height:56px; background:var(--cinza3); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.item-info { flex:1; }
-.item-nome { font-size:15px; font-weight:600; margin-bottom:3px; }
-.item-desc { font-size:13px; color:var(--texto2); margin-bottom:6px; }
-.item-preco { font-size:16px; font-weight:700; color:var(--verde); }
-.item-estoque { font-size:12px; color:var(--texto2); margin-top:2px; }
-.item-add { background:var(--verde); border:none; border-radius:10px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--preto); font-weight:700; transition:transform 0.15s; flex-shrink:0; }
-.item-add:active { transform:scale(0.9); }
+.cardapio-banner { width:100%; height:180px; background:linear-gradient(135deg,var(--cinza2),var(--cinza3)); display:flex; align-items:center; justify-content:center; font-size:72px; overflow:hidden; position:relative; flex-shrink:0; }
+.cardapio-banner img { width:100%; height:100%; object-fit:cover; }
+.cardapio-header { padding:16px 20px 12px; position:relative; }
+.btn-voltar { background:rgba(0,0,0,0.5); border:none; border-radius:20px; padding:8px 16px; color:var(--texto); font-size:14px; cursor:pointer; font-family:'DM Sans',sans-serif; display:inline-flex; align-items:center; gap:6px; position:absolute; top:-48px; left:20px; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+.btn-voltar-fixed { background:var(--cinza2); border:none; border-radius:10px; padding:8px 14px; color:var(--texto); font-size:14px; cursor:pointer; font-family:'DM Sans',sans-serif; margin-bottom:12px; display:inline-flex; align-items:center; gap:6px; }
+.est-destaque { display:flex; align-items:center; gap:14px; margin-bottom:4px; }
+.est-avatar { width:64px; height:64px; border-radius:18px; background:var(--cinza3); display:flex; align-items:center; justify-content:center; font-size:30px; border:3px solid var(--cinza1); box-shadow:0 4px 16px rgba(0,0,0,0.4); flex-shrink:0; }
+.est-destaque-info h2 { font-size:22px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; }
+.est-destaque-info p { color:var(--texto2); font-size:13px; margin-top:2px; }
+.itens-cardapio { padding:0 16px 120px; display:flex; flex-direction:column; gap:10px; }
+.card-item { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:16px; padding:14px; display:flex; align-items:center; gap:14px; box-shadow:0 2px 12px rgba(0,0,0,0.2); transition:all 0.2s; }
+.card-item:active { transform:scale(0.98); }
+.item-thumb { width:80px; height:80px; border-radius:12px; overflow:hidden; flex-shrink:0; background:var(--cinza3); display:flex; align-items:center; justify-content:center; }
+.item-thumb img { width:100%; height:100%; object-fit:cover; }
+.item-emoji { font-size:38px; width:80px; height:80px; background:var(--cinza3); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.item-info { flex:1; min-width:0; }
+.item-nome { font-size:15px; font-weight:700; margin-bottom:3px; font-family:'Plus Jakarta Sans',sans-serif; }
+.item-desc { font-size:12px; color:var(--texto2); margin-bottom:6px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.item-preco { font-size:16px; font-weight:800; color:var(--verde); font-family:'Plus Jakarta Sans',sans-serif; }
+.item-estoque { font-size:11px; color:var(--texto2); margin-top:2px; }
+.item-add { background:var(--verde); border:none; border-radius:12px; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:22px; color:var(--preto); font-weight:700; transition:transform 0.15s, background 0.15s; flex-shrink:0; box-shadow:0 4px 12px rgba(0,200,83,0.3); }
+.item-add:active { transform:scale(0.88); background:var(--verde2); }
 
 /* CARRINHO FLUTUANTE */
 .carrinho-float { position:fixed; bottom:24px; left:20px; right:20px; background:var(--verde); border-radius:16px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; box-shadow:0 8px 32px rgba(0,200,83,0.3); transition:all 0.2s; z-index:200; }
@@ -373,6 +391,10 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <div class="btn-icone" onclick="alert('Seu histórico está na tela de pedidos! Configurações do perfil em breve.')">👤</div>
   </div>
   <div class="home-content">
+    <div class="home-greeting">
+      <div class="saudacao" style="font-size:26px;font-weight:800;letter-spacing:-0.5px;font-family:'Plus Jakarta Sans',sans-serif;">Olá! <span style="color:var(--verde)" id="greeting-nome">O que vai pedir?</span></div>
+      <div class="sub" style="color:var(--texto2);font-size:14px;margin-top:4px;">Delivery rápido em Guajará-AM</div>
+    </div>
     <div class="endereco-bar" onclick="alterarEndereco()">
       <span class="icon">📍</span>
       <div class="info">
@@ -382,16 +404,15 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <span style="color:var(--texto2)">›</span>
     </div>
     <div class="busca-bar">
-    <span class="busca-icon">🔍</span>
-    <input type="text" placeholder="Buscar estabelecimento..." id="busca-input" oninput="buscarEst(this.value)">
-  </div>
-  <div class="secao-titulo">Categorias</div>
+      <span class="busca-icon">🔍</span>
+      <input type="text" placeholder="Buscar loja ou produto..." id="busca-input" oninput="buscarEst(this.value)">
+    </div>
     <div class="categorias">
-      <div class="cat-btn ativo" onclick="filtrarCat(this,'todos')">🍽️ Todos</div>
-      <div class="cat-btn" onclick="filtrarCat(this,'restaurante')">🍔 Restaurantes</div>
-      <div class="cat-btn" onclick="filtrarCat(this,'mercado')">🛒 Mercados</div>
-      <div class="cat-btn" onclick="filtrarCat(this,'farmacia')">💊 Farmácias</div>
-      <div class="cat-btn" onclick="filtrarCat(this,'lanche')">🥪 Lanches</div>
+      <div class="cat-btn ativo" onclick="filtrarCat(this,'todos')"><span class="cat-emoji">🍽️</span><span class="cat-label">Todos</span></div>
+      <div class="cat-btn" onclick="filtrarCat(this,'restaurante')"><span class="cat-emoji">🍔</span><span class="cat-label">Restaurantes</span></div>
+      <div class="cat-btn" onclick="filtrarCat(this,'mercado')"><span class="cat-emoji">🛒</span><span class="cat-label">Mercados</span></div>
+      <div class="cat-btn" onclick="filtrarCat(this,'farmacia')"><span class="cat-emoji">💊</span><span class="cat-label">Farmácias</span></div>
+      <div class="cat-btn" onclick="filtrarCat(this,'lanche')"><span class="cat-emoji">🥪</span><span class="cat-label">Lanches</span></div>
     </div>
     <div class="secao-titulo">Estabelecimentos</div>
     <div class="estabelecimentos" id="lista-estabelecimentos"></div>
@@ -405,8 +426,9 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 <!-- CARDÁPIO -->
 <div class="tela" id="tela-cardapio">
+  <div id="est-banner" class="cardapio-banner">🏪</div>
   <div class="cardapio-header">
-    <button class="btn-voltar" onclick="irHome()">← Voltar</button>
+    <button class="btn-voltar-fixed" onclick="irHome()">← Voltar</button>
     <div class="est-destaque">
       <div class="est-avatar" id="est-avatar">🏪</div>
       <div class="est-destaque-info">
@@ -981,10 +1003,16 @@ async function irHome() {
   carrinho = [];
   atualizarCarrinho();
   irTela('tela-home');
-  // Limpar polling se houver (ex: checagem de pix/pagamento ou status do pedido)
   if(window.pixCheckInterval) clearInterval(window.pixCheckInterval);
   if(typeof pollingInterval !== 'undefined') clearInterval(pollingInterval);
-  carregarEstabelecimentos('todos'); // Roda em background sem bloquear
+  // Atualizar greeting com nome do usuário
+  var greetEl = document.getElementById('greeting-nome');
+  if(greetEl && currentUser && currentUser.nome) {
+    var hora = new Date().getHours();
+    var cumprimento = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+    greetEl.textContent = cumprimento + ', ' + currentUser.nome.split(' ')[0] + '!';
+  }
+  carregarEstabelecimentos('todos');
 }
 
 // Cache local de estabelecimentos vindos da API (reutiliza a variável já declarada acima)
@@ -1012,17 +1040,27 @@ function renderEstabelecimentos(cat) {
     return;
   }
   lista.innerHTML = filtrados.map(function(e) {
-    var badge = e.aberto ? 'badge-aberto' : 'badge-fechado';
-    var status = e.aberto ? 'Aberto' : 'Fechado';
-    var esmaecido = e.aberto ? '' : 'style="opacity: 0.5; filter: grayscale(1);"';
+    var aberto = e.aberto && !e.pausado;
+    var esmaecido = aberto ? '' : 'style="opacity:0.55;filter:grayscale(0.6);"';
+    var imgHtml = e.imagem_url
+      ? '<img src="' + e.imagem_url + '" onerror="this.parentElement.innerHTML=\'' + (e.emoji||'🏪') + '\'">' + '<div class="card-est-overlay"></div>'
+      : (e.emoji || '🏪');
+    var isNovo = e.cadastro_data && (Date.now() - new Date(e.cadastro_data).getTime()) < 30*24*60*60*1000;
+    var badges = '<div class="card-est-badges">';
+    badges += '<span class="' + (aberto ? 'badge-aberto' : 'badge-fechado') + '">' + (aberto ? 'Aberto' : 'Fechado') + '</span>';
+    if(isNovo) badges += '<span class="badge-novo">✨ Novo</span>';
+    badges += '</div>';
     return '<div class="card-est" onclick="abrirCardapio(\'' + e.id + '\')" ' + esmaecido + '>' +
-      '<div class="card-est-img">' + (e.emoji || '🏪') + '</div>' +
+      '<div class="card-est-img">' + imgHtml + '</div>' +
       '<div class="card-est-info">' +
-        '<div class="card-est-nome">' + e.nome + '</div>' +
+        '<div class="card-est-top">' +
+          '<div class="card-est-nome">' + e.nome + '</div>' +
+          badges +
+        '</div>' +
         '<div class="card-est-meta">' +
-          '<span>' + (e.tempo_entrega || '30-45 min') + '</span>' +
-          '<span>Taxa R$' + parseFloat(e.taxa_entrega || 4).toFixed(2).replace('.',',') + '</span>' +
-          '<span class="' + badge + '">' + status + '</span>' +
+          '<span>🕐 ' + (e.tempo_entrega || '30-45 min') + '</span>' +
+          '<span>·</span>' +
+          '<span>🛵 R$' + parseFloat(e.taxa_entrega || 4).toFixed(2).replace('.',',') + '</span>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -1133,10 +1171,19 @@ async function abrirCardapio(id) {
       return;
     }
 
+    // Banner da loja
+    var banner = document.getElementById('est-banner');
+    if(banner) {
+      if(estAtual.imagem_url) {
+        banner.innerHTML = '<img src="' + estAtual.imagem_url + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML=\'' + (estAtual.emoji||'🏪') + '\'">';
+      } else {
+        banner.innerHTML = estAtual.emoji || '🏪';
+      }
+    }
     document.getElementById('est-avatar').textContent = estAtual.emoji || '🏪';
     document.getElementById('est-nome-cardapio').textContent = estAtual.nome;
     document.getElementById('est-meta-cardapio').textContent =
-      'Aberto • ' + (estAtual.tempo_entrega || '30-45 min') + ' • Taxa R$' + parseFloat(estAtual.taxa_entrega || 4).toFixed(2).replace('.',',');
+      '🕐 ' + (estAtual.tempo_entrega || '30-45 min') + '  ·  🛵 R$' + parseFloat(estAtual.taxa_entrega || 4).toFixed(2).replace('.',',');
 
     // Título dinâmico conforme categoria
     var tituloCardapio = 'Cardápio';
@@ -1193,7 +1240,7 @@ function renderProdutos(produtos) {
   var lista = document.getElementById('lista-itens');
   lista.innerHTML = produtos.map(function(item, i) {
     var imgHtml = item.imagem_url
-      ? '<img src="' + item.imagem_url + '" style="width:56px;height:56px;border-radius:10px;object-fit:cover;" onerror="this.style.display=\'none\'">'
+      ? '<div class="item-thumb"><img src="' + item.imagem_url + '" onerror="this.parentElement.innerHTML=\'<div class=&quot;item-emoji&quot;>' + (item.emoji||'🍽️') + '</div>\'"></div>'
       : '<div class="item-emoji">' + (item.emoji || '🍽️') + '</div>';
     return '<div class="card-item" data-nome="' + (item.nome || '').toLowerCase() + '">' +
       imgHtml +
@@ -1201,7 +1248,7 @@ function renderProdutos(produtos) {
         '<div class="item-nome">' + item.nome + '</div>' +
         '<div class="item-desc">' + (item.descricao || '') + '</div>' +
         '<div class="item-preco">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + '</div>' +
-        (item.estoque !== null && item.estoque !== undefined ? '<div class="item-estoque">' + item.estoque + ' em estoque</div>' : '') +
+        (item.estoque !== null && item.estoque !== undefined ? '<div class="item-estoque">📦 ' + item.estoque + ' em estoque</div>' : '') +
       '</div>' +
       '<button class="item-add" onclick="adicionarItem(' + i + ')">+</button>' +
     '</div>';
