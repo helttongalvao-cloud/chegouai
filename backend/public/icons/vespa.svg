@@ -1,26 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- Bagageiro (caixa) -->
-  <rect x="30" y="52" width="52" height="46" rx="6" ry="6" fill="#00C853"/>
+  <!-- Bagageiro (caixa quadrada no alto) -->
+  <rect x="30" y="52" width="52" height="46" rx="6" ry="6" fill="#ffffff"/>
   <!-- Tampa do bagageiro -->
-  <rect x="27" y="48" width="58" height="10" rx="4" ry="4" fill="#00C853"/>
+  <rect x="27" y="48" width="58" height="10" rx="4" ry="4" fill="#ffffff"/>
+
+  <!-- Corpo da moto (Vespa) -->
   <!-- Cupolino/para-brisa -->
-  <path d="M115 88 Q130 60 148 68 Q155 72 152 85 Z" fill="#00C853"/>
+  <path d="M115 88 Q130 60 148 68 Q155 72 152 85 Z" fill="#ffffff"/>
   <!-- Corpo principal -->
-  <ellipse cx="105" cy="112" rx="48" ry="28" fill="#00C853"/>
-  <!-- Bagageiro traseiro -->
-  <rect x="56" y="88" width="20" height="14" rx="3" fill="#00C853"/>
+  <ellipse cx="105" cy="112" rx="48" ry="28" fill="#ffffff"/>
+  <!-- Bagageiro traseiro (conexão com caixa) -->
+  <rect x="56" y="88" width="20" height="14" rx="3" fill="#ffffff"/>
   <!-- Assento -->
-  <ellipse cx="118" cy="88" rx="20" ry="7" fill="#00C853"/>
+  <ellipse cx="118" cy="88" rx="20" ry="7" fill="#ffffff"/>
   <!-- Guidão -->
-  <path d="M148 68 L155 62 M155 62 L160 68" stroke="#00C853" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <path d="M148 68 L155 62 M155 62 L160 68" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none"/>
+
   <!-- Roda traseira -->
-  <circle cx="70" cy="148" r="22" fill="#00C853"/>
-  <circle cx="70" cy="148" r="9" fill="rgba(0,0,0,0.25)"/>
-  <circle cx="70" cy="148" r="3.5" fill="#00C853"/>
+  <circle cx="70" cy="148" r="22" fill="#ffffff"/>
+  <circle cx="70" cy="148" r="10" fill="rgba(0,0,0,0.2)"/>
+  <circle cx="70" cy="148" r="4" fill="#ffffff"/>
+
   <!-- Roda dianteira -->
-  <circle cx="148" cy="148" r="22" fill="#00C853"/>
-  <circle cx="148" cy="148" r="9" fill="rgba(0,0,0,0.25)"/>
-  <circle cx="148" cy="148" r="3.5" fill="#00C853"/>
-  <!-- Chassis -->
-  <path d="M58 140 Q100 128 140 140" stroke="#00C853" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <circle cx="148" cy="148" r="22" fill="#ffffff"/>
+  <circle cx="148" cy="148" r="10" fill="rgba(0,0,0,0.2)"/>
+  <circle cx="148" cy="148" r="4" fill="#ffffff"/>
+
+  <!-- Chassis (chão da moto) -->
+  <path d="M58 140 Q100 128 140 140" stroke="#ffffff" stroke-width="8" stroke-linecap="round" fill="none"/>
 </svg>
