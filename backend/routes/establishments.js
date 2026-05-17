@@ -80,9 +80,9 @@ router.get('/', async (req, res, next) => {
 
     // Calcular aberto dinamicamente com base nos horários configurados
     const diasMap = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
-    const agora = new Date();
-    const diaKey = diasMap[agora.getDay()];
-    const minAtual = agora.getHours() * 60 + agora.getMinutes();
+    const agoraBR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const diaKey = diasMap[agoraBR.getDay()];
+    const minAtual = agoraBR.getHours() * 60 + agoraBR.getMinutes();
 
     const resultado = data.map(est => {
       if (est.horarios && est.horarios[diaKey]) {
@@ -128,14 +128,14 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
 
     // Calcular aberto com base em horarios se configurado
     if (est.horarios && Object.keys(est.horarios).length > 0) {
-      const agora = new Date();
+      const agoraBR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
       const diasMap = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
-      const diaKey = diasMap[agora.getDay()];
+      const diaKey = diasMap[agoraBR.getDay()];
       const horDia = est.horarios[diaKey];
       if (horDia && horDia.abre && horDia.fecha) {
         const [hA, mA] = horDia.abre.split(':').map(Number);
         const [hF, mF] = horDia.fecha.split(':').map(Number);
-        const minAtual = agora.getHours() * 60 + agora.getMinutes();
+        const minAtual = agoraBR.getHours() * 60 + agoraBR.getMinutes();
         const minAbre = hA * 60 + mA;
         const minFecha = hF * 60 + mF;
         est.aberto = minAtual >= minAbre && minAtual <= minFecha;
