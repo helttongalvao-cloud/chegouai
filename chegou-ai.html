@@ -127,40 +127,44 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .perfil-btn .perfil-nome { font-size:11px; color:var(--texto2); font-weight:500; }
 
 /* HEADER */
-.header { background:var(--cinza1); padding:16px 20px; padding-top:max(16px,env(safe-area-inset-top,0px)); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; border-bottom:1px solid var(--cinza3); }
+.header { background:var(--cinza1); padding:10px 16px; padding-top:max(10px,env(safe-area-inset-top,0px)); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; border-bottom:1px solid var(--cinza3); gap:8px; }
 .header-logo { display:flex; align-items:center; gap:10px; }
 .logo-mini { width:36px; height:36px; background:var(--preto); border:2px solid var(--verde); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; }
 .logo-mini span { display:inline-block; filter:hue-rotate(90deg) saturate(1.8); transform:scaleX(-1); }
 .header h3 { font-size:19px; font-weight:700; letter-spacing:-0.3px; background:linear-gradient(90deg,var(--verde) 0%,#ffffff 70%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 .header-acao { background:var(--cinza3); border:none; border-radius:10px; padding:8px 14px; color:var(--texto); font-size:13px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+/* GEO HEADER */
+.header-geo { flex:1; display:flex; flex-direction:column; gap:1px; cursor:pointer; min-width:0; padding:4px 6px; border-radius:10px; transition:background 0.15s; -webkit-tap-highlight-color:transparent; }
+.header-geo:active { background:rgba(255,255,255,0.06); }
+.geo-label { font-size:10px; color:var(--texto2); font-weight:500; letter-spacing:0.3px; text-transform:uppercase; }
+.geo-valor { font-size:14px; font-weight:700; color:var(--texto); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:'Plus Jakarta Sans',sans-serif; }
+.header-acoes { display:flex; align-items:center; gap:2px; flex-shrink:0; }
+.header-icon-btn { background:none; border:none; width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; color:var(--texto); transition:background 0.15s; -webkit-tap-highlight-color:transparent; }
+.header-icon-btn:active { background:rgba(255,255,255,0.08); }
 
 /* HOME CLIENTE */
 #tela-home { background:var(--preto); }
-.home-content { padding:20px; flex:1; }
-.endereco-bar { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:10px; margin-bottom:24px; cursor:pointer; transition:border-color 0.2s; }
-.endereco-bar:hover { border-color:var(--verde); }
-.endereco-bar .icon { font-size:20px; }
-.endereco-bar .info { flex:1; }
-.endereco-bar .info .label { font-size:11px; color:var(--texto2); }
-.endereco-bar .info .valor { font-size:14px; font-weight:500; }
-.secao-titulo { font-size:20px; font-weight:700; margin-bottom:16px; letter-spacing:-0.3px; }
+.home-content { padding:0 16px 120px; flex:1; }
+.secao-titulo { font-size:17px; font-weight:800; margin-bottom:12px; letter-spacing:-0.3px; font-family:'Plus Jakarta Sans',sans-serif; }
 .categorias { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; margin-bottom:24px; scrollbar-width:none; }
 .categorias::-webkit-scrollbar { display:none; }
 .cat-btn { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:12px; padding:10px 16px; white-space:nowrap; font-size:13px; cursor:pointer; color:var(--texto2); transition:all 0.2s; display:flex; align-items:center; gap:6px; font-family:'DM Sans',sans-serif; }
 .cat-btn.ativo, .cat-btn:hover { background:var(--verde); color:var(--preto); border-color:var(--verde); font-weight:600; }
-.estabelecimentos { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.card-est { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:16px; overflow:hidden; cursor:pointer; transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s, border-color 0.2s; display:flex; flex-direction:column; }
-.card-est:hover { border-color:var(--verde); transform:translateY(-4px) scale(1.01); box-shadow:0 12px 32px rgba(0,0,0,0.45); }
-.card-est:active { transform:scale(0.96); box-shadow:none; }
-@keyframes cardEntrar { from { opacity:0; transform:translateY(20px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
-.card-est-animado { animation:cardEntrar 0.4s cubic-bezier(0.22,1,0.36,1) both; }
-.card-est-img { width:100%; height:110px; object-fit:cover; background:var(--cinza3); display:flex; align-items:center; justify-content:center; font-size:48px; flex-shrink:0; }
-.card-est-info { padding:10px 12px 12px; flex:1; }
-.card-est-nome { font-size:13px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; margin-bottom:5px; letter-spacing:-0.2px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.card-est-meta { display:flex; flex-wrap:wrap; gap:4px; color:var(--texto2); font-size:11px; align-items:center; }
-.badge-aberto { background:#00C85320; color:var(--verde); font-size:11px; padding:3px 8px; border-radius:6px; font-weight:600; }
-.badge-fechado { background:#FF525220; color:var(--erro); font-size:11px; padding:3px 8px; border-radius:6px; font-weight:600; }
-.badge-pausado { background:#FF6D0020; color:#FF6D00; font-size:11px; padding:3px 8px; border-radius:6px; font-weight:600; }
+/* FEED DE ESTABELECIMENTOS — coluna única mobile */
+.estabelecimentos { display:flex; flex-direction:column; }
+.card-est { background:transparent; border:none; border-bottom:1px solid var(--cinza3); cursor:pointer; transition:background 0.12s; display:flex; flex-direction:row; align-items:center; gap:14px; padding:14px 0; overflow:visible; -webkit-tap-highlight-color:transparent; }
+.card-est:first-child { border-top:1px solid var(--cinza3); }
+.card-est:active { background:rgba(255,255,255,0.04); }
+@keyframes cardEntrar { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+.card-est-animado { animation:cardEntrar 0.32s cubic-bezier(0.22,1,0.36,1) both; }
+.card-est-avatar { width:62px; height:62px; border-radius:16px; flex-shrink:0; overflow:hidden; background:var(--cinza2); display:flex; align-items:center; justify-content:center; border:1.5px solid var(--cinza3); }
+.card-est-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+.card-est-info { flex:1; min-width:0; }
+.card-est-nome { font-size:15px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; margin-bottom:5px; letter-spacing:-0.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.card-est-meta { display:flex; flex-wrap:wrap; gap:6px; color:var(--texto2); font-size:12px; align-items:center; }
+.badge-aberto { background:rgba(0,200,83,0.13); color:#00C853; font-size:11px; padding:3px 9px; border-radius:20px; font-weight:700; }
+.badge-fechado { background:rgba(255,82,82,0.13); color:var(--erro); font-size:11px; padding:3px 9px; border-radius:20px; font-weight:700; }
+.badge-pausado { background:rgba(255,109,0,0.13); color:#FF6D00; font-size:11px; padding:3px 9px; border-radius:20px; font-weight:700; }
 /* COMPLEMENTOS */
 .comp-grupo { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:12px; padding:14px; margin-bottom:10px; }
 .comp-grupo-titulo { font-size:14px; font-weight:700; margin-bottom:2px; }
@@ -418,9 +422,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 /* HOME — saudação */
 .home-greeting {
-  padding:20px 20px 4px;
   font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:23px; font-weight:800; letter-spacing:-0.4px;
+  font-size:20px; font-weight:800; letter-spacing:-0.4px;
 }
 .home-greeting span { color:var(--verde); }
 
@@ -449,22 +452,12 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 /* CARD PRODUTO — badge desconto */
 .badge-desconto { position:absolute; top:8px; left:8px; background:#e53935; color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px; }
 
-/* HOME — cards compactos (estilo lista) */
-.card-est { box-shadow:0 4px 16px rgba(0,0,0,0.25); }
 .cardapio-banner { width:100%; height:150px; position:relative; flex-shrink:0; overflow:hidden; background:#111; }
 .cardapio-banner .banner-bg { position:absolute; inset:-20px; background-size:cover; background-position:center; filter:blur(18px) brightness(0.35); transform:scale(1.1); }
 .cardapio-banner .banner-logo { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
 .cardapio-banner .banner-logo img { width:80px; height:80px; border-radius:16px; object-fit:cover; border:3px solid rgba(255,255,255,0.15); box-shadow:0 4px 20px rgba(0,0,0,0.5); }
 .cardapio-banner .banner-logo .banner-emoji-icon { font-size:60px; line-height:1; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5)); }
-.card-est-img { width:100%; height:110px; overflow:hidden; flex-shrink:0; }
-.card-est-img img { width:100%; height:100%; object-fit:cover; display:block; }
-.card-est-placeholder { width:100%; height:110px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; flex-shrink:0; }
-.card-est-placeholder .pl-emoji { font-size:40px; line-height:1; }
-.card-est-placeholder .pl-inicial { font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase; opacity:0.7; text-align:center; }
-.card-est-tempo { background:rgba(255,255,255,0.08); color:var(--texto2); font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px; }
-.card-est-skeleton { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:16px; overflow:hidden; }
-.card-est-skeleton .sk-img { width:100%; height:110px; }
-.card-est-skeleton .sk-body { padding:10px 12px 12px; }
+.card-est-tempo { color:var(--texto2); font-size:12px; }
 .sk-linha { height:12px; border-radius:6px; margin-bottom:8px; }
 .sk-linha.larga { width:80%; }
 .sk-linha.curta { width:50%; }
@@ -603,38 +596,45 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 <!-- HOME CLIENTE -->
 <div class="tela" id="tela-home">
+  <!-- Header geo-location -->
   <div class="header">
-    <div class="header-logo">
-      <div class="logo-mini"><img src="/icons/icon-192.png?v=3" style="width:28px;height:28px;border-radius:6px;object-fit:cover;" alt=""></div>
-      <h3>Chegou Aí</h3>
+    <div class="header-geo" onclick="alterarEndereco()">
+      <span class="geo-label">Entregar em ▾</span>
+      <span class="geo-valor" id="endereco-atual">Minha localização</span>
     </div>
-    <button class="header-acao" onclick="irLogin()" style="margin-left:8px;">Sair</button>
-    <div class="btn-icone" id="btn-instalar-home" onclick="instalarApp()" title="Instalar app" style="display:none;">📲</div>
-    <div class="btn-icone" onclick="abrirGerenciarCartao()" title="Meu cartão">💳</div>
+    <div class="header-acoes">
+      <button class="header-icon-btn" id="btn-instalar-home" onclick="instalarApp()" title="Instalar app" style="display:none;">📲</button>
+      <button class="header-icon-btn" onclick="abrirGerenciarCartao()" title="Meu cartão">💳</button>
+      <button class="header-icon-btn" onclick="irLogin()" title="Sair">👤</button>
+    </div>
   </div>
-  <div class="home-greeting" id="home-greeting">Olá! <span>O que vai pedir?</span></div>
+
   <div class="home-content">
-    <div style="display:flex;gap:8px;margin-bottom:4px;">
-      <div class="busca-bar" style="margin-bottom:0;flex:1;">
-        <span class="busca-icon">🏪</span>
-        <input type="text" placeholder="Buscar loja..." id="busca-input" oninput="buscarEst(this.value)">
-      </div>
-      <div class="busca-bar" style="margin-bottom:0;flex:1;">
-        <span class="busca-icon">🔍</span>
-        <input type="text" placeholder="Buscar produto..." id="busca-produto-input" oninput="buscarProdutoGlobal(this.value)">
-      </div>
+    <!-- Saudação -->
+    <div class="home-greeting" id="home-greeting" style="padding:16px 0 12px;">Olá! <span>O que vai pedir?</span></div>
+
+    <!-- Busca unificada -->
+    <div class="busca-bar" style="margin-bottom:16px;">
+      <span class="busca-icon">🔍</span>
+      <input type="text" placeholder="Buscar pratos, produtos, remédios..." id="busca-input"
+        oninput="buscarEst(this.value);buscarProdutoGlobal(this.value)" style="height:48px;">
     </div>
+    <!-- Campo oculto mantém compatibilidade com funções que leem busca-produto-input -->
+    <input type="hidden" id="busca-produto-input">
     <div id="resultado-busca-produto" style="display:none;margin-bottom:8px;"></div>
-  <div id="secao-titulo-categorias">
-    <div class="cat-icon-grid">
-      <div class="cat-icon-item ativo" onclick="filtrarCatIcon(this,'todos')"><div class="ci-circle">🍽️</div><div class="ci-label">Todos</div></div>
-      <div class="cat-icon-item" onclick="filtrarCatIcon(this,'restaurante')"><div class="ci-circle">🍴</div><div class="ci-label">Restaurantes</div></div>
-      <div class="cat-icon-item" onclick="filtrarCatIcon(this,'mercado')"><div class="ci-circle">🛒</div><div class="ci-label">Mercados</div></div>
-      <div class="cat-icon-item" onclick="filtrarCatIcon(this,'farmacia')"><div class="ci-circle">💊</div><div class="ci-label">Farmácias</div></div>
-      <div class="cat-icon-item" onclick="filtrarCatIcon(this,'lanche')"><div class="ci-circle">🥪</div><div class="ci-label">Lanches</div></div>
+
+    <!-- Categorias -->
+    <div id="secao-titulo-categorias">
+      <div class="cat-icon-grid" style="-webkit-overflow-scrolling:touch;">
+        <div class="cat-icon-item ativo" onclick="filtrarCatIcon(this,'todos')"><div class="ci-circle">🍽️</div><div class="ci-label">Todos</div></div>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'restaurante')"><div class="ci-circle">🍴</div><div class="ci-label">Restaurantes</div></div>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'mercado')"><div class="ci-circle">🛒</div><div class="ci-label">Mercados</div></div>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'farmacia')"><div class="ci-circle">💊</div><div class="ci-label">Farmácias</div></div>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'lanche')"><div class="ci-circle">🥪</div><div class="ci-label">Lanches</div></div>
+      </div>
     </div>
-  </div>
-    <div class="secao-titulo" style="font-size:18px;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:-0.3px;">Perto de você</div>
+
+    <div class="secao-titulo">Perto de você</div>
     <div class="estabelecimentos" id="lista-estabelecimentos"></div>
   </div>
   <div class="carrinho-float oculto" id="carrinho-float" onclick="irCheckout()">
@@ -2059,23 +2059,11 @@ function irLogin() {
   irTela('tela-login');
 }
 
-function cardEstImg(e) {
+function cardEstAvatar(e) {
   if(e.foto_url) {
-    return '<div class="card-est-img">' +
-      '<img src="' + e.foto_url + '" alt="' + sanitizar(e.nome) + '" loading="lazy">' +
-    '</div>';
+    return '<div class="card-est-avatar"><img src="' + e.foto_url + '" alt="' + sanitizar(e.nome) + '" loading="lazy"></div>';
   }
-  var gradientes = {
-    restaurante: 'linear-gradient(135deg,#1a0a00,#3d1a00)',
-    mercado:     'linear-gradient(135deg,#00102a,#002a5c)',
-    farmacia:    'linear-gradient(135deg,#001a14,#003d2e)',
-    lanche:      'linear-gradient(135deg,#1a1200,#3d2d00)',
-  };
-  var bg = gradientes[e.categoria] || 'linear-gradient(135deg,#0d1a0d,#1a3320)';
-  return '<div class="card-est-placeholder" style="background:' + bg + ';">' +
-    '<div class="pl-emoji">' + (e.emoji || '🏪') + '</div>' +
-    '<div class="pl-inicial">' + sanitizar(e.nome).substring(0,10) + '</div>' +
-  '</div>';
+  return '<div class="card-est-avatar" style="font-size:28px;">' + (e.emoji || '🏪') + '</div>';
 }
 
 function atualizarSaudacao() {
@@ -2097,9 +2085,9 @@ async function irHome() {
   // Limpar polling se houver (ex: checagem de pix/pagamento ou status do pedido)
   if(window.pixCheckInterval) { clearInterval(window.pixCheckInterval); window.pixCheckInterval = null; }
   if(pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
-  // Limpar busca de produto ao voltar para home
-  var inpProd = document.getElementById('busca-produto-input');
-  if(inpProd) inpProd.value = '';
+  // Limpar busca ao voltar para home
+  var inpBusca = document.getElementById('busca-input');
+  if(inpBusca) inpBusca.value = '';
   var elRes = document.getElementById('resultado-busca-produto');
   if(elRes) elRes.style.display = 'none';
   var elCats = document.getElementById('secao-titulo-categorias');
@@ -2113,7 +2101,7 @@ async function irHome() {
 
 async function carregarEstabelecimentos(cat) {
   const lista = document.getElementById('lista-estabelecimentos');
-  lista.innerHTML = [1,2,3,4,5,6].map(function(){ return '<div class="card-est-skeleton"><div class="sk-img skeleton"></div><div class="sk-body"><div class="sk-linha larga skeleton"></div><div class="sk-linha curta skeleton"></div></div></div>'; }).join('');
+  lista.innerHTML = [1,2,3,4,5].map(function(){ return '<div class="card-est" style="pointer-events:none;"><div style="width:62px;height:62px;border-radius:16px;flex-shrink:0;" class="skeleton"></div><div style="flex:1;"><div class="sk-linha larga skeleton" style="height:14px;margin-bottom:8px;border-radius:7px;"></div><div class="sk-linha curta skeleton" style="height:11px;border-radius:6px;"></div></div></div>'; }).join('');
   try {
     var params = cat && cat !== 'todos' ? '?categoria=' + cat : '';
     var data = await apiCall('/api/establishments' + params);
@@ -2145,21 +2133,21 @@ function renderEstabelecimentos(cat) {
     var novoBadge = isNovo ? '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;">🆕 Novo</span>' : '';
     var pedidosHoje = '';
     var isFav = favoritosIds.has(e.id);
-    var heartBtn = currentUser ? '<button onclick="toggleFavorito(\'' + e.id + '\',event)" style="background:none;border:none;font-size:18px;cursor:pointer;padding:0;line-height:1;flex-shrink:0;" title="' + (isFav ? 'Remover favorito' : 'Favoritar') + '">' + (isFav ? '❤️' : '🤍') + '</button>' : '';
-    return '<div class="card-est card-est-animado" style="animation-delay:' + (idx * 60) + 'ms" onclick="abrirCardapio(\'' + e.id + '\')" ' + esmaecido + '>' +
-      cardEstImg(e) +
+    var heartBtn = currentUser ? '<button onclick="toggleFavorito(\'' + e.id + '\',event)" style="background:none;border:none;font-size:18px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0;">' + (isFav ? '❤️' : '🤍') + '</button>' : '';
+    var separador = '<span style="color:var(--cinza4);">·</span>';
+    return '<div class="card-est card-est-animado" style="animation-delay:' + (idx * 50) + 'ms" onclick="abrirCardapio(\'' + e.id + '\')" ' + esmaecido + '>' +
+      cardEstAvatar(e) +
       '<div class="card-est-info">' +
-        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:3px;">' +
-          '<div class="card-est-nome">' + sanitizar(e.nome) + '</div>' +
-          heartBtn +
-        '</div>' +
+        '<div class="card-est-nome">' + sanitizar(e.nome) + '</div>' +
         '<div class="card-est-meta">' +
-          '<span class="card-est-tempo">🕐 ' + (e.tempo_entrega || '30-45 min') + '</span>' +
+          (e.avaliacao > 0 ? '<span style="color:#f5a623;font-weight:700;">⭐ ' + parseFloat(e.avaliacao).toFixed(1) + '</span>' + separador : '') +
+          '<span>🕐 ' + (e.tempo_entrega || '30-45 min') + '</span>' +
+          separador +
           '<span class="' + badge + '">' + status + '</span>' +
-          (ratingHtml ? ratingHtml : '') +
-          (isNovo ? '<span class="badge-novo">Novo ✨</span>' : '') +
+          (isNovo ? separador + '<span class="badge-novo">✨ Novo</span>' : '') +
         '</div>' +
       '</div>' +
+      heartBtn +
     '</div>';
   }).join('');
 }
