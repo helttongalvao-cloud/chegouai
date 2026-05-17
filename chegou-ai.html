@@ -87,7 +87,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 @keyframes telaEntrar { from { opacity:0; } to { opacity:1; } }
 
 /* SPLASH */
-#tela-splash { background:var(--preto); align-items:center; justify-content:center; flex-direction:column; gap:16px; }
+#tela-splash { background:radial-gradient(ellipse at 50% 40%,#181818 0%,#0A0A0A 70%); align-items:center; justify-content:center; flex-direction:column; gap:16px; }
 .logo-splash { width:80px; height:80px; background:var(--verde); border-radius:24px; display:flex; align-items:center; justify-content:center; font-family:'Plus Jakarta Sans',sans-serif; font-size:32px; font-weight:800; color:var(--preto); animation: pulsar 1.5s ease-in-out infinite; }
 @keyframes pulsar { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
 .logo-img-pulsar { width:110px; height:110px; border-radius:32px; object-fit:cover; display:block; }
@@ -95,20 +95,26 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .nome-splash { font-family:'Plus Jakarta Sans',sans-serif; font-size:28px; font-weight:800; background:linear-gradient(90deg,var(--verde) 0%,#ffffff 70%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 .sub-splash { color:var(--texto2); font-size:15px; letter-spacing:0.5px; margin-top:-4px; }
 
-/* LOGIN */
-#tela-login { background:var(--preto); padding:40px 24px; }
-.login-header { margin-bottom:36px; margin-top:28px; }
-.login-header h2 { font-size:32px; font-weight:800; line-height:1.1; }
-.login-header h2 span { color:var(--verde); }
-.login-header p { color:var(--texto2); margin-top:10px; font-size:15px; letter-spacing:0.1px; }
+/* LOGIN — SuperApp */
+#tela-login { background:radial-gradient(ellipse at 50% 20%,#181818 0%,#0A0A0A 75%); padding:0; position:relative; overflow:hidden; justify-content:center; align-items:center; }
+.login-bg { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.login-bg span { position:absolute; line-height:1; display:block; user-select:none; opacity:0.04; }
+.login-container { width:100%; max-width:420px; padding:48px 28px 64px; position:relative; z-index:1; margin:0 auto; }
+.login-logo-wrap { position:relative; display:flex; align-items:center; justify-content:center; margin:0 auto 28px; }
+.login-glow { position:absolute; width:200px; height:200px; border-radius:50%; background:radial-gradient(circle,rgba(0,230,118,0.2) 0%,transparent 68%); top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; }
+.login-logo-img { width:112px; height:112px; border-radius:32px; object-fit:cover; display:block; position:relative; box-shadow:0 0 40px rgba(0,200,83,0.28),0 8px 24px rgba(0,0,0,0.6); }
+.login-titulo { font-size:36px; font-weight:800; letter-spacing:-1px; line-height:1.1; text-align:center; }
+.gradient-text { background:linear-gradient(90deg,#00C853 0%,#ffffff 70%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; color:transparent; }
+.login-cats { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-top:14px; }
+.login-cat-tag { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); border-radius:20px; padding:5px 11px; font-size:12px; color:var(--texto2); white-space:nowrap; }
 .campo { margin-bottom:16px; }
 .campo label { display:block; font-size:13px; color:var(--texto2); margin-bottom:6px; font-weight:500; }
-.campo input { width:100%; background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:14px; padding:16px 18px; color:var(--texto); font-size:16px; font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.2s, box-shadow 0.2s; }
-.campo input:focus { border-color:var(--verde); }
-.campo input::placeholder { color:var(--cinza4); }
-.btn-principal { width:100%; background:var(--verde); color:var(--preto); border:none; border-radius:14px; padding:16px; font-size:16px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; transition:transform 0.15s, background 0.2s; margin-top:8px; }
-.btn-principal:active { transform:scale(0.97); }
-.btn-principal:hover { background:var(--verde2); }
+.campo input { width:100%; background:rgba(255,255,255,0.05); border:1.5px solid rgba(255,255,255,0.1); border-radius:14px; padding:16px 18px; color:var(--texto); font-size:16px; font-family:'DM Sans',sans-serif; outline:none; transition:border-color 0.2s, box-shadow 0.2s; }
+.campo input:focus { border-color:var(--verde); box-shadow:0 0 0 3px rgba(0,200,83,0.14); background:rgba(0,200,83,0.04); }
+.campo input::placeholder { color:rgba(255,255,255,0.2); }
+.btn-principal { width:100%; background:var(--verde); color:var(--preto); border:none; border-radius:14px; padding:16px; font-size:16px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; transition:transform 0.15s, background 0.2s, box-shadow 0.2s; margin-top:8px; }
+.btn-principal:active { transform:scale(0.96); box-shadow:none; }
+.btn-principal:hover { background:var(--verde2); box-shadow:0 4px 20px rgba(0,200,83,0.35); }
 .link-texto { text-align:center; margin-top:20px; color:var(--texto2); font-size:14px; }
 .link-texto span { color:var(--verde); cursor:pointer; font-weight:500; }
 .perfis-acesso { margin-top:32px; border-top:1px solid var(--cinza3); padding-top:24px; }
@@ -541,12 +547,39 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 <!-- LOGIN -->
 <div class="tela" id="tela-login">
-  <div style="padding:0 24px 40px; flex:1; display:flex; flex-direction:column; justify-content:center;">
-    <div style="text-align:center; margin-bottom:40px;">
-      <img src="/icons/icon-192.png?v=3" style="width:90px;height:90px;border-radius:26px;object-fit:cover;margin:0 auto 20px;display:block;" alt="Chegou Aí">
-      <h2 style="font-size:38px;font-weight:800;letter-spacing:-1px;line-height:1.05;">Bem-vindo ao<br><span style="background:linear-gradient(90deg,#00C853 0%,#ffffff 70%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;color:transparent;">Chegou Aí</span></h2>
-      <p style="color:var(--texto2);margin-top:10px;font-size:15px;">Entre na sua conta para continuar</p>
+  <!-- Ícones flutuantes de categorias (fundo, baixíssima opacidade) -->
+  <div class="login-bg" aria-hidden="true">
+    <span style="top:5%;left:3%;font-size:80px;transform:rotate(-15deg);">🛒</span>
+    <span style="top:10%;right:4%;font-size:64px;transform:rotate(12deg);">🍕</span>
+    <span style="top:30%;left:5%;font-size:72px;transform:rotate(-8deg);">💊</span>
+    <span style="top:45%;right:2%;font-size:60px;transform:rotate(18deg);">🍺</span>
+    <span style="top:65%;left:8%;font-size:76px;transform:rotate(-5deg);">🐾</span>
+    <span style="top:76%;right:6%;font-size:68px;transform:rotate(10deg);">🛒</span>
+    <span style="top:20%;left:46%;font-size:56px;transform:rotate(-22deg);">🍕</span>
+    <span style="top:55%;right:26%;font-size:62px;transform:rotate(8deg);">💊</span>
+    <span style="top:88%;left:38%;font-size:58px;transform:rotate(-12deg);">🍺</span>
+  </div>
+
+  <div class="login-container">
+    <!-- Logo com glow -->
+    <div class="login-logo-wrap">
+      <div class="login-glow"></div>
+      <img src="/icons/icon-192.png?v=3" class="login-logo-img" alt="Chegou Aí">
     </div>
+
+    <!-- Título + categorias -->
+    <div style="text-align:center; margin-bottom:32px;">
+      <h2 class="login-titulo">Bem-vindo ao<br><span class="gradient-text">Chegou Aí</span></h2>
+      <p style="color:var(--texto2);margin-top:10px;font-size:14px;letter-spacing:0.1px;">Delivery de tudo, rápido e fácil</p>
+      <div class="login-cats">
+        <span class="login-cat-tag">🍕 Comida</span>
+        <span class="login-cat-tag">🛒 Mercado</span>
+        <span class="login-cat-tag">💊 Farmácia</span>
+        <span class="login-cat-tag">🐾 Petshop</span>
+        <span class="login-cat-tag">🍺 Bebidas</span>
+      </div>
+    </div>
+
     <div class="campo">
       <label>Telefone (WhatsApp)</label>
       <input type="tel" placeholder="(97) 99999-9999" id="login-usuario" autocomplete="tel" inputmode="numeric" oninput="mascaraTelefone(this)">
@@ -560,7 +593,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       Não tem conta? <span onclick="irCadastro()">Cadastre-se grátis</span>
     </div>
     <div style="text-align:center;margin-top:20px;">
-      <span onclick="continuarSemConta()" style="color:var(--texto2);font-size:14px;cursor:pointer;border-bottom:1px dashed var(--cinza4);padding-bottom:2px;">Fazer pedido sem criar conta →</span>
+      <span onclick="continuarSemConta()" style="color:var(--texto2);font-size:14px;cursor:pointer;border-bottom:1px dashed rgba(255,255,255,0.15);padding-bottom:2px;">Fazer pedido sem criar conta →</span>
     </div>
   </div>
 </div>
