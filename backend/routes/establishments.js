@@ -85,13 +85,14 @@ router.get('/', async (req, res, next) => {
     const minAtual = agoraBR.getHours() * 60 + agoraBR.getMinutes();
 
     const resultado = data.map(est => {
-      if (est.horarios && est.horarios[diaKey]) {
+      if (est.horarios && Object.keys(est.horarios).length > 0) {
         const h = est.horarios[diaKey];
-        if (h.abre && h.fecha) {
+        if (h && h.abre && h.fecha) {
           const [hA, mA] = h.abre.split(':').map(Number);
           const [hF, mF] = h.fecha.split(':').map(Number);
-          est.aberto = minAtual >= hA * 60 + mA && minAtual <= hF * 60 + mF;
+          est.aberto = minAtual >= hA * 60 + mA && minAtual < hF * 60 + mF;
         } else {
+          // horários configurados mas hoje não tem entrada = fechado
           est.aberto = false;
         }
       }
@@ -138,7 +139,7 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
         const minAtual = agoraBR.getHours() * 60 + agoraBR.getMinutes();
         const minAbre = hA * 60 + mA;
         const minFecha = hF * 60 + mF;
-        est.aberto = minAtual >= minAbre && minAtual <= minFecha;
+        est.aberto = minAtual >= minAbre && minAtual < minFecha;
       } else {
         est.aberto = false;
       }
