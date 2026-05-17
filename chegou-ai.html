@@ -102,7 +102,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .login-container { width:100%; max-width:420px; padding:48px 28px 64px; position:relative; z-index:1; margin:0 auto; }
 .login-logo-wrap { position:relative; display:flex; align-items:center; justify-content:center; margin:0 auto 28px; }
 .login-glow { position:absolute; width:200px; height:200px; border-radius:50%; background:radial-gradient(circle,rgba(0,230,118,0.2) 0%,transparent 68%); top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; }
-.login-logo-img { width:120px; height:120px; display:block; object-fit:cover; position:relative; mix-blend-mode:screen; filter:drop-shadow(0 0 18px rgba(0,200,83,0.55)); }
+.login-logo-frame { width:112px; height:112px; border-radius:25px; overflow:hidden; position:relative; flex-shrink:0; }
+.login-logo-img { width:112px; height:112px; display:block; object-fit:cover; }
 .login-titulo { font-size:36px; font-weight:800; letter-spacing:-1px; line-height:1.1; text-align:center; }
 .gradient-text { background:linear-gradient(90deg,#00C853 0%,#ffffff 70%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; color:transparent; }
 .login-cats { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-top:24px; }
@@ -556,7 +557,9 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <!-- Logo com glow -->
     <div class="login-logo-wrap">
       <div class="login-glow"></div>
-      <img src="/icons/icon-192.png?v=3" class="login-logo-img" alt="Chegou Aí">
+      <div class="login-logo-frame">
+        <img src="/icons/icon-192.png?v=3" class="login-logo-img" alt="Chegou Aí">
+      </div>
     </div>
 
     <!-- Título + categorias -->
