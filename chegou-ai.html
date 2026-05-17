@@ -102,7 +102,6 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .login-container { width:100%; max-width:420px; padding:48px 28px 64px; position:relative; z-index:1; margin:0 auto; }
 .login-logo-wrap { position:relative; display:flex; align-items:center; justify-content:center; margin:0 auto 28px; }
 .login-glow { position:absolute; width:200px; height:200px; border-radius:50%; background:radial-gradient(circle,rgba(0,230,118,0.2) 0%,transparent 68%); top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; }
-.login-logo-img { width:112px; height:112px; display:block; border-radius:25px; }
 .login-titulo { font-size:36px; font-weight:800; letter-spacing:-1px; line-height:1.1; text-align:center; }
 .gradient-text { background:linear-gradient(90deg,#00C853 0%,#ffffff 70%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; color:transparent; }
 .login-cats { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-top:24px; }
@@ -556,7 +555,19 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <!-- Logo com glow -->
     <div class="login-logo-wrap">
       <div class="login-glow"></div>
-      <img src="/icons/icon-192.png?v=3" class="login-logo-img" alt="Chegou Aí">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="120" height="120">
+        <g fill="#00E600">
+          <path d="M96 160h112v128H96z" />
+          <path d="M80 144h144v16H80z" />
+          <path d="M368 288h-48v-32a16 16 0 0 0-16-16h-64v64h-32v-96h-16v112a16 16 0 0 0 16 16h160a16 16 0 0 0 16-16v-16a16 16 0 0 0-16-16z" />
+          <path d="M384 224a16 16 0 0 0-16-16h-16v-16h24a8 8 0 0 0 8-8v-8a8 8 0 0 0-8-8h-48a8 8 0 0 0-8 8v8a8 8 0 0 0 8 8h16v16h-16a32 32 0 0 0-32 32v64h32v-64a16 16 0 0 1 16-16h16a16 16 0 0 1 16 16z" />
+          <path d="M144 288a48 48 0 1 0 48 48 48 48 0 0 0-48-48zm0 64a16 16 0 1 1 16-16 16 16 0 0 1-16 16z" />
+          <path d="M144 256a80 80 0 0 0-80 80h32a48 48 0 0 1 96 0h32a80 80 0 0 0-80-80z" />
+          <path d="M368 288a48 48 0 1 0 48 48 48 48 0 0 0-48-48zm0 64a16 16 0 1 1 16-16 16 16 0 0 1-16 16z" />
+          <path d="M368 256a80 80 0 0 0-80 80h32a48 48 0 0 1 96 0h32a80 80 0 0 0-80-80z" />
+          <path d="M224 288h32v32h-32z" />
+        </g>
+      </svg>
     </div>
 
     <!-- Título + categorias -->
