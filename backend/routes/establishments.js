@@ -234,6 +234,19 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
 
     if (errPedidos) console.error('[dashboard] pedidosAbertos query error:', errPedidos);
 
+    // Resolver nomes dos clientes logados via lookup direto (evita dependência de FK join)
+    const clienteIds = [...new Set((pedidosAbertos || []).map(p => p.cliente_id).filter(Boolean))];
+    let nomesMap = {};
+    if (clienteIds.length > 0) {
+      const { data: perfis } = await supabaseAdmin
+        .from('profiles').select('id, nome').in('id', clienteIds);
+      if (perfis) perfis.forEach(p => { nomesMap[p.id] = p.nome; });
+    }
+    const pedidosComNome = (pedidosAbertos || []).map(p => ({
+      ...p,
+      nome_cliente: p.guest_nome || (p.cliente_id && nomesMap[p.cliente_id]) || null,
+    }));
+
     const faturamento = pedidosHoje?.reduce((s, p) => s + (p.subtotal || 0), 0) || 0;
     const comissao = calcularComissao(est.cadastro_data);
 
@@ -250,7 +263,7 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         comissaoPaga: parseFloat((faturamento * comissao.taxa / 100).toFixed(2)),
         saldoLiquido: parseFloat((faturamento * (1 - comissao.taxa / 100)).toFixed(2)),
       },
-      pedidosAbertos: pedidosAbertos || [],
+      pedidosAbertos: pedidosComNome,
     });
   } catch (err) {
     next(err);

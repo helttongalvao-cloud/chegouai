@@ -368,9 +368,19 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
       .reduce((s, p) => s + (p.taxa_entrega || 0), 0);
     const ganhoTotal = historico.reduce((s, p) => s + (p.taxa_entrega || 0), 0);
 
+    // Resolver nomes dos clientes via lookup direto
+    const todosOsPedidos = [...(dispRes.data || []), ...(ativaRes.data ? [ativaRes.data] : [])];
+    const clienteIds = [...new Set(todosOsPedidos.map(p => p.cliente_id).filter(Boolean))];
+    let nomesMap = {};
+    if (clienteIds.length > 0) {
+      const { data: perfis } = await supabaseAdmin.from('profiles').select('id, nome').in('id', clienteIds);
+      if (perfis) perfis.forEach(p => { nomesMap[p.id] = p.nome; });
+    }
+    const resolverNome = (p) => ({ ...p, nome_cliente: p.guest_nome || (p.cliente_id && nomesMap[p.cliente_id]) || null });
+
     res.json({
-      disponiveis: dispRes.data || [],
-      ativa: ativaRes.data || null,
+      disponiveis: (dispRes.data || []).map(resolverNome),
+      ativa: ativaRes.data ? resolverNome(ativaRes.data) : null,
       disponivel: motoboy ? motoboy.disponivel : null,
       stats: {
         entregasHoje,
