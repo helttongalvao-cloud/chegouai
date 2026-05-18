@@ -354,22 +354,26 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
       // Histórico de entregas do motoboy (últimos 30 dias)
       motoboy ? supabaseAdmin
         .from('pedidos')
-        .select('id, taxa_entrega, criado_em, estabelecimentos(nome), profiles!pedidos_cliente_id_fkey(nome)')
+        .select('id, taxa_entrega, criado_em, guest_nome, cliente_id, estabelecimentos(nome), profiles!pedidos_cliente_id_fkey(nome)')
         .eq('status', 'entregue')
         .eq('motoboy_id', motoboy.id)
         .order('criado_em', { ascending: false })
         .limit(20) : Promise.resolve({ data: [] }),
     ]);
 
-    const historico = histRes.data || [];
-    const entregasHoje = historico.filter(p => new Date(p.criado_em) >= hojeInicio).length;
-    const ganhoHoje = historico
+    const historicoRaw = histRes.data || [];
+    const entregasHoje = historicoRaw.filter(p => new Date(p.criado_em) >= hojeInicio).length;
+    const ganhoHoje = historicoRaw
       .filter(p => new Date(p.criado_em) >= hojeInicio)
       .reduce((s, p) => s + (p.taxa_entrega || 0), 0);
-    const ganhoTotal = historico.reduce((s, p) => s + (p.taxa_entrega || 0), 0);
+    const ganhoTotal = historicoRaw.reduce((s, p) => s + (p.taxa_entrega || 0), 0);
 
-    // Resolver nomes dos clientes via lookup direto
-    const todosOsPedidos = [...(dispRes.data || []), ...(ativaRes.data ? [ativaRes.data] : [])];
+    // Resolver nomes dos clientes via lookup direto (inclui historico)
+    const todosOsPedidos = [
+      ...(dispRes.data || []),
+      ...(ativaRes.data ? [ativaRes.data] : []),
+      ...historicoRaw,
+    ];
     const clienteIds = [...new Set(todosOsPedidos.map(p => p.cliente_id).filter(Boolean))];
     let nomesMap = {};
     if (clienteIds.length > 0) {
@@ -385,10 +389,10 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
       stats: {
         entregasHoje,
         ganhoHoje: parseFloat(ganhoHoje.toFixed(2)),
-        entregasTotal: historico.length,
+        entregasTotal: historicoRaw.length,
         ganhoTotal: parseFloat(ganhoTotal.toFixed(2)),
       },
-      historico,
+      historico: historicoRaw.map(resolverNome),
     });
   } catch (err) {
     next(err);
