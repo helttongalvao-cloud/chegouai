@@ -4268,7 +4268,7 @@ async function renderEstabelecimento() {
       var pagBadge = p.forma_pagamento ? '<span style="font-size:11px;color:var(--texto2);margin-left:6px;">' + (pagIcones[p.forma_pagamento] || '') + ' ' + p.forma_pagamento + '</span>' : '';
       var nomeCliente = p.tipo_pedido === 'mesa'
         ? (p.nome_cliente_mesa || 'Cliente')
-        : ((p.profiles && p.profiles.nome) ? sanitizar(p.profiles.nome) : sanitizar(p.guest_nome || ''));
+        : ((p.profiles && p.profiles.nome) ? sanitizar(p.profiles.nome) : sanitizar(p.guest_nome || p.telefone_cliente || 'Visitante'));
       var mesaTag = p.tipo_pedido === 'mesa'
         ? '<span style="background:#FF6D0020;color:#FF6D00;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:6px;">🪑 ' + (p.numero_mesa ? 'Mesa ' + p.numero_mesa : 'Salão') + '</span>'
         : '';
@@ -4277,9 +4277,9 @@ async function renderEstabelecimento() {
         var corMoto = (p.status === 'saiu_para_entrega' || p.status === 'coletado') ? 'var(--verde)' : '#ffb400';
         motoboyProprioTag = '<div class="pedido-endereco" style="font-weight:600;color:' + corMoto + ';">🛵 ' + sanitizar(p.motoboys_proprios.nome) + '</div>';
       }
-      var codigoColetaTag = p.codigo_coleta && !isEncerrado
+      var codigoColetaTag = p.codigo_coleta && p.status !== 'entregue'
         ? '<div style="background:rgba(0,200,83,0.1);border:1.5px solid var(--verde);border-radius:10px;padding:8px 12px;margin:6px 0;display:flex;align-items:center;gap:10px;">' +
-            '<span style="font-size:13px;color:var(--texto2);">🔒 Código do pedido:</span>' +
+            '<span style="font-size:13px;color:var(--texto2);">🔒 Código:</span>' +
             '<span style="font-size:22px;font-weight:900;color:var(--verde);font-family:monospace;letter-spacing:4px;">' + p.codigo_coleta + '</span>' +
           '</div>'
         : '';
@@ -5294,7 +5294,7 @@ async function renderMotoboy() {
       html += disponiveis.map(function(p) {
         var ganho = 'R$ ' + parseFloat(p.taxa_entrega || 4).toFixed(2).replace('.',',');
         var nomeLoja = p.estabelecimentos ? p.estabelecimentos.nome : '—';
-        var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : (p.guest_nome || '—');
+        var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : (p.guest_nome || p.telefone_cliente || 'Visitante');
         var distLoja = '';
         return '<div class="entrega-card">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
@@ -5334,7 +5334,7 @@ async function renderMotoboy() {
 function renderFaseEntrega(pedido, fase) {
   var ganho = 'R$ ' + parseFloat(pedido.taxa_entrega || 4).toFixed(2).replace('.',',');
   var nomeLoja = pedido.estabelecimentos ? pedido.estabelecimentos.nome : '—';
-  var nomeCliente = (pedido.profiles && pedido.profiles.nome) ? pedido.profiles.nome : (pedido.guest_nome || '—');
+  var nomeCliente = (pedido.profiles && pedido.profiles.nome) ? pedido.profiles.nome : (pedido.guest_nome || pedido.telefone_cliente || 'Visitante');
   var telAtivo = pedido.telefone_cliente ? pedido.telefone_cliente.replace(/\D/g,'') : '';
   var codigo = codigoPedido(pedido.id);
 
