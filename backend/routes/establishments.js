@@ -12,20 +12,37 @@ const router = express.Router();
 // =============================================
 router.get('/products/featured', async (req, res, next) => {
   try {
-    // 1. Buscar IDs de lojas realmente abertas e não pausadas
-    // Usa .or() porque NULL != true é NULL em PostgreSQL (não é true)
+    // 1. Buscar lojas ativas com horários para calcular aberto dinamicamente
     const { data: lojas, error: eLojas } = await supabaseAdmin
       .from('estabelecimentos')
-      .select('id')
-      .eq('ativo', true)
-      .eq('aberto', true)
-      .or('pausado.is.null,pausado.eq.false');
+      .select('id, aberto, pausado, horarios')
+      .eq('ativo', true);
 
     if (eLojas) throw eLojas;
-    const ids = (lojas || []).map(l => l.id);
+
+    // Mesma lógica do GET /api/establishments
+    const diasMap = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+    const agoraBR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const diaKey = diasMap[agoraBR.getDay()];
+    const minAtual = agoraBR.getHours() * 60 + agoraBR.getMinutes();
+
+    const ids = (lojas || []).filter(est => {
+      if (est.pausado) return false;
+      if (est.horarios && Object.keys(est.horarios).length > 0) {
+        const h = est.horarios[diaKey];
+        if (h && h.abre && h.fecha) {
+          const [hA, mA] = h.abre.split(':').map(Number);
+          const [hF, mF] = h.fecha.split(':').map(Number);
+          return minAtual >= hA * 60 + mA && minAtual < hF * 60 + mF;
+        }
+        return false;
+      }
+      return est.aberto === true;
+    }).map(est => est.id);
+
     if (ids.length === 0) return res.json([]);
 
-    // 2. Buscar produtos dessas lojas
+    // 2. Buscar produtos dessas lojas abertas
     const { data, error } = await supabaseAdmin
       .from('produtos')
       .select('id, nome, preco, emoji, imagem_url, estabelecimento_id, estabelecimentos(nome)')
