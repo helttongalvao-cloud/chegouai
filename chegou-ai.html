@@ -1888,7 +1888,7 @@ setTimeout(function(){
   } else {
     irTela('tela-login');
   }
-}, 1800);
+}, 100);
 
 
 
@@ -1924,7 +1924,7 @@ function entrarComo(perfil) {
     irTela('tela-estabelecimento');
     setTimeout(function() { renderEstabelecimento(); }, 50);
     if(window.estPollingTimer) clearInterval(window.estPollingTimer);
-    window.estPollingTimer = setInterval(function() { renderEstabelecimento(); }, 20000);
+    window.estPollingTimer = setInterval(function() { renderEstabelecimento(); }, 60000);
     ativarNotificacoesPush().then(verificarBannerPush);
     verificarBannerPush();
   }
@@ -6165,7 +6165,7 @@ if('serviceWorker' in navigator) {
       var resp = await apiCall('/api/auth/me');
       if(resp && resp.id) {
         currentUser = user;
-        setTimeout(function() { entrarComo(user.perfil); }, 1800);
+        setTimeout(function() { entrarComo(user.perfil); }, 100);
         return;
       }
     } catch(e) { /* token expirado — tentar refresh abaixo */ }
@@ -6185,7 +6185,7 @@ if('serviceWorker' in navigator) {
           localStorage.setItem('chegouai_token', renewed.token);
           if(renewed.refreshToken) localStorage.setItem('chegouai_refresh', renewed.refreshToken);
           currentUser = user;
-          setTimeout(function() { entrarComo(user.perfil); }, 1800);
+          setTimeout(function() { entrarComo(user.perfil); }, 100);
           return;
         }
       } catch(e2) { /* refresh falhou */ }

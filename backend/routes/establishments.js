@@ -187,36 +187,33 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
 
     if (estErr || !est) return res.status(404).json({ error: 'Loja não encontrada' });
 
-    // Pedidos de hoje
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-
-    const { data: pedidosHoje } = await supabaseAdmin
-      .from('pedidos')
-      .select('id, total, subtotal, comissao_plataforma, status, pagamento_status')
-      .eq('estabelecimento_id', est.id)
-      .gte('criado_em', hoje.toISOString())
-      .eq('pagamento_status', 'aprovado') // Só conta como pedido real se foi pago
-      .neq('status', 'cancelado');
-
-    // Pedidos dos últimos 7 dias
-    const inicioSemana = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
-    inicioSemana.setHours(0, 0, 0, 0);
-    const { data: pedidosSemana } = await supabaseAdmin
-      .from('pedidos').select('id, subtotal')
-      .eq('estabelecimento_id', est.id)
-      .gte('criado_em', inicioSemana.toISOString())
-      .eq('pagamento_status', 'aprovado').neq('status', 'cancelado');
-
-    // Pedidos do mês corrente
+    // Datas para filtros
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const inicioSemana = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000); inicioSemana.setHours(0, 0, 0, 0);
     const inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
-    const { data: pedidosMes } = await supabaseAdmin
-      .from('pedidos').select('id, subtotal')
-      .eq('estabelecimento_id', est.id)
-      .gte('criado_em', inicioMes.toISOString())
-      .eq('pagamento_status', 'aprovado').neq('status', 'cancelado');
 
-    const { data: pedidosAbertos, error: errPedidos } = await supabaseAdmin
+    // Todas as queries de pedidos em paralelo
+    const [
+      { data: pedidosHoje },
+      { data: pedidosSemana },
+      { data: pedidosMes },
+      { data: pedidosAbertos, error: errPedidos },
+    ] = await Promise.all([
+      supabaseAdmin.from('pedidos')
+        .select('id, subtotal, comissao_plataforma, status, pagamento_status')
+        .eq('estabelecimento_id', est.id)
+        .gte('criado_em', hoje.toISOString())
+        .eq('pagamento_status', 'aprovado')
+        .neq('status', 'cancelado'),
+      supabaseAdmin.from('pedidos').select('id, subtotal')
+        .eq('estabelecimento_id', est.id)
+        .gte('criado_em', inicioSemana.toISOString())
+        .eq('pagamento_status', 'aprovado').neq('status', 'cancelado'),
+      supabaseAdmin.from('pedidos').select('id, subtotal')
+        .eq('estabelecimento_id', est.id)
+        .gte('criado_em', inicioMes.toISOString())
+        .eq('pagamento_status', 'aprovado').neq('status', 'cancelado'),
+      supabaseAdmin
       .from('pedidos')
       .select(`
         id, tipo, tipo_pedido, numero_mesa, nome_cliente_mesa, status, pagamento_status,
@@ -228,11 +225,12 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         motoboys_proprios (id, nome),
         profiles!pedidos_cliente_id_fkey (nome)
       `)
-      .eq('estabelecimento_id', est.id)
-      .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue'])
-      .or('pagamento_status.eq.aprovado,tipo.eq.lista')
-      .gte('criado_em', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      .order('criado_em', { ascending: true });
+        .eq('estabelecimento_id', est.id)
+        .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue'])
+        .or('pagamento_status.eq.aprovado,tipo.eq.lista')
+        .gte('criado_em', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .order('criado_em', { ascending: true }),
+    ]);
 
     if (errPedidos) console.error('[dashboard] pedidosAbertos query error:', errPedidos);
 
