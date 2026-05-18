@@ -1880,13 +1880,32 @@ setTimeout(function(){
     iniciarModoMesa(lojaParam, params.get('mesa') || '');
   } else if(window.location.pathname === '/motoboy' && lojaParam) {
     iniciarModoMotoboyProprio(lojaParam);
+  } else if(authToken && currentUser) {
+    // Sessão salva: ir direto para a tela correta sem esperar verificarSessao()
+    // verificarSessao() valida em background e desloga se token expirou
+    entrarComo(currentUser.perfil);
   } else if(pedidoAtualId) {
-    // Pedido ativo para rastrear — não redirecionar para login
-    if(!authToken) { irTela('tela-confirmado'); ultimoStatusConhecido = {}; iniciarPollingPedidos(); }
+    // Pedido ativo guest para rastrear
+    irTela('tela-confirmado'); ultimoStatusConhecido = {}; iniciarPollingPedidos();
   } else {
     irTela('tela-login');
   }
 }, 100);
+
+// Quando app volta do background (tela desligou e voltou), recarrega dados
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState !== 'visible') return;
+  var tela = document.querySelector('.tela.ativa');
+  if (!tela) return;
+  if (tela.id === 'tela-estabelecimento') {
+    renderEstabelecimento();
+  } else if (tela.id === 'tela-motoboy') {
+    renderMotoboy();
+  } else if (tela.id === 'tela-confirmado' && pedidoAtualId) {
+    ultimoStatusConhecido = {};
+    iniciarPollingPedidos();
+  }
+});
 
 
 
@@ -6163,7 +6182,11 @@ if('serviceWorker' in navigator) {
       var resp = await apiCall('/api/auth/me');
       if(resp && resp.id) {
         currentUser = user;
-        setTimeout(function() { entrarComo(user.perfil); }, 100);
+        // Só redireciona se ainda está na tela de login (splash já pode ter redirecionado otimisticamente)
+        var telaAtiva = document.querySelector('.tela.ativa');
+        if (!telaAtiva || telaAtiva.id === 'tela-login') {
+          setTimeout(function() { entrarComo(user.perfil); }, 100);
+        }
         return;
       }
     } catch(e) { /* token expirado — tentar refresh abaixo */ }
@@ -6183,7 +6206,10 @@ if('serviceWorker' in navigator) {
           localStorage.setItem('chegouai_token', renewed.token);
           if(renewed.refreshToken) localStorage.setItem('chegouai_refresh', renewed.refreshToken);
           currentUser = user;
-          setTimeout(function() { entrarComo(user.perfil); }, 100);
+          var telaAtivaR = document.querySelector('.tela.ativa');
+          if (!telaAtivaR || telaAtivaR.id === 'tela-login') {
+            setTimeout(function() { entrarComo(user.perfil); }, 100);
+          }
           return;
         }
       } catch(e2) { /* refresh falhou */ }
