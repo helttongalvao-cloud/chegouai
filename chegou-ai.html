@@ -2253,6 +2253,13 @@ function renderEstabelecimentos(cat) {
   var filtrados = (cat === 'todos' || !cat) ? estabelecimentos.slice()
     : estabelecimentos.filter(function(e){ return e.categoria === cat; });
 
+  // Abertos sempre antes dos fechados/pausados
+  filtrados.sort(function(a, b) {
+    var aAberto = a.aberto && !a.pausado ? 0 : 1;
+    var bAberto = b.aberto && !b.pausado ? 0 : 1;
+    return aAberto - bAberto;
+  });
+
   if(filtroRapidoAtual === 'aberto') {
     filtrados = filtrados.filter(function(e){ return e.aberto && !e.pausado; });
   } else if(filtroRapidoAtual === 'rapido') {
