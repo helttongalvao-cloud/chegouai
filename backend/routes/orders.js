@@ -9,6 +9,25 @@ const { enviarPush } = require('./notifications');
 const router = express.Router();
 
 // =============================================
+// GET /api/orders/primeiro-pedido — Verifica se telefone nunca comprou
+// =============================================
+router.get('/primeiro-pedido', async (req, res, next) => {
+  try {
+    const tel = (req.query.telefone || '').replace(/\D/g, '').slice(-11);
+    if (tel.length < 10) return res.json({ primeiroP: false });
+
+    const { data } = await supabaseAdmin
+      .from('pedidos')
+      .select('id')
+      .eq('telefone_cliente', tel)
+      .eq('pagamento_status', 'aprovado')
+      .limit(1);
+
+    res.json({ primeiroP: !data || data.length === 0 });
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // POST /api/orders — Criar novo pedido
 // =============================================
 router.post(
@@ -194,7 +213,23 @@ router.post(
         }
         taxaFinal = taxaCliente;
       }
-      taxaFinal = Math.round(taxaFinal * 100) / 100; // garantir 2 casas decimais
+      taxaFinal = Math.round(taxaFinal * 100) / 100;
+
+      // 5b. Frete grátis no primeiro pedido — verificação dupla (front pediu + backend confirma)
+      if (req.body.freteGratis === true) {
+        const tel = telefoneCliente.replace(/\D/g, '').slice(-11);
+        const { data: pedidosAnt } = await supabaseAdmin
+          .from('pedidos')
+          .select('id')
+          .eq('telefone_cliente', tel)
+          .eq('pagamento_status', 'aprovado')
+          .limit(1);
+        if (!pedidosAnt || pedidosAnt.length === 0) {
+          // Confirmado: é primeiro pedido — absorver os R$2 no desconto
+          desconto = parseFloat((desconto + taxaFinal).toFixed(2));
+        }
+      }
+
       const totalFinal = parseFloat(Math.max(0, subtotal + taxaFinal - desconto).toFixed(2));
 
       const pedidoInsert = {
@@ -211,7 +246,11 @@ router.post(
         pagamento_status: 'pendente',
         codigo_coleta: String(Math.floor(Math.random() * 900) + 100),
       };
-      if (desconto > 0) { pedidoInsert.desconto = desconto; pedidoInsert.cupom_codigo = cupomCodigo; }
+      if (desconto > 0) {
+        pedidoInsert.desconto = desconto;
+        if (cupomCodigo) pedidoInsert.cupom_codigo = cupomCodigo;
+        else if (req.body.freteGratis === true) pedidoInsert.cupom_codigo = 'FRETE_GRATIS_1P';
+      }
       if (!req.user) {
         pedidoInsert.guest_nome = (guestNome || '').trim();
         if (guestCpf) pedidoInsert.guest_cpf = guestCpf.replace(/\D/g, '');
