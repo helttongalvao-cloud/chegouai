@@ -8,6 +8,42 @@ const { enviarPush } = require('./notifications');
 const router = express.Router();
 
 // =============================================
+// GET /api/establishments/products/featured — Produtos em destaque de lojas abertas
+// =============================================
+router.get('/products/featured', async (req, res, next) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('produtos')
+      .select(`
+        id, nome, preco, emoji, imagem_url,
+        estabelecimentos!inner (id, nome, aberto, ativo, pausado)
+      `)
+      .eq('disponivel', true)
+      .eq('estabelecimentos.ativo', true)
+      .eq('estabelecimentos.aberto', true)
+      .eq('estabelecimentos.pausado', false)
+      .limit(30);
+
+    if (error) throw error;
+
+    const ativos = (data || []).filter(p => p.estabelecimentos?.aberto && !p.estabelecimentos?.pausado);
+
+    // Embaralhar e devolver até 8
+    const embaralhados = ativos.sort(() => Math.random() - 0.5).slice(0, 8);
+
+    res.json(embaralhados.map(p => ({
+      id: p.id,
+      nome: p.nome,
+      preco: p.preco,
+      emoji: p.emoji || null,
+      imagem_url: p.imagem_url || null,
+      loja_id: p.estabelecimentos.id,
+      loja_nome: p.estabelecimentos.nome,
+    })));
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // GET /api/establishments/products/search — Busca global de produtos (público)
 // =============================================
 router.get('/products/search', async (req, res, next) => {
