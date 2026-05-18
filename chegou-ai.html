@@ -648,12 +648,19 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
             <div style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:5px;">Simples como nunca foi</div>
             <span style="position:absolute;right:-8px;bottom:-12px;font-size:88px;opacity:0.12;line-height:1;">🛒</span>
           </div>
+          <div class="banner-slide" style="background:linear-gradient(135deg,#1a0a3a,#3a1a6e);">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Pagamento</div>
+            <div style="font-size:20px;font-weight:800;color:#fff;line-height:1.2;font-family:'Plus Jakarta Sans',sans-serif;">Pague com Cartão</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:5px;">Débito ou crédito, na hora</div>
+            <span style="position:absolute;right:-8px;bottom:-12px;font-size:88px;opacity:0.12;line-height:1;">💳</span>
+          </div>
         </div>
       </div>
       <div class="banner-dots" id="banner-dots">
         <span class="banner-dot ativo" data-idx="0"></span>
         <span class="banner-dot" data-idx="1"></span>
         <span class="banner-dot" data-idx="2"></span>
+        <span class="banner-dot" data-idx="3"></span>
       </div>
     </div>
 
@@ -662,7 +669,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="cat-icon-grid">
         <div class="cat-icon-item ativo" onclick="filtrarCatIcon(this,'todos')" style="background:linear-gradient(135deg,#1a1f2e,#0d1117);border-radius:14px;padding:13px 16px;min-height:64px;display:flex;align-items:center;justify-content:space-between;">
           <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">Todos</div><div style="font-size:10px;color:rgba(255,255,255,0.45);">Ver tudo</div></div>
-          <span style="font-size:28px;">🍽️</span>
+          <span style="font-size:28px;">🏠</span>
         </div>
         <div class="cat-icon-item" onclick="filtrarCatIcon(this,'restaurante')" style="background:linear-gradient(135deg,#4a0e0e,#180505);border-radius:14px;padding:13px 16px;min-height:64px;display:flex;align-items:center;justify-content:space-between;">
           <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">Restaurantes</div><div style="font-size:10px;color:rgba(255,255,255,0.45);">Pratos</div></div>
@@ -676,9 +683,13 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
           <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">Farmácias</div><div style="font-size:10px;color:rgba(255,255,255,0.45);">Remédios</div></div>
           <span style="font-size:28px;">💊</span>
         </div>
-        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'lanche')" style="background:linear-gradient(135deg,#3a2005,#120b02);border-radius:14px;padding:13px 16px;min-height:64px;display:flex;align-items:center;justify-content:space-between;grid-column:span 2;">
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'lanche')" style="background:linear-gradient(135deg,#3a2005,#120b02);border-radius:14px;padding:13px 16px;min-height:64px;display:flex;align-items:center;justify-content:space-between;">
           <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">Lanches</div><div style="font-size:10px;color:rgba(255,255,255,0.45);">Hambúrgueres e salgados</div></div>
           <span style="font-size:28px;">🥪</span>
+        </div>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'todos')" style="background:linear-gradient(135deg,#1a1040,#0d0820);border-radius:14px;padding:13px 16px;min-height:64px;display:flex;align-items:center;justify-content:space-between;">
+          <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">E muito mais</div><div style="font-size:10px;color:rgba(255,255,255,0.45);">Ver tudo</div></div>
+          <span style="font-size:28px;">🎁</span>
         </div>
       </div>
     </div>
@@ -2506,7 +2517,7 @@ function buscarProdutoGlobal(val) {
   function initBanner() {
     var track = document.getElementById('banner-track');
     var dots = document.querySelectorAll('.banner-dot');
-    var total = 3; var current = 0; var timer;
+    var total = 4; var current = 0; var timer;
     function goTo(idx) {
       current = idx;
       if(track) track.style.transform = 'translateX(-' + (idx*100) + '%)';
