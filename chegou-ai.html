@@ -142,7 +142,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 /* HOME CLIENTE */
 #tela-home { background:var(--preto); }
-.home-content { padding:0 16px 120px; flex:1; }
+.home-content { padding:0 16px 160px; flex:1; }
 .secao-titulo { font-size:17px; font-weight:800; margin-bottom:12px; letter-spacing:-0.3px; font-family:'Plus Jakarta Sans',sans-serif; }
 .categorias { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; margin-bottom:24px; scrollbar-width:none; }
 .categorias::-webkit-scrollbar { display:none; }
@@ -162,6 +162,13 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .badge-aberto { background:rgba(16,185,129,0.10); color:#34d399; font-size:12px; padding:4px 10px; border-radius:9999px; font-weight:500; }
 .badge-fechado { background:rgba(244,63,94,0.10); color:#fb7185; font-size:12px; padding:4px 10px; border-radius:9999px; font-weight:500; }
 .badge-pausado { background:rgba(251,146,60,0.10); color:#fb923c; font-size:12px; padding:4px 10px; border-radius:9999px; font-weight:500; }
+/* BOTTOM NAVIGATION */
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; z-index:300; background:#0d0d0d; border-top:1px solid rgba(255,255,255,0.08); display:flex; align-items:stretch; padding-bottom:env(safe-area-inset-bottom,0px); }
+.bottom-nav.oculto { display:none; }
+.bottom-nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; cursor:pointer; color:#71717a; padding:8px 0 6px; -webkit-tap-highlight-color:transparent; transition:color 0.15s; font-size:10px; font-weight:600; font-family:'DM Sans',sans-serif; }
+.bottom-nav-btn.ativo { color:var(--verde); }
+.bottom-nav-btn svg { transition:stroke 0.15s; }
+
 /* COMPLEMENTOS */
 .comp-grupo { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:12px; padding:14px; margin-bottom:10px; }
 .comp-grupo-titulo { font-size:14px; font-weight:700; margin-bottom:2px; }
@@ -694,6 +701,15 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       </div>
     </div>
 
+    <!-- Leva e Traz -->
+    <div style="background:#16161a;border:1.5px solid var(--verde);border-radius:18px;padding:16px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;" onclick="abrirEnvios()">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:15px;font-weight:800;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:4px;">🛵 Chegou Aí Envios</div>
+        <div style="font-size:12px;color:#a1a1aa;line-height:1.45;">Documento, chave ou pacote? Chame um motoboy particular agora.</div>
+      </div>
+      <div style="flex-shrink:0;background:var(--verde);color:#000;font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;white-space:nowrap;">Chamar</div>
+    </div>
+
     <div class="secao-titulo" style="margin-bottom:8px;">Perto de você</div>
     <!-- Filtros rápidos -->
     <div class="filtros-rapidos-wrap" id="filtros-rapidos">
@@ -709,6 +725,22 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <div class="carrinho-texto">Ver carrinho</div>
     <div class="carrinho-total" id="carrinho-total">R$ 0,00</div>
   </div>
+</div>
+
+<!-- BOTTOM NAVIGATION (visível apenas na home do cliente) -->
+<div class="bottom-nav oculto" id="bottom-nav">
+  <button class="bottom-nav-btn ativo" id="nav-inicio" onclick="navInicio()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Início
+  </button>
+  <button class="bottom-nav-btn" id="nav-busca" onclick="navBusca()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Busca
+  </button>
+  <button class="bottom-nav-btn" id="nav-pedidos" onclick="navPedidos()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    Pedidos
+  </button>
 </div>
 
 <!-- CARDÁPIO -->
@@ -1943,6 +1975,18 @@ function irTela(id) {
   document.querySelectorAll('.tela').forEach(function(t){ t.classList.remove('ativa'); });
   var proxima = document.getElementById(id);
   proxima.classList.add('ativa');
+  // Bottom nav: visível apenas na home do cliente
+  var bn = document.getElementById('bottom-nav');
+  var cf = document.getElementById('carrinho-float');
+  if(bn) {
+    if(id === 'tela-home') {
+      bn.classList.remove('oculto');
+      if(cf) cf.style.bottom = '76px';
+    } else {
+      bn.classList.add('oculto');
+      if(cf) cf.style.bottom = '24px';
+    }
+  }
 }// SPLASH
 restaurarCarrinho();
 atualizarCarrinho();
@@ -2228,7 +2272,7 @@ function renderEstabelecimentos(cat) {
   }
   var agora = Date.now();
   var diasNovoMs = 14 * 24 * 60 * 60 * 1000;
-  lista.innerHTML = filtrados.map(function(e, idx) {
+  var cards = filtrados.map(function(e, idx) {
     var status = e.pausado ? 'Pausado' : (e.aberto ? 'Aberto' : 'Fechado');
     var dimStyle = (!e.aberto || e.pausado) ? 'opacity:0.55;filter:grayscale(0.8);' : '';
     var badgeInline = e.pausado
@@ -2263,7 +2307,34 @@ function renderEstabelecimentos(cat) {
         heartBtn +
       '</div>' +
     '</div>';
-  }).join('');
+  });
+
+  // Prateleira de conveniência — intercalada após o 2º card
+  var prateleiraHtml = '<div style="margin:4px 0 20px;">' +
+    '<div style="font-size:15px;font-weight:800;color:#fff;font-family:\'Plus Jakarta Sans\',sans-serif;margin-bottom:10px;">🛒 Mercado e Conveniência Rápida</div>' +
+    '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none;">' +
+    [
+      { emoji:'🧊', nome:'Gelo 5kg',        preco:'R$ 12,90' },
+      { emoji:'🔥', nome:'Carvão 3kg',       preco:'R$ 18,90' },
+      { emoji:'🥤', nome:'Refri Gelado',     preco:'R$ 8,90'  },
+      { emoji:'🍺', nome:'Cerveja Gelada',   preco:'R$ 5,90'  },
+      { emoji:'🍫', nome:'Chocolate',        preco:'R$ 6,90'  },
+    ].map(function(p) {
+      return '<div onclick="filtrarCatIcon(document.querySelector(\'.cat-icon-item[onclick*=mercado]\'),\'mercado\')" style="flex-shrink:0;width:108px;background:#1e1e22;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;cursor:pointer;">' +
+        '<div style="height:88px;display:flex;align-items:center;justify-content:center;font-size:42px;background:linear-gradient(135deg,#1a1a20,#252529);">' + p.emoji + '</div>' +
+        '<div style="padding:8px 10px 10px;">' +
+          '<div style="font-size:13px;font-weight:700;color:var(--verde);margin-bottom:2px;">' + p.preco + '</div>' +
+          '<div style="font-size:11px;color:#a1a1aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.nome + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('') +
+    '</div>' +
+  '</div>';
+
+  if(cards.length >= 2) {
+    cards.splice(2, 0, prateleiraHtml);
+  }
+  lista.innerHTML = cards.join('');
 }
 
 function filtrarCat(btn, cat) {
@@ -2286,6 +2357,38 @@ function aplicarFiltroRapido(el, tipo) {
   el.classList.add('ativo');
   filtroRapidoAtual = tipo;
   renderEstabelecimentos(categoriaAtual);
+}
+
+function navInicio() {
+  document.querySelectorAll('.bottom-nav-btn').forEach(function(b){ b.classList.remove('ativo'); });
+  document.getElementById('nav-inicio').classList.add('ativo');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function navBusca() {
+  document.querySelectorAll('.bottom-nav-btn').forEach(function(b){ b.classList.remove('ativo'); });
+  document.getElementById('nav-busca').classList.add('ativo');
+  var input = document.getElementById('busca-input');
+  if(input) { input.focus(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  // Reset ativo após 2s (sem tela separada de busca ainda)
+  setTimeout(function(){ document.getElementById('nav-inicio') && document.getElementById('nav-inicio').classList.add('ativo'); document.getElementById('nav-busca') && document.getElementById('nav-busca').classList.remove('ativo'); }, 2000);
+}
+
+function navPedidos() {
+  document.querySelectorAll('.bottom-nav-btn').forEach(function(b){ b.classList.remove('ativo'); });
+  document.getElementById('nav-pedidos').classList.add('ativo');
+  if(pedidoAtualId) {
+    ultimoStatusConhecido = {};
+    irTela('tela-confirmado');
+    iniciarPollingPedidos();
+  } else {
+    showToast('📋', 'Sem pedidos ativos', 'Faça um pedido para acompanhar aqui');
+    setTimeout(function(){ document.getElementById('nav-inicio') && document.getElementById('nav-inicio').classList.add('ativo'); document.getElementById('nav-pedidos') && document.getElementById('nav-pedidos').classList.remove('ativo'); }, 2200);
+  }
+}
+
+function abrirEnvios() {
+  showToast('🛵', 'Em breve!', 'Serviço de envios disponível em breve na sua cidade.');
 }
 
 function scrollToSecao(tab) {
