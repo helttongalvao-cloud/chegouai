@@ -426,12 +426,25 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 /* HOME — categorias ícone estilo iFood */
 .cat-btn { border-radius:100px; padding:9px 18px; }
-.cat-icon-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:4px 0 16px; margin-bottom:8px; }
-.cat-icon-item { cursor:pointer; border-radius:16px; transition:opacity 0.15s, outline 0.15s; -webkit-tap-highlight-color:transparent; }
+/* Grid compacto de categorias principais */
+.cat-icon-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 0 14px; margin-bottom:4px; }
+.cat-icon-item { cursor:pointer; border-radius:14px; transition:opacity 0.15s, outline 0.15s; -webkit-tap-highlight-color:transparent; }
 .cat-icon-item:active { opacity:0.75; }
 .cat-icon-item.ativo { outline:2.5px solid var(--verde); }
 @keyframes catBounce { 0%{transform:scale(1)} 40%{transform:scale(1.08)} 70%{transform:scale(0.96)} 100%{transform:scale(1)} }
 .cat-bounce { animation:catBounce 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+/* Banners promocionais */
+.banner-carousel-wrap { border-radius:16px; overflow:hidden; }
+.banner-track { display:flex; transition:transform 0.45s cubic-bezier(0.4,0,0.2,1); will-change:transform; }
+.banner-slide { flex:0 0 100%; height:120px; display:flex; flex-direction:column; justify-content:center; padding:20px 22px; position:relative; overflow:hidden; cursor:pointer; }
+.banner-dots { display:flex; justify-content:center; gap:5px; margin-top:8px; margin-bottom:14px; }
+.banner-dot { width:6px; height:6px; border-radius:50%; background:var(--cinza4); transition:all 0.3s; cursor:pointer; }
+.banner-dot.ativo { width:18px; border-radius:4px; background:var(--verde); }
+/* Filtros rápidos */
+.filtros-rapidos-wrap { display:flex; gap:8px; overflow-x:auto; padding:2px 0 12px; scrollbar-width:none; margin-bottom:4px; }
+.filtros-rapidos-wrap::-webkit-scrollbar { display:none; }
+.filtro-rapido-btn { flex-shrink:0; padding:8px 16px; border-radius:9999px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto2); font-size:13px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+.filtro-rapido-btn.ativo { background:var(--verde); color:#000; border-color:var(--verde); }
 
 /* CARDÁPIO — barra de categorias sticky */
 .cat-tabs-bar { display:flex; gap:0; overflow-x:auto; scrollbar-width:none; background:var(--preto); border-bottom:1.5px solid var(--cinza3); position:sticky; top:0; z-index:20; padding:0 16px; }
@@ -613,33 +626,71 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <input type="hidden" id="busca-produto-input">
     <div id="resultado-busca-produto" style="display:none;margin-bottom:8px;"></div>
 
-    <!-- Categorias -->
+    <!-- Banners promocionais -->
+    <div style="margin-bottom:4px;">
+      <div class="banner-carousel-wrap" id="banner-carousel-wrap">
+        <div class="banner-track" id="banner-track">
+          <div class="banner-slide" style="background:linear-gradient(135deg,#003d1a,#00a846);">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Chegou Aí</div>
+            <div style="font-size:20px;font-weight:800;color:#fff;line-height:1.2;font-family:'Plus Jakarta Sans',sans-serif;">Frete a partir de R$ 2</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:5px;">Delivery local rápido e fácil</div>
+            <span style="position:absolute;right:-8px;bottom:-12px;font-size:88px;opacity:0.12;line-height:1;">🛵</span>
+          </div>
+          <div class="banner-slide" style="background:linear-gradient(135deg,#0a1628,#1a3a5e);">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Pagamento</div>
+            <div style="font-size:20px;font-weight:800;color:#fff;line-height:1.2;font-family:'Plus Jakarta Sans',sans-serif;">Pague com Pix</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:5px;">Aprovação instantânea, sem espera</div>
+            <span style="position:absolute;right:-8px;bottom:-12px;font-size:88px;opacity:0.12;line-height:1;">⚡</span>
+          </div>
+          <div class="banner-slide" style="background:linear-gradient(135deg,#2d0a0a,#7f1d1d);">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Novidade</div>
+            <div style="font-size:20px;font-weight:800;color:#fff;line-height:1.2;font-family:'Plus Jakarta Sans',sans-serif;">Peça sem criar conta</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:5px;">Simples como nunca foi</div>
+            <span style="position:absolute;right:-8px;bottom:-12px;font-size:88px;opacity:0.12;line-height:1;">🛒</span>
+          </div>
+        </div>
+      </div>
+      <div class="banner-dots" id="banner-dots">
+        <span class="banner-dot ativo" data-idx="0"></span>
+        <span class="banner-dot" data-idx="1"></span>
+        <span class="banner-dot" data-idx="2"></span>
+      </div>
+    </div>
+
+    <!-- Categorias principais (grid 2x2 compacto) -->
     <div id="secao-titulo-categorias">
       <div class="cat-icon-grid">
-        <div class="cat-icon-item ativo" onclick="filtrarCatIcon(this,'todos')" style="background:linear-gradient(135deg,#1a1f2e,#0d1117);border-radius:16px;padding:18px;min-height:80px;display:flex;align-items:center;justify-content:space-between;">
-          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px;">Todos</div><div style="font-size:11px;color:rgba(255,255,255,0.45);">Ver tudo</div></div>
-          <span style="font-size:32px;">🍽️</span>
+        <div class="cat-icon-item ativo" onclick="filtrarCatIcon(this,'todos')" style="background:linear-gradient(135deg,#1a1f2e,#0d1117);border-radius:14px;padding:13px 16px;min-height:64px;display:flex;align-items:center;justify-content:space-between;">
+          <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">Todos</div><div style="font-size:10px;color:rgba(255,255,255,0.45);">Ver tudo</div></div>
+          <span style="font-size:28px;">🍽️</span>
         </div>
-        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'restaurante')" style="background:linear-gradient(135deg,#4a0e0e,#180505);border-radius:16px;padding:18px;min-height:80px;display:flex;align-items:center;justify-content:space-between;">
-          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px;">Restaurantes</div><div style="font-size:11px;color:rgba(255,255,255,0.45);">Pratos e refeições</div></div>
-          <span style="font-size:32px;">🍴</span>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'restaurante')" style="background:linear-gradient(135deg,#4a0e0e,#180505);border-radius:14px;padding:13px 16px;min-height:64px;display:flex;align-items:center;justify-content:space-between;">
+          <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">Restaurantes</div><div style="font-size:10px;color:rgba(255,255,255,0.45);">Pratos</div></div>
+          <span style="font-size:28px;">🍴</span>
         </div>
-        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'mercado')" style="background:linear-gradient(135deg,#0f3a1f,#071409);border-radius:16px;padding:18px;min-height:80px;display:flex;align-items:center;justify-content:space-between;">
-          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px;">Mercados</div><div style="font-size:11px;color:rgba(255,255,255,0.45);">Compras e hortifruti</div></div>
-          <span style="font-size:32px;">🛒</span>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'mercado')" style="background:linear-gradient(135deg,#0f3a1f,#071409);border-radius:14px;padding:13px 16px;min-height:64px;display:flex;align-items:center;justify-content:space-between;">
+          <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">Mercados</div><div style="font-size:10px;color:rgba(255,255,255,0.45);">Compras</div></div>
+          <span style="font-size:28px;">🛒</span>
         </div>
-        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'farmacia')" style="background:linear-gradient(135deg,#0a2a4a,#040e1a);border-radius:16px;padding:18px;min-height:80px;display:flex;align-items:center;justify-content:space-between;">
-          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px;">Farmácias</div><div style="font-size:11px;color:rgba(255,255,255,0.45);">Medicamentos</div></div>
-          <span style="font-size:32px;">💊</span>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'farmacia')" style="background:linear-gradient(135deg,#0a2a4a,#040e1a);border-radius:14px;padding:13px 16px;min-height:64px;display:flex;align-items:center;justify-content:space-between;">
+          <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">Farmácias</div><div style="font-size:10px;color:rgba(255,255,255,0.45);">Remédios</div></div>
+          <span style="font-size:28px;">💊</span>
         </div>
-        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'lanche')" style="background:linear-gradient(135deg,#3a2005,#120b02);border-radius:16px;padding:18px;min-height:80px;display:flex;align-items:center;justify-content:space-between;grid-column:span 2;">
-          <div><div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:3px;">Lanches</div><div style="font-size:11px;color:rgba(255,255,255,0.45);">Hambúrgueres e salgados</div></div>
-          <span style="font-size:32px;">🥪</span>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'lanche')" style="background:linear-gradient(135deg,#3a2005,#120b02);border-radius:14px;padding:13px 16px;min-height:64px;display:flex;align-items:center;justify-content:space-between;grid-column:span 2;">
+          <div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">Lanches</div><div style="font-size:10px;color:rgba(255,255,255,0.45);">Hambúrgueres e salgados</div></div>
+          <span style="font-size:28px;">🥪</span>
         </div>
       </div>
     </div>
 
-    <div class="secao-titulo">Perto de você</div>
+    <div class="secao-titulo" style="margin-bottom:8px;">Perto de você</div>
+    <!-- Filtros rápidos -->
+    <div class="filtros-rapidos-wrap" id="filtros-rapidos">
+      <button class="filtro-rapido-btn ativo" onclick="aplicarFiltroRapido(this,'todos')">✨ Todos</button>
+      <button class="filtro-rapido-btn" onclick="aplicarFiltroRapido(this,'aberto')">✅ Aberto agora</button>
+      <button class="filtro-rapido-btn" onclick="aplicarFiltroRapido(this,'rapido')">🕐 Mais rápido</button>
+      <button class="filtro-rapido-btn" onclick="aplicarFiltroRapido(this,'avaliacao')">⭐ Melhor avaliação</button>
+    </div>
     <div class="estabelecimentos" id="lista-estabelecimentos"></div>
   </div>
   <div class="carrinho-float oculto" id="carrinho-float" onclick="irCheckout()">
@@ -1803,6 +1854,7 @@ function fecharModalPagamento() {
 let estabelecimentos = [];
 var favoritosIds = new Set();
 var categoriaAtual = 'todos';
+var filtroRapidoAtual = 'todos';
 
 async function carregarFavoritos() {
   if(!authToken) return;
@@ -2144,8 +2196,20 @@ async function carregarEstabelecimentos(cat) {
 function renderEstabelecimentos(cat) {
   categoriaAtual = cat || 'todos';
   const lista = document.getElementById('lista-estabelecimentos');
-  const filtrados = (cat === 'todos' || !cat) ? estabelecimentos
+  var filtrados = (cat === 'todos' || !cat) ? estabelecimentos.slice()
     : estabelecimentos.filter(function(e){ return e.categoria === cat; });
+
+  if(filtroRapidoAtual === 'aberto') {
+    filtrados = filtrados.filter(function(e){ return e.aberto && !e.pausado; });
+  } else if(filtroRapidoAtual === 'rapido') {
+    filtrados = filtrados.slice().sort(function(a,b){
+      var na = parseInt((a.tempo_entrega||'99').replace(/\D.*/,''))||99;
+      var nb = parseInt((b.tempo_entrega||'99').replace(/\D.*/,''))||99;
+      return na - nb;
+    });
+  } else if(filtroRapidoAtual === 'avaliacao') {
+    filtrados = filtrados.slice().sort(function(a,b){ return (b.avaliacao||0)-(a.avaliacao||0); });
+  }
 
   if(filtrados.length === 0) {
     lista.innerHTML = '<div class="vazio"><div class="vazio-icon">🏪</div>Nenhum estabelecimento encontrado</div>';
@@ -2201,7 +2265,16 @@ function filtrarCatIcon(el, cat) {
   document.querySelectorAll('.cat-icon-item').forEach(function(b){ b.classList.remove('ativo','cat-bounce'); });
   el.classList.add('ativo','cat-bounce');
   el.addEventListener('animationend', function(){ el.classList.remove('cat-bounce'); }, { once:true });
+  filtroRapidoAtual = 'todos';
+  document.querySelectorAll('.filtro-rapido-btn').forEach(function(b,i){ b.classList.toggle('ativo', i===0); });
   carregarEstabelecimentos(cat);
+}
+
+function aplicarFiltroRapido(el, tipo) {
+  document.querySelectorAll('.filtro-rapido-btn').forEach(function(b){ b.classList.remove('ativo'); });
+  el.classList.add('ativo');
+  filtroRapidoAtual = tipo;
+  renderEstabelecimentos(categoriaAtual);
 }
 
 function scrollToSecao(tab) {
@@ -2427,6 +2500,35 @@ function buscarProdutoGlobal(val) {
     }
   }, 400);
 }
+
+// Banner carousel autoplay
+(function() {
+  function initBanner() {
+    var track = document.getElementById('banner-track');
+    var dots = document.querySelectorAll('.banner-dot');
+    var total = 3; var current = 0; var timer;
+    function goTo(idx) {
+      current = idx;
+      if(track) track.style.transform = 'translateX(-' + (idx*100) + '%)';
+      dots.forEach(function(d,i){ d.classList.toggle('ativo', i===idx); });
+    }
+    function next() { goTo((current+1) % total); }
+    function startTimer() { timer = setInterval(next, 4000); }
+    function stopTimer() { clearInterval(timer); }
+    var wrap = document.getElementById('banner-carousel-wrap');
+    if(wrap) {
+      wrap.addEventListener('touchstart', stopTimer, {passive:true});
+      wrap.addEventListener('touchend', startTimer, {passive:true});
+    }
+    dots.forEach(function(d,i){ d.addEventListener('click', function(){ stopTimer(); goTo(i); startTimer(); }); });
+    if(track) startTimer();
+  }
+  if(document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBanner);
+  } else {
+    initBanner();
+  }
+})();
 
 // Fechar modal clicando fora — executar após DOM carregado
 window.addEventListener('DOMContentLoaded', function() {
