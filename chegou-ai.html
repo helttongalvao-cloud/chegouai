@@ -2042,9 +2042,16 @@ function irLogin() {
   pararRealtime();
   pararRealtimeCliente();
   if(pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+  if(window.estPollingTimer) { clearInterval(window.estPollingTimer); window.estPollingTimer = null; }
   authToken = null;
   currentUser = null;
   ultimoStatusConhecido = {};
+  estDataCache = null;
+  window._lojistaEstId = null;
+  window._pedidosCache = {};
+  // Limpar DOM de pedidos para não vazar dados entre contas
+  var listaPed = document.getElementById('pedidos-estabelecimento');
+  if(listaPed) listaPed.innerHTML = '';
   localStorage.removeItem('chegouai_pedido_id');
   pedidoAtualId = null;
   localStorage.removeItem('chegouai_token');
@@ -4173,7 +4180,7 @@ async function renderEstabelecimento() {
       '<div class="pedidos-lista" id="pedidos-estabelecimento"></div>';
   }
   var lista = document.getElementById('pedidos-estabelecimento');
-  if(lista && !lista.firstChild) lista.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando pedidos...</div>';
+  if(lista) lista.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando pedidos...</div>';
   try {
     var data = await apiCall('/api/establishments/me/dashboard');
     // Atualizar stats do dashboard
