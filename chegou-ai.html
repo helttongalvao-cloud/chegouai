@@ -680,7 +680,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <div style="margin-bottom:4px;">
       <div class="banner-carousel-wrap" id="banner-carousel-wrap">
         <div class="banner-track" id="banner-track">
-          <!-- Slide 1 — Frete grátis -->
+          <!-- Slide 0 — Frete grátis -->
           <div class="banner-slide" style="background:linear-gradient(105deg,#0d1f0f,#0f2a12);border-left:3px solid #00c853;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
               <div>
@@ -694,19 +694,19 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
               </div>
             </div>
           </div>
-          <!-- Slide 2 — Pix -->
+          <!-- Slide 1 — Pix -->
           <div class="banner-slide" style="background:linear-gradient(105deg,#0a1220,#0c1928);border-left:3px solid #38bdf8;">
             <div style="font-size:9px;font-weight:700;color:#38bdf8;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">⚡ Pagamento</div>
             <div style="font-size:18px;font-weight:800;color:#fff;line-height:1.15;font-family:'Plus Jakarta Sans',sans-serif;">Pague com Pix</div>
             <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px;">Aprovação instantânea, sem espera</div>
           </div>
-          <!-- Slide 3 — Sem conta -->
+          <!-- Slide 2 — Sem conta -->
           <div class="banner-slide" style="background:linear-gradient(105deg,#1a0e22,#210f2e);border-left:3px solid #a78bfa;">
             <div style="font-size:9px;font-weight:700;color:#a78bfa;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">✨ Novidade</div>
             <div style="font-size:18px;font-weight:800;color:#fff;line-height:1.15;font-family:'Plus Jakarta Sans',sans-serif;">Peça sem criar conta</div>
             <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px;">Simples como nunca foi</div>
           </div>
-          <!-- Slide 4 — Cartão -->
+          <!-- Slide 3 — Cartão -->
           <div class="banner-slide" style="background:linear-gradient(105deg,#0f1220,#141828);border-left:3px solid #fb923c;">
             <div style="font-size:9px;font-weight:700;color:#fb923c;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">💳 Pagamento</div>
             <div style="font-size:18px;font-weight:800;color:#fff;line-height:1.15;font-family:'Plus Jakarta Sans',sans-serif;">Pague com Cartão</div>
@@ -726,7 +726,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <div id="secao-titulo-categorias">
       <div class="cat-icon-grid">
         <div class="cat-icon-item ativo" onclick="filtrarCatIcon(this,'todos')">
-          <span style="font-size:28px;line-height:1;">🏠</span>
+          <span style="font-size:28px;line-height:1;">✨</span>
           <span style="font-size:11px;font-weight:700;color:#e4e4e7;text-align:center;line-height:1.2;">Todos</span>
         </div>
         <div class="cat-icon-item" onclick="filtrarCatIcon(this,'restaurante')">
@@ -2715,13 +2715,13 @@ function buscarProdutoGlobal(val) {
   function initBanner() {
     var track = document.getElementById('banner-track');
     var dots = document.querySelectorAll('.banner-dot');
-    var total = 4; var current = 0; var timer;
-    function goTo(idx) {
-      current = idx;
-      if(track) track.style.transform = 'translateX(-' + (idx*100) + '%)';
-      dots.forEach(function(d,i){ d.classList.toggle('ativo', i===idx); });
+    // Sequência: frete grátis aparece entre cada banner (0=frete, 1=pix, 2=semconta, 3=cartão)
+    var seq = [0,1,0,2,0,3]; var seqPos = 0; var timer;
+    function goTo(slideIdx) {
+      if(track) track.style.transform = 'translateX(-' + (slideIdx*100) + '%)';
+      dots.forEach(function(d,i){ d.classList.toggle('ativo', i===slideIdx); });
     }
-    function next() { goTo((current+1) % total); }
+    function next() { seqPos = (seqPos+1) % seq.length; goTo(seq[seqPos]); }
     function startTimer() { timer = setInterval(next, 4000); }
     function stopTimer() { clearInterval(timer); }
     var wrap = document.getElementById('banner-carousel-wrap');
@@ -2729,7 +2729,7 @@ function buscarProdutoGlobal(val) {
       wrap.addEventListener('touchstart', stopTimer, {passive:true});
       wrap.addEventListener('touchend', startTimer, {passive:true});
     }
-    dots.forEach(function(d,i){ d.addEventListener('click', function(){ stopTimer(); goTo(i); startTimer(); }); });
+    dots.forEach(function(d,i){ d.addEventListener('click', function(){ stopTimer(); seqPos=seq.indexOf(i); if(seqPos<0)seqPos=0; goTo(i); startTimer(); }); });
     if(track) startTimer();
   }
   if(document.readyState === 'loading') {
