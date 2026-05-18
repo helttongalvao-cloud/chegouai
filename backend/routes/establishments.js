@@ -13,12 +13,13 @@ const router = express.Router();
 router.get('/products/featured', async (req, res, next) => {
   try {
     // 1. Buscar IDs de lojas realmente abertas e não pausadas
+    // Usa .or() porque NULL != true é NULL em PostgreSQL (não é true)
     const { data: lojas, error: eLojas } = await supabaseAdmin
       .from('estabelecimentos')
       .select('id')
       .eq('ativo', true)
       .eq('aberto', true)
-      .neq('pausado', true);
+      .or('pausado.is.null,pausado.eq.false');
 
     if (eLojas) throw eLojas;
     const ids = (lojas || []).map(l => l.id);
