@@ -12,24 +12,29 @@ const router = express.Router();
 // =============================================
 router.get('/products/featured', async (req, res, next) => {
   try {
+    // 1. Buscar IDs de lojas realmente abertas e não pausadas
+    const { data: lojas, error: eLojas } = await supabaseAdmin
+      .from('estabelecimentos')
+      .select('id')
+      .eq('ativo', true)
+      .eq('aberto', true)
+      .neq('pausado', true);
+
+    if (eLojas) throw eLojas;
+    const ids = (lojas || []).map(l => l.id);
+    if (ids.length === 0) return res.json([]);
+
+    // 2. Buscar produtos dessas lojas
     const { data, error } = await supabaseAdmin
       .from('produtos')
-      .select(`
-        id, nome, preco, emoji, imagem_url,
-        estabelecimentos!inner (id, nome, aberto, ativo, pausado)
-      `)
+      .select('id, nome, preco, emoji, imagem_url, estabelecimento_id, estabelecimentos(nome)')
       .eq('disponivel', true)
-      .eq('estabelecimentos.ativo', true)
-      .eq('estabelecimentos.aberto', true)
-      .eq('estabelecimentos.pausado', false)
-      .limit(30);
+      .in('estabelecimento_id', ids)
+      .limit(40);
 
     if (error) throw error;
 
-    const ativos = (data || []).filter(p => p.estabelecimentos?.aberto && !p.estabelecimentos?.pausado);
-
-    // Embaralhar e devolver até 8
-    const embaralhados = ativos.sort(() => Math.random() - 0.5).slice(0, 8);
+    const embaralhados = (data || []).sort(() => Math.random() - 0.5).slice(0, 8);
 
     res.json(embaralhados.map(p => ({
       id: p.id,
@@ -37,8 +42,8 @@ router.get('/products/featured', async (req, res, next) => {
       preco: p.preco,
       emoji: p.emoji || null,
       imagem_url: p.imagem_url || null,
-      loja_id: p.estabelecimentos.id,
-      loja_nome: p.estabelecimentos.nome,
+      loja_id: p.estabelecimento_id,
+      loja_nome: p.estabelecimentos?.nome || '',
     })));
   } catch (err) { next(err); }
 });
