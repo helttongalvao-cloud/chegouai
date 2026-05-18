@@ -767,4 +767,91 @@ router.patch('/establishments/:id/recipient/transfer', async (req, res, next) =>
   }
 });
 
+// =============================================
+// GET /api/admin/metrics — Painel de métricas de audiência
+// =============================================
+router.get('/metrics', async (req, res, next) => {
+  try {
+    const agora = new Date();
+    const d7  = new Date(agora.getTime() - 7  * 24 * 60 * 60 * 1000);
+    const d30 = new Date(agora.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // Todos os pedidos aprovados
+    const { data: todos } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, total, subtotal, telefone_cliente, guest_telefone, cliente_id, criado_em, pagamento_status')
+      .eq('pagamento_status', 'aprovado')
+      .order('criado_em', { ascending: true });
+
+    const pedidos = todos || [];
+
+    // Identificador único: telefone_cliente → guest_telefone → cliente_id
+    const getId = p => (p.telefone_cliente || p.guest_telefone || p.cliente_id || '').toString().replace(/\D/g, '').slice(-11) || null;
+
+    // Pedidos por período
+    const p7  = pedidos.filter(p => new Date(p.criado_em) >= d7);
+    const p30 = pedidos.filter(p => new Date(p.criado_em) >= d30);
+
+    // Clientes únicos (por telefone/id)
+    const unicos       = new Set(pedidos.map(getId).filter(Boolean));
+    const unicos7      = new Set(p7.map(getId).filter(Boolean));
+    const unicos30     = new Set(p30.map(getId).filter(Boolean));
+
+    // Recompra: clientes com mais de 1 pedido
+    const freq = {};
+    pedidos.forEach(p => { const id = getId(p); if(id) freq[id] = (freq[id]||0)+1; });
+    const recorrentes = Object.values(freq).filter(v => v > 1).length;
+    const taxaRecompra = unicos.size > 0 ? ((recorrentes / unicos.size) * 100).toFixed(1) : '0.0';
+
+    // GMV
+    const gmvTotal = pedidos.reduce((s,p) => s + (p.total||0), 0);
+    const gmv30    = p30.reduce((s,p) => s + (p.total||0), 0);
+    const gmv7     = p7.reduce((s,p) => s + (p.total||0), 0);
+
+    // Ticket médio
+    const ticketMedio = pedidos.length > 0 ? (gmvTotal / pedidos.length) : 0;
+
+    // Crescimento mês anterior vs atual
+    const inicioMesAtual = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    const inicioMesAnt   = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
+    const pMesAtual  = pedidos.filter(p => new Date(p.criado_em) >= inicioMesAtual);
+    const pMesAnt    = pedidos.filter(p => new Date(p.criado_em) >= inicioMesAnt && new Date(p.criado_em) < inicioMesAtual);
+    const crescimento = pMesAnt.length > 0
+      ? (((pMesAtual.length - pMesAnt.length) / pMesAnt.length) * 100).toFixed(1)
+      : pMesAtual.length > 0 ? '100.0' : '0.0';
+
+    // Pedidos por dia (últimos 30 dias para gráfico)
+    const porDia = {};
+    p30.forEach(p => {
+      const dia = p.criado_em.slice(0, 10);
+      porDia[dia] = (porDia[dia] || 0) + 1;
+    });
+
+    res.json({
+      clientes: {
+        total: unicos.size,
+        ultimos7dias: unicos7.size,
+        ultimos30dias: unicos30.size,
+        recorrentes,
+        taxaRecompra: parseFloat(taxaRecompra),
+      },
+      pedidos: {
+        total: pedidos.length,
+        ultimos7dias: p7.length,
+        ultimos30dias: p30.length,
+        mesAtual: pMesAtual.length,
+        mesAnterior: pMesAnt.length,
+        crescimentoMensal: parseFloat(crescimento),
+      },
+      gmv: {
+        total: parseFloat(gmvTotal.toFixed(2)),
+        ultimos30dias: parseFloat(gmv30.toFixed(2)),
+        ultimos7dias: parseFloat(gmv7.toFixed(2)),
+        ticketMedio: parseFloat(ticketMedio.toFixed(2)),
+      },
+      porDia,
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

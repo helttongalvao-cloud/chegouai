@@ -1111,6 +1111,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="nav-btn" onclick="adminNav(this,'lojas')">Estabelecimentos</div>
       <div class="nav-btn" onclick="adminNav(this,'motoboys')">Motoboys</div>
       <div class="nav-btn" onclick="adminNav(this,'cupons')">Cupons</div>
+      <div class="nav-btn" onclick="adminNav(this,'metricas')" style="color:#a78bfa;border-color:#a78bfa40;">📊 Métricas</div>
       <div class="nav-btn" onclick="adminNav(this,'cadastrar')">+ Cadastrar</div>
     </div>
     <div id="admin-conteudo"></div>
@@ -4811,6 +4812,7 @@ async function renderAdmin(secao) {
 
   if(secao === 'monitor') { await renderAdminMonitor(); return; }
   if(secao === 'cupons') { renderAdminCupons(); return; }
+  if(secao === 'metricas') { renderAdminMetricas(); return; }
 
   if (secao !== 'cadastrar') {
     el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando painel...</div>';
@@ -6130,6 +6132,84 @@ async function adminSalvarRecebedor(lojaId) {
     btn.disabled = false; btn.textContent = 'Cadastrar';
     showToast('❌', 'Erro', e.message);
   }
+}
+
+async function renderAdminMetricas() {
+  var el = document.getElementById('admin-conteudo');
+  el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando métricas...</div>';
+  try {
+    var m = await apiCall('/api/admin/metrics');
+    var fmt = function(v){ return 'R$ ' + parseFloat(v).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); };
+    var pct = function(v){ return (v > 0 ? '+' : '') + v + '%'; };
+    var crescCor = m.pedidos.crescimentoMensal >= 0 ? '#4ade80' : '#f87171';
+
+    // Mini gráfico de barras com os últimos 14 dias
+    var dias = Object.keys(m.porDia).sort().slice(-14);
+    var maxVal = Math.max.apply(null, dias.map(function(d){ return m.porDia[d]; }).concat([1]));
+    var barras = dias.map(function(d) {
+      var pct2 = Math.round((m.porDia[d] / maxVal) * 100);
+      var label = d.slice(5); // MM-DD
+      return '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;">' +
+        '<div style="font-size:9px;color:#71717a;">' + m.porDia[d] + '</div>' +
+        '<div style="width:100%;background:#a78bfa;border-radius:3px 3px 0 0;height:' + pct2 + 'px;min-height:2px;transition:height 0.3s;"></div>' +
+        '<div style="font-size:8px;color:#52525b;writing-mode:vertical-rl;transform:rotate(180deg);">' + label + '</div>' +
+      '</div>';
+    }).join('');
+
+    el.innerHTML =
+      '<div style="padding:16px 0;">' +
+
+      // Título
+      '<div style="font-size:18px;font-weight:800;font-family:\'Plus Jakarta Sans\',sans-serif;margin-bottom:4px;">📊 Métricas de Audiência</div>' +
+      '<div style="font-size:12px;color:#71717a;margin-bottom:20px;">Dados para investidores e decisões estratégicas</div>' +
+
+      // GMV
+      '<div style="font-size:11px;font-weight:700;color:#71717a;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Volume Transacionado (GMV)</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;">' +
+        _metricCard('GMV Total', fmt(m.gmv.total), 'Desde o início', '#4ade80') +
+        _metricCard('Últimos 30 dias', fmt(m.gmv.ultimos30dias), 'Mês corrente', '#a78bfa') +
+        _metricCard('Ticket Médio', fmt(m.gmv.ticketMedio), 'Por pedido', '#60a5fa') +
+      '</div>' +
+
+      // Clientes
+      '<div style="font-size:11px;font-weight:700;color:#71717a;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Audiência de Clientes</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
+        _metricCard('Clientes Únicos', m.clientes.total, 'Total histórico (por telefone)', '#4ade80') +
+        _metricCard('Clientes Recorrentes', m.clientes.recorrentes, 'Compraram mais de 1x', '#fb923c') +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">' +
+        _metricCard('Taxa de Recompra', m.clientes.taxaRecompra + '%', 'Fidelização', '#f472b6') +
+        _metricCard('Novos (7 dias)', m.clientes.ultimos7dias, 'Clientes únicos na semana', '#60a5fa') +
+      '</div>' +
+
+      // Pedidos
+      '<div style="font-size:11px;font-weight:700;color:#71717a;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Volume de Pedidos</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;">' +
+        _metricCard('Total Histórico', m.pedidos.total, 'Pedidos aprovados', '#4ade80') +
+        _metricCard('Este Mês', m.pedidos.mesAtual, 'Pedidos aprovados', '#a78bfa') +
+        _metricCard('Crescimento Mensal', pct(m.pedidos.crescimentoMensal), 'vs. mês anterior', crescCor) +
+      '</div>' +
+
+      // Gráfico
+      '<div style="font-size:11px;font-weight:700;color:#71717a;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Pedidos por Dia (últimos 14 dias)</div>' +
+      '<div style="background:#18181b;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px;">' +
+        (dias.length > 0
+          ? '<div style="display:flex;align-items:flex-end;gap:4px;height:100px;">' + barras + '</div>'
+          : '<div style="color:#52525b;font-size:13px;text-align:center;padding:20px;">Sem dados ainda</div>') +
+      '</div>' +
+
+      '</div>';
+  } catch(e) {
+    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar métricas: ' + e.message + '</div>';
+  }
+}
+
+function _metricCard(titulo, valor, sub, cor) {
+  return '<div style="background:#18181b;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:14px;">' +
+    '<div style="font-size:11px;color:#71717a;margin-bottom:6px;">' + titulo + '</div>' +
+    '<div style="font-size:22px;font-weight:800;color:' + cor + ';font-family:\'Plus Jakarta Sans\',sans-serif;margin-bottom:3px;">' + valor + '</div>' +
+    '<div style="font-size:10px;color:#52525b;">' + sub + '</div>' +
+  '</div>';
 }
 
 function adminNav(btn, secao) {
