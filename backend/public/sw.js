@@ -1,4 +1,4 @@
-const CACHE = 'chegouai-v50';
+const CACHE = 'chegouai-v51';
 const PRECACHE = [
   '/manifest.json',
   '/icons/icon-192.png',
