@@ -229,6 +229,16 @@ app.listen(PORT, () => {
   console.log(`\n🛵  Chegou Aí — Backend rodando`);
   console.log(`📍  http://localhost:${PORT}`);
   console.log(`🌍  Ambiente: ${process.env.NODE_ENV || 'development'}\n`);
+
+  // Fix: atualiza logo Sabor na Brasa se ainda está com a imagem antiga
+  const { supabaseAdmin } = require('./config/supabase');
+  const LOGO_ANTIGA = 'https://lgcepuednurxwsandgaf.supabase.co/storage/v1/object/public/produtos/787a8b0c-f3f8-4ba5-b746-6533ca732cdc_1776560472993.jpg';
+  const LOGO_NOVA = 'https://chegouaiapp.com.br/sabor-na-brasa-logo.jpg';
+  supabaseAdmin.from('estabelecimentos')
+    .update({ foto_url: LOGO_NOVA })
+    .eq('foto_url', LOGO_ANTIGA)
+    .then(({ error }) => { if (!error) console.log('✅  Logo Sabor na Brasa atualizada'); })
+    .catch(() => {});
 });
 
 module.exports = app;
