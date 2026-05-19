@@ -75,6 +75,7 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
       'https://chegouaiapp.com.br',
       'https://www.chegouaiapp.com.br',
       'https://chegouai-production.up.railway.app',
+      'https://chegouai.onrender.com',
     ].filter(Boolean)
   : [
       process.env.FRONTEND_URL || 'http://localhost:3000',

@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: chegouai
+    runtime: node
+    region: oregon
+    plan: starter
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: BASE_URL
+        value: https://chegouaiapp.com.br
+      - key: FRONTEND_URL
+        value: https://chegouaiapp.com.br
+      - key: WEBHOOK_URL
+        value: https://chegouaiapp.com.br
+      - key: SUPABASE_URL
+        value: https://lgcepuednurxwsandgaf.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnY2VwdWVkbnVyeHdzYW5kZ2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3OTA2NDgsImV4cCI6MjA4OTM2NjY0OH0.4X406qQXrkgVMQlCssoKQUhclII3g7BdqJW2lJTFiYw
+      - key: VAPID_PUBLIC_KEY
+        value: BIuzKNh95xo8YIIsV8c5vMrnh2A5nmfce-bINM6FZoHCghQ8nS2xvEArwLoXwIRIIzNo8E3OFxsINK9TGQqzI98
+      - key: VAPID_PRIVATE_KEY
+        value: iMJSPBVi6Z_EREetqC0V4nrtrIlbJ0CKCgxKn-L6Mi8
+      - key: VAPID_EMAIL
+        value: mailto:helttongalvao@gmail.com
+      - key: JWT_SECRET
+        value: fa9fcceb8aaf4e48d2a5a6013fad944c01a3cc123664d46adc83f449dd15a770c1b85c536acfbf717f4cd0c0b2b0da6f48ca624770c264f8f8e23de46caa2aeb
+      # ⬇️ PREENCHER COM VALORES DO PAGAR.ME DASHBOARD
+      - key: SUPABASE_SERVICE_KEY
+        value: PEGAR_EM_SUPABASE_COM_SETTINGS_API_SERVICE_ROLE
+      - key: PAGARME_API_KEY
+        value: PEGAR_EM_DASHBOARD_PAGARME_CONFIGURACOES_API_KEYS
+      - key: PAGARME_WEBHOOK_SECRET
+        value: PEGAR_EM_DASHBOARD_PAGARME_WEBHOOKS
+      - key: PAGARME_RECIPIENT_ID_PLATAFORMA
+        value: PEGAR_EM_DASHBOARD_PAGARME_RECEBEDORES
+      - key: PAGARME_TAXA_PIX_PERCENT
+        value: "0.99"
+      - key: PAGARME_TAXA_CARTAO_PERCENT
+        value: "3.99"
+      - key: PAGARME_TAXA_ANTECIPACAO_PERCENT
+        value: "1.99"
+      - key: PAGARME_TAXA_FIXA_CARTAO
+        value: "0.70"
