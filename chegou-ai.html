@@ -954,6 +954,15 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     </div>
   </div>
 
+  <!-- Código de confirmação de entrega -->
+  <div id="box-codigo-entrega" style="display:none;background:#111317;border:1.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 16px;width:100%;margin-bottom:16px;display:none;">
+    <div style="font-size:11px;font-weight:700;color:#a1a1aa;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">🔐 Código de confirmação de entrega</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:4px;" id="codigo-entrega-display">••••</div>
+      <div style="font-size:11px;color:#a1a1aa;max-width:160px;text-align:right;line-height:1.4;">Informe ao recebedor caso não seja você</div>
+    </div>
+  </div>
+
   <!-- Mapa do motoboy (aparece quando coletado) -->
   <div id="box-rastreio" style="display:none;width:100%;margin-bottom:16px;">
     <p id="map-aguardando" style="font-size:13px;color:var(--texto2);text-align:center;padding:16px 0;margin:0;">🛵 Aguardando localização do motoboy...</p>
@@ -6987,6 +6996,7 @@ function iniciarPollingPedidos() {
         var cm = r.endereco_entrega.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
         if(cm) { pedidoEntregaLat = parseFloat(cm[1]); pedidoEntregaLng = parseFloat(cm[2]); }
       }
+      if(r && (r.telefone_cliente || r.guest_telefone)) mostrarCodigoEntrega(r.telefone_cliente || r.guest_telefone);
       if(r && r.status && ultimoStatusConhecido[_pid] !== r.status) {
         ultimoStatusConhecido[_pid] = r.status;
         atualizarRastreioPedido(r.status);
@@ -7005,6 +7015,7 @@ function iniciarPollingPedidos() {
     if(!authToken && pedidoAtualId) {
       try {
         var resp = await apiCall('/api/orders/' + pedidoAtualId);
+        if(resp.telefone_cliente || resp.guest_telefone) mostrarCodigoEntrega(resp.telefone_cliente || resp.guest_telefone);
         var novoStatus = resp.status;
         if(ultimoStatusConhecido[pedidoAtualId] !== novoStatus) {
           ultimoStatusConhecido[pedidoAtualId] = novoStatus;
@@ -7170,6 +7181,17 @@ async function cancelarPedidoCliente() {
 }
 
 // === RASTREIO DO PEDIDO (stepper visual para o cliente) ===
+function mostrarCodigoEntrega(telefone) {
+  var box = document.getElementById('box-codigo-entrega');
+  var disp = document.getElementById('codigo-entrega-display');
+  if(!box || !disp) return;
+  var tel = (telefone || '').replace(/\D/g, '');
+  if(tel.length >= 4) {
+    disp.textContent = tel.slice(-4);
+    box.style.display = 'block';
+  }
+}
+
 function atualizarRastreioPedido(status) {
   var etapas = ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue'];
   var idx = etapas.indexOf(status);
