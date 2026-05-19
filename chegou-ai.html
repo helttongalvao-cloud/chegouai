@@ -563,51 +563,36 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   <!-- Vídeo 1 -->
   <div style="padding:0 20px 4px;">
     <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;">📲 Como instalar na tela inicial</div>
-    <div style="background:#18181b;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;">
-      <div style="position:relative;width:100%;padding-bottom:177.78%;background:#000;" id="wrap-vid1">
-        <iframe src="https://www.youtube.com/embed/JugQ3t2rOCs?rel=0&playsinline=1" style="position:absolute;inset:0;width:100%;height:100%;border:none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        <!-- Fallback visível se iframe bloqueado -->
-        <a href="https://youtube.com/shorts/JugQ3t2rOCs" target="_blank" id="fallback-vid1" style="display:none;position:absolute;inset:0;background:#111;align-items:center;justify-content:center;flex-direction:column;gap:10px;text-decoration:none;">
-          <span style="font-size:48px;">▶️</span>
-          <span style="color:#fff;font-size:14px;font-weight:700;">Assistir no YouTube</span>
-        </a>
+    <a href="https://youtube.com/shorts/JugQ3t2rOCs" target="_blank" style="display:block;border-radius:16px;overflow:hidden;text-decoration:none;position:relative;background:#000;">
+      <img src="https://img.youtube.com/vi/JugQ3t2rOCs/hqdefault.jpg" style="width:100%;display:block;object-fit:cover;min-height:200px;" alt="Como instalar o Chegou Aí">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);">
+        <div style="width:64px;height:64px;background:rgba(255,0,0,0.92);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+          <div style="width:0;height:0;border-top:12px solid transparent;border-bottom:12px solid transparent;border-left:20px solid #fff;margin-left:4px;"></div>
+        </div>
       </div>
-    </div>
+      <div style="position:absolute;bottom:0;left:0;right:0;padding:12px 16px;background:linear-gradient(to top,rgba(0,0,0,0.8),transparent);">
+        <div style="color:#fff;font-size:13px;font-weight:700;">📲 Como instalar na tela inicial</div>
+        <div style="color:rgba(255,255,255,0.7);font-size:11px;margin-top:2px;">Toque para assistir no YouTube</div>
+      </div>
+    </a>
   </div>
 
   <!-- Vídeo 2 -->
   <div style="padding:16px 20px 4px;">
     <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;">🛵 Como fazer um pedido</div>
-    <div style="background:#18181b;border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;">
-      <div style="position:relative;width:100%;padding-bottom:177.78%;background:#000;" id="wrap-vid2">
-        <iframe src="https://www.youtube.com/embed/1jQbjEeNggQ?rel=0&playsinline=1" style="position:absolute;inset:0;width:100%;height:100%;border:none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        <!-- Fallback visível se iframe bloqueado -->
-        <a href="https://youtube.com/shorts/1jQbjEeNggQ" target="_blank" id="fallback-vid2" style="display:none;position:absolute;inset:0;background:#111;align-items:center;justify-content:center;flex-direction:column;gap:10px;text-decoration:none;">
-          <span style="font-size:48px;">▶️</span>
-          <span style="color:#fff;font-size:14px;font-weight:700;">Assistir no YouTube</span>
-        </a>
+    <a href="https://youtube.com/shorts/1jQbjEeNggQ" target="_blank" style="display:block;border-radius:16px;overflow:hidden;text-decoration:none;position:relative;background:#000;">
+      <img src="https://img.youtube.com/vi/1jQbjEeNggQ/hqdefault.jpg" style="width:100%;display:block;object-fit:cover;min-height:200px;" alt="Como fazer um pedido">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);">
+        <div style="width:64px;height:64px;background:rgba(255,0,0,0.92);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+          <div style="width:0;height:0;border-top:12px solid transparent;border-bottom:12px solid transparent;border-left:20px solid #fff;margin-left:4px;"></div>
+        </div>
       </div>
-    </div>
+      <div style="position:absolute;bottom:0;left:0;right:0;padding:12px 16px;background:linear-gradient(to top,rgba(0,0,0,0.8),transparent);">
+        <div style="color:#fff;font-size:13px;font-weight:700;">🛵 Como fazer um pedido</div>
+        <div style="color:rgba(255,255,255,0.7);font-size:11px;margin-top:2px;">Toque para assistir no YouTube</div>
+      </div>
+    </a>
   </div>
-  <script>
-  // Detecta se iframes foram bloqueados (YouTube não permite embed) e mostra fallback
-  (function() {
-    function checaFrame(frameId, fallbackId) {
-      var fb = document.getElementById(fallbackId);
-      if(!fb) return;
-      setTimeout(function() {
-        try {
-          var iframes = document.getElementById(frameId === 'wrap-vid1' ? 'wrap-vid1' : 'wrap-vid2').querySelectorAll('iframe');
-          if(!iframes.length) { fb.style.display = 'flex'; return; }
-          // Se o iframe carregou mas está vazio (bloqueado), contentDocument será null em cross-origin — isso é normal
-          // Usamos onerror no iframe para detectar bloqueio
-        } catch(e) { fb.style.display = 'flex'; }
-      }, 3000);
-    }
-    checaFrame('wrap-vid1','fallback-vid1');
-    checaFrame('wrap-vid2','fallback-vid2');
-  })();
-  </script>
 
   <!-- Botão -->
   <div style="padding:20px;position:sticky;bottom:0;background:linear-gradient(to top,#0a0a0a 80%,transparent);">
