@@ -225,10 +225,14 @@ app.use((req, res) => {
 // =============================================
 // INICIAR SERVIDOR
 // =============================================
+const { iniciarMonitorAlertas } = require('./services/monitor-alertas');
+
 app.listen(PORT, () => {
   console.log(`\n🛵  Chegou Aí — Backend rodando`);
   console.log(`📍  http://localhost:${PORT}`);
   console.log(`🌍  Ambiente: ${process.env.NODE_ENV || 'development'}\n`);
+
+  iniciarMonitorAlertas();
 
   // Fix: atualiza logo Sabor na Brasa se ainda está com a imagem antiga
   const { supabaseAdmin } = require('./config/supabase');
