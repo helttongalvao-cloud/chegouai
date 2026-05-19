@@ -2068,8 +2068,10 @@ setTimeout(function(){
     // Pedido ativo guest para rastrear
     irTela('tela-confirmado'); ultimoStatusConhecido = {}; iniciarPollingPedidos();
   } else {
-    // Mostrar boas-vindas 1x por dispositivo (apenas para novos visitantes)
-    if(!localStorage.getItem('chegouai_bvisto')) {
+    // Mostrar boas-vindas até 2x por dispositivo
+    var bvisto = parseInt(localStorage.getItem('chegouai_bvisto') || '0');
+    if(bvisto < 2) {
+      localStorage.setItem('chegouai_bvisto', String(bvisto + 1));
       irTela('tela-boas-vindas');
     } else {
       irTela('tela-login');
@@ -2466,7 +2468,6 @@ function aplicarFiltroRapido(el, tipo) {
 }
 
 function dispensarBoasVindas() {
-  localStorage.setItem('chegouai_bvisto', '1');
   irTela('tela-login');
 }
 
