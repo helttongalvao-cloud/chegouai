@@ -16,10 +16,11 @@ router.get('/primeiro-pedido', async (req, res, next) => {
     const tel = (req.query.telefone || '').replace(/\D/g, '').slice(-11);
     if (tel.length < 10) return res.json({ primeiroP: false });
 
+    const tel8 = tel.slice(-8);
     const { data } = await supabaseAdmin
       .from('pedidos')
       .select('id')
-      .eq('telefone_cliente', tel)
+      .or(`telefone_cliente.eq.${tel},telefone_cliente.like.%${tel8}`)
       .eq('pagamento_status', 'aprovado')
       .limit(1);
 
@@ -218,10 +219,11 @@ router.post(
       // 5b. Frete grátis no primeiro pedido — verificação dupla (front pediu + backend confirma)
       if (req.body.freteGratis === true) {
         const tel = telefoneCliente.replace(/\D/g, '').slice(-11);
+        const tel8 = tel.slice(-8);
         const { data: pedidosAnt } = await supabaseAdmin
           .from('pedidos')
           .select('id')
-          .eq('telefone_cliente', tel)
+          .or(`telefone_cliente.eq.${tel},telefone_cliente.like.%${tel8}`)
           .eq('pagamento_status', 'aprovado')
           .limit(1);
         if (!pedidosAnt || pedidosAnt.length === 0) {
@@ -237,7 +239,7 @@ router.post(
         estabelecimento_id: estabelecimentoId,
         status: 'pendente',
         endereco_entrega: enderecoEntrega,
-        telefone_cliente: telefoneCliente,
+        telefone_cliente: telefoneCliente.replace(/\D/g, '').slice(-11),
         subtotal,
         taxa_entrega: taxaFinal,
         comissao_plataforma: split.valorPlataforma,
@@ -254,7 +256,7 @@ router.post(
       if (!req.user) {
         pedidoInsert.guest_nome = (guestNome || '').trim();
         if (guestCpf) pedidoInsert.guest_cpf = guestCpf.replace(/\D/g, '');
-        pedidoInsert.guest_telefone = telefoneCliente;
+        pedidoInsert.guest_telefone = telefoneCliente.replace(/\D/g, '').slice(-11);
       }
 
       const { data: pedido, error: pedidoErr } = await supabaseAdmin
