@@ -268,4 +268,32 @@ router.patch('/cpf', requireAuth, async (req, res, next) => {
   }
 });
 
+// =============================================
+// POST /api/auth/reset-senha — Reset de senha pelo telefone
+// =============================================
+router.post('/reset-senha', [
+  body('telefone').notEmpty().withMessage('Telefone obrigatório'),
+  body('novaSenha').isLength({ min: 6 }).withMessage('Senha deve ter pelo menos 6 caracteres'),
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+  try {
+    const tel = req.body.telefone.replace(/\D/g, '').slice(-11);
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('telefone', tel)
+      .single();
+
+    if (!profile) return res.status(404).json({ error: 'Telefone não cadastrado' });
+
+    await supabaseAdmin.auth.admin.updateUser(profile.id, { password: req.body.novaSenha });
+
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

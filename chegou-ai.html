@@ -647,12 +647,37 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <input type="password" placeholder="••••••••" id="login-senha">
     </div>
     <button class="btn-principal" onclick="entrar()">Entrar</button>
+    <div style="text-align:center;margin-top:10px;">
+      <span onclick="abrirResetSenha()" style="color:var(--texto2);font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Esqueci minha senha</span>
+    </div>
     <div class="link-texto">
       Não tem conta? <span onclick="irCadastro()">Cadastre-se grátis</span>
     </div>
     <div style="text-align:center;margin-top:20px;">
       <span onclick="continuarSemConta()" style="color:var(--texto2);font-size:14px;cursor:pointer;border-bottom:1px dashed rgba(255,255,255,0.15);padding-bottom:2px;">Fazer pedido sem criar conta →</span>
     </div>
+  </div>
+</div>
+
+<!-- MODAL RESET SENHA -->
+<div id="modal-reset-senha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--cinza1);border-radius:16px;padding:28px 24px;width:100%;max-width:380px;">
+    <h3 style="margin:0 0 6px;font-size:18px;">Nova senha</h3>
+    <p style="color:var(--texto2);font-size:13px;margin:0 0 20px;">Digite seu telefone e escolha uma nova senha.</p>
+    <div class="campo">
+      <label>Telefone</label>
+      <input type="tel" id="reset-telefone" placeholder="(97) 99999-9999" inputmode="numeric" oninput="mascaraTelefone(this)">
+    </div>
+    <div class="campo">
+      <label>Nova senha</label>
+      <input type="password" id="reset-nova-senha" placeholder="Mínimo 6 caracteres">
+    </div>
+    <div class="campo">
+      <label>Confirmar senha</label>
+      <input type="password" id="reset-confirmar-senha" placeholder="Repita a nova senha">
+    </div>
+    <button class="btn-principal" onclick="submitResetSenha()" id="btn-reset-senha">Salvar nova senha</button>
+    <button onclick="fecharResetSenha()" style="width:100%;margin-top:10px;padding:12px;background:none;border:1px solid var(--cinza3);border-radius:10px;color:var(--texto2);cursor:pointer;font-size:14px;">Cancelar</button>
   </div>
 </div>
 
@@ -2290,6 +2315,40 @@ function irLogin() {
   localStorage.removeItem('chegouai_user');
   localStorage.removeItem('chegouai_refresh');
   irTela('tela-login');
+}
+
+function abrirResetSenha() {
+  var m = document.getElementById('modal-reset-senha');
+  m.style.display = 'flex';
+  document.getElementById('reset-telefone').value = document.getElementById('login-usuario').value || '';
+  document.getElementById('reset-nova-senha').value = '';
+  document.getElementById('reset-confirmar-senha').value = '';
+}
+
+function fecharResetSenha() {
+  document.getElementById('modal-reset-senha').style.display = 'none';
+}
+
+async function submitResetSenha() {
+  var telefone = document.getElementById('reset-telefone').value.replace(/\D/g,'');
+  var novaSenha = document.getElementById('reset-nova-senha').value;
+  var confirmar = document.getElementById('reset-confirmar-senha').value;
+  if (!telefone || telefone.length < 10) { alert('Telefone inválido'); return; }
+  if (novaSenha.length < 6) { alert('Senha deve ter pelo menos 6 caracteres'); return; }
+  if (novaSenha !== confirmar) { alert('As senhas não coincidem'); return; }
+  var btn = document.getElementById('btn-reset-senha');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    await apiCall('/api/auth/reset-senha', { method: 'POST', body: { telefone, novaSenha } });
+    fecharResetSenha();
+    document.getElementById('login-usuario').value = document.getElementById('reset-telefone')?.value || '';
+    document.getElementById('login-senha').value = '';
+    alert('Senha alterada! Agora faça login com a nova senha.');
+  } catch(e) {
+    alert(e.message || 'Erro ao redefinir senha');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar nova senha';
+  }
 }
 
 function cardEstAvatar(e) {
