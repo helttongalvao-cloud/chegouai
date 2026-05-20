@@ -3323,13 +3323,14 @@ function irCheckout() {
   if(secaoGuest) secaoGuest.style.display = !authToken ? '' : 'none';
   if(secaoCupom) secaoCupom.style.display = !authToken ? 'none' : '';
   if(campoCpf && !authToken) campoCpf.style.display = 'block';
-  // Pré-preencher telefone se já logado
+  // Pré-preencher telefone se já logado e verificar frete grátis
   if(authToken && currentUser && currentUser.telefone) {
     var telEl = document.getElementById('checkout-telefone');
     if(telEl && !telEl.value) {
       var t = currentUser.telefone.replace(/\D/g,'');
       telEl.value = t.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
     }
+    verificarPrimeiroP(currentUser.telefone);
   }
 
   // Pré-preencher CPF se já salvo no perfil
