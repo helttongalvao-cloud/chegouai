@@ -150,6 +150,8 @@ router.post('/pix', paymentLimiter, optionalAuth, [
       formaPagamento: 'pix',
       tipoEntrega:    pedido.estabelecimentos?.tipo_entrega,
     });
+    // Aplicar desconto (ex: frete grátis) ao total cobrado do cliente
+    if (pedido.desconto > 0) split.total = parseFloat((split.total - pedido.desconto).toFixed(2));
 
     const guestTel = (pedido.guest_telefone || pedido.telefone_cliente || '').replace(/\D/g, '');
     const customerId = await criarOuBuscarCliente({
@@ -263,13 +265,14 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
 
     const pedido = await buscarPedidoPendente(pedidoId, req.user?.id || null);
 
-    // split.total já contém o gross-up (produto + frete + taxas repassadas ao cliente)
     const split = calcularSplit({
       subtotal:       pedido.subtotal,
       taxaEntrega:    pedido.taxa_entrega,
       formaPagamento: 'cartao',
       tipoEntrega:    pedido.estabelecimentos?.tipo_entrega,
     });
+    // Aplicar desconto (ex: frete grátis) ao total cobrado do cliente
+    if (pedido.desconto > 0) split.total = parseFloat((split.total - pedido.desconto).toFixed(2));
 
     let customerId;
     if (cardId && savedCustomerId) {
