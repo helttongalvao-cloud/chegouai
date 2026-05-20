@@ -3493,7 +3493,7 @@ async function confirmarPedido() {
       enderecoEntrega: end,
       telefoneCliente: tel,
       formaPagamento: formaPag,
-      taxaEntrega: window.taxaEntregaSimulada,
+      ...(window.taxaEntregaSimulada > 0 && { taxaEntrega: window.taxaEntregaSimulada }),
       freteGratis: true, // backend valida independentemente se é 1º pedido
     };
     if(cupomAplicado) bodyPedido.cupom = cupomAplicado.codigo;
