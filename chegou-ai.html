@@ -2138,12 +2138,17 @@ function entrarComo(perfil) {
       // Verificar se o pedido ainda está ativo antes de redirecionar
       apiCall('/api/orders/' + pedidoAtualId).then(function(resp) {
         var statusFinal = ['entregue', 'cancelado'];
-        if(resp && resp.status && statusFinal.indexOf(resp.status) === -1) {
+        var pagamentoOk = resp && (resp.pagamento_status === 'aprovado' || resp.forma_pagamento === 'dinheiro');
+        if(resp && resp.status && statusFinal.indexOf(resp.status) === -1 && pagamentoOk) {
           if(resp.estabelecimentos) estAtual = Object.assign(estAtual || {}, resp.estabelecimentos);
           irTela('tela-confirmado');
           mostrarWhatsappEstabelecimento();
           ultimoStatusConhecido = {};
           iniciarPollingPedidos();
+        } else if(resp && resp.pagamento_status === 'pendente' && resp.forma_pagamento === 'pix') {
+          // Pagamento Pix ainda não confirmado — reapresenta o QR code
+          pedidoAtualId = resp.id;
+          pagarPix(pedidoAtualId);
         } else {
           pedidoAtualId = null;
           localStorage.removeItem('chegouai_pedido_id');

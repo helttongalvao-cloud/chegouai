@@ -272,15 +272,7 @@ router.post(
 
       if (itensErr) throw itensErr;
 
-      // 7. Notificar lojista via push
-      if (est.user_id) {
-        enviarPush(
-          est.user_id,
-          '🔔 Novo pedido!',
-          `R$ ${totalFinal.toFixed(2).replace('.', ',')} — ${itensPedido.map((i) => `${i.quantidade}x ${i.nome}`).join(', ')}`,
-          { pedidoId: pedido.id }
-        );
-      }
+      // 7. Push e WhatsApp só após pagamento confirmado (ver processarPagamentoAprovado em payments.js)
 
       // 8. Link WhatsApp para o lojista (se configurado)
       let whatsappLink = null;

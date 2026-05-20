@@ -12,6 +12,7 @@ const {
   verificarWebhook,
 } = require('../services/pagarme');
 const { calcularSplit } = require('../services/commission');
+const { enviarPush } = require('./notifications');
 
 const router = express.Router();
 
@@ -57,7 +58,7 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
     .update({ pagamento_status: 'aprovado', status: 'aceito', pagarme_order_id: pagarmeOrderId })
     .eq('id', orderId)
     .neq('pagamento_status', 'aprovado')
-    .select('subtotal, taxa_entrega, forma_pagamento, estabelecimentos(tipo_entrega)')
+    .select('subtotal, taxa_entrega, total, forma_pagamento, estabelecimentos(tipo_entrega, user_id, nome)')
     .maybeSingle();
 
   if (!pedido) {
@@ -109,6 +110,17 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
           .eq('id', item.produto_id);
       }
     }
+  }
+
+  // Notificar lojista APENAS agora que pagamento foi confirmado
+  const lojistaUserId = pedido.estabelecimentos?.user_id;
+  if (lojistaUserId) {
+    enviarPush(
+      lojistaUserId,
+      '🔔 Novo pedido pago!',
+      `R$ ${pedido.total?.toFixed(2).replace('.', ',')} — pagamento confirmado`,
+      { pedidoId: orderId }
+    );
   }
 
   console.log(
