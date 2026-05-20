@@ -6750,8 +6750,8 @@ var isAndroid = /android/i.test(navigator.userAgent);
 var isInApp = /Instagram|FBAN|FBAV|Twitter|TikTok|Snapchat|LinkedIn|Line\/|KAKAOTALK|WhatsApp/i.test(navigator.userAgent)
   || (isIOS && !/Safari/i.test(navigator.userAgent));
 
-// Já dispensou antes?
-var bannerDispensado = localStorage.getItem('chegouai_install_dispensado');
+// Dispensado apenas nesta sessão (reseta ao abrir o app de novo)
+var bannerDispensado = sessionStorage.getItem('chegouai_install_dispensado');
 
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
@@ -6767,10 +6767,9 @@ window.addEventListener('appinstalled', function() {
 });
 
 function abrirNoChrome() {
-  var url = 'https://chegouaiapp.com.br/app';
+  var url = 'https://chegouaiapp.com.br';
   var intent = 'intent://' + url.replace('https://', '') + '#Intent;scheme=https;package=com.android.chrome;end';
   window.location.href = intent;
-  // fallback: tentar abrir no browser padrão após pequeno delay
   setTimeout(function() { window.open(url, '_blank'); }, 800);
 }
 
@@ -6814,6 +6813,7 @@ function fecharBannerInstall(permanente) {
   var banner = document.getElementById('install-banner');
   if(banner) banner.classList.remove('visivel');
   if(permanente) localStorage.setItem('chegouai_install_dispensado', '1');
+  sessionStorage.setItem('chegouai_install_dispensado', '1');
 }
 
 function clicarBannerInstall() {
@@ -6877,10 +6877,15 @@ if(!isStandalone && !bannerDispensado) {
       mostrarBannerInstall(isIOS ? 'inapp-ios' : 'inapp-android');
     } else if(isIOS) {
       mostrarBannerInstall('ios');
-    } else if(isAndroid && !deferredInstallPrompt) {
-      mostrarBannerInstall('android-manual');
+    } else if(isAndroid) {
+      // Se o Chrome já capturou o prompt nativo, usa ele; senão mostra instruções manuais
+      if(deferredInstallPrompt) {
+        mostrarBannerInstall('android');
+      } else {
+        mostrarBannerInstall('android-manual');
+      }
     }
-  }, 4000);
+  }, 3500);
 }
 
 // Verificar retorno do callback de pagamento por cartão
