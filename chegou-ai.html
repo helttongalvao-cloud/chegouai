@@ -2517,7 +2517,7 @@ function renderEstabelecimentos(cat) {
 function filtrarCat(btn, cat) {
   document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('ativo'); });
   btn.classList.add('ativo');
-  carregarEstabelecimentos(cat);
+  renderEstabelecimentos(cat);
 }
 
 function filtrarCatIcon(el, cat) {
@@ -2526,7 +2526,7 @@ function filtrarCatIcon(el, cat) {
   el.addEventListener('animationend', function(){ el.classList.remove('cat-bounce'); }, { once:true });
   filtroRapidoAtual = 'todos';
   document.querySelectorAll('.filtro-rapido-btn').forEach(function(b,i){ b.classList.toggle('ativo', i===0); });
-  carregarEstabelecimentos(cat);
+  renderEstabelecimentos(cat);
 }
 
 function aplicarFiltroRapido(el, tipo) {
