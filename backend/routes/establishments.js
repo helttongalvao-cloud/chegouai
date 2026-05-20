@@ -22,7 +22,7 @@ router.get('/products/featured', async (req, res, next) => {
 
     // Mesma lógica do GET /api/establishments
     const diasMap = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
-    const agoraBR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const agoraBR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Eirunepe' }));
     const diaKey = diasMap[agoraBR.getDay()];
     const minAtual = agoraBR.getHours() * 60 + agoraBR.getMinutes();
 
@@ -139,7 +139,7 @@ router.get('/', async (req, res, next) => {
 
     // Calcular aberto dinamicamente com base nos horários configurados
     const diasMap = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
-    const agoraBR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const agoraBR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Eirunepe' }));
     const diaKey = diasMap[agoraBR.getDay()];
     const minAtual = agoraBR.getHours() * 60 + agoraBR.getMinutes();
 
@@ -188,7 +188,7 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
 
     // Calcular aberto com base em horarios se configurado
     if (est.horarios && Object.keys(est.horarios).length > 0) {
-      const agoraBR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+      const agoraBR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Eirunepe' }));
       const diasMap = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
       const diaKey = diasMap[agoraBR.getDay()];
       const horDia = est.horarios[diaKey];

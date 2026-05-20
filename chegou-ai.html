@@ -4838,7 +4838,7 @@ function atualizarStatsPeriodo() {
 function verificarHorarioAuto(est) {
   if(!est || !est.horarios || !Object.keys(est.horarios).length) return;
   if(est.pausado) return;
-  var agora = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  var agora = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Eirunepe' }));
   var diaChave = ['dom','seg','ter','qua','qui','sex','sab'][agora.getDay()];
   var h = est.horarios[diaChave];
   var deveriaAbrir = false;
