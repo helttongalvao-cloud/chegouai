@@ -4808,6 +4808,7 @@ function imprimirComanda(id) {
     '<div class="linha"></div>' +
     '<div style="display:flex;justify-content:space-between;"><span>Subtotal</span><span>R$' + parseFloat(p.subtotal||0).toFixed(2) + '</span></div>' +
     '<div style="display:flex;justify-content:space-between;"><span>Entrega</span><span>R$' + parseFloat(p.taxa_entrega||0).toFixed(2) + '</span></div>' +
+    (p.cupom_codigo === 'FRETE_GRATIS_1P' ? '<div style="display:flex;justify-content:space-between;"><span>🎉 Frete grátis 1º pedido</span><span>-R$' + parseFloat(p.taxa_entrega||0).toFixed(2) + '</span></div>' : '') +
     '<div class="total"><span>TOTAL</span><span>R$' + parseFloat(p.total||0).toFixed(2) + '</span></div>' +
     '<div class="linha"></div>' +
     '<div>Pagamento: <b>' + (pagIcones[p.forma_pagamento] || (p.forma_pagamento||'').toUpperCase()) + '</b></div>' +
