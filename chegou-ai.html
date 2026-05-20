@@ -5912,21 +5912,29 @@ async function confirmarColeta(pedidoId, btn) {
   }
 }
 
-async function confirmarEntregaReal(pedidoId, btn) {
-  if (!confirm('Confirmar entrega do pedido?')) return;
-  btn.disabled = true;
-  btn.textContent = 'Confirmando...';
-  try {
-    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'entregue' } });
-    pararRastreio();
-    salvarFaseMotoboy(null, null);
-    esconderChatFab();
-    renderMotoboy();
-  } catch(e) {
-    showToast('❌', 'Erro', e.message || 'Tente novamente');
-    btn.disabled = false;
-    btn.textContent = '✅ Confirmar entrega';
-  }
+function confirmarEntregaReal(pedidoId) {
+  var modal = document.getElementById('modal-confirmar-entrega');
+  var btnSim = document.getElementById('btn-confirmar-entrega-sim');
+  modal.classList.add('aberto');
+  // Remover listener anterior para evitar duplicatas
+  var novo = btnSim.cloneNode(true);
+  btnSim.parentNode.replaceChild(novo, btnSim);
+  novo.addEventListener('click', async function() {
+    novo.disabled = true;
+    novo.textContent = '⏳ Confirmando...';
+    try {
+      await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'entregue' } });
+      modal.classList.remove('aberto');
+      pararRastreio();
+      salvarFaseMotoboy(null, null);
+      esconderChatFab();
+      renderMotoboy();
+    } catch(e) {
+      showToast('❌', 'Erro', e.message || 'Tente novamente');
+      novo.disabled = false;
+      novo.textContent = '✅ Sim, entregue!';
+    }
+  });
 }
 
 async function aceitarEntregaReal(pedidoId, btn) {
@@ -6610,6 +6618,16 @@ function adminNav(btn, secao) {
 </div>
 
 <!-- MODAL PAGAMENTO -->
+<div class="modal-overlay" id="modal-confirmar-entrega">
+  <div class="modal-box" style="text-align:center;">
+    <div style="font-size:48px;margin-bottom:12px;">📦</div>
+    <div class="modal-titulo">Confirmar entrega?</div>
+    <p style="color:var(--texto2);font-size:14px;margin:8px 0 20px;">Tenha certeza que o cliente recebeu o pedido antes de confirmar.</p>
+    <button id="btn-confirmar-entrega-sim" style="width:100%;padding:14px;border-radius:12px;background:var(--verde);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;">✅ Sim, entregue!</button>
+    <button onclick="document.getElementById('modal-confirmar-entrega').classList.remove('aberto')" style="width:100%;background:transparent;border:none;color:var(--texto2);padding:12px;cursor:pointer;font-size:14px;font-family:'DM Sans',sans-serif;">Cancelar</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-pagamento">
   <div class="modal-box">
     <div class="pag-header">
