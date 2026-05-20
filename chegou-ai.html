@@ -3489,7 +3489,7 @@ async function confirmarPedido() {
       telefoneCliente: tel,
       formaPagamento: formaPag,
       taxaEntrega: window.taxaEntregaSimulada,
-      freteGratis: freteGratis === true,
+      freteGratis: true, // backend valida independentemente se é 1º pedido
     };
     if(cupomAplicado) bodyPedido.cupom = cupomAplicado.codigo;
     if(isGuest) {
