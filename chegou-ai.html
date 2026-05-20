@@ -3443,11 +3443,16 @@ async function confirmarPedido() {
     guestCpf = (document.getElementById('checkout-guest-cpf')?.value || '').replace(/\D/g,'');
     if(guestCpf.length !== 11) { alert('Informe seu CPF (11 dígitos)'); return; }
 
+    // GPS é recomendado mas não obrigatório — se digitou endereço manualmente, aceita
     if(!clienteLat || !clienteLng) {
       var av = document.getElementById('guest-gps-aviso');
       if(av) av.style.display = '';
-      alert('Use o botão 📍 "Usar minha localização atual" para confirmar onde você está');
-      return;
+      // Só bloqueia se o endereço for uma coord GPS incompleta; texto manual é aceito
+      var endParaTestar = endEl.readOnly ? endEl.dataset.latLng : end;
+      if(endEl.readOnly && !endEl.dataset.latLng) {
+        alert('Use o botão 📍 para confirmar sua localização ou digite o endereço completo.');
+        return;
+      }
     }
   }
 
@@ -3537,28 +3542,34 @@ function usarLocalizacao() {
   }
   btn.textContent = '📡 Obtendo localização...';
   btn.style.color = 'var(--verde)';
-  navigator.geolocation.getCurrentPosition(
-    function(pos) {
-      clienteLat = pos.coords.latitude;
-      clienteLng = pos.coords.longitude;
-      btn.textContent = '✅ Localização obtida — ajuste o pin se precisar';
-      btn.style.borderColor = 'var(--verde)';
-      btn.style.color = 'var(--verde)';
-      var av = document.getElementById('guest-gps-aviso');
-      if(av) av.style.display = 'none';
-      mostrarMapaPicker(clienteLat, clienteLng);
-    },
-    function(err) {
-      btn.textContent = '📍 Usar minha localização atual';
-      btn.style.color = 'var(--texto2)';
-      if (err.code === 1) {
-        showToast('📍', 'Localização bloqueada', 'Permita nas Configurações do celular → Safari/Chrome → Localização.');
-      } else {
-        showToast('📍', 'Localização indisponível', 'Digite o endereço manualmente no campo acima.');
-      }
-    },
-    { timeout: 10000, enableHighAccuracy: true }
-  );
+
+  function _onGPS(pos) {
+    clienteLat = pos.coords.latitude;
+    clienteLng = pos.coords.longitude;
+    btn.textContent = '✅ Localização obtida — ajuste o pin se precisar';
+    btn.style.borderColor = 'var(--verde)';
+    btn.style.color = 'var(--verde)';
+    var av = document.getElementById('guest-gps-aviso');
+    if(av) av.style.display = 'none';
+    mostrarMapaPicker(clienteLat, clienteLng);
+  }
+  function _onGPSErro(err) {
+    btn.textContent = '📍 Usar minha localização atual';
+    btn.style.color = 'var(--texto2)';
+    if (err.code === 1) {
+      showToast('📍', 'Localização bloqueada', 'Permita nas Configurações → ' + (isIOS ? 'Safari' : 'Chrome') + ' → Localização.');
+    } else {
+      showToast('📍', 'Localização indisponível', 'Digite o endereço completo no campo acima.');
+    }
+  }
+  // Tenta alta precisão primeiro; se falhar em 8s, tenta baixa precisão (mais rápida em ambientes cobertos)
+  navigator.geolocation.getCurrentPosition(_onGPS, function(err) {
+    if(err.code !== 1) {
+      navigator.geolocation.getCurrentPosition(_onGPS, _onGPSErro, { timeout: 10000, enableHighAccuracy: false, maximumAge: 60000 });
+    } else {
+      _onGPSErro(err);
+    }
+  }, { timeout: 8000, enableHighAccuracy: true, maximumAge: 30000 });
 }
 
 function abrirMapaSemGPS() {
