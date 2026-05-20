@@ -16,15 +16,13 @@ router.get('/primeiro-pedido', async (req, res, next) => {
     const tel = (req.query.telefone || '').replace(/\D/g, '').slice(-11);
     if (tel.length < 10) return res.json({ primeiroP: false });
 
-    const tel8 = tel.slice(-8);
-    const { data } = await supabaseAdmin
-      .from('pedidos')
-      .select('id')
-      .or(`telefone_cliente.eq.${tel},telefone_cliente.like.%${tel8}`)
-      .eq('pagamento_status', 'aprovado')
-      .limit(1);
+    const telFormatado = `(${tel.slice(0,2)}) ${tel.slice(2,7)}-${tel.slice(7)}`;
+    const [{ data: r1 }, { data: r2 }] = await Promise.all([
+      supabaseAdmin.from('pedidos').select('id').eq('telefone_cliente', tel).eq('pagamento_status', 'aprovado').limit(1),
+      supabaseAdmin.from('pedidos').select('id').eq('telefone_cliente', telFormatado).eq('pagamento_status', 'aprovado').limit(1),
+    ]);
 
-    res.json({ primeiroP: !data || data.length === 0 });
+    res.json({ primeiroP: (!r1 || r1.length === 0) && (!r2 || r2.length === 0) });
   } catch (err) { next(err); }
 });
 
@@ -219,15 +217,12 @@ router.post(
       // 5b. Frete grátis no primeiro pedido — verificação dupla (front pediu + backend confirma)
       if (req.body.freteGratis === true) {
         const tel = telefoneCliente.replace(/\D/g, '').slice(-11);
-        const tel8 = tel.slice(-8);
-        const { data: pedidosAnt } = await supabaseAdmin
-          .from('pedidos')
-          .select('id')
-          .or(`telefone_cliente.eq.${tel},telefone_cliente.like.%${tel8}`)
-          .eq('pagamento_status', 'aprovado')
-          .limit(1);
-        if (!pedidosAnt || pedidosAnt.length === 0) {
-          // Confirmado: é primeiro pedido — absorver os R$2 no desconto
+        const telFormatado = `(${tel.slice(0,2)}) ${tel.slice(2,7)}-${tel.slice(7)}`;
+        const [{ data: ant1 }, { data: ant2 }] = await Promise.all([
+          supabaseAdmin.from('pedidos').select('id').eq('telefone_cliente', tel).eq('pagamento_status', 'aprovado').limit(1),
+          supabaseAdmin.from('pedidos').select('id').eq('telefone_cliente', telFormatado).eq('pagamento_status', 'aprovado').limit(1),
+        ]);
+        if ((!ant1 || ant1.length === 0) && (!ant2 || ant2.length === 0)) {
           desconto = parseFloat((desconto + taxaFinal).toFixed(2));
         }
       }
