@@ -872,6 +872,10 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <button id="btn-localizacao" onclick="usarLocalizacao()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📡 Minha localização</button>
         <button onclick="mostrarInputLinkGMaps()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📎 Colar link</button>
       </div>
+      <div id="mapa-picker-wrap" style="display:none;margin-top:10px;">
+        <div id="mapa-picker" style="height:220px;border-radius:12px;overflow:hidden;border:1.5px solid var(--cinza3);"></div>
+        <div style="font-size:12px;color:var(--texto2);margin-top:6px;text-align:center;">📌 Arraste o mapa para ajustar o ponto de entrega</div>
+      </div>
       <div id="link-gmaps-wrap" style="display:none;margin-top:10px;">
         <div style="font-size:12px;color:var(--texto2);margin-bottom:8px;line-height:1.4;">
           Peça para quem vai receber abrir o <strong style="color:var(--texto);">Google Maps</strong> → pressionar a localização da casa → tocar em <strong style="color:var(--texto);">Compartilhar</strong> → enviar o link pelo WhatsApp. Cole o link abaixo:
@@ -3443,16 +3447,11 @@ async function confirmarPedido() {
     guestCpf = (document.getElementById('checkout-guest-cpf')?.value || '').replace(/\D/g,'');
     if(guestCpf.length !== 11) { alert('Informe seu CPF (11 dígitos)'); return; }
 
-    // GPS é recomendado mas não obrigatório — se digitou endereço manualmente, aceita
     if(!clienteLat || !clienteLng) {
       var av = document.getElementById('guest-gps-aviso');
       if(av) av.style.display = '';
-      // Só bloqueia se o endereço for uma coord GPS incompleta; texto manual é aceito
-      var endParaTestar = endEl.readOnly ? endEl.dataset.latLng : end;
-      if(endEl.readOnly && !endEl.dataset.latLng) {
-        alert('Use o botão 📍 para confirmar sua localização ou digite o endereço completo.');
-        return;
-      }
+      alert('Use o botão 📡 "Minha localização" para confirmar onde você está');
+      return;
     }
   }
 
