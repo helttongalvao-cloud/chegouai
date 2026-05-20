@@ -3251,9 +3251,15 @@ function simularFrete(endereco) {
   const taxa = calcularTaxaEntrega(distKm);
   window.taxaEntregaSimulada = taxa;
 
-  document.getElementById('taxa-entrega-valor').textContent = 'R$ ' + taxa.toFixed(2).replace('.',',');
-  document.getElementById('taxa-entrega-valor').style.color = 'var(--verde)';
-  var baseTotal = parseFloat((subtotal + taxa).toFixed(2));
+  var taxaEl = document.getElementById('taxa-entrega-valor');
+  taxaEl.style.color = 'var(--verde)';
+  if (freteGratis) {
+    taxaEl.innerHTML = '<span style="text-decoration:line-through;color:#71717a;font-size:12px;">R$ ' + taxa.toFixed(2).replace('.',',') + '</span> <span style="color:#4ade80;">Grátis</span>';
+    document.getElementById('frete-gratis-badge').style.display = 'block';
+  } else {
+    taxaEl.textContent = 'R$ ' + taxa.toFixed(2).replace('.',',');
+  }
+  var baseTotal = parseFloat((subtotal + (freteGratis ? 0 : taxa)).toFixed(2));
   window._baseTotal = baseTotal;
   window._conveniencia = 0;
   document.getElementById('linha-conveniencia').style.display = 'none';
