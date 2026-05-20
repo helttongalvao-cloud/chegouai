@@ -76,12 +76,11 @@ router.patch('/:estId/pedidos/:pedidoId/coletar', [
 
 // =============================================
 // PATCH /api/motoboy-proprio/:estId/pedidos/:pedidoId/entregar
-// Marca como "entregue" — requer 4 últimos dígitos do telefone do cliente
+// Marca como "entregue"
 // =============================================
 router.patch('/:estId/pedidos/:pedidoId/entregar', [
   param('estId').isUUID(),
   param('pedidoId').isUUID(),
-  body('codigo').matches(/^\d{4}$/).withMessage('Informe os 4 últimos dígitos do telefone do cliente'),
 ], async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
@@ -89,18 +88,13 @@ router.patch('/:estId/pedidos/:pedidoId/entregar', [
   try {
     const { data: pedido } = await supabaseAdmin
       .from('pedidos')
-      .select('id, status, telefone_cliente')
+      .select('id, status')
       .eq('id', req.params.pedidoId)
       .eq('estabelecimento_id', req.params.estId)
       .single();
 
     if (!pedido) return res.status(404).json({ error: 'Pedido não encontrado' });
     if (pedido.status !== 'coletado') return res.status(400).json({ error: 'Pedido ainda não foi coletado' });
-
-    const tel = (pedido.telefone_cliente || '').replace(/\D/g, '');
-    if (tel.length < 4 || tel.slice(-4) !== req.body.codigo) {
-      return res.status(400).json({ error: 'Código incorreto. Peça ao cliente os 4 últimos dígitos do telefone.' });
-    }
 
     await supabaseAdmin
       .from('pedidos')

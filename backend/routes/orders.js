@@ -577,22 +577,6 @@ router.patch(
           return res.status(400).json({ error: 'Não é possível cancelar pedido já pago' });
       }
 
-      // Validar código de entrega quando motoboy confirma entrega
-      if (status === 'entregue' && perfil === 'motoboy') {
-        const { codigoEntrega } = req.body;
-        if (!codigoEntrega || !/^\d{4}$/.test(codigoEntrega)) {
-          return res.status(400).json({ error: 'Informe os 4 últimos dígitos do telefone do cliente' });
-        }
-        const { data: pedCheck } = await supabaseAdmin
-          .from('pedidos').select('telefone_cliente').eq('id', orderId).single();
-        const tel = (pedCheck?.telefone_cliente || '').replace(/\D/g, '');
-        if (!tel || tel.length < 4) {
-          return res.status(400).json({ error: 'Telefone do cliente não disponível para verificação' });
-        }
-        if (tel.slice(-4) !== codigoEntrega) {
-          return res.status(400).json({ error: 'Código incorreto. Peça ao cliente os 4 últimos dígitos do telefone.' });
-        }
-      }
 
       // Campos extras para o update
       const updateFields = { status, atualizado_em: new Date().toISOString() };

@@ -5829,8 +5829,21 @@ async function confirmarColeta(pedidoId, btn) {
   }
 }
 
-function confirmarEntregaReal(pedidoId, btn) {
-  abrirModalCodigo('entrega', pedidoId, btn);
+async function confirmarEntregaReal(pedidoId, btn) {
+  if (!confirm('Confirmar entrega do pedido?')) return;
+  btn.disabled = true;
+  btn.textContent = 'Confirmando...';
+  try {
+    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'entregue' } });
+    pararRastreio();
+    salvarFaseMotoboy(null, null);
+    esconderChatFab();
+    renderMotoboy();
+  } catch(e) {
+    showToast('❌', 'Erro', e.message || 'Tente novamente');
+    btn.disabled = false;
+    btn.textContent = '✅ Confirmar entrega';
+  }
 }
 
 async function aceitarEntregaReal(pedidoId, btn) {
@@ -8602,14 +8615,15 @@ async function mpAbrirColetar(pedidoId) {
   } catch(e) { alert('Erro de conexão'); }
 }
 
-function mpAbrirEntregar(pedidoId) {
-  _mpAcaoAtual = { pedidoId: pedidoId, tipo: 'entregar', digitos: 4 };
-  _mpCodigoAtual = '';
-  document.getElementById('mp-codigo-titulo').textContent = 'Confirmar Entrega';
-  document.getElementById('mp-codigo-subtitulo').textContent = 'Digite os 4 últimos dígitos do telefone do cliente';
-  mpAtualizarDisplay();
-  document.getElementById('mp-codigo-erro').textContent = '';
-  document.getElementById('modal-mp-codigo').style.display = 'flex';
+async function mpAbrirEntregar(pedidoId) {
+  if (!confirm('Confirmar entrega do pedido?')) return;
+  try {
+    var url = API_BASE + '/api/motoboy-proprio/' + _mpEstId + '/pedidos/' + pedidoId + '/entregar';
+    var resp = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+    var data = await resp.json();
+    if (!resp.ok) { alert(data.error || 'Erro ao confirmar entrega'); return; }
+    await mpCarregarPedidos();
+  } catch(e) { alert('Erro ao confirmar entrega'); }
 }
 
 function fecharModalMpCodigo() {
