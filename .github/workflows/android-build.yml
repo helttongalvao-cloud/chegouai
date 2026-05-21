@@ -36,6 +36,19 @@ jobs:
       - name: Write google-services.json
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | tr -d '\n' | base64 --decode > android-app/android/app/google-services.json
 
+      - name: Set app icon
+        run: |
+          SRC="backend/public/icons/icon-512.png"
+          RES="android-app/android/app/src/main/res"
+          convert "$SRC" -resize 48x48   "$RES/mipmap-mdpi/ic_launcher.png"
+          convert "$SRC" -resize 72x72   "$RES/mipmap-hdpi/ic_launcher.png"
+          convert "$SRC" -resize 96x96   "$RES/mipmap-xhdpi/ic_launcher.png"
+          convert "$SRC" -resize 144x144 "$RES/mipmap-xxhdpi/ic_launcher.png"
+          convert "$SRC" -resize 192x192 "$RES/mipmap-xxxhdpi/ic_launcher.png"
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            cp "$RES/mipmap-$d/ic_launcher.png" "$RES/mipmap-$d/ic_launcher_round.png" 2>/dev/null || true
+          done
+
       - name: Sync Capacitor
         working-directory: android-app
         run: npx cap sync android
