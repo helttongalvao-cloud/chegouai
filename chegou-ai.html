@@ -1414,9 +1414,18 @@ async function ativarNotificacoesPush() {
 }
 
 function verificarBannerPush() {
-  var perm = ('Notification' in window) ? Notification.permission : 'denied';
-  var concedido = perm === 'granted';
-  var bloqueado = perm === 'denied';
+  // No APK (Capacitor), notificações são FCM — Notification.permission do WebView não se aplica
+  var isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  var concedido, bloqueado;
+  if (isCapacitor) {
+    var fcmToken = localStorage.getItem('chegouai_fcm_token');
+    concedido = !!fcmToken;
+    bloqueado = false;
+  } else {
+    var perm = ('Notification' in window) ? Notification.permission : 'denied';
+    concedido = perm === 'granted';
+    bloqueado = perm === 'denied';
+  }
   var bannerEst = document.getElementById('banner-push-est');
   var bannerMoto = document.getElementById('banner-push-moto');
   var bannerEstOk = document.getElementById('banner-push-est-ok');
