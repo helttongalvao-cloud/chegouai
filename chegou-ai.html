@@ -1296,7 +1296,53 @@ inicializarApp();
 // ============================================
 // PUSH NOTIFICATIONS
 // ============================================
+
+// FCM via Capacitor (APK Android) — registra token nativo e envia ao backend
+function inicializarFCM() {
+  if(!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.PushNotifications) return;
+  var PushNotifications = window.Capacitor.Plugins.PushNotifications;
+
+  PushNotifications.addListener('registration', function(token) {
+    console.log('[FCM] Token recebido:', token.value.substring(0, 20) + '...');
+    localStorage.setItem('chegouai_fcm_token', token.value);
+    var authTok = localStorage.getItem('chegouai_token');
+    if(authTok) {
+      fetch('/api/notifications/subscribe-fcm', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + authTok, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fcmToken: token.value })
+      }).catch(function(e) { console.error('[FCM] Erro ao enviar token:', e.message); });
+    }
+  });
+
+  PushNotifications.addListener('registrationError', function(err) {
+    console.error('[FCM] Erro de registro:', err.error);
+  });
+
+  PushNotifications.addListener('pushNotificationReceived', function(notif) {
+    showToast('🔔', notif.title || 'Chegou Aí', notif.body || '');
+  });
+
+  PushNotifications.addListener('pushNotificationActionPerformed', function(action) {
+    var dados = action.notification.data || {};
+    if(dados.tela === 'pedidos') mostrarTela && mostrarTela('pedidos');
+    else if(dados.tela === 'motoboy') mostrarTela && mostrarTela('motoboy');
+  });
+}
+inicializarFCM();
+
 async function ativarNotificacoesPush() {
+  // No APK (Capacitor), usar FCM nativo
+  if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications) {
+    var PushNotifications = window.Capacitor.Plugins.PushNotifications;
+    try {
+      var result = await PushNotifications.requestPermissions();
+      if(result.receive !== 'granted') { mostrarInstrucoesNotif(); return; }
+      await PushNotifications.register();
+    } catch(e) { console.error('[FCM] Erro ao registrar:', e.message); }
+    return;
+  }
+
   if(!('serviceWorker' in navigator) || !('PushManager' in window)) {
     showToast('⚠️', 'Notificações não suportadas', 'Instale o app na tela inicial e abra por lá para ativar notificações.');
     return; // Promise resolve implícita — .then() não quebra
@@ -2343,6 +2389,16 @@ async function entrar() {
     localStorage.setItem('chegouai_token', authToken);
     localStorage.setItem('chegouai_user', JSON.stringify(currentUser));
     if(resp.refreshToken) localStorage.setItem('chegouai_refresh', resp.refreshToken);
+
+    // Se rodando no APK e já tem FCM token pendente, enviar ao backend
+    var fcmTokenPendente = localStorage.getItem('chegouai_fcm_token');
+    if(fcmTokenPendente) {
+      fetch('/api/notifications/subscribe-fcm', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fcmToken: fcmTokenPendente })
+      }).catch(function(){});
+    }
 
     entrarComo(resp.user.perfil);
     ativarNotificacoesPush();
