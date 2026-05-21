@@ -12,8 +12,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Chegou Aí">
-<link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-512.png?v=6">
-<link rel="apple-touch-icon" href="/icons/icon-512.png?v=6">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-512.png?v=7">
+<link rel="apple-touch-icon" href="/icons/icon-512.png?v=7">
 
 <!-- SEO / Social -->
 <meta name="description" content="Delivery rápido em Guajará-AM. Peça de restaurantes, mercados e farmácias.">
@@ -4128,6 +4128,7 @@ async function buscarFotosAutomatico(produtosSemFoto) {
 }
 
 async function renderCardapioEst(manterDestaque) {
+  var scrollAntes = window.scrollY;
   if(!manterDestaque) window._idsImportados = null;
   var el = document.getElementById('est-secao-cardapio');
   el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando...</div>';
@@ -4174,7 +4175,6 @@ async function renderCardapioEst(manterDestaque) {
   var vazioIconEst = catEst === 'mercado' ? '🛒' : catEst === 'farmacia' ? '💊' : '🍽️';
   var vazioTxtEst  = catEst === 'mercado' ? 'Nenhum produto cadastrado ainda' : catEst === 'farmacia' ? 'Nenhum medicamento cadastrado ainda' : 'Nenhum item no cardápio ainda';
   var vazio = produtos.length ? itensHtml : '<div class="vazio"><div class="vazio-icon">' + vazioIconEst + '</div>' + vazioTxtEst + '</div>';
-  var scrollAntes = window.scrollY;
   el.innerHTML =
     '<div style="display:flex;gap:10px;margin-bottom:16px;">' +
       '<button class="btn-principal" onclick="abrirModalProduto()" style="flex:1;">+ Adicionar produto</button>' +

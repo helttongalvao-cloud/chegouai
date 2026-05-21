@@ -289,23 +289,24 @@ router.post('/reset-senha', [
     if (profileErr) throw profileErr;
     if (!profile) return res.status(404).json({ error: 'Telefone não cadastrado' });
 
-    const { error: updateErr } = await supabaseAdmin.auth.admin.updateUser(profile.id, { password: req.body.novaSenha });
+    const emailInterno = `tel_${tel}@chegouai.app`;
 
-    if (updateErr) {
-      // Auth user inexistente — recriar mantendo o mesmo ID e e-mail interno
-      const msg = (updateErr.message || '').toLowerCase();
-      if (msg.includes('not found') || msg.includes('user not found') || updateErr.status === 404 || updateErr.code === 'user_not_found') {
-        const emailInterno = `tel_${tel}@chegouai.app`;
-        const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
-          id: profile.id,
-          email: emailInterno,
-          password: req.body.novaSenha,
-          email_confirm: true,
-        });
-        if (createErr) throw createErr;
-      } else {
-        throw updateErr;
-      }
+    // Verificar se o auth user existe antes de tentar atualizar
+    const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+
+    if (authUserData?.user) {
+      // Auth user existe — atualizar senha
+      const { error: updateErr } = await supabaseAdmin.auth.admin.updateUser(profile.id, { password: req.body.novaSenha });
+      if (updateErr) throw updateErr;
+    } else {
+      // Auth user não existe (órfão) — recriar com mesmo ID
+      const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        id: profile.id,
+        email: emailInterno,
+        password: req.body.novaSenha,
+        email_confirm: true,
+      });
+      if (createErr) throw createErr;
     }
 
     res.json({ ok: true });
