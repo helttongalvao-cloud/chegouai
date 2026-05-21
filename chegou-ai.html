@@ -1451,9 +1451,9 @@ function iniciarRealtimeLojista(estId) {
       schema: 'public',
       table: 'pedidos',
       filter: 'estabelecimento_id=eq.' + estId,
-    }, function() {
-      // Novo pedido chegou — iniciar loop de alerta e re-renderizar
-      iniciarLoopSom();
+    }, function(payload) {
+      // Tocar som só se o pedido já entrou pago (ex: cartão aprovado na hora)
+      if(payload.new && payload.new.pagamento_status === 'aprovado') iniciarLoopSom();
       renderEstabelecimento();
     })
     .on('postgres_changes', {
@@ -1461,8 +1461,22 @@ function iniciarRealtimeLojista(estId) {
       schema: 'public',
       table: 'pedidos',
       filter: 'estabelecimento_id=eq.' + estId,
-    }, function() { renderEstabelecimento(); })
-    .subscribe();
+    }, function(payload) {
+      // Tocar som quando pagamento for confirmado (Pix pago, cartão aprovado)
+      if(payload.new && payload.new.pagamento_status === 'aprovado' &&
+         payload.old && payload.old.pagamento_status !== 'aprovado') {
+        iniciarLoopSom();
+      }
+      renderEstabelecimento();
+    })
+    .subscribe(function(status) {
+      if(status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        // Realtime caiu — reagendar reconexão em 5s
+        setTimeout(function() {
+          if(window._lojistaEstId) iniciarRealtimeLojista(window._lojistaEstId);
+        }, 5000);
+      }
+    });
 }
 
 function iniciarRealtimeMotoboy() {
@@ -2169,7 +2183,17 @@ function entrarComo(perfil) {
     irTela('tela-estabelecimento');
     setTimeout(function() { renderEstabelecimento(); }, 50);
     if(window.estPollingTimer) clearInterval(window.estPollingTimer);
-    window.estPollingTimer = setInterval(function() { renderEstabelecimento(); }, 60000);
+    window.estPollingTimer = setInterval(function() { renderEstabelecimento(); }, 15000);
+    // Reconectar Realtime e re-renderizar ao voltar ao foco (app em background no Android)
+    if(!window._visibilityListenerEst) {
+      window._visibilityListenerEst = true;
+      document.addEventListener('visibilitychange', function() {
+        if(document.visibilityState === 'visible' && currentUser && currentUser.perfil === 'estabelecimento') {
+          renderEstabelecimento();
+          if(window._lojistaEstId) iniciarRealtimeLojista(window._lojistaEstId);
+        }
+      });
+    }
     ativarNotificacoesPush().then(verificarBannerPush);
     verificarBannerPush();
   }
