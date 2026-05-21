@@ -40,7 +40,11 @@ async function enviarPush(userId, titulo, corpo, dados) {
   } catch (e) {
     if (e.statusCode === 410 || e.statusCode === 404) {
       console.warn('[Push] Subscription expirada (', e.statusCode, ') — removendo para', userId);
-      await supabaseAdmin.from('push_subscriptions').delete().eq('user_id', userId);
+      // Deletar e marcar no perfil para forçar renovação no próximo login
+      await Promise.all([
+        supabaseAdmin.from('push_subscriptions').delete().eq('user_id', userId),
+        supabaseAdmin.from('profiles').update({ push_needs_renewal: true }).eq('id', userId),
+      ]);
     } else {
       console.error('[Push] ✗ Falha ao enviar para', userId, '— HTTP', e.statusCode, '—', e.message);
     }
@@ -50,6 +54,17 @@ async function enviarPush(userId, titulo, corpo, dados) {
 // GET /api/notifications/vapid-public-key
 router.get('/vapid-public-key', (req, res) => {
   res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || '' });
+});
+
+// GET /api/notifications/status — verifica se subscription existe no banco
+router.get('/status', requireAuth, async (req, res, next) => {
+  try {
+    const { data: sub } = await supabaseAdmin
+      .from('push_subscriptions').select('endpoint').eq('user_id', req.user.id).maybeSingle();
+    const { data: profile } = await supabaseAdmin
+      .from('profiles').select('push_needs_renewal').eq('id', req.user.id).maybeSingle();
+    res.json({ active: !!sub, needsRenewal: !!(profile && profile.push_needs_renewal) });
+  } catch (err) { next(err); }
 });
 
 // POST /api/notifications/subscribe
@@ -69,6 +84,9 @@ router.post('/subscribe', requireAuth, async (req, res, next) => {
       console.error('[Push] Erro ao salvar subscription para', req.user.id, error.message);
       return res.status(500).json({ error: 'Erro ao salvar subscription' });
     }
+
+    // Limpar flag de renovação necessária
+    await supabaseAdmin.from('profiles').update({ push_needs_renewal: false }).eq('id', req.user.id);
 
     console.log('[Push] Subscription salva para user_id:', req.user.id);
     res.json({ ok: true });

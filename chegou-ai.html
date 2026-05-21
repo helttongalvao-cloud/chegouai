@@ -1323,6 +1323,7 @@ async function ativarNotificacoesPush() {
     var existingSub = await reg.pushManager.getSubscription();
 
     // Verificar se a subscription existente usa a mesma chave VAPID
+    // e se não está vencida (forçar renovação a cada 25 dias)
     if(existingSub) {
       var existingKey = null;
       try {
@@ -1331,11 +1332,17 @@ async function ativarNotificacoesPush() {
             .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
         }
       } catch(_) {}
-      // Recriar se: não tem chave, chave diferente, ou chave vazia
-      if(!existingKey || existingKey !== appKey) {
+      var lastTs = parseInt(localStorage.getItem('chegouai_push_ts') || '0');
+      var diasDesdeRenovacao = (Date.now() - lastTs) / 86400000;
+      // Verificar se subscription ainda existe no banco (pode ter sido deletada por 410)
+      var statusResp = null;
+      try { statusResp = await apiCall('/api/notifications/status'); } catch(_) {}
+      var precisaRenovar = !existingKey || existingKey !== appKey || diasDesdeRenovacao > 25 ||
+        (statusResp && (!statusResp.active || statusResp.needsRenewal));
+      if(precisaRenovar) {
         await existingSub.unsubscribe();
         existingSub = null;
-        console.log('[Push] Subscription inválida ou com chave diferente — reinscrevendo');
+        console.log('[Push] Renovando subscription (chave diferente ou vencida há ' + Math.round(diasDesdeRenovacao) + ' dias)');
       }
     }
 
@@ -1344,6 +1351,7 @@ async function ativarNotificacoesPush() {
     }
 
     await apiCall('/api/notifications/subscribe', { method: 'POST', body: { subscription: existingSub.toJSON() } });
+    localStorage.setItem('chegouai_push_ts', Date.now().toString());
     console.log('[Push] ✓ Subscription registrada no servidor:', existingSub.endpoint.substring(0, 60));
   } catch(e) {
     console.error('[Push] ✗ Falha ao ativar notificações:', e.message);
