@@ -1083,7 +1083,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   <div id="banner-push-est" style="display:none;background:#b71c1c;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;flex-direction:column;gap:8px;">
     <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;">
       <span>🔕 Notificações desativadas — você pode perder pedidos!</span>
-      <button onclick="ativarNotificacoesPush().then(verificarBannerPush)" style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Ativar</button>
+      <button onclick="var b=this;b.disabled=true;b.textContent='...';ativarNotificacoesPush().then(verificarBannerPush).finally(function(){b.disabled=false;b.textContent='Ativar';})" style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Ativar</button>
     </div>
   </div>
   <div id="banner-push-est-ok" style="display:none;background:#1b5e20;color:#fff;padding:8px 16px;font-size:12px;">
@@ -1140,7 +1140,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   <div id="banner-push-moto" style="display:none;background:#b71c1c;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;flex-direction:column;gap:8px;">
     <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;">
       <span>🔕 Notificações desativadas — você pode perder entregas!</span>
-      <button onclick="ativarNotificacoesPush().then(verificarBannerPush)" style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Ativar</button>
+      <button onclick="var b=this;b.disabled=true;b.textContent='...';ativarNotificacoesPush().then(verificarBannerPush).finally(function(){b.disabled=false;b.textContent='Ativar';})" style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Ativar</button>
     </div>
   </div>
   <div id="banner-push-moto-ok" style="display:none;background:#1b5e20;color:#fff;padding:8px 16px;font-size:12px;">
@@ -1302,9 +1302,14 @@ async function ativarNotificacoesPush() {
     return; // Promise resolve implícita — .then() não quebra
   }
   try {
+    // Se já bloqueado no sistema, mostrar instruções imediatamente
+    if('Notification' in window && Notification.permission === 'denied') {
+      mostrarInstrucoesNotif();
+      return;
+    }
     var perm = await Notification.requestPermission();
     if(perm === 'denied') {
-      showToast('🔕', 'Permissão negada', 'Vá nas configurações do navegador e permita notificações para este site.');
+      mostrarInstrucoesNotif();
       return;
     }
     if(perm !== 'granted') return;
