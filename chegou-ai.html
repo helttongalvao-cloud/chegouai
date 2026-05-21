@@ -2191,6 +2191,10 @@ function entrarComo(perfil) {
         if(document.visibilityState === 'visible' && currentUser && currentUser.perfil === 'estabelecimento') {
           renderEstabelecimento();
           if(window._lojistaEstId) iniciarRealtimeLojista(window._lojistaEstId);
+          // Renovar subscription push silenciosamente (subscription pode ter expirado)
+          if('Notification' in window && Notification.permission === 'granted') {
+            ativarNotificacoesPush().catch(function(){});
+          }
         }
       });
     }
@@ -2203,6 +2207,18 @@ function entrarComo(perfil) {
     iniciarRealtimeMotoboy();
     ativarNotificacoesPush().then(verificarBannerPush);
     verificarBannerPush();
+    if(!window._visibilityListenerMoto) {
+      window._visibilityListenerMoto = true;
+      document.addEventListener('visibilitychange', function() {
+        if(document.visibilityState === 'visible' && currentUser && currentUser.perfil === 'motoboy') {
+          renderMotoboy();
+          iniciarRealtimeMotoboy();
+          if('Notification' in window && Notification.permission === 'granted') {
+            ativarNotificacoesPush().catch(function(){});
+          }
+        }
+      });
+    }
   }
   else if(perfil === 'admin') { renderAdmin('pedidos'); irTela('tela-admin'); }
 }
