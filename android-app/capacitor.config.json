@@ -3,7 +3,7 @@
   "appName": "Chegou Aí",
   "webDir": "www",
   "server": {
-    "url": "https://chegouaiapp.com.br",
+    "url": "https://chegouaiapp.com.br/app",
     "cleartext": false,
     "allowNavigation": ["chegouaiapp.com.br"]
   },
