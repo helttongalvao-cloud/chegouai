@@ -126,6 +126,11 @@ app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'chegou-ai.html'));
 });
 
+// Download do APK Android
+app.get('/download', (req, res) => {
+  res.redirect(301, 'https://github.com/helttongalvao-cloud/chegouai/releases/latest/download/app-debug.apk');
+});
+
 // Mesa — cardápio público via QR Code (sem login)
 app.get('/mesa', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'chegou-ai.html'));
