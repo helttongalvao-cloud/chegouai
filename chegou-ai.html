@@ -848,7 +848,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 <!-- CHECKOUT -->
 <div class="tela" id="tela-checkout">
   <div class="header">
-    <button class="btn-voltar" onclick="voltarCardapio()">← Voltar</button>
+    <button onclick="voltarCardapio()" style="background:none;border:none;color:var(--texto);font-size:15px;font-weight:600;cursor:pointer;padding:8px 4px;display:flex;align-items:center;gap:6px;font-family:'Plus Jakarta Sans',sans-serif;">← Voltar</button>
     <h3>Meu Pedido</h3>
     <div></div>
   </div>
@@ -3347,9 +3347,9 @@ function irCheckout() {
     return '<div class="item-resumo" style="flex-direction:column;align-items:stretch;">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;">' +
         '<div style="display:flex;align-items:center;gap:10px;">' +
-          '<button onclick="alterarQtdCarrinho(' + idx + ', -1)" style="width:24px;height:24px;border-radius:4px;border:none;background:var(--fundo2);color:var(--texto);cursor:pointer;">-</button>' +
+          '<button onclick="alterarQtdCarrinho(' + idx + ', -1)" style="width:32px;height:32px;border-radius:8px;border:none;background:' + (i.qtd <= (i.unidade==='kg'?0.5:1) ? '#FF525220' : 'var(--fundo2)') + ';color:' + (i.qtd <= (i.unidade==='kg'?0.5:1) ? 'var(--erro)' : 'var(--texto)') + ';cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">' + (i.qtd <= (i.unidade==='kg'?0.5:1) ? '🗑️' : '−') + '</button>' +
           '<span class="item-resumo-nome">' + (i.unidade === 'kg' ? i.qtd.toFixed(1).replace('.',',') + ' kg' : i.qtd + 'x') + ' ' + sanitizar(i.nome) + '</span>' +
-          '<button onclick="alterarQtdCarrinho(' + idx + ', 1)" style="width:24px;height:24px;border-radius:4px;border:none;background:var(--fundo2);color:var(--texto);cursor:pointer;">+</button>' +
+          '<button onclick="alterarQtdCarrinho(' + idx + ', 1)" style="width:32px;height:32px;border-radius:8px;border:none;background:var(--verde);color:var(--preto);cursor:pointer;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;">+</button>' +
         '</div>' +
         '<span class="item-resumo-preco">R$ ' + precoTotal.toFixed(2).replace('.',',') + '</span>' +
       '</div>' +
@@ -4118,6 +4118,7 @@ async function renderCardapioEst(manterDestaque) {
   var vazioIconEst = catEst === 'mercado' ? '🛒' : catEst === 'farmacia' ? '💊' : '🍽️';
   var vazioTxtEst  = catEst === 'mercado' ? 'Nenhum produto cadastrado ainda' : catEst === 'farmacia' ? 'Nenhum medicamento cadastrado ainda' : 'Nenhum item no cardápio ainda';
   var vazio = produtos.length ? itensHtml : '<div class="vazio"><div class="vazio-icon">' + vazioIconEst + '</div>' + vazioTxtEst + '</div>';
+  var scrollAntes = window.scrollY;
   el.innerHTML =
     '<div style="display:flex;gap:10px;margin-bottom:16px;">' +
       '<button class="btn-principal" onclick="abrirModalProduto()" style="flex:1;">+ Adicionar produto</button>' +
@@ -4126,6 +4127,7 @@ async function renderCardapioEst(manterDestaque) {
     '<input type="file" id="csv-import-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="processarArquivoImport(this)">' +
     '<div class="secao-titulo" style="font-size:14px;color:var(--texto2);">' + produtos.length + ' produto(s) cadastrado(s)</div>' +
     vazio;
+  requestAnimationFrame(function() { window.scrollTo(0, scrollAntes); });
 }
 
 async function renderRelatorio(periodo) {
