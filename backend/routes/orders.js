@@ -38,7 +38,7 @@ router.post(
       .isArray({ min: 1 })
       .withMessage('Pedido deve ter pelo menos 1 item'),
     body('itens.*.produtoId').isUUID().withMessage('Produto inválido'),
-    body('itens.*.quantidade').isInt({ min: 1 }).withMessage('Quantidade inválida'),
+    body('itens.*.quantidade').isFloat({ min: 0.5 }).withMessage('Quantidade inválida'),
     body('itens.*.observacao').optional().trim().isLength({ max: 200 }).escape(),
     body('enderecoEntrega')
       .trim()
@@ -274,7 +274,7 @@ router.post(
       // 8. Link WhatsApp para o lojista (se configurado)
       let whatsappLink = null;
       if (est.whatsapp) {
-        const itensTexto = itensPedido.map((i) => `${i.quantidade}x ${i.nome}`).join(', ');
+        const itensTexto = itensPedido.map((i) => `${Number.isInteger(i.quantidade) ? i.quantidade + 'x' : i.quantidade + ' kg'} ${i.nome}`).join(', ');
         const msg = encodeURIComponent(`🔔 Novo pedido!\nTotal: R$ ${totalFinal.toFixed(2)}\nItens: ${itensTexto}\nEntrega: ${enderecoEntrega}`);
         whatsappLink = `https://wa.me/55${est.whatsapp}?text=${msg}`;
       }

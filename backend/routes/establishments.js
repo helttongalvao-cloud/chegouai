@@ -178,7 +178,7 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
       .select(`
         id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng,
         valor_minimo, horarios, foto_url, whatsapp, pausado,
-        produtos (id, nome, descricao, preco, emoji, disponivel, imagem_url, categoria)
+        produtos (id, nome, descricao, preco, emoji, disponivel, imagem_url, categoria, unidade)
       `)
       .eq('id', req.params.id)
       .eq('ativo', true)
@@ -452,6 +452,7 @@ router.post(
     body('categoria').optional().trim().isLength({ max: 50 }),
     body('imagem_url').optional().trim().isURL().withMessage('URL de imagem inválida'),
     body('estoque').optional({ nullable: true }).isInt({ min: 0 }).withMessage('Estoque inválido'),
+    body('unidade').optional().isIn(['un', 'kg']).withMessage('Unidade inválida'),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -468,7 +469,7 @@ router.post(
 
       if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
-      const { nome, descricao, preco, emoji, disponivel, categoria, imagem_url, estoque } = req.body;
+      const { nome, descricao, preco, emoji, disponivel, categoria, imagem_url, estoque, unidade } = req.body;
 
       const produtoData = {
         estabelecimento_id: est.id,
@@ -477,6 +478,7 @@ router.post(
         preco: Math.round(parseFloat(preco) * 100) / 100,
         emoji: emoji || '🍽️',
         disponivel: disponivel !== false,
+        unidade: unidade || 'un',
       };
       if (categoria) produtoData.categoria = categoria;
       if (imagem_url) produtoData.imagem_url = imagem_url;
@@ -632,7 +634,7 @@ router.put(
       if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
       const campos = {};
-      ['nome', 'descricao', 'preco', 'emoji', 'disponivel', 'categoria', 'imagem_url', 'estoque'].forEach((key) => {
+      ['nome', 'descricao', 'preco', 'emoji', 'disponivel', 'categoria', 'imagem_url', 'estoque', 'unidade'].forEach((key) => {
         if (req.body[key] !== undefined) campos[key] = req.body[key];
       });
 

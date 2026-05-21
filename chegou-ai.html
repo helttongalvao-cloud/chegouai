@@ -3032,7 +3032,7 @@ function renderCardProduto(item, i) {
     : '<button class="item-add" onclick="adicionarItem(' + i + ')">+</button>';
   var precoHtml = temPromo
     ? '<div class="item-preco"><span style="text-decoration:line-through;color:var(--texto2);font-size:12px;margin-right:4px;">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + '</span>R$ ' + parseFloat(item.preco_promocional).toFixed(2).replace('.',',') + '</div>'
-    : '<div class="item-preco">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + '</div>';
+    : '<div class="item-preco">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + (item.unidade === 'kg' ? ' / kg' : '') + '</div>';
   return '<div class="card-item" data-nome="' + (item.nome || '').toLowerCase() + '">' +
     imgWrap +
     '<div class="item-info" style="' + opacidade + '">' +
@@ -3062,7 +3062,8 @@ function adicionarItem(idx) {
   }
   const existente = carrinho.find(function(c){ return c.id === item.id && !c.observacao && !(c.complementos && c.complementos.length); });
   if(existente) {
-    existente.qtd++;
+    var passo = item.unidade === 'kg' ? 0.5 : 1;
+    existente.qtd = parseFloat((existente.qtd + passo).toFixed(1));
     atualizarCarrinho();
     const btns = document.querySelectorAll('.item-add');
     if(btns[idx]) {
@@ -3119,7 +3120,8 @@ function abrirModalComplementos(item, idx, grupos) {
     });
     if(!valido) return;
     var obs = document.getElementById('comp-obs-input').value.trim().replace(/<[^>]*>/g,'').substring(0,200);
-    carrinho.push({ id:item.id, nome:item.nome, preco:item.preco, emoji:item.emoji, disponivel:item.disponivel, imagem_url:item.imagem_url||'', categoria:item.categoria||'', qtd:1, observacao:obs||'', complementos:selecionados });
+    var qtdInicialComp = item.unidade === 'kg' ? 0.5 : 1;
+    carrinho.push({ id:item.id, nome:item.nome, preco:item.preco, emoji:item.emoji, disponivel:item.disponivel, imagem_url:item.imagem_url||'', categoria:item.categoria||'', unidade:item.unidade||'un', qtd:qtdInicialComp, observacao:obs||'', complementos:selecionados });
     atualizarCarrinho();
     overlay.classList.remove('aberto');
     const btns = document.querySelectorAll('.item-add');
@@ -3151,14 +3153,15 @@ function abrirModalObservacao(item, idx) {
   }
   overlay.classList.add('aberto');
   document.getElementById('obs-titulo').textContent = 'Adicionar ao carrinho';
-  document.getElementById('obs-nome').textContent = (item.emoji || '🍽️') + ' ' + item.nome + ' — R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',');
+  document.getElementById('obs-nome').textContent = (item.emoji || '🍽️') + ' ' + item.nome + ' — R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + (item.unidade === 'kg' ? ' / kg' : '');
   var obsInput = document.getElementById('obs-input');
   obsInput.value = '';
   obsInput.focus();
   var addBtn = document.getElementById('obs-btn-add');
   addBtn.onclick = function() {
     var obs = obsInput.value.trim().replace(/<[^>]*>/g,'').substring(0,200);
-    carrinho.push({ id:item.id, nome:item.nome, preco:item.preco, emoji:item.emoji, disponivel:item.disponivel, imagem_url:item.imagem_url||'', categoria:item.categoria||'', qtd:1, observacao:obs||'', complementos:[] });
+    var qtdInicial = item.unidade === 'kg' ? 0.5 : 1;
+    carrinho.push({ id:item.id, nome:item.nome, preco:item.preco, emoji:item.emoji, disponivel:item.disponivel, imagem_url:item.imagem_url||'', categoria:item.categoria||'', unidade:item.unidade||'un', qtd:qtdInicial, observacao:obs||'', complementos:[] });
     atualizarCarrinho();
     overlay.classList.remove('aberto');
     // feedback visual
@@ -3174,7 +3177,8 @@ function abrirModalObservacao(item, idx) {
 
 function alterarQtdCarrinho(idx, delta) {
   var item = carrinho[idx];
-  item.qtd += delta;
+  var passo = item.unidade === 'kg' ? 0.5 : 1;
+  item.qtd = parseFloat((item.qtd + delta * passo).toFixed(1));
   if(item.qtd <= 0) {
     carrinho.splice(idx, 1);
   }
@@ -3204,7 +3208,7 @@ function restaurarCarrinho() {
 function atualizarCarrinho() {
   salvarCarrinho();
   var total = calcularTotalCarrinho();
-  var qtd = carrinho.reduce(function(s,i){ return s + i.qtd; }, 0);
+  var qtd = carrinho.reduce(function(s,i){ return s + (i.unidade === 'kg' ? 1 : i.qtd); }, 0);
   const mostrar = qtd > 0;
   ['carrinho-float','carrinho-float2'].forEach(function(id) {
     const el = document.getElementById(id);
@@ -3291,7 +3295,7 @@ function irCheckout() {
       '<div style="display:flex;align-items:center;justify-content:space-between;">' +
         '<div style="display:flex;align-items:center;gap:10px;">' +
           '<button onclick="alterarQtdCarrinho(' + idx + ', -1)" style="width:24px;height:24px;border-radius:4px;border:none;background:var(--fundo2);color:var(--texto);cursor:pointer;">-</button>' +
-          '<span class="item-resumo-nome">' + i.qtd + 'x ' + sanitizar(i.nome) + '</span>' +
+          '<span class="item-resumo-nome">' + (i.unidade === 'kg' ? i.qtd.toFixed(1).replace('.',',') + ' kg' : i.qtd + 'x') + ' ' + sanitizar(i.nome) + '</span>' +
           '<button onclick="alterarQtdCarrinho(' + idx + ', 1)" style="width:24px;height:24px;border-radius:4px;border:none;background:var(--fundo2);color:var(--texto);cursor:pointer;">+</button>' +
         '</div>' +
         '<span class="item-resumo-preco">R$ ' + precoTotal.toFixed(2).replace('.',',') + '</span>' +
@@ -4368,6 +4372,7 @@ function abrirModalProduto(idx) {
     document.getElementById('prod-emoji').value = p.emoji || '🍽️';
     document.getElementById('prod-disponivel').checked = p.disponivel;
     document.getElementById('prod-estoque').value = p.estoque !== null && p.estoque !== undefined ? p.estoque : '';
+    document.getElementById('prod-unidade').value = p.unidade || 'un';
     var catSel = document.getElementById('prod-categoria');
     if(catSel) catSel.value = p.categoria || 'principal';
     var imgInput = document.getElementById('prod-imagem');
@@ -4390,6 +4395,7 @@ function abrirModalProduto(idx) {
     document.getElementById('prod-desc').value = '';
     document.getElementById('prod-preco').value = '';
     document.getElementById('prod-estoque').value = '';
+    document.getElementById('prod-unidade').value = 'un';
     document.getElementById('prod-disponivel').checked = true;
     var catSel = document.getElementById('prod-categoria');
     if(catSel) catSel.value = 'principal';
@@ -4480,7 +4486,8 @@ async function salvarProduto() {
   try {
     const estoqueRaw = document.getElementById('prod-estoque').value.trim();
     const estoque = estoqueRaw === '' ? null : parseInt(estoqueRaw);
-    const body = { nome, descricao: descricao, preco, emoji: emojiSelecionado, disponivel, categoria, estoque };
+    const unidade = document.getElementById('prod-unidade').value || 'un';
+    const body = { nome, descricao: descricao, preco, emoji: emojiSelecionado, disponivel, categoria, estoque, unidade };
     if(imagem_url) body.imagem_url = imagem_url;
     if(idx >= 0 && cardapioEst[idx] && cardapioEst[idx].id) {
       await apiCall('/api/establishments/me/products/' + cardapioEst[idx].id, { method: 'PUT', body });
@@ -4706,7 +4713,7 @@ async function renderEstabelecimento() {
       } else {
         itensTxt = (p.itens_pedido || []).map(function(i){
           var linhas = '<div style="padding:5px 0;border-bottom:1px solid var(--cinza3);">' +
-            '<span style="font-weight:700;color:var(--texto);">' + i.quantidade + 'x ' + sanitizar(i.nome) + '</span>';
+            '<span style="font-weight:700;color:var(--texto);">' + (Number.isInteger(i.quantidade) ? i.quantidade + 'x' : String(i.quantidade).replace('.',',') + ' kg') + ' ' + sanitizar(i.nome) + '</span>';
           if(i.complementos && i.complementos.length) {
             linhas += '<div style="color:var(--texto2);font-size:12px;padding-left:10px;margin-top:2px;">› ' +
               i.complementos.map(function(c){ return sanitizar(c.nome); }).join(' · ') + '</div>';
@@ -4777,7 +4784,7 @@ function imprimirComanda(id) {
     itensHtml = (p.itens_pedido || []).map(function(i) {
       var obs = i.observacao ? '<div style="font-size:10px;color:#555;padding-left:8px;">Obs: ' + i.observacao + '</div>' : '';
       return '<div style="display:flex;justify-content:space-between;padding:2px 0;">' +
-        '<span>' + i.quantidade + 'x ' + i.nome + '</span>' +
+        '<span>' + (Number.isInteger(i.quantidade) ? i.quantidade + 'x' : String(i.quantidade).replace('.',',') + ' kg') + ' ' + i.nome + '</span>' +
         '<span>R$' + (parseFloat(i.preco_unitario) * i.quantidade).toFixed(2) + '</span>' +
         '</div>' + obs;
     }).join('');
@@ -6531,6 +6538,13 @@ function adminNav(btn, secao) {
       <input type="number" id="prod-preco" placeholder="0,00" step="0.01" min="0">
     </div>
     <div class="form-grupo">
+      <label>Unidade de venda</label>
+      <select id="prod-unidade" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;">
+        <option value="un">Por unidade (ex: 1 hambúrguer, 1 caixa)</option>
+        <option value="kg">Por kg (ex: frango, carne, peixe)</option>
+      </select>
+    </div>
+    <div class="form-grupo">
       <label>Quantidade em estoque <span style="color:var(--texto2);font-size:12px;">(deixe vazio = ilimitado)</span></label>
       <input type="number" id="prod-estoque" placeholder="Ex: 50" min="0" step="1" style="width:100%;">
     </div>
@@ -7613,7 +7627,7 @@ async function abrirHistorico() {
       var data = new Date(p.criado_em).toLocaleDateString('pt-BR');
       var statusCor = p.status === 'entregue' ? 'color:var(--verde)' : p.status === 'cancelado' ? 'color:var(--erro)' : 'color:var(--laranja)';
       var statusTxt = p.status === 'entregue' ? '✅ Entregue' : p.status === 'cancelado' ? '❌ Cancelado' : '⏳ ' + p.status;
-      var itens = p.tipo === 'lista' ? '📝 Lista de compras' : (p.itens_pedido || []).map(function(i) { return i.quantidade + 'x ' + i.nome; }).join(', ');
+      var itens = p.tipo === 'lista' ? '📝 Lista de compras' : (p.itens_pedido || []).map(function(i) { return (Number.isInteger(i.quantidade) ? i.quantidade + 'x' : String(i.quantidade).replace('.',',') + ' kg') + ' ' + i.nome; }).join(', ');
       var total = p.total > 0 ? 'R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') : 'A definir';
       var btnAvaliar = p.status === 'entregue' ? '<button class="btn-acao" onclick="avaliarPedido(\'' + p.id + '\',\'' + (p.estabelecimentos?.id || p.estabelecimento_id) + '\')" style="padding:6px 12px;font-size:12px;">⭐ Avaliar</button>' : '';
       var btnPedirNov = p.status === 'entregue' && p.estabelecimentos ? '<button onclick="pedirNovamente(' + JSON.stringify(p).replace(/"/g,'&quot;') + ')" style="padding:6px 12px;font-size:12px;border-radius:8px;border:1.5px solid var(--verde);background:transparent;color:var(--verde);cursor:pointer;font-weight:600;">🔄 Pedir novamente</button>' : '';
