@@ -32,7 +32,7 @@ jobs:
         run: npx cap add android
 
       - name: Write google-services.json
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > android-app/android/app/google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | tr -d '\n' | base64 --decode > android-app/android/app/google-services.json
 
       - name: Sync Capacitor
         working-directory: android-app
