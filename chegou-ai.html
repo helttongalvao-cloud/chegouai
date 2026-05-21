@@ -1329,6 +1329,13 @@ function inicializarFCM() {
     if(dados.tela === 'pedidos') mostrarTela && mostrarTela('pedidos');
     else if(dados.tela === 'motoboy') mostrarTela && mostrarTela('motoboy');
   });
+
+  // Pedir permissão imediatamente ao abrir o APK (sem esperar login)
+  PushNotifications.requestPermissions().then(function(result) {
+    if(result.receive === 'granted') {
+      PushNotifications.register();
+    }
+  }).catch(function(){});
 }
 inicializarFCM();
 
