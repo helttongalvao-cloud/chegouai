@@ -46,9 +46,30 @@ jobs:
         working-directory: android-app/android
         run: ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: chegouai-debug
           path: android-app/android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+          retention-days: 90
+
+      - name: Delete old release
+        run: gh release delete latest --yes 2>/dev/null || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Chegou Aí — Versão mais recente"
+          body: |
+            **Instale o app Chegou Aí no Android**
+
+            1. Baixe o arquivo `chegouai.apk` abaixo
+            2. Abra o arquivo no celular
+            3. Se aparecer aviso de "fonte desconhecida", toque em **Instalar mesmo assim**
+          files: android-app/android/app/build/outputs/apk/debug/app-debug.apk
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
