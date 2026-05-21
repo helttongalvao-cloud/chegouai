@@ -280,15 +280,17 @@ router.post('/reset-senha', [
 
   try {
     const tel = req.body.telefone.replace(/\D/g, '').slice(-11);
-    const { data: profile } = await supabaseAdmin
+    const { data: profile, error: profileErr } = await supabaseAdmin
       .from('profiles')
       .select('id')
       .eq('telefone', tel)
-      .single();
+      .maybeSingle();
 
+    if (profileErr) throw profileErr;
     if (!profile) return res.status(404).json({ error: 'Telefone não cadastrado' });
 
-    await supabaseAdmin.auth.admin.updateUser(profile.id, { password: req.body.novaSenha });
+    const { error: updateErr } = await supabaseAdmin.auth.admin.updateUser(profile.id, { password: req.body.novaSenha });
+    if (updateErr) throw updateErr;
 
     res.json({ ok: true });
   } catch (err) {
