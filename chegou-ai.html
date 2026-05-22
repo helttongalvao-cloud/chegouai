@@ -1828,7 +1828,6 @@ async function pagarCartao(pedidoId) {
       '<input id="cc-ano" placeholder="AAAA" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
       '<input id="cc-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
     '</div>' +
-    '<input id="cc-cpf" placeholder="CPF do titular (somente números)" maxlength="14" oninput="mascaraCPF(this)" inputmode="numeric" style="' + _estiloInput() + '">' +
     (ehDebito ? '' : '<select id="cc-parcelas" style="' + _estiloInput() + '">' +
       [1,2,3,4,5,6,7,8,9,10,11,12].map(function(n){ return '<option value="'+n+'">'+n+'x sem juros</option>'; }).join('') +
     '</select>') +
@@ -1906,7 +1905,7 @@ async function submitCartaoSalvo(pedidoId) {
       body.expiryMonth = document.getElementById('cc-mes')?.value.trim();
       body.expiryYear  = document.getElementById('cc-ano')?.value.trim();
       body.ccv         = document.getElementById('cc-cvv')?.value.trim();
-      body.cpf         = (document.getElementById('cc-cpf')?.value || '').replace(/\D/g,'');
+      body.cpf         = _cpfCheckout();
       body.installments = _tipoCartaoSelecionado === 'debito' ? 1 : (document.getElementById('cc-parcelas')?.value || 1);
     }
 
@@ -1919,10 +1918,13 @@ async function submitCartaoSalvo(pedidoId) {
 }
 
 // Submissão legada via form (mantida para compatibilidade)
+function _cpfCheckout() {
+  return (document.getElementById('checkout-guest-cpf')?.value ||
+          document.getElementById('checkout-cpf')?.value || '').replace(/\D/g,'');
+}
+
 async function submitCartao(e, pedidoId) {
   e.preventDefault();
-  var cpfVal = (document.getElementById('cc-cpf')?.value || '').replace(/\D/g,'');
-  if(cpfVal.length !== 11) { alert('Informe o CPF do titular do cartão para continuar.'); return; }
   var btn = e.target.querySelector('button[type=submit]');
   if (btn) { btn.disabled = true; btn.textContent = 'Processando...'; }
   try {
@@ -1935,7 +1937,7 @@ async function submitCartao(e, pedidoId) {
         expiryMonth: document.getElementById('cc-mes').value.trim(),
         expiryYear:  document.getElementById('cc-ano').value.trim(),
         ccv:         document.getElementById('cc-cvv').value.trim(),
-        cpf:         (document.getElementById('cc-cpf')?.value || '').replace(/\D/g,''),
+        cpf:         _cpfCheckout(),
         installments: _tipoCartaoSelecionado === 'debito' ? 1 : (document.getElementById('cc-parcelas')?.value || 1),
       },
     });
