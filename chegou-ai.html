@@ -3631,7 +3631,7 @@ async function confirmarPedido() {
       telefoneCliente: tel,
       formaPagamento: formaPag,
       ...(window.taxaEntregaSimulada > 0 && { taxaEntrega: window.taxaEntregaSimulada }),
-      freteGratis: true,
+      freteGratis: freteGratis === true,
     };
     if(cupomAplicado) bodyPedido.cupom = cupomAplicado.codigo;
     if(isGuest) {
