@@ -8848,7 +8848,7 @@ function mpRenderLista() {
         '<a href="' + mapsUrl + '" target="_blank" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;font-weight:600;text-decoration:none;text-align:center;">🗺️ Navegar</a>' +
         (!isColetado
           ? '<button onclick="mpAbrirColetar(\'' + p.id + '\')" style="flex:1;padding:10px;border-radius:10px;background:var(--verde);border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">✅ Coletei</button>'
-          : '<button onclick="mpAbrirEntregar(\'' + p.id + '\')" style="flex:1;padding:10px;border-radius:10px;background:#ff9800;border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">🏠 Entreguei</button>'
+          : '<button onclick="mpAbrirEntregar(\'' + p.id + '\',\'' + (p.telefone_cliente || p.guest_telefone || '') + '\')" style="flex:1;padding:10px;border-radius:10px;background:#ff9800;border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">🏠 Entreguei</button>'
         ) +
       '</div>' +
     '</div>';
@@ -8871,15 +8871,43 @@ async function mpAbrirColetar(pedidoId) {
   } catch(e) { alert('Erro de conexão'); }
 }
 
-async function mpAbrirEntregar(pedidoId) {
-  if (!confirm('Confirmar entrega do pedido?')) return;
+var _mpEntregarPedidoId = null;
+
+async function mpAbrirEntregar(pedidoId, telefone) {
+  _mpEntregarPedidoId = pedidoId;
+  var codigo = (telefone || '').replace(/\D/g, '').slice(-4);
+  var tituloEl = document.getElementById('mp-codigo-titulo');
+  var subEl = document.getElementById('mp-codigo-subtitulo');
+  var displayEl = document.getElementById('mp-codigo-display');
+  var btnEl = document.getElementById('mp-btn-confirmar');
+  var erroEl = document.getElementById('mp-codigo-erro');
+  var numpadEl = document.querySelector('#modal-mp-codigo [style*="grid-template-columns"]');
+
+  if(tituloEl) tituloEl.textContent = '📱 Código do Cliente';
+  if(subEl) subEl.textContent = 'Pergunte o código ao cliente. Se bater, confirme a entrega:';
+  if(displayEl) { displayEl.textContent = codigo ? codigo.split('').join(' ') : '— — — —'; displayEl.style.color = '#ff9800'; }
+  if(erroEl) erroEl.textContent = '';
+  if(numpadEl) numpadEl.style.display = 'none';
+  if(btnEl) { btnEl.disabled = false; btnEl.textContent = '✅ Confirmar Entrega'; btnEl.onclick = mpConfirmarEntrega; }
+
+  document.getElementById('modal-mp-codigo').style.display = 'flex';
+}
+
+async function mpConfirmarEntrega() {
+  var pedidoId = _mpEntregarPedidoId;
+  if(!pedidoId) return;
+  var btnEl = document.getElementById('mp-btn-confirmar');
+  if(btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Confirmando...'; }
   try {
     var url = API_BASE + '/api/motoboy-proprio/' + _mpEstId + '/pedidos/' + pedidoId + '/entregar';
     var resp = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
     var data = await resp.json();
-    if (!resp.ok) { alert(data.error || 'Erro ao confirmar entrega'); return; }
+    if (!resp.ok) { alert(data.error || 'Erro ao confirmar entrega'); if(btnEl) { btnEl.disabled = false; btnEl.textContent = '✅ Confirmar Entrega'; } return; }
+    fecharModalMpCodigo();
+    var numpadEl = document.querySelector('#modal-mp-codigo [style*="grid-template-columns"]');
+    if(numpadEl) numpadEl.style.display = '';
     await mpCarregarPedidos();
-  } catch(e) { alert('Erro ao confirmar entrega'); }
+  } catch(e) { alert('Erro ao confirmar entrega'); if(btnEl) { btnEl.disabled = false; btnEl.textContent = '✅ Confirmar Entrega'; } }
 }
 
 function fecharModalMpCodigo() {
