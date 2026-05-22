@@ -291,34 +291,19 @@ router.post('/reset-senha', [
 
     const emailInterno = `tel_${tel}@chegouai.app`;
 
-    // Verificar se o auth user existe antes de tentar atualizar
-    const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+    // Apagar auth user (se existir) e recriar com nova senha
+    // Mais robusto que updateUser que pode falhar em estado inconsistente
+    await supabaseAdmin.auth.admin.deleteUser(profile.id).catch((e) => {
+      console.warn('[reset-senha] deleteUser ignorado:', e.message);
+    });
 
-    if (authUserData?.user) {
-      // Auth user existe — tentar atualizar senha
-      const { error: updateErr } = await supabaseAdmin.auth.admin.updateUser(profile.id, { password: req.body.novaSenha });
-      if (updateErr) {
-        // Fallback: apagar e recriar (estado inconsistente após outage)
-        console.warn('[reset-senha] updateUser falhou, tentando recriar:', updateErr.message);
-        await supabaseAdmin.auth.admin.deleteUser(profile.id);
-        const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
-          id: profile.id,
-          email: emailInterno,
-          password: req.body.novaSenha,
-          email_confirm: true,
-        });
-        if (createErr) throw createErr;
-      }
-    } else {
-      // Auth user não existe (órfão) — recriar com mesmo ID
-      const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
-        id: profile.id,
-        email: emailInterno,
-        password: req.body.novaSenha,
-        email_confirm: true,
-      });
-      if (createErr) throw createErr;
-    }
+    const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
+      id: profile.id,
+      email: emailInterno,
+      password: req.body.novaSenha,
+      email_confirm: true,
+    });
+    if (createErr) throw createErr;
 
     res.json({ ok: true });
   } catch (err) {
