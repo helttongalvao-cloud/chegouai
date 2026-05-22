@@ -260,7 +260,7 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
     const {
       pedidoId, holderName, cardNumber, expiryMonth, expiryYear, ccv,
       cardId, savedCustomerId,
-      postalCode, installments,
+      postalCode, installments, cpf,
     } = req.body;
 
     const pedido = await buscarPedidoPendente(pedidoId, req.user?.id || null);
@@ -280,10 +280,11 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
       customerId = savedCustomerId;
     } else {
       const guestTel = (pedido.guest_telefone || pedido.telefone_cliente || '').replace(/\D/g, '');
+      const cpfFinal = req.user ? req.user.profile.cpf : (pedido.guest_cpf || (cpf ? cpf.replace(/\D/g, '') : null));
       customerId = await criarOuBuscarCliente({
         nome:     req.user ? req.user.profile.nome     : pedido.guest_nome,
         email:    req.user ? req.user.email            : `${guestTel}@guest.chegouai.com.br`,
-        cpf:      req.user ? req.user.profile.cpf      : pedido.guest_cpf,
+        cpf:      cpfFinal,
         telefone: req.user ? (pedido.telefone_cliente || req.user.profile.telefone) : guestTel,
       });
     }

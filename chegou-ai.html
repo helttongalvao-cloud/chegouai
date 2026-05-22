@@ -1921,6 +1921,8 @@ async function submitCartaoSalvo(pedidoId) {
 // Submissão legada via form (mantida para compatibilidade)
 async function submitCartao(e, pedidoId) {
   e.preventDefault();
+  var cpfVal = (document.getElementById('cc-cpf')?.value || '').replace(/\D/g,'');
+  if(cpfVal.length !== 11) { alert('Informe o CPF do titular do cartão para continuar.'); return; }
   var btn = e.target.querySelector('button[type=submit]');
   if (btn) { btn.disabled = true; btn.textContent = 'Processando...'; }
   try {
