@@ -295,9 +295,20 @@ router.post('/reset-senha', [
     const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(profile.id);
 
     if (authUserData?.user) {
-      // Auth user existe — atualizar senha
+      // Auth user existe — tentar atualizar senha
       const { error: updateErr } = await supabaseAdmin.auth.admin.updateUser(profile.id, { password: req.body.novaSenha });
-      if (updateErr) throw updateErr;
+      if (updateErr) {
+        // Fallback: apagar e recriar (estado inconsistente após outage)
+        console.warn('[reset-senha] updateUser falhou, tentando recriar:', updateErr.message);
+        await supabaseAdmin.auth.admin.deleteUser(profile.id);
+        const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
+          id: profile.id,
+          email: emailInterno,
+          password: req.body.novaSenha,
+          email_confirm: true,
+        });
+        if (createErr) throw createErr;
+      }
     } else {
       // Auth user não existe (órfão) — recriar com mesmo ID
       const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
