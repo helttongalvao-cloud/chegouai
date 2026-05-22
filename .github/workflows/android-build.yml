@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK + AAB
 
 on:
   push:
@@ -44,29 +44,43 @@ jobs:
         run: |
           SRC="backend/public/icons/icon-512.png"
           RES="android-app/android/app/src/main/res"
-          # Instalar imagemagick
           sudo apt-get install -y imagemagick 2>/dev/null
-          # Ícones normais
           convert "$SRC" -resize 48x48   "$RES/mipmap-mdpi/ic_launcher.png"
           convert "$SRC" -resize 72x72   "$RES/mipmap-hdpi/ic_launcher.png"
           convert "$SRC" -resize 96x96   "$RES/mipmap-xhdpi/ic_launcher.png"
           convert "$SRC" -resize 144x144 "$RES/mipmap-xxhdpi/ic_launcher.png"
           convert "$SRC" -resize 192x192 "$RES/mipmap-xxxhdpi/ic_launcher.png"
-          # Ícones redondos
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
             cp "$RES/mipmap-$d/ic_launcher.png" "$RES/mipmap-$d/ic_launcher_round.png" 2>/dev/null || true
           done
-          # Ícone adaptativo (Android 8+): foreground com padding de 25%
           convert "$SRC" -resize 432x432 -gravity center -extent 648x648 -background transparent \
             "$RES/drawable/ic_launcher_foreground.png" 2>/dev/null || \
           convert "$SRC" -resize 432x432 -gravity center -extent 648x648 \
             "$RES/drawable/ic_launcher_foreground.png" || true
-          # Foreground para cada densidade
           convert "$SRC" -resize 81x81   -gravity center -extent 108x108  "$RES/mipmap-mdpi/ic_launcher_foreground.png"   2>/dev/null || true
           convert "$SRC" -resize 121x121 -gravity center -extent 162x162  "$RES/mipmap-hdpi/ic_launcher_foreground.png"   2>/dev/null || true
           convert "$SRC" -resize 162x162 -gravity center -extent 216x216  "$RES/mipmap-xhdpi/ic_launcher_foreground.png"  2>/dev/null || true
           convert "$SRC" -resize 243x243 -gravity center -extent 324x324  "$RES/mipmap-xxhdpi/ic_launcher_foreground.png" 2>/dev/null || true
           convert "$SRC" -resize 324x324 -gravity center -extent 432x432  "$RES/mipmap-xxxhdpi/ic_launcher_foreground.png" 2>/dev/null || true
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android-app/android/app/chegouai.jks
+
+      - name: Configure signing in build.gradle
+        run: |
+          cat >> android-app/android/app/build.gradle << 'EOF'
+
+          android.signingConfigs {
+            release {
+              storeFile file("chegouai.jks")
+              storePassword System.getenv("KEYSTORE_PASSWORD")
+              keyAlias System.getenv("KEY_ALIAS")
+              keyPassword System.getenv("KEY_PASSWORD")
+            }
+          }
+          android.buildTypes.release.signingConfig = android.signingConfigs.release
+          EOF
 
       - name: Make gradlew executable
         working-directory: android-app/android
@@ -76,11 +90,26 @@ jobs:
         working-directory: android-app/android
         run: ./gradlew assembleDebug
 
-      - name: Upload APK artifact
+      - name: Build Release AAB (Play Store)
+        working-directory: android-app/android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew bundleRelease
+
+      - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: chegouai-debug
+          name: chegouai-debug-apk
           path: android-app/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 90
+
+      - name: Upload Release AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chegouai-release-aab
+          path: android-app/android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 90
 
       - name: Delete old release
