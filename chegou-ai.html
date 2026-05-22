@@ -8864,7 +8864,7 @@ function mpRenderLista() {
     var labelStatus = isColetado ? '🛵 Coletado — confirmar entrega' : '📦 Pronto para coletar';
     var _mpCoords = (p.endereco_entrega || '').match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
     var mapsUrl = _mpCoords
-      ? 'https://maps.google.com/maps?daddr=' + _mpCoords[1] + ',' + _mpCoords[2]
+      ? 'https://maps.google.com/?q=' + _mpCoords[1] + ',' + _mpCoords[2]
       : 'https://maps.google.com/?q=' + encodeURIComponent(p.endereco_entrega || '');
     return '<div style="background:var(--cinza2);border-radius:16px;padding:16px;margin-bottom:12px;border:1.5px solid ' + corStatus + '20;">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
