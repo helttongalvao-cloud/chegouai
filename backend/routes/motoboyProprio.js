@@ -107,4 +107,29 @@ router.patch('/:estId/pedidos/:pedidoId/entregar', [
   }
 });
 
+// =============================================
+// POST /api/motoboy-proprio/:estId/subscribe-fcm
+// =============================================
+router.post('/:estId/subscribe-fcm', [
+  param('estId').isUUID(),
+  body('fcmToken').notEmpty(),
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+  try {
+    const { error } = await supabaseAdmin
+      .from('estabelecimentos')
+      .update({ motoboy_fcm_token: req.body.fcmToken })
+      .eq('id', req.params.estId)
+      .eq('ativo', true);
+
+    if (error) throw error;
+    console.log('[FCM] Token motoboy próprio salvo para est:', req.params.estId);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

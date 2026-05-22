@@ -192,3 +192,4 @@ router.post('/unsubscribe', requireAuth, async (req, res, next) => {
 
 module.exports = router;
 module.exports.enviarPush = enviarPush;
+module.exports.enviarFCMDireto = enviarFCM;

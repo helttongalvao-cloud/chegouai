@@ -634,8 +634,11 @@ router.patch(
         enviarPush(pedido.cliente_id, tituloStatus[status], corpStatus[status], { pedidoId: orderId, status });
       }
 
-      // Quando pedido fica pronto, notificar todos os motoboys disponíveis
+      // Quando pedido fica pronto, notificar motoboys disponíveis
       if (status === 'pronto') {
+        const enderecoResumido = (pedido.endereco_entrega || '').substring(0, 40);
+
+        // Motoboys parceiros (plataforma)
         const { data: motosDisp } = await supabaseAdmin
           .from('motoboys')
           .select('user_id')
@@ -643,10 +646,23 @@ router.patch(
           .eq('ativo', true);
 
         if (motosDisp?.length) {
-          const enderecoResumido = (pedido.endereco_entrega || '').substring(0, 40);
           motosDisp.forEach((m) => {
             enviarPush(m.user_id, '🛵 Nova entrega disponível!', enderecoResumido || 'Toque para ver detalhes', { pedidoId: orderId });
           });
+        }
+
+        // Motoboy próprio do estabelecimento (sem login — usa FCM direto)
+        if (pedido.estabelecimento_id) {
+          const { data: est } = await supabaseAdmin
+            .from('estabelecimentos')
+            .select('motoboy_fcm_token, tipo_entrega')
+            .eq('id', pedido.estabelecimento_id)
+            .single();
+
+          if (est?.tipo_entrega === 'proprio' && est?.motoboy_fcm_token) {
+            const { enviarFCMDireto } = require('./notifications');
+            enviarFCMDireto(est.motoboy_fcm_token, '📦 Pedido pronto para entregar!', enderecoResumido || 'Toque para ver detalhes', { pedidoId: orderId });
+          }
         }
       }
 

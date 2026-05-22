@@ -1307,12 +1307,19 @@ function inicializarFCM() {
     console.log('[FCM] Token recebido:', token.value.substring(0, 20) + '...');
     localStorage.setItem('chegouai_fcm_token', token.value);
     var authTok = localStorage.getItem('chegouai_token');
+    var mpEstId = localStorage.getItem('chegouai_motoboy_estid');
     if(authTok) {
       fetch('/api/notifications/subscribe-fcm', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + authTok, 'Content-Type': 'application/json' },
         body: JSON.stringify({ fcmToken: token.value })
       }).catch(function(e) { console.error('[FCM] Erro ao enviar token:', e.message); });
+    } else if(mpEstId) {
+      fetch('/api/motoboy-proprio/' + mpEstId + '/subscribe-fcm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fcmToken: token.value })
+      }).catch(function(e) { console.error('[FCM] Erro ao enviar token motoboy:', e.message); });
     }
   });
 
@@ -8811,6 +8818,18 @@ var _mpPolling = null;
 
 async function iniciarModoMotoboyProprio(estId) {
   _mpEstId = estId;
+  localStorage.setItem('chegouai_motoboy_estid', estId);
+
+  // Se FCM já foi registrado antes (token em cache), enviar agora
+  var fcmToken = localStorage.getItem('chegouai_fcm_token');
+  if(fcmToken) {
+    fetch('/api/motoboy-proprio/' + estId + '/subscribe-fcm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fcmToken: fcmToken })
+    }).catch(function(){});
+  }
+
   document.body.innerHTML = document.getElementById('tela-motoboy-proprio').outerHTML +
     document.getElementById('modal-mp-codigo').outerHTML +
     '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></' + 'script>';
