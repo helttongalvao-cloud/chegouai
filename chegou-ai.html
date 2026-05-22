@@ -5146,11 +5146,14 @@ async function renderAdmin(secao) {
   if (secao !== 'cadastrar') {
     el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando painel...</div>';
     try {
-      // Buscar dados reais do Backend
       if (secao === 'pedidos') {
-        var pedReq = await apiCall('/api/admin/pedidos');
+        var [pedReq, dashReq] = await Promise.all([
+          apiCall('/api/admin/pedidos'),
+          adminDataCache && adminDataCache.stats ? Promise.resolve(null) : apiCall('/api/admin/dashboard'),
+        ]);
         adminDataCache = adminDataCache || {};
         adminDataCache.pedidos = pedReq.pedidos;
+        if (dashReq) adminDataCache = Object.assign({}, adminDataCache, dashReq);
       } else {
         var dashReq = await apiCall('/api/admin/dashboard');
         adminDataCache = Object.assign({}, adminDataCache || {}, dashReq);
