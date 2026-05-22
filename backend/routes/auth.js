@@ -291,19 +291,34 @@ router.post('/reset-senha', [
 
     const emailInterno = `tel_${tel}@chegouai.app`;
 
-    // Apagar auth user (se existir) e recriar com nova senha
-    // Mais robusto que updateUser que pode falhar em estado inconsistente
-    await supabaseAdmin.auth.admin.deleteUser(profile.id).catch((e) => {
-      console.warn('[reset-senha] deleteUser ignorado:', e.message);
-    });
+    // 1. Tentar atualizar senha diretamente
+    const { error: updateErr } = await supabaseAdmin.auth.admin.updateUser(
+      profile.id, { password: req.body.novaSenha }
+    );
 
-    const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
-      id: profile.id,
-      email: emailInterno,
-      password: req.body.novaSenha,
-      email_confirm: true,
-    });
-    if (createErr) throw createErr;
+    if (updateErr) {
+      console.warn('[reset-senha] updateUser falhou:', updateErr.message);
+
+      // 2. Apagar e recriar
+      const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(profile.id);
+      if (delErr) console.warn('[reset-senha] deleteUser:', delErr.message);
+
+      const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        id: profile.id,
+        email: emailInterno,
+        password: req.body.novaSenha,
+        email_confirm: true,
+      });
+
+      // 3. Se create também falhou (user ainda existe), tentar update de novo
+      if (createErr) {
+        console.warn('[reset-senha] createUser falhou:', createErr.message, '— tentando update final');
+        const { error: updateErr2 } = await supabaseAdmin.auth.admin.updateUser(
+          profile.id, { password: req.body.novaSenha }
+        );
+        if (updateErr2) throw updateErr2;
+      }
+    }
 
     res.json({ ok: true });
   } catch (err) {
