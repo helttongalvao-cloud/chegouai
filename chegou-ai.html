@@ -1835,9 +1835,7 @@ async function pagarCartao(pedidoId) {
       '<input id="cc-ano" placeholder="AAAA" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
       '<input id="cc-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
     '</div>' +
-    (ehDebito ? '' : '<select id="cc-parcelas" style="' + _estiloInput() + '">' +
-      [1,2,3,4,5,6,7,8,9,10,11,12].map(function(n){ return '<option value="'+n+'">'+n+'x sem juros</option>'; }).join('') +
-    '</select>') +
+    (ehDebito ? '' : '<input type="hidden" id="cc-parcelas" value="1">') +
     '</div></form></div>';
 
   var cartaoSalvoUI = '';
@@ -1932,6 +1930,12 @@ function _cpfCheckout() {
 
 async function submitCartao(e, pedidoId) {
   e.preventDefault();
+  var cpfVal = _cpfCheckout();
+  var usuarioTemCpf = !!(currentUser && currentUser.cpf && currentUser.cpf.replace(/\D/g,'').length === 11);
+  if(!usuarioTemCpf && cpfVal.length !== 11) {
+    alert('Informe seu CPF para pagamento com cartão.');
+    return;
+  }
   var btn = e.target.querySelector('button[type=submit]');
   if (btn) { btn.disabled = true; btn.textContent = 'Processando...'; }
   try {
@@ -1944,7 +1948,7 @@ async function submitCartao(e, pedidoId) {
         expiryMonth: document.getElementById('cc-mes').value.trim(),
         expiryYear:  document.getElementById('cc-ano').value.trim(),
         ccv:         document.getElementById('cc-cvv').value.trim(),
-        cpf:         _cpfCheckout(),
+        cpf:         cpfVal,
         installments: _tipoCartaoSelecionado === 'debito' ? 1 : (document.getElementById('cc-parcelas')?.value || 1),
       },
     });
@@ -3528,9 +3532,12 @@ function selecionarPag(el, tipo) {
     var extras = document.getElementById('cartao-extras');
     if (extras) extras.style.display = 'none';
   }
-  // CPF: sempre para Pix; para Cartão só se logado não precisa (já tem no perfil)
+  // CPF: obrigatório para Pix e Cartão (anti-fraude Pagar.me requer CPF)
+  // Esconde só se logado E já tem CPF salvo no perfil
   var campoCpf = document.getElementById('campo-cpf-pix');
-  if(campoCpf) campoCpf.style.display = (tipo === 'pix' || !authToken) ? 'block' : 'none';
+  var usuarioTemCpf = !!(currentUser && currentUser.cpf && currentUser.cpf.replace(/\D/g,'').length === 11);
+  var precisaCpf = (tipo === 'pix' || tipo === 'cartao') && (!authToken || !usuarioTemCpf);
+  if(campoCpf) campoCpf.style.display = precisaCpf ? 'block' : 'none';
   var cpfPlaceholder = document.getElementById('checkout-cpf');
   if(cpfPlaceholder) cpfPlaceholder.placeholder = 'CPF (obrigatório)';
 }
