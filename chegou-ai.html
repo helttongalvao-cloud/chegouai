@@ -1896,10 +1896,15 @@ function _finalizarPagamentoCartao(resp) {
 
 // Submissão quando usando cartão salvo ou formulário novo (via botão externo ao form)
 async function submitCartaoSalvo(pedidoId) {
+  var cartao = getCartaoSalvo();
+  if (_usarCartaoSalvo && cartao) {
+    var last4 = cartao.last4 || '????';
+    var ok = confirm('Confirmar pagamento com o cartão ••••' + last4 + '?');
+    if (!ok) return;
+  }
   var btn = document.querySelector('#pag-detalhe .btn-principal');
   if (btn) { btn.disabled = true; btn.textContent = 'Processando...'; }
   try {
-    var cartao = getCartaoSalvo();
     var body = { pedidoId: pedidoId };
 
     if (_usarCartaoSalvo && cartao) {
