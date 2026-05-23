@@ -5,7 +5,7 @@ const { supabaseAdmin } = require('../config/supabase');
 const { calcularSplit } = require('../services/commission');
 const { criarTransferenciaPix } = require('../services/pagarme');
 const { enviarPush } = require('./notifications');
-const { alertarAdmin } = require('../services/whatsapp');
+const { alertarAdmin, enviarWhatsApp } = require('../services/whatsapp');
 
 const router = express.Router();
 
@@ -649,9 +649,32 @@ router.patch(
           .eq('ativo', true);
 
         if (motosDisp?.length) {
+          // Buscar telefones dos motoboys disponíveis para WhatsApp
+          const motoIds = motosDisp.map((m) => m.user_id);
+          const { data: motosInfo } = await supabaseAdmin
+            .from('motoboys').select('user_id, telefone').in('user_id', motoIds).eq('ativo', true);
+
           motosDisp.forEach((m) => {
             enviarPush(m.user_id, '🛵 Nova entrega disponível!', enderecoResumido || 'Toque para ver detalhes', { pedidoId: orderId });
           });
+
+          if (motosInfo?.length) {
+            const msgMotoboy = `🛵 *Nova entrega disponível!*\n🏪 ${lojaNome}\n💰 ${valorStr}\n📍 ${enderecoResumido || 'Ver no app'}\n\nAbra o app para aceitar.`;
+            motosInfo.forEach((m) => { if (m.telefone) enviarWhatsApp(m.telefone, msgMotoboy); });
+          }
+
+          // Timer 30s: se nenhum motoboy coletar, alertar admin
+          setTimeout(async () => {
+            try {
+              const { data: chk } = await supabaseAdmin
+                .from('pedidos').select('status').eq('id', orderId).maybeSingle();
+              if (chk && chk.status === 'pronto') {
+                alertarAdmin(`⚠️ *Nenhum motoboy coletou em 30s*\n🏪 ${lojaNome}\n💰 ${valorStr}\n📍 ${enderecoResumido || 'Ver no app'}`);
+              }
+            } catch (e) {
+              console.error('[Timer30s] Erro ao verificar pedido', orderId, e.message);
+            }
+          }, 30 * 1000);
         } else {
           // Sem motoboy disponível — alertar admin imediatamente
           alertarAdmin(`🚨 *Sem motoboy disponível!*\n🏪 ${lojaNome}\n💰 ${valorStr}\n📍 ${enderecoResumido || 'Ver no app'}`);

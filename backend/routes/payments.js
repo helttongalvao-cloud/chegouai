@@ -142,6 +142,21 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
     `🔔 *Novo pedido pago*\n🏪 ${lojaInfo?.nome || 'Loja'}\n💰 ${valorStr}\n👤 ${clienteNome}`
   );
 
+  // Timer 40s: se lojista não mover para 'preparando', alertar admin
+  setTimeout(async () => {
+    try {
+      const { data: check } = await supabaseAdmin
+        .from('pedidos').select('status').eq('id', orderId).maybeSingle();
+      if (check && check.status === 'aceito') {
+        alertarAdmin(
+          `⚠️ *Lojista não aceitou em 40s*\n🏪 ${lojaInfo?.nome || 'Loja'}\n💰 ${valorStr}\n👤 ${clienteNome}`
+        );
+      }
+    } catch (e) {
+      console.error('[Timer40s] Erro ao verificar pedido', orderId, e.message);
+    }
+  }, 40 * 1000);
+
   console.log(
     `[Pagar.me] Pedido ${orderId} aprovado` +
     ` — lojista R$${split.valorLojista}` +
