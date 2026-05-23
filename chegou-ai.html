@@ -2252,7 +2252,9 @@ function entrarComo(perfil) {
       apiCall('/api/orders/' + pedidoAtualId).then(function(resp) {
         var statusFinal = ['entregue', 'cancelado'];
         var pagamentoOk = resp && (resp.pagamento_status === 'aprovado' || resp.forma_pagamento === 'dinheiro');
-        if(resp && resp.status && statusFinal.indexOf(resp.status) === -1 && pagamentoOk) {
+        // Não restaurar pedidos com mais de 6h (evita pedidos antigos/cancelados pelo banco)
+        var pedidoRecente = resp && resp.criado_em && (Date.now() - new Date(resp.criado_em).getTime()) < 6 * 60 * 60 * 1000;
+        if(resp && resp.status && statusFinal.indexOf(resp.status) === -1 && pagamentoOk && pedidoRecente) {
           if(resp.estabelecimentos) estAtual = Object.assign(estAtual || {}, resp.estabelecimentos);
           irTela('tela-confirmado');
           mostrarWhatsappEstabelecimento();
