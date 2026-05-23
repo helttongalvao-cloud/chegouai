@@ -66,6 +66,7 @@ async function enviarFCM(fcmToken, titulo, corpo, dados) {
 // =============================================
 async function enviarPush(userId, titulo, corpo, dados) {
   try {
+    console.log('[Push] Enviando para user_id:', userId, '|', titulo);
     const { data, error } = await supabaseAdmin
       .from('push_subscriptions')
       .select('subscription, fcm_token')
@@ -73,7 +74,7 @@ async function enviarPush(userId, titulo, corpo, dados) {
       .maybeSingle();
 
     if (error) { console.error('[Push] Erro DB ao buscar subscription:', userId, error.message); return; }
-    if (!data) { console.warn('[Push] Nenhuma subscription salva para user_id:', userId); return; }
+    if (!data) { console.warn('[Push] Nenhuma subscription no banco para user_id:', userId); return; }
 
     // Tentar FCM primeiro (APK Android — mais confiável)
     if (data.fcm_token) {
@@ -132,20 +133,32 @@ router.post('/subscribe', requireAuth, async (req, res, next) => {
     const { subscription } = req.body;
     if (!subscription?.endpoint) return res.status(400).json({ error: 'Subscription inválida' });
 
-    const { error } = await supabaseAdmin.from('push_subscriptions').upsert({
-      user_id: req.user.id,
-      endpoint: subscription.endpoint,
-      subscription: JSON.stringify(subscription),
-      atualizado_em: new Date().toISOString(),
-    }, { onConflict: 'user_id' });
+    const userId = req.user.id;
+    console.log('[Push] Tentando salvar subscription para user_id:', userId, '| endpoint:', subscription.endpoint.substring(0, 50));
 
-    if (error) {
-      console.error('[Push] Erro ao salvar subscription para', req.user.id, error.message);
-      return res.status(500).json({ error: 'Erro ao salvar subscription' });
+    // Delete + insert é mais confiável que upsert (não depende de constraint unique)
+    const { error: delErr } = await supabaseAdmin
+      .from('push_subscriptions')
+      .delete()
+      .eq('user_id', userId);
+    if (delErr) console.warn('[Push] Aviso ao deletar subscription antiga:', delErr.message);
+
+    const { error: insErr } = await supabaseAdmin
+      .from('push_subscriptions')
+      .insert({
+        user_id: userId,
+        endpoint: subscription.endpoint,
+        subscription: JSON.stringify(subscription),
+        atualizado_em: new Date().toISOString(),
+      });
+
+    if (insErr) {
+      console.error('[Push] ERRO ao inserir subscription para', userId, ':', insErr.message);
+      return res.status(500).json({ error: 'Erro ao salvar subscription: ' + insErr.message });
     }
 
-    await supabaseAdmin.from('profiles').update({ push_needs_renewal: false }).eq('id', req.user.id);
-    console.log('[Push] Subscription VAPID salva para user_id:', req.user.id);
+    await supabaseAdmin.from('profiles').update({ push_needs_renewal: false }).eq('id', userId);
+    console.log('[Push] ✓ Subscription VAPID salva com sucesso para user_id:', userId);
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
