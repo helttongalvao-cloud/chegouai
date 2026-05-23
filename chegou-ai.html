@@ -3341,11 +3341,24 @@ function adicionarItem(idx) {
   abrirModalObservacao(item, idx);
 }
 
+function compQtdAlterar(delta) {
+  var passo = window._compPasso || 1;
+  var min = passo;
+  window._compQtd = parseFloat(Math.max(min, (window._compQtd || passo) + delta * passo).toFixed(1));
+  var disp = document.getElementById('comp-qtd-display');
+  if(disp) disp.textContent = passo === 0.5 ? window._compQtd.toFixed(1).replace('.',',') : window._compQtd;
+}
+
 function abrirModalComplementos(item, idx, grupos) {
   var overlay = document.getElementById('modal-complementos');
   document.getElementById('comp-modal-titulo').textContent = item.nome;
   document.getElementById('comp-modal-info').textContent = (item.emoji || '🍽️') + ' R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',');
   document.getElementById('comp-obs-input').value = '';
+  var _cpasso = item.unidade === 'kg' ? 0.5 : 1;
+  window._compQtd = _cpasso;
+  window._compPasso = _cpasso;
+  var dispComp = document.getElementById('comp-qtd-display');
+  if(dispComp) dispComp.textContent = item.unidade === 'kg' ? '0,5' : '1';
   var cont = document.getElementById('comp-grupos-container');
   cont.innerHTML = grupos.map(function(g, gi) {
     var opcoes = (g.complementos || []).filter(function(c){ return c.disponivel !== false; }).sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
@@ -3386,8 +3399,8 @@ function abrirModalComplementos(item, idx, grupos) {
     });
     if(!valido) return;
     var obs = document.getElementById('comp-obs-input').value.trim().replace(/<[^>]*>/g,'').substring(0,200);
-    var qtdInicialComp = item.unidade === 'kg' ? 0.5 : 1;
-    carrinho.push({ id:item.id, nome:item.nome, preco:item.preco, emoji:item.emoji, disponivel:item.disponivel, imagem_url:item.imagem_url||'', categoria:item.categoria||'', unidade:item.unidade||'un', qtd:qtdInicialComp, observacao:obs||'', complementos:selecionados });
+    var qtdFinalComp = window._compQtd || _cpasso;
+    carrinho.push({ id:item.id, nome:item.nome, preco:item.preco, emoji:item.emoji, disponivel:item.disponivel, imagem_url:item.imagem_url||'', categoria:item.categoria||'', unidade:item.unidade||'un', qtd:qtdFinalComp, observacao:obs||'', complementos:selecionados });
     atualizarCarrinho();
     overlay.classList.remove('aberto');
     const btns = document.querySelectorAll('.item-add');
@@ -3407,6 +3420,11 @@ function abrirModalObservacao(item, idx) {
       '<div class="modal-box" style="max-width:360px;">' +
       '<div class="modal-titulo" id="obs-titulo">Adicionar ao carrinho</div>' +
       '<div style="font-size:13px;color:var(--texto2);margin-bottom:12px;" id="obs-nome"></div>' +
+      '<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:14px 0;">' +
+      '<button onclick="obsQtdAlterar(-1)" style="width:36px;height:36px;border-radius:50%;border:2px solid var(--verde);background:transparent;color:var(--verde);font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">−</button>' +
+      '<span id="obs-qtd-display" style="font-size:20px;font-weight:700;min-width:32px;text-align:center;">1</span>' +
+      '<button onclick="obsQtdAlterar(1)" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--verde);color:#fff;font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">+</button>' +
+      '</div>' +
       '<div class="form-grupo">' +
       '<label>Observação (opcional)</label>' +
       '<input type="text" id="obs-input" placeholder="Ex: sem cebola, bem passado..." maxlength="200" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:\'DM Sans\',sans-serif;" oninput="this.value=this.value.replace(/<[^>]*>/g,\'\')">' +
@@ -3423,11 +3441,16 @@ function abrirModalObservacao(item, idx) {
   var obsInput = document.getElementById('obs-input');
   obsInput.value = '';
   obsInput.focus();
+  var _passo = item.unidade === 'kg' ? 0.5 : 1;
+  window._obsQtd = _passo;
+  window._obsPasso = _passo;
+  var dispObs = document.getElementById('obs-qtd-display');
+  if(dispObs) dispObs.textContent = item.unidade === 'kg' ? '0,5' : '1';
   var addBtn = document.getElementById('obs-btn-add');
   addBtn.onclick = function() {
     var obs = obsInput.value.trim().replace(/<[^>]*>/g,'').substring(0,200);
-    var qtdInicial = item.unidade === 'kg' ? 0.5 : 1;
-    carrinho.push({ id:item.id, nome:item.nome, preco:item.preco, emoji:item.emoji, disponivel:item.disponivel, imagem_url:item.imagem_url||'', categoria:item.categoria||'', unidade:item.unidade||'un', qtd:qtdInicial, observacao:obs||'', complementos:[] });
+    var qtdFinal = window._obsQtd || _passo;
+    carrinho.push({ id:item.id, nome:item.nome, preco:item.preco, emoji:item.emoji, disponivel:item.disponivel, imagem_url:item.imagem_url||'', categoria:item.categoria||'', unidade:item.unidade||'un', qtd:qtdFinal, observacao:obs||'', complementos:[] });
     atualizarCarrinho();
     overlay.classList.remove('aberto');
     // feedback visual
@@ -3439,6 +3462,14 @@ function abrirModalObservacao(item, idx) {
   };
   // Allow Enter key
   obsInput.onkeydown = function(e) { if(e.key==='Enter') addBtn.click(); };
+}
+
+function obsQtdAlterar(delta) {
+  var passo = window._obsPasso || 1;
+  var min = passo;
+  window._obsQtd = parseFloat(Math.max(min, (window._obsQtd || passo) + delta * passo).toFixed(1));
+  var disp = document.getElementById('obs-qtd-display');
+  if(disp) disp.textContent = passo === 0.5 ? window._obsQtd.toFixed(1).replace('.',',') : window._obsQtd;
 }
 
 function alterarQtdCarrinho(idx, delta) {
@@ -6836,6 +6867,11 @@ function adminNav(btn, secao) {
     <div class="modal-titulo" id="comp-modal-titulo">Personalizar pedido</div>
     <div id="comp-modal-info" style="font-size:13px;color:var(--texto2);margin-bottom:14px;"></div>
     <div id="comp-grupos-container"></div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:14px 0;">
+      <button onclick="compQtdAlterar(-1)" style="width:36px;height:36px;border-radius:50%;border:2px solid var(--verde);background:transparent;color:var(--verde);font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">−</button>
+      <span id="comp-qtd-display" style="font-size:20px;font-weight:700;min-width:32px;text-align:center;">1</span>
+      <button onclick="compQtdAlterar(1)" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--verde);color:#fff;font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">+</button>
+    </div>
     <div class="form-grupo">
       <label>Observação (opcional)</label>
       <input type="text" id="comp-obs-input" placeholder="Ex: sem cebola, bem passado..." maxlength="200" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;">
