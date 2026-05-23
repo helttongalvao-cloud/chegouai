@@ -456,7 +456,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .filtro-rapido-btn.ativo { background:var(--verde); color:#000; border-color:var(--verde); }
 
 /* CARDÁPIO — barra de categorias sticky */
-.cat-tabs-bar { display:flex; gap:0; overflow-x:auto; scrollbar-width:none; background:var(--preto); border-bottom:1.5px solid var(--cinza3); position:sticky; top:0; z-index:20; padding:0 16px; }
+.cat-tabs-bar { display:flex; gap:0; overflow-x:auto; scrollbar-width:none; background:var(--preto); border-bottom:1.5px solid var(--cinza3); position:sticky; top:56px; z-index:20; padding:0 16px; }
 .cat-tabs-bar::-webkit-scrollbar { display:none; }
 .cat-tab { padding:12px 14px; white-space:nowrap; font-size:13px; font-weight:600; color:var(--texto2); cursor:pointer; border-bottom:2.5px solid transparent; transition:all 0.2s; }
 .cat-tab.ativo { color:var(--verde); border-bottom-color:var(--verde); }
@@ -832,7 +832,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       </div>
     </div>
   </div>
-  <div style="padding:0 16px 8px;">
+  <div style="padding:8px 16px 8px;position:sticky;top:0;z-index:25;background:var(--preto);">
     <input type="text" id="busca-produto" placeholder="🔍 Buscar produto..." oninput="filtrarProdutos(this.value)" style="width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;">
   </div>
   <div id="cardapio-avaliacao" style="padding:0 16px 8px;font-size:13px;color:var(--texto2);"></div>
@@ -2897,7 +2897,7 @@ function buscarUnificado(val) {
             ? '<img src="' + p.imagem_url + '" style="width:54px;height:54px;border-radius:14px;object-fit:cover;flex-shrink:0;" onerror="this.style.display=\'none\'">'
             : '<div style="width:54px;height:54px;border-radius:14px;background:var(--cinza3);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">' + (p.emoji || '🍽️') + '</div>';
           var preco = 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.',',');
-          return '<div onclick="abrirCardapio(\'' + p.loja.id + '\')" class="card-est" style="background-color:#222226;border-radius:16px;padding:18px;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.5);">' +
+          return '<div onclick="abrirCardapio(\'' + p.loja.id + '\',\'' + p.id + '\')" class="card-est" style="background-color:#222226;border-radius:16px;padding:18px;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.5);">' +
             imgHtml +
             '<div class="card-est-info">' +
               '<div class="card-est-nome">' + sanitizar(p.nome) + '</div>' +
@@ -2979,7 +2979,7 @@ function buscarProdutoGlobal(val) {
             : '<div style="width:52px;height:52px;border-radius:10px;background:var(--cinza3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">' + (p.emoji || '🍽️') + '</div>';
           var preco = 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.',',');
           var frete = p.loja.taxa_entrega > 0 ? 'Frete R$ ' + parseFloat(p.loja.taxa_entrega).toFixed(2).replace('.',',') : 'Frete grátis';
-          return '<div onclick="abrirCardapio(\'' + p.loja.id + '\')" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--cinza2);border-radius:14px;margin-bottom:8px;cursor:pointer;border:1.5px solid var(--cinza3);">' +
+          return '<div onclick="abrirCardapio(\'' + p.loja.id + '\',\'' + p.id + '\')" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--cinza2);border-radius:14px;margin-bottom:8px;cursor:pointer;border:1.5px solid var(--cinza3);">' +
             imgHtml +
             '<div style="flex:1;min-width:0;">' +
               '<div style="font-size:14px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + sanitizar(p.nome) + '</div>' +
@@ -3049,7 +3049,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
 // CARDÁPIO
 var produtosCache = [];
-async function abrirCardapio(id) {
+async function abrirCardapio(id, _prodId) {
   const lista = document.getElementById('lista-itens');
   lista.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando cardápio...</div>';
   irTela('tela-cardapio');
@@ -3109,6 +3109,17 @@ async function abrirCardapio(id) {
     // Salvar todos os produtos (disponíveis e indisponíveis — indisponíveis aparecem bloqueados)
     produtosCache = estAtual.produtos || [];
     renderProdutos(produtosCache);
+    if(_prodId) {
+      setTimeout(function() {
+        var el = document.querySelector('#lista-itens .card-produto[data-id="' + _prodId + '"]');
+        if(el) {
+          el.scrollIntoView({ behavior:'smooth', block:'center' });
+          el.style.transition = 'box-shadow 0.4s';
+          el.style.boxShadow = '0 0 0 3px var(--verde)';
+          setTimeout(function() { el.style.boxShadow = ''; }, 2000);
+        }
+      }, 300);
+    }
 
     // Carregar endereço salvo
     var endSalvo = localStorage.getItem('chegouai_endereco');
@@ -3143,7 +3154,7 @@ function renderProdutos(produtos) {
   });
 
   // Verificar se há categorias distintas (além de "principal"/undefined)
-  var comCat = produtos.some(function(p) { return p.categoria && p.categoria !== 'principal'; });
+  var comCat = produtos.some(function(p) { return p.categoria && p.categoria.toLowerCase().trim() !== 'principal'; });
 
   if(!comCat) {
     lista.innerHTML = produtosComIdx.map(function(pi) {
@@ -3153,11 +3164,11 @@ function renderProdutos(produtos) {
     return;
   }
 
-  // Agrupar por categoria
+  // Agrupar por categoria (normaliza para evitar duplicatas por casing)
   var grupos = {};
   var ordemCat = ['principal','entradas','lanches','bebidas','sobremesas','porcoes','combos'];
   produtosComIdx.forEach(function(pi) {
-    var cat = pi.produto.categoria || 'principal';
+    var cat = (pi.produto.categoria || 'principal').toLowerCase().trim();
     if(!grupos[cat]) grupos[cat] = [];
     grupos[cat].push(pi);
   });
