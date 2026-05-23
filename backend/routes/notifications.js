@@ -173,12 +173,15 @@ router.post('/subscribe-fcm', requireAuth, async (req, res, next) => {
     const { fcmToken } = req.body;
     if (!fcmToken) return res.status(400).json({ error: 'fcmToken obrigatório' });
 
-    const { error } = await supabaseAdmin.from('push_subscriptions').upsert({
+    // Delete + insert (evita conflito de constraint e garante dado limpo)
+    await supabaseAdmin.from('push_subscriptions').delete().eq('user_id', req.user.id);
+    const { error } = await supabaseAdmin.from('push_subscriptions').insert({
       user_id: req.user.id,
       fcm_token: fcmToken,
       endpoint: `fcm:${req.user.id}`,
+      subscription: '{}',   // coluna NOT NULL — placeholder para registro FCM
       atualizado_em: new Date().toISOString(),
-    }, { onConflict: 'user_id' });
+    });
 
     if (error) {
       console.error('[FCM] Erro ao salvar token para', req.user.id, error.message);
