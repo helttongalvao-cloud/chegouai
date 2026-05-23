@@ -456,7 +456,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .filtro-rapido-btn.ativo { background:var(--verde); color:#000; border-color:var(--verde); }
 
 /* CARDÁPIO — barra de categorias sticky */
-.cat-tabs-bar { display:flex; gap:0; overflow-x:auto; scrollbar-width:none; background:var(--preto); border-bottom:1.5px solid var(--cinza3); position:sticky; top:calc(env(safe-area-inset-top,0px) + 56px); z-index:20; padding:0 16px; }
+.cat-tabs-bar { display:flex; gap:0; overflow-x:auto; scrollbar-width:none; background:var(--preto); border-bottom:1.5px solid var(--cinza3); position:relative; top:0; z-index:20; padding:0 16px; }
 .cat-tabs-bar::-webkit-scrollbar { display:none; }
 .cat-tab { padding:12px 14px; white-space:nowrap; font-size:13px; font-weight:600; color:var(--texto2); cursor:pointer; border-bottom:2.5px solid transparent; transition:all 0.2s; }
 .cat-tab.ativo { color:var(--verde); border-bottom-color:var(--verde); }
@@ -832,11 +832,13 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       </div>
     </div>
   </div>
-  <div style="padding:max(8px,env(safe-area-inset-top,8px)) 16px 8px;position:sticky;top:0;z-index:25;background:var(--preto);">
-    <input type="text" id="busca-produto" placeholder="🔍 Buscar produto..." oninput="filtrarProdutos(this.value)" style="width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;">
+  <div id="cardapio-sticky-top" style="position:sticky;top:0;z-index:25;background:var(--preto);">
+    <div style="padding:max(8px,env(safe-area-inset-top,8px)) 16px 8px;">
+      <input type="text" id="busca-produto" placeholder="🔍 Buscar produto..." oninput="filtrarProdutos(this.value)" style="width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;">
+    </div>
+    <div id="cat-tabs-bar" class="cat-tabs-bar" style="display:none;position:relative;top:0;"></div>
   </div>
   <div id="cardapio-avaliacao" style="padding:0 16px 8px;font-size:13px;color:var(--texto2);"></div>
-  <div id="cat-tabs-bar" class="cat-tabs-bar" style="display:none;"></div>
   <div id="area-lista-compras" style="display:none;padding:0 16px;"></div>
   <div class="itens-cardapio" id="lista-itens"></div>
   <div class="carrinho-float oculto" id="carrinho-float2" onclick="irCheckout()">
