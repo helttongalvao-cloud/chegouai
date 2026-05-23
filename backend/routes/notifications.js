@@ -78,8 +78,12 @@ async function enviarPush(userId, titulo, corpo, dados) {
 
     // Tentar FCM primeiro (APK Android — mais confiável)
     if (data.fcm_token) {
-      const fcmOk = await enviarFCM(data.fcm_token, titulo, corpo, dados);
-      if (fcmOk) return;
+      if (!fcmMessaging) {
+        console.warn('[Push] FCM token existe mas FIREBASE_SERVICE_ACCOUNT não configurado — APK não receberá push. Configure a variável de ambiente.');
+      } else {
+        const fcmOk = await enviarFCM(data.fcm_token, titulo, corpo, dados);
+        if (fcmOk) return;
+      }
     }
 
     // Fallback: VAPID (PWA)
