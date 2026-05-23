@@ -1835,7 +1835,9 @@ async function pagarCartao(pedidoId) {
       '<input id="cc-ano" placeholder="AAAA" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
       '<input id="cc-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
     '</div>' +
-    (ehDebito ? '' : '<input type="hidden" id="cc-parcelas" value="1">') +
+    (ehDebito ? '' : '<select id="cc-parcelas" style="' + _estiloInput() + '">' +
+      [1,2,3,4,5,6].map(function(n){ return '<option value="'+n+'">'+n+'x sem juros</option>'; }).join('') +
+    '</select>') +
     '</div></form></div>';
 
   var cartaoSalvoUI = '';
