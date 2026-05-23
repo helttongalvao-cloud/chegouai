@@ -479,3 +479,4 @@ router.get('/status/:pedidoId', [
 });
 
 module.exports = router;
+module.exports.processarPagamentoAprovado = processarPagamentoAprovado;
