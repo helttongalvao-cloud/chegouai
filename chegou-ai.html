@@ -1387,7 +1387,11 @@ async function ativarNotificacoesPush() {
 
     var keyResp = await fetch('/api/notifications/vapid-public-key').then(function(r){ return r.json(); });
     var appKey = keyResp.publicKey;
-    if(!appKey) { console.warn('[Push] VAPID key não configurada no servidor'); return; }
+    if(!appKey) {
+      console.warn('[Push] VAPID key não configurada no servidor');
+      showToast('⚠️', 'Push não configurado', 'Chave VAPID ausente no servidor — contate o administrador.');
+      return;
+    }
     var convertedKey = urlBase64ToUint8Array(appKey);
 
     var reg = await navigator.serviceWorker.ready;
@@ -1430,43 +1434,69 @@ async function ativarNotificacoesPush() {
   }
 }
 
-function verificarBannerPush() {
-  // No APK (Capacitor), notificações são FCM — Notification.permission do WebView não se aplica
+async function verificarBannerPush() {
   var isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   var concedido, bloqueado;
   if (isCapacitor) {
-    var fcmToken = localStorage.getItem('chegouai_fcm_token');
-    concedido = !!fcmToken;
+    concedido = !!localStorage.getItem('chegouai_fcm_token');
     bloqueado = false;
   } else {
     var perm = ('Notification' in window) ? Notification.permission : 'denied';
     concedido = perm === 'granted';
     bloqueado = perm === 'denied';
   }
-  var bannerEst = document.getElementById('banner-push-est');
+
+  // Se o navegador diz que foi concedido, confirmar que subscription existe no servidor
+  var subNoServidor = false;
+  var precisaRenovar = false;
+  if (concedido && authToken) {
+    try {
+      var st = await apiCall('/api/notifications/status');
+      subNoServidor = !!(st && st.active);
+      precisaRenovar = !!(st && (st.needsRenewal || !st.active));
+    } catch(_) {}
+  }
+
+  var bannerEst  = document.getElementById('banner-push-est');
   var bannerMoto = document.getElementById('banner-push-moto');
-  var bannerEstOk = document.getElementById('banner-push-est-ok');
+  var bannerEstOk  = document.getElementById('banner-push-est-ok');
   var bannerMotoOk = document.getElementById('banner-push-moto-ok');
 
-  // Atualizar conteúdo do banner dependendo do estado
   [bannerEst, bannerMoto].forEach(function(b) {
     if(!b) return;
     var spanEl = b.querySelector('span');
-    var btnEl = b.querySelector('button');
+    var btnEl  = b.querySelector('button');
     if(bloqueado) {
-      if(spanEl) spanEl.textContent = '🔕 Notificações bloqueadas — pedidos chegam, mas sem alerta sonoro quando o app estiver fechado.';
-      if(btnEl) { btnEl.textContent = 'Como desbloquear'; btnEl.onclick = mostrarInstrucoesNotif; }
+      if(spanEl) spanEl.textContent = '🔕 Notificações bloqueadas — ative nas configurações do navegador.';
+      if(btnEl) { btnEl.textContent = 'Como ativar'; btnEl.onclick = mostrarInstrucoesNotif; }
+    } else if(concedido && precisaRenovar) {
+      // Permissão concedida mas subscription ausente/vencida — renovar automaticamente
+      b.style.display = 'flex';
+      if(spanEl) spanEl.textContent = '🔄 Reconectando notificações...';
+      if(btnEl) { btnEl.textContent = 'Renovar'; btnEl.onclick = function() { ativarNotificacoesPush().then(verificarBannerPush); }; }
+      ativarNotificacoesPush().then(verificarBannerPush);
+      return;
     } else {
       if(spanEl) spanEl.textContent = '🔕 Notificações desativadas — você pode perder pedidos!';
-      if(btnEl) {
-        btnEl.textContent = 'Ativar';
-        btnEl.onclick = function() { ativarNotificacoesPush().then(verificarBannerPush); };
-      }
+      if(btnEl) { btnEl.textContent = 'Ativar'; btnEl.onclick = function() { ativarNotificacoesPush().then(verificarBannerPush); }; }
     }
-    b.style.display = concedido ? 'none' : 'flex';
+    b.style.display = (concedido && !precisaRenovar) ? 'none' : 'flex';
   });
-  if(bannerEstOk) bannerEstOk.style.display = concedido ? 'flex' : 'none';
-  if(bannerMotoOk) bannerMotoOk.style.display = concedido ? 'flex' : 'none';
+
+  var okVis = concedido && !precisaRenovar ? 'flex' : 'none';
+  [bannerEstOk, bannerMotoOk].forEach(function(b) {
+    if(!b) return;
+    b.style.display = okVis;
+    // Botão testar só aparece quando está ativo
+    if(!b.querySelector('.btn-testar-push')) {
+      var btn = document.createElement('button');
+      btn.className = 'btn-testar-push';
+      btn.textContent = 'Testar 🔔';
+      btn.style.cssText = 'margin-left:12px;background:rgba(255,255,255,0.2);border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;';
+      btn.onclick = testarPush;
+      b.appendChild(btn);
+    }
+  });
 }
 
 function mostrarInstrucoesNotif() {
