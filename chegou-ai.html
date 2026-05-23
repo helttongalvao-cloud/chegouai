@@ -1115,6 +1115,10 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         </div>
         <button id="btn-toggle-pausar" onclick="togglePausar()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Pausar</button>
       </div>
+      <div class="busca-bar" style="margin-bottom:10px;">
+        <span class="busca-icon">🔍</span>
+        <input type="text" id="busca-pedidos-lojista" placeholder="Buscar por nome, telefone, item..." oninput="filtrarPedidosLojista(this.value)" style="height:44px;">
+      </div>
       <div id="tabs-pedido" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;"></div>
       <div class="pedidos-lista" id="pedidos-estabelecimento"></div>
     </div>
@@ -4841,6 +4845,7 @@ async function renderEstabelecimento() {
         '<button id="btn-toggle-pausar" onclick="togglePausar()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Pausar</button>' +
       '</div>' +
       (('Notification' in window && Notification.permission !== 'granted') ? '<div style="margin-bottom:12px;padding:12px 16px;border-radius:14px;background:rgba(255,180,0,0.12);border:1.5px solid #ffb400;display:flex;align-items:center;justify-content:space-between;gap:10px;"><div style="font-size:13px;font-weight:600;color:#ffb400;">🔔 Notificações desativadas</div><button onclick="ativarPushDoCard()" style="padding:8px 14px;border-radius:10px;border:none;background:#ffb400;color:#000;font-weight:700;font-size:12px;cursor:pointer;">' + (Notification.permission === 'denied' ? 'Como ativar' : 'Ativar') + '</button></div>' : '') +
+      '<div class="busca-bar" style="margin-bottom:10px;"><span class="busca-icon">🔍</span><input type="text" id="busca-pedidos-lojista" placeholder="Buscar por nome, telefone, item..." oninput="filtrarPedidosLojista(this.value)" style="height:44px;"></div>' +
       '<div id="tabs-pedido" style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;"></div>' +
       '<div class="pedidos-lista" id="pedidos-estabelecimento"></div>';
   }
@@ -4948,7 +4953,15 @@ async function renderEstabelecimento() {
             '<span style="font-size:22px;font-weight:900;color:var(--verde);font-family:monospace;letter-spacing:4px;">' + p.codigo_coleta + '</span>' +
           '</div>'
         : '';
-      return '<div class="card-pedido" data-status="' + p.status + '"' + (isEncerrado ? ' style="opacity:0.65;"' : '') + '>' +
+      var searchText = [
+        p.id.substring(0,8),
+        p.nome_cliente || '', p.nome_cliente_mesa || '',
+        p.telefone_cliente || '',
+        (p.itens_pedido || []).map(function(i){ return i.nome; }).join(' '),
+        p.lista_compras || '',
+        p.endereco_entrega || ''
+      ].join(' ').toLowerCase();
+      return '<div class="card-pedido" data-status="' + p.status + '" data-search="' + searchText.replace(/"/g,'') + '"' + (isEncerrado ? ' style="opacity:0.65;"' : '') + '>' +
         '<div class="pedido-header"><span class="pedido-num">Pedido #' + p.id.substring(0,8) + mesaTag + '</span>' +
         '<span class="badge-status ' + sc + '">' + sl + '</span></div>' +
         (nomeCliente ? '<div class="pedido-endereco" style="font-weight:600;color:var(--texto);">👤 ' + nomeCliente + '</div>' : '') +
@@ -5095,6 +5108,32 @@ function filtrarTabPedido(tabId, silencioso) {
 var _dashPeriodo = 'hoje';
 var _dashStats = {};
 var _ultimoEstadoAuto = null;
+
+function filtrarPedidosLojista(termo) {
+  var t = (termo || '').toLowerCase().trim();
+  var cards = document.querySelectorAll('#pedidos-estabelecimento .card-pedido');
+  var algum = false;
+  cards.forEach(function(card) {
+    var s = (card.getAttribute('data-search') || '');
+    var visivel = !t || s.indexOf(t) !== -1;
+    card.style.display = visivel ? '' : 'none';
+    if (visivel) algum = true;
+  });
+  var vazio = document.getElementById('busca-sem-resultado-lojista');
+  if (!t) { if (vazio) vazio.remove(); return; }
+  if (!algum) {
+    if (!vazio) {
+      var div = document.createElement('div');
+      div.id = 'busca-sem-resultado-lojista';
+      div.className = 'vazio';
+      div.textContent = 'Nenhum pedido encontrado para "' + termo + '"';
+      var lista = document.getElementById('pedidos-estabelecimento');
+      if (lista) lista.after(div);
+    }
+  } else {
+    if (vazio) vazio.remove();
+  }
+}
 
 function mudarPeriodoDash(p) {
   _dashPeriodo = p;
