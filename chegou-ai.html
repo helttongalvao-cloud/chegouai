@@ -4245,7 +4245,8 @@ async function renderCardapioEst(manterDestaque) {
     var btnFoto = isNovo && !p.imagem_url
       ? '<button class="btn-editar" onclick="editarProduto(' + i + ')" style="background:#FF6D0020;color:var(--laranja);border:1px solid var(--laranja);">📷 Adicionar foto</button>'
       : '<button class="btn-editar" onclick="editarProduto(' + i + ')">✏️ Editar</button>';
-    return '<div class="card-produto" data-id="' + p.id + '" style="' + bordaNova + '">' +
+    var searchProd = (p.nome + ' ' + (p.descricao || p.desc || '') + ' ' + (p.categoria || '')).toLowerCase();
+    return '<div class="card-produto" data-id="' + p.id + '" data-search="' + searchProd.replace(/"/g,'') + '" style="' + bordaNova + '">' +
       (isNovo && !p.imagem_url ? '<div style="position:absolute;top:6px;left:6px;background:var(--laranja);color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;">NOVO</div>' : '') +
       thumbHtml +
       '<div class="prod-info">' +
@@ -4274,6 +4275,7 @@ async function renderCardapioEst(manterDestaque) {
     '</div>' +
     '<input type="file" id="csv-import-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="processarArquivoImport(this)">' +
     '<div class="secao-titulo" style="font-size:14px;color:var(--texto2);">' + produtos.length + ' produto(s) cadastrado(s)</div>' +
+    '<div class="busca-bar" style="margin-bottom:12px;"><span class="busca-icon">🔍</span><input type="text" id="busca-produtos-cardapio" placeholder="Buscar produto..." oninput="filtrarProdutosCardapio(this.value)" style="height:44px;"></div>' +
     vazio;
   requestAnimationFrame(function() { window.scrollTo(0, scrollAntes); });
 }
@@ -5108,6 +5110,32 @@ function filtrarTabPedido(tabId, silencioso) {
 var _dashPeriodo = 'hoje';
 var _dashStats = {};
 var _ultimoEstadoAuto = null;
+
+function filtrarProdutosCardapio(termo) {
+  var t = (termo || '').toLowerCase().trim();
+  var cards = document.querySelectorAll('#est-secao-cardapio .card-produto');
+  var algum = false;
+  cards.forEach(function(card) {
+    var s = card.getAttribute('data-search') || '';
+    var visivel = !t || s.indexOf(t) !== -1;
+    card.style.display = visivel ? '' : 'none';
+    if (visivel) algum = true;
+  });
+  var vazio = document.getElementById('busca-sem-resultado-cardapio');
+  if (!t) { if (vazio) vazio.remove(); return; }
+  if (!algum) {
+    if (!vazio) {
+      var div = document.createElement('div');
+      div.id = 'busca-sem-resultado-cardapio';
+      div.className = 'vazio';
+      div.textContent = 'Nenhum produto encontrado para "' + termo + '"';
+      var input = document.getElementById('busca-produtos-cardapio');
+      if (input) input.parentElement.after(div);
+    }
+  } else {
+    if (vazio) vazio.remove();
+  }
+}
 
 function filtrarPedidosLojista(termo) {
   var t = (termo || '').toLowerCase().trim();
