@@ -833,8 +833,12 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     </div>
   </div>
   <div id="cardapio-sticky-top" style="position:sticky;top:0;z-index:25;background:var(--preto);">
-    <div style="padding:max(8px,env(safe-area-inset-top,8px)) 16px 8px;">
-      <input type="text" id="busca-produto" placeholder="🔍 Buscar produto..." oninput="filtrarProdutos(this.value)" style="width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;">
+    <div style="display:flex;align-items:center;justify-content:flex-end;padding:max(8px,env(safe-area-inset-top,8px)) 16px 6px;" id="busca-lupa-row">
+      <button onclick="abrirBuscaCardapio()" style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px;flex-shrink:0;">🔍</button>
+    </div>
+    <div id="busca-input-row" style="display:none;padding:0 16px 8px;gap:8px;align-items:center;">
+      <input type="text" id="busca-produto" placeholder="Buscar produto..." oninput="filtrarProdutos(this.value)" autofocus style="flex:1;padding:11px 16px;border-radius:12px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;">
+      <button onclick="fecharBuscaCardapio()" style="background:none;border:none;color:var(--texto2);font-size:22px;cursor:pointer;padding:4px 2px;line-height:1;">✕</button>
     </div>
     <div id="cat-tabs-bar" class="cat-tabs-bar" style="display:none;position:relative;top:0;"></div>
   </div>
@@ -3058,6 +3062,10 @@ async function abrirCardapio(id, _prodId) {
   // Limpar busca
   var buscaInput = document.getElementById('busca-produto');
   if(buscaInput) buscaInput.value = '';
+  var lupaRow = document.getElementById('busca-lupa-row');
+  var inputRow = document.getElementById('busca-input-row');
+  if(lupaRow) lupaRow.style.display = 'flex';
+  if(inputRow) inputRow.style.display = 'none';
 
   try {
     var data = await apiCall('/api/establishments/' + id);
@@ -3256,6 +3264,21 @@ function renderCardProduto(item, i) {
     '</div>' +
     btnHtml +
   '</div>';
+}
+
+function abrirBuscaCardapio() {
+  document.getElementById('busca-lupa-row').style.display = 'none';
+  var row = document.getElementById('busca-input-row');
+  row.style.display = 'flex';
+  var inp = document.getElementById('busca-produto');
+  if(inp) { inp.value = ''; inp.focus(); }
+}
+function fecharBuscaCardapio() {
+  document.getElementById('busca-input-row').style.display = 'none';
+  document.getElementById('busca-lupa-row').style.display = 'flex';
+  var inp = document.getElementById('busca-produto');
+  if(inp) inp.value = '';
+  renderProdutos(produtosCache);
 }
 
 function filtrarProdutos(termo) {
