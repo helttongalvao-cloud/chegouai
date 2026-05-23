@@ -5,6 +5,7 @@ const { supabaseAdmin } = require('../config/supabase');
 const { calcularSplit } = require('../services/commission');
 const { criarTransferenciaPix } = require('../services/pagarme');
 const { enviarPush } = require('./notifications');
+const { alertarAdmin } = require('../services/whatsapp');
 
 const router = express.Router();
 
@@ -637,6 +638,8 @@ router.patch(
       // Quando pedido fica pronto, notificar motoboys disponíveis
       if (status === 'pronto') {
         const enderecoResumido = (pedido.endereco_entrega || '').substring(0, 40);
+        const lojaNome = pedido.estabelecimentos?.nome || 'Loja';
+        const valorStr = `R$ ${parseFloat(pedido.total || 0).toFixed(2).replace('.', ',')}`;
 
         // Motoboys parceiros (plataforma)
         const { data: motosDisp } = await supabaseAdmin
@@ -649,6 +652,9 @@ router.patch(
           motosDisp.forEach((m) => {
             enviarPush(m.user_id, '🛵 Nova entrega disponível!', enderecoResumido || 'Toque para ver detalhes', { pedidoId: orderId });
           });
+        } else {
+          // Sem motoboy disponível — alertar admin imediatamente
+          alertarAdmin(`🚨 *Sem motoboy disponível!*\n🏪 ${lojaNome}\n💰 ${valorStr}\n📍 ${enderecoResumido || 'Ver no app'}`);
         }
 
         // Motoboy próprio do estabelecimento (sem login — usa FCM direto)

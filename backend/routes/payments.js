@@ -13,6 +13,7 @@ const {
 } = require('../services/pagarme');
 const { calcularSplit } = require('../services/commission');
 const { enviarPush } = require('./notifications');
+const { enviarWhatsApp, alertarAdmin } = require('../services/whatsapp');
 
 const router = express.Router();
 
@@ -58,7 +59,7 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
     .update({ pagamento_status: 'aprovado', status: 'aceito', pagarme_order_id: pagarmeOrderId })
     .eq('id', orderId)
     .neq('pagamento_status', 'aprovado')
-    .select('subtotal, taxa_entrega, total, forma_pagamento, estabelecimentos(tipo_entrega, user_id, nome)')
+    .select('subtotal, taxa_entrega, total, forma_pagamento, guest_nome, endereco_entrega, profiles(nome), estabelecimentos(tipo_entrega, user_id, nome, whatsapp), itens_pedido(qtd, nome)')
     .maybeSingle();
 
   if (!pedido) {
@@ -114,14 +115,32 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
 
   // Notificar lojista APENAS agora que pagamento foi confirmado
   const lojistaUserId = pedido.estabelecimentos?.user_id;
+  const lojaInfo = pedido.estabelecimentos;
+  const valorStr = `R$ ${pedido.total?.toFixed(2).replace('.', ',')}`;
+  const clienteNome = pedido.profiles?.nome || pedido.guest_nome || 'Cliente';
+
   if (lojistaUserId) {
     enviarPush(
       lojistaUserId,
       '🔔 Novo pedido pago!',
-      `R$ ${pedido.total?.toFixed(2).replace('.', ',')} — pagamento confirmado`,
+      `${valorStr} — pagamento confirmado`,
       { pedidoId: orderId }
     );
   }
+
+  // WhatsApp para o lojista (número cadastrado na loja)
+  if (lojaInfo?.whatsapp) {
+    const itensTxt = (pedido.itens_pedido || []).map(i => `${i.qtd}x ${i.nome}`).join(', ');
+    enviarWhatsApp(
+      lojaInfo.whatsapp,
+      `🔔 *Novo pedido!*\n💰 ${valorStr}\n👤 ${clienteNome}\n📦 ${itensTxt || 'Ver no app'}\n🏠 ${pedido.endereco_entrega || ''}`
+    );
+  }
+
+  // WhatsApp para o admin
+  alertarAdmin(
+    `🔔 *Novo pedido pago*\n🏪 ${lojaInfo?.nome || 'Loja'}\n💰 ${valorStr}\n👤 ${clienteNome}`
+  );
 
   console.log(
     `[Pagar.me] Pedido ${orderId} aprovado` +
