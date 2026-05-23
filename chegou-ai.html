@@ -3164,12 +3164,14 @@ function renderProdutos(produtos) {
     return;
   }
 
-  // Agrupar por categoria (normaliza para evitar duplicatas por casing)
+  // Agrupar por categoria (normaliza key para evitar duplicatas por casing, preserva label original)
   var grupos = {};
+  var grupoLabels = {};
   var ordemCat = ['principal','entradas','lanches','bebidas','sobremesas','porcoes','combos'];
   produtosComIdx.forEach(function(pi) {
-    var cat = (pi.produto.categoria || 'principal').toLowerCase().trim();
-    if(!grupos[cat]) grupos[cat] = [];
+    var catOrig = pi.produto.categoria || 'principal';
+    var cat = catOrig.toLowerCase().trim();
+    if(!grupos[cat]) { grupos[cat] = []; grupoLabels[cat] = catOrig; }
     grupos[cat].push(pi);
   });
 
@@ -3185,7 +3187,7 @@ function renderProdutos(produtos) {
 
   var html = '';
   catsOrdenadas.forEach(function(cat) {
-    var label = categoriaLabels[cat] || cat;
+    var label = categoriaLabels[cat] || grupoLabels[cat] || cat;
     var slug = cat.replace(/[^a-z0-9]/gi, '-');
     html += '<div id="secao-cat-' + slug + '" class="cat-secao" data-cat="' + slug + '">' +
       '<div style="font-size:13px;font-weight:700;color:var(--verde);padding:12px 0 6px;letter-spacing:0.5px;text-transform:uppercase;">' + label + '</div>' +
@@ -3198,7 +3200,7 @@ function renderProdutos(produtos) {
   var tabsBar = document.getElementById('cat-tabs-bar');
   tabsBar.style.display = 'flex';
   tabsBar.innerHTML = catsOrdenadas.map(function(cat, i) {
-    var label = categoriaLabels[cat] || cat;
+    var label = categoriaLabels[cat] || grupoLabels[cat] || cat;
     var slug = cat.replace(/[^a-z0-9]/gi, '-');
     return '<div class="cat-tab' + (i===0?' ativo':'') + '" data-target="secao-cat-' + slug + '" onclick="scrollToSecao(this)">' + label + '</div>';
   }).join('');
