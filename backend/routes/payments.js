@@ -297,8 +297,19 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
       recipientIdLojista: pedido.estabelecimentos?.pagarme_recipient_id || null,
     });
 
+    // Juros a partir de 4x (1,99% a.m., calculado no backend por segurança)
+    const nParcelas = parseInt(installments || 1);
+    let totalCobranca = split.total;
+    if (nParcelas >= 4) {
+      const i = 0.0199;
+      const parcela = split.total * (i * Math.pow(1+i, nParcelas)) / (Math.pow(1+i, nParcelas) - 1);
+      const parcelaCeiling = Math.ceil(parcela * 100) / 100;
+      totalCobranca = parseFloat((parcelaCeiling * nParcelas).toFixed(2));
+      console.log(`[Cartão] ${nParcelas}x com juros: base R$${split.total} → total R$${totalCobranca}`);
+    }
+
     const cobranca = await criarCobrancaCartao({
-      total:    split.total,
+      total:    totalCobranca,
       orderId:  pedidoId,
       customerId,
       ...(cardId
@@ -320,7 +331,7 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
             } : null,
           }
       ),
-      installments: parseInt(installments || 1),
+      installments: nParcelas,
       splitRules,
     });
 

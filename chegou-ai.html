@@ -1813,9 +1813,53 @@ function toggleUsarCartaoSalvo(usar) {
   if (formNovo) formNovo.style.display = usar ? 'none' : 'block';
 }
 
+// ── Parcelamento com juros a partir de 4x ───────────────────────────────────
+var TAXA_JUROS_MENSAL = 0.0199; // 1,99% ao mês
+
+function _calcularParcela(totalBase, n) {
+  if (n <= 3) return { parcela: totalBase / n, totalFinal: totalBase, comJuros: false };
+  var i = TAXA_JUROS_MENSAL;
+  var parcela = totalBase * (i * Math.pow(1+i, n)) / (Math.pow(1+i, n) - 1);
+  parcela = Math.ceil(parcela * 100) / 100;
+  return { parcela: parcela, totalFinal: parseFloat((parcela * n).toFixed(2)), comJuros: true };
+}
+
+function _gerarOpcoesParcelamento(totalBase) {
+  var opts = '';
+  for (var n = 1; n <= 12; n++) {
+    var c = _calcularParcela(totalBase, n);
+    if (!c.comJuros) {
+      opts += '<option value="'+n+'">'+n+'x sem juros</option>';
+    } else {
+      var pStr = 'R$ ' + c.parcela.toFixed(2).replace('.',',');
+      var tStr = 'R$ ' + c.totalFinal.toFixed(2).replace('.',',');
+      opts += '<option value="'+n+'">'+n+'x de '+pStr+' ('+tStr+' c/ juros)</option>';
+    }
+  }
+  return opts;
+}
+
+function atualizarTotalParcelado(n) {
+  n = parseInt(n) || 1;
+  var base = window._totalBase || 0;
+  var c = _calcularParcela(base, n);
+  var el = document.getElementById('pag-valor');
+  if (!el) return;
+  if (c.comJuros) {
+    el.textContent = 'R$ ' + c.totalFinal.toFixed(2).replace('.',',');
+    var instr = document.getElementById('pag-instrucao');
+    if (instr) instr.textContent = n + 'x de R$ ' + c.parcela.toFixed(2).replace('.',',') + ' · juros 1,99% a.m.';
+  } else {
+    el.textContent = 'R$ ' + base.toFixed(2).replace('.',',');
+    var instr2 = document.getElementById('pag-instrucao');
+    if (instr2) instr2.textContent = 'Pagamento 100% seguro';
+  }
+}
+
 // ── pagarCartao modificado ───────────────────────────────────────────────────
 async function pagarCartao(pedidoId) {
   var total = document.getElementById('total-valor').textContent;
+  window._totalBase = parseFloat((total || '0').replace(/[^\d,]/g,'').replace(',','.')) || 0;
   var cartao = getCartaoSalvo();
   var ehDebito = _tipoCartaoSelecionado === 'debito';
 
@@ -1835,8 +1879,8 @@ async function pagarCartao(pedidoId) {
       '<input id="cc-ano" placeholder="AAAA" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
       '<input id="cc-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" style="' + _estiloInput() + '" required>' +
     '</div>' +
-    (ehDebito ? '' : '<select id="cc-parcelas" style="' + _estiloInput() + '">' +
-      [1,2,3].map(function(n){ return '<option value="'+n+'">'+n+'x sem juros</option>'; }).join('') +
+    (ehDebito ? '' : '<select id="cc-parcelas" style="' + _estiloInput() + '" onchange="atualizarTotalParcelado(this.value)">' +
+      _gerarOpcoesParcelamento(window._totalBase || 0) +
     '</select>') +
     '</div></form></div>';
 
