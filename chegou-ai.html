@@ -6285,8 +6285,12 @@ function renderFaseEntrega(pedido, fase) {
           '<button onclick="abrirChat(\'' + pedido.id + '\',\'motoboy\')" style="flex:1;padding:8px;border-radius:8px;background:var(--cinza3);color:var(--texto);border:none;font-size:13px;font-weight:600;cursor:pointer;">💬 Chat</button>' +
         '</div>' +
       '</div>' +
-      '<div style="display:flex;align-items:center;gap:4px;margin-bottom:12px;font-size:12px;color:var(--texto2);">' +
-        '<span style="background:var(--cinza2);padding:3px 8px;border-radius:6px;font-family:monospace;font-weight:700;">Cód: ' + codigo + '</span>' +
+      (telAtivo.length >= 4 ?
+      '<div style="background:rgba(0,200,83,0.1);border:2px solid var(--verde);border-radius:14px;padding:14px;margin-bottom:12px;text-align:center;">' +
+        '<div style="font-size:12px;color:var(--texto2);margin-bottom:4px;">Peça este código ao cliente</div>' +
+        '<div style="font-size:48px;font-weight:900;letter-spacing:10px;color:var(--verde);font-family:monospace;">' + telAtivo.slice(-4) + '</div>' +
+      '</div>' : '') +
+      '<div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:12px;font-size:12px;color:var(--texto2);">' +
         '<span>Seu ganho: <b style="color:var(--verde);">' + ganho + '</b></span>' +
       '</div>' +
       '<button class="btn-acao" style="width:100%;background:var(--verde);color:#000;" onclick="confirmarEntregaReal(\'' + pedido.id + '\',this)">✅ Confirmar entrega</button>';
