@@ -211,8 +211,8 @@ router.post(
           if (!cupomAtualizado || cupomAtualizado.length === 0) {
             return res.status(400).json({ error: 'Cupom esgotado' });
           }
-          // Frete será zerado em 5b abaixo via flag
-          req.body.freteGratis = true;
+          // Frete será zerado em 5b — flag separada para não conflitar com primeiro pedido
+          req.body._volteiAtivo = true;
         } else {
         if (cupomData.desconto_tipo === 'percentual') {
           desconto = parseFloat((subtotal * cupomData.desconto_valor / 100).toFixed(2));
@@ -244,8 +244,10 @@ router.post(
       }
       taxaFinal = Math.round(taxaFinal * 100) / 100;
 
-      // 5b. Frete grátis no primeiro pedido — verificação dupla (front pediu + backend confirma)
-      if (req.body.freteGratis === true) {
+      // 5b. Frete grátis: cupom VOLTEI ou primeiro pedido confirmado pelo backend
+      if (req.body._volteiAtivo === true) {
+        desconto = parseFloat((desconto + taxaFinal).toFixed(2));
+      } else if (req.body.freteGratis === true) {
         const tel = telefoneCliente.replace(/\D/g, '').slice(-11);
         const telFormatado = `(${tel.slice(0,2)}) ${tel.slice(2,7)}-${tel.slice(7)}`;
         const [{ data: ant1 }, { data: ant2 }] = await Promise.all([
