@@ -26,13 +26,14 @@ async function verificarPagamentosPerdidos() {
   for (const pedido of pedidos) {
     try {
       const order = await buscarPedido(pedido.pagarme_order_id);
+      console.log(`[Monitor-Pag] Pedido ${pedido.id} → Pagar.me status: "${order.status}"`);
       if (order.status === 'paid') {
         console.log(`[Monitor-Pag] ✓ Pagamento recuperado para pedido ${pedido.id}`);
         const processar = getProcessar();
         await processar(pedido.id, pedido.pagarme_order_id);
       }
     } catch (e) {
-      console.error(`[Monitor-Pag] Erro ao verificar pedido ${pedido.id}:`, e.message);
+      console.error(`[Monitor-Pag] Erro ao verificar pedido ${pedido.id} (pagarme_id: ${pedido.pagarme_order_id}):`, e.message);
     }
   }
 }
