@@ -180,7 +180,7 @@ router.post(
         if (cupomErr || !cupomData) {
           return res.status(400).json({ error: 'Cupom inválido ou expirado' });
         }
-        if (cupomData.validade && new Date(cupomData.validade) < new Date(new Date().toDateString())) {
+        if (cupomData.validade && cupomData.validade.split('T')[0] < new Date().toISOString().split('T')[0]) {
           return res.status(400).json({ error: 'Cupom expirado' });
         }
         if (cupomData.usos_atual >= cupomData.usos_max) {
@@ -357,10 +357,8 @@ router.get('/cupom/:codigo', requireAuth, async (req, res, next) => {
 
     if (error || !cupom) return res.status(404).json({ error: 'Cupom não encontrado ou inativo' });
     // Comparar só a data (sem hora) para evitar problema de fuso horário
-    if (cupom.validade) {
-      const valDate = new Date(cupom.validade);
-      const hoje = new Date(); hoje.setHours(23, 59, 59, 999);
-      if (valDate < new Date(new Date().toDateString())) return res.status(400).json({ error: 'Cupom expirado' });
+    if (cupom.validade && cupom.validade.split('T')[0] < new Date().toISOString().split('T')[0]) {
+      return res.status(400).json({ error: 'Cupom expirado' });
     }
     if (cupom.usos_atual >= cupom.usos_max) return res.status(400).json({ error: 'Cupom esgotado' });
 
