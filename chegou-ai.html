@@ -1304,15 +1304,6 @@ async function inicializarApp() {
   } catch(e) {
     console.warn('[Config] Erro ao carregar config do servidor:', e.message);
   }
-  // Carregar aviso da home
-  try {
-    var av = await fetch('/api/aviso').then(function(r){ return r.json(); });
-    var bannerEl = document.getElementById('banner-aviso-home');
-    if(bannerEl && av.aviso) {
-      bannerEl.textContent = av.aviso;
-      bannerEl.style.display = 'block';
-    }
-  } catch(_) {}
 }
 inicializarApp();
 
@@ -2644,6 +2635,7 @@ async function irHome() {
   var elLista = document.getElementById('lista-estabelecimentos');
   if(elLista) elLista.style.display = '';
   carregarEstabelecimentos('todos'); // Roda em background sem bloquear
+  carregarAvisoHome();
 }
 
 // Cache local de estabelecimentos vindos da API (reutiliza a variável já declarada acima)
@@ -6724,6 +6716,24 @@ async function criarCupom() {
     await apiCall('/api/admin/cupons', { method: 'POST', body: { codigo, desconto_tipo: tipo, desconto_valor: valor, usos_max: usos, validade: validade || null } });
     renderAdminCupons();
   } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function carregarAvisoHome() {
+  var bannerEl = document.getElementById('banner-aviso-home');
+  if (!bannerEl) return;
+  bannerEl.style.display = 'none';
+  try {
+    // Só mostra para usuário logado que já fez pedido
+    if (!currentUser) return;
+    var tel = currentUser.telefone || '';
+    var pResp = await fetch('/api/orders/primeiro-pedido?telefone=' + tel).then(function(r){ return r.json(); });
+    if (pResp.primeiroP) return; // nunca comprou — não mostra
+    var av = await fetch('/api/aviso').then(function(r){ return r.json(); });
+    if (av.aviso) {
+      bannerEl.textContent = av.aviso;
+      bannerEl.style.display = 'block';
+    }
+  } catch(_) {}
 }
 
 async function salvarAviso() {
