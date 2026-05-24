@@ -186,41 +186,12 @@ router.post(
         if (cupomData.usos_atual >= cupomData.usos_max) {
           return res.status(400).json({ error: 'Cupom esgotado' });
         }
-        // Validações especiais para o cupom VOLTEI (frete grátis para clientes recorrentes)
-        if (cupomData.codigo === 'VOLTEI') {
-          if (!clienteId) return res.status(400).json({ error: 'Faça login para usar este cupom' });
-          if (subtotal < 30) return res.status(400).json({ error: 'Cupom VOLTEI válido para pedidos acima de R$ 30,00' });
-          const { data: pedidosAnt } = await supabaseAdmin
-            .from('pedidos')
-            .select('id')
-            .eq('cliente_id', clienteId)
-            .eq('pagamento_status', 'aprovado')
-            .limit(1);
-          if (!pedidosAnt || pedidosAnt.length === 0) {
-            return res.status(400).json({ error: 'Este cupom é exclusivo para quem já fez um pedido antes' });
-          }
-          // Aplica frete grátis — o desconto cobre a taxa de entrega
-          cupomCodigo = cupomData.codigo;
-          // Incrementar uso
-          const { data: cupomAtualizado } = await supabaseAdmin
-            .from('cupons_plataforma')
-            .update({ usos_atual: cupomData.usos_atual + 1 })
-            .eq('id', cupomData.id)
-            .lt('usos_atual', cupomData.usos_max)
-            .select('id');
-          if (!cupomAtualizado || cupomAtualizado.length === 0) {
-            return res.status(400).json({ error: 'Cupom esgotado' });
-          }
-          // Frete será zerado em 5b — flag separada para não conflitar com primeiro pedido
-          req.body._volteiAtivo = true;
-        } else {
-        if (cupomData.desconto_tipo === 'percentual') {
-          desconto = parseFloat((subtotal * cupomData.desconto_valor / 100).toFixed(2));
-        } else {
-          desconto = Math.min(parseFloat(cupomData.desconto_valor), subtotal);
+        const valorMinimo = parseFloat(cupomData.valor_minimo || 0);
+        if (valorMinimo > 0 && subtotal < valorMinimo) {
+          return res.status(400).json({ error: `Cupom válido para pedidos acima de R$ ${valorMinimo.toFixed(2).replace('.', ',')}` });
         }
-        cupomCodigo = cupomData.codigo;
-        // Incrementar uso atomicamente — só atualiza se ainda abaixo do limite (evita race condition)
+
+        // Incrementar uso atomicamente (comum a todos os tipos)
         const { data: cupomAtualizado } = await supabaseAdmin
           .from('cupons_plataforma')
           .update({ usos_atual: cupomData.usos_atual + 1 })
@@ -230,7 +201,27 @@ router.post(
         if (!cupomAtualizado || cupomAtualizado.length === 0) {
           return res.status(400).json({ error: 'Cupom esgotado' });
         }
-        } // fim else (cupons normais)
+        cupomCodigo = cupomData.codigo;
+
+        if (cupomData.codigo === 'VOLTEI') {
+          // Frete grátis exclusivo para clientes recorrentes
+          if (!clienteId) return res.status(400).json({ error: 'Faça login para usar este cupom' });
+          const { data: pedidosAnt } = await supabaseAdmin
+            .from('pedidos').select('id').eq('cliente_id', clienteId).eq('pagamento_status', 'aprovado').limit(1);
+          if (!pedidosAnt || pedidosAnt.length === 0) {
+            return res.status(400).json({ error: 'Este cupom é exclusivo para quem já fez um pedido antes' });
+          }
+          req.body._volteiAtivo = true;
+        } else if (cupomData.frete_gratis) {
+          // Frete grátis sem restrição de pedido anterior
+          req.body._volteiAtivo = true;
+        } else {
+          if (cupomData.desconto_tipo === 'percentual') {
+            desconto = parseFloat((subtotal * cupomData.desconto_valor / 100).toFixed(2));
+          } else {
+            desconto = Math.min(parseFloat(cupomData.desconto_valor), subtotal);
+          }
+        }
       }
 
       // 5. Calcular taxa de entrega final — calculada por distância para ambos os tipos
@@ -361,8 +352,11 @@ router.get('/cupom/:codigo', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: 'Cupom expirado' });
     }
     if (cupom.usos_atual >= cupom.usos_max) return res.status(400).json({ error: 'Cupom esgotado' });
+    const valorMinimo = parseFloat(cupom.valor_minimo || 0);
+    if (valorMinimo > 0 && subtotal < valorMinimo) {
+      return res.status(400).json({ error: `Cupom válido para pedidos acima de R$ ${valorMinimo.toFixed(2).replace('.', ',')}` });
+    }
 
-    // VOLTEI: frete grátis para clientes recorrentes com pedido >= R$30
     if (cupom.codigo === 'VOLTEI') {
       if (subtotal < 30) return res.status(400).json({ error: 'Cupom VOLTEI válido para pedidos acima de R$ 30,00' });
       const clienteId = req.user?.profile?.id || req.user?.id;
@@ -372,6 +366,10 @@ router.get('/cupom/:codigo', requireAuth, async (req, res, next) => {
       if (!pedidosAnt || pedidosAnt.length === 0) {
         return res.status(400).json({ error: 'Este cupom é exclusivo para quem já fez um pedido antes' });
       }
+      return res.json({ codigo: cupom.codigo, desconto_tipo: 'frete_gratis', desconto_valor: 0, desconto: 0, freteGratis: true });
+    }
+
+    if (cupom.frete_gratis) {
       return res.json({ codigo: cupom.codigo, desconto_tipo: 'frete_gratis', desconto_valor: 0, desconto: 0, freteGratis: true });
     }
 

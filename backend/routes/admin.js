@@ -680,7 +680,7 @@ router.post(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
-    const { codigo, desconto_tipo, desconto_valor, usos_max, validade } = req.body;
+    const { codigo, desconto_tipo, desconto_valor, usos_max, validade, valor_minimo, frete_gratis } = req.body;
     try {
       const { data, error } = await supabaseAdmin
         .from('cupons_plataforma')
@@ -690,6 +690,8 @@ router.post(
           desconto_valor,
           usos_max: usos_max || 1,
           validade: validade || null,
+          valor_minimo: parseFloat(valor_minimo || 0),
+          frete_gratis: !!frete_gratis,
         })
         .select()
         .single();
