@@ -7414,13 +7414,47 @@ if(!isStandalone && !bannerDispensado) {
 
 <!-- SISTEMA DE NOTIFICAÇÕES + RASTREIO + SERVICE WORKER -->
 <script>
+// AudioContext persistente — criado na primeira interação para sobreviver a background tabs
+var _audioCtx = null;
+var _somPendente = false;
+
+function _getAudioCtx() {
+  if(!_audioCtx || _audioCtx.state === 'closed') {
+    try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  return _audioCtx;
+}
+
+// Inicializa o AudioContext na primeira toque/clique do usuário
+(function() {
+  function _initAudio() {
+    _getAudioCtx();
+    document.removeEventListener('touchstart', _initAudio);
+    document.removeEventListener('click', _initAudio);
+  }
+  document.addEventListener('touchstart', _initAudio, { once: true, passive: true });
+  document.addEventListener('click', _initAudio, { once: true });
+})();
+
+// Quando o app volta ao foreground, toca som pendente
+document.addEventListener('visibilitychange', function() {
+  if(!document.hidden && _somPendente) {
+    _somPendente = false;
+    tocarSomNovoPedido();
+  }
+});
+
 // === TOAST NOTIFICATION SYSTEM ===
 async function tocarSomNovoPedido() {
   // Vibração — 3 pulsos (Android)
   if(navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]);
 
+  // Se documento oculto (background), marcar pendente e aguardar foco
+  if(document.hidden) { _somPendente = true; return; }
+
   try {
-    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var ctx = _getAudioCtx();
+    if(!ctx) return;
     await ctx.resume();
     var delays = [0, 0.17, 0.34, 0.51, 0.68];
     var freqs  = [880, 1100, 880, 1100, 1320];
@@ -7436,7 +7470,6 @@ async function tocarSomNovoPedido() {
       osc.start(ctx.currentTime + t);
       osc.stop(ctx.currentTime + t + 0.22);
     });
-    setTimeout(function() { ctx.close(); }, 1500);
   } catch(e) {}
 }
 
