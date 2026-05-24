@@ -658,7 +658,7 @@ router.get('/cupons', async (req, res, next) => {
       if (error.code === '42P01' || error.message?.includes('does not exist')) {
         return res.json([]);
       }
-      return res.status(500).json({ error: `Cupons: ${error.message} (code: ${error.code})` });
+      throw error;
     }
     res.json(data || []);
   } catch (err) { next(err); }

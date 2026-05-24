@@ -10,6 +10,12 @@ CREATE TABLE IF NOT EXISTS public.cupons_plataforma (
   ativo BOOLEAN DEFAULT true
 );
 
+-- Permissões necessárias para o service_role acessar a tabela
+GRANT ALL ON public.cupons_plataforma TO service_role;
+GRANT ALL ON public.cupons_plataforma TO postgres;
+GRANT ALL ON public.cupons_plataforma TO authenticated;
+GRANT ALL ON public.cupons_plataforma TO anon;
+
 -- Garante colunas caso a tabela já exista com schema parcial
 ALTER TABLE public.cupons_plataforma ADD COLUMN IF NOT EXISTS desconto_tipo TEXT;
 ALTER TABLE public.cupons_plataforma ADD COLUMN IF NOT EXISTS desconto_valor NUMERIC(10,2);
