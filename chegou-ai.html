@@ -6684,7 +6684,7 @@ async function renderAdminCupons() {
     var listaHtml = (cupons.length === 0)
       ? '<div class="vazio"><div class="vazio-icon">🎟️</div>Nenhum cupom criado ainda</div>'
       : '<div class="tabela">' + cupons.map(function(c) {
-          var validade = c.validade ? new Date(c.validade).toLocaleDateString('pt-BR') : 'Sem validade';
+          var validade = c.validade ? c.validade.split('T')[0].split('-').reverse().join('/') : 'Sem validade';
           var ativo = c.ativo ? '<span style="color:var(--verde);">Ativo</span>' : '<span style="color:var(--erro);">Inativo</span>';
           var descTxt = c.desconto_tipo === 'percentual' ? c.desconto_valor + '%' : 'R$ ' + parseFloat(c.desconto_valor).toFixed(2).replace('.',',');
           return '<div class="tabela-row">' +
