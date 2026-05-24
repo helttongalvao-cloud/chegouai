@@ -60,7 +60,7 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
     .update({ pagamento_status: 'aprovado', status: 'aceito', pagarme_order_id: pagarmeOrderId })
     .eq('id', orderId)
     .neq('pagamento_status', 'aprovado')
-    .select('subtotal, taxa_entrega, total, forma_pagamento, guest_nome, endereco_entrega, profiles(nome), estabelecimentos(tipo_entrega, user_id, nome, whatsapp), itens_pedido(qtd, nome)')
+    .select('subtotal, taxa_entrega, total, forma_pagamento, guest_nome, endereco_entrega, profiles(nome), estabelecimentos(tipo_entrega, user_id, nome, whatsapp), itens_pedido(quantidade, nome)')
     .maybeSingle();
 
   if (updateError) console.error(`[Processar] Erro Supabase:`, updateError.message);
@@ -134,7 +134,7 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
 
   // WhatsApp para o lojista (número cadastrado na loja)
   if (lojaInfo?.whatsapp) {
-    const itensTxt = (pedido.itens_pedido || []).map(i => `${i.qtd}x ${i.nome}`).join(', ');
+    const itensTxt = (pedido.itens_pedido || []).map(i => `${i.quantidade}x ${i.nome}`).join(', ');
     enviarWhatsApp(
       lojaInfo.whatsapp,
       `🔔 *Novo pedido!*\n💰 ${valorStr}\n👤 ${clienteNome}\n📦 ${itensTxt || 'Ver no app'}\n🏠 ${pedido.endereco_entrega || ''}`
