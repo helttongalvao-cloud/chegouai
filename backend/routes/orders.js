@@ -334,7 +334,7 @@ router.post(
 // =============================================
 // GET /api/orders/cupom/:codigo — Validar cupom
 // =============================================
-router.get('/cupom/:codigo', requireAuth, async (req, res, next) => {
+router.get('/cupom/:codigo', async (req, res, next) => {
   try {
     const subtotal = parseFloat(req.query.subtotal) || 0;
     const codigo = req.params.codigo.toUpperCase();
