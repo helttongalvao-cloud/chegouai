@@ -6723,11 +6723,7 @@ async function carregarAvisoHome() {
   if (!bannerEl) return;
   bannerEl.style.display = 'none';
   try {
-    // Só mostra para usuário logado que já fez pedido
     if (!currentUser) return;
-    var tel = currentUser.telefone || '';
-    var pResp = await fetch('/api/orders/primeiro-pedido?telefone=' + tel).then(function(r){ return r.json(); });
-    if (pResp.primeiroP) return; // nunca comprou — não mostra
     var av = await fetch('/api/aviso').then(function(r){ return r.json(); });
     if (av.aviso) {
       bannerEl.textContent = av.aviso;
