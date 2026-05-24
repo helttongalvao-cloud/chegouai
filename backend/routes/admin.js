@@ -720,6 +720,37 @@ router.patch('/cupons/:id', async (req, res, next) => {
 });
 
 // =============================================
+// POST /api/admin/push-broadcast — Notificação para todos os clientes
+// =============================================
+router.post('/push-broadcast', async (req, res, next) => {
+  try {
+    const { titulo, corpo } = req.body;
+    if (!titulo || !corpo) return res.status(400).json({ error: 'Título e corpo obrigatórios' });
+
+    const { enviarPush } = require('./notifications');
+
+    // Buscar todos os user_ids com push subscription ativa
+    const { data: subs, error } = await supabaseAdmin
+      .from('push_subscriptions')
+      .select('user_id');
+
+    if (error) throw error;
+    if (!subs || subs.length === 0) return res.json({ enviados: 0 });
+
+    let enviados = 0;
+    for (const sub of subs) {
+      try {
+        await enviarPush(sub.user_id, titulo, corpo, { tipo: 'broadcast' });
+        enviados++;
+      } catch (_) {}
+    }
+
+    console.log(`[Admin] Broadcast enviado: ${enviados}/${subs.length}`);
+    res.json({ enviados, total: subs.length });
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // POST /api/admin/establishments/:id/recipient
 // Cadastrar lojista como recebedor no Pagar.me
 // =============================================

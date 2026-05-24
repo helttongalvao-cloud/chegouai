@@ -6685,7 +6685,15 @@ async function renderAdminCupons() {
           '</div>';
         }).join('') + '</div>';
 
-    el.innerHTML = '<div class="secao-titulo">Cupons de desconto</div>' + formHtml + listaHtml;
+    var broadcastHtml =
+      '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:16px;margin-top:16px;">' +
+      '<h4 style="margin-bottom:12px;font-size:14px;">Enviar notificação para todos os clientes</h4>' +
+      '<input type="text" id="bc-titulo" placeholder="Título da notificação" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;margin-bottom:8px;box-sizing:border-box;">' +
+      '<textarea id="bc-corpo" placeholder="Mensagem..." rows="3" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;margin-bottom:8px;box-sizing:border-box;resize:vertical;font-family:inherit;"></textarea>' +
+      '<button class="btn-principal" onclick="dispararBroadcast()" style="padding:12px;">Disparar notificação</button>' +
+      '</div>';
+
+    el.innerHTML = '<div class="secao-titulo">Cupons de desconto</div>' + formHtml + listaHtml + broadcastHtml;
   } catch(e) {
     el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro: ' + e.message + '</div>';
   }
@@ -6701,6 +6709,17 @@ async function criarCupom() {
   try {
     await apiCall('/api/admin/cupons', { method: 'POST', body: { codigo, desconto_tipo: tipo, desconto_valor: valor, usos_max: usos, validade: validade || null } });
     renderAdminCupons();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function dispararBroadcast() {
+  var titulo = (document.getElementById('bc-titulo').value || '').trim();
+  var corpo = (document.getElementById('bc-corpo').value || '').trim();
+  if(!titulo || !corpo) return alert('Preencha o título e a mensagem');
+  if(!confirm('Enviar para todos os clientes com notificação ativa?')) return;
+  try {
+    var r = await apiCall('/api/admin/push-broadcast', { method: 'POST', body: { titulo, corpo } });
+    alert('Notificação enviada para ' + r.enviados + ' cliente(s)!');
   } catch(e) { alert('Erro: ' + e.message); }
 }
 
