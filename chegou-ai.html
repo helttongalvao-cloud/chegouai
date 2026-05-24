@@ -6429,6 +6429,23 @@ function recusarEntrega(btn) {
 }
 
 let statusAtivo = true;
+// Wake Lock — mantém CPU/tela ativa enquanto motoboy estiver disponível
+var _wakeLock = null;
+async function _ativarWakeLock() {
+  if(!('wakeLock' in navigator)) return;
+  try {
+    _wakeLock = await navigator.wakeLock.request('screen');
+    console.log('[WakeLock] Tela mantida ativa');
+    // Reativar automaticamente se o sistema liberar (ex: ao voltar de outra app)
+    _wakeLock.addEventListener('release', function() {
+      if(statusAtivo) _ativarWakeLock();
+    });
+  } catch(e) { console.warn('[WakeLock] Não disponível:', e.message); }
+}
+function _liberarWakeLock() {
+  if(_wakeLock) { _wakeLock.release(); _wakeLock = null; }
+}
+
 async function alternarStatus() {
   statusAtivo = !statusAtivo;
   const toggle = document.getElementById('toggle-motoboy');
@@ -6436,6 +6453,7 @@ async function alternarStatus() {
   // Notificar o backend sobre a mudança de disponibilidade
   try {
     await apiCall('/api/orders/motoboy/disponibilidade', { method: 'PATCH', body: { disponivel: statusAtivo } });
+    if(statusAtivo) _ativarWakeLock(); else _liberarWakeLock();
   } catch(e) {
     // Reverter visual se falhar
     statusAtivo = !statusAtivo;
@@ -7449,8 +7467,8 @@ async function tocarSomNovoPedido() {
   // Vibração — 3 pulsos (Android)
   if(navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]);
 
-  // Se documento oculto (background), marcar pendente e aguardar foco
-  if(document.hidden) { _somPendente = true; return; }
+  // Se documento oculto (background) e sem Wake Lock, marcar pendente e aguardar foco
+  if(document.hidden && !_wakeLock) { _somPendente = true; return; }
 
   try {
     var ctx = _getAudioCtx();
@@ -7488,39 +7506,27 @@ function pararLoopSom() {
 // ALERTA SONORO + VIBRAÇÃO — novo pedido para o motoboy
 // ============================================================
 function alertarNovoPedido() {
-  // Vibração: padrão de urgência (3 pulsos)
-  if(navigator.vibrate) {
-    navigator.vibrate([300, 150, 300, 150, 300]);
-  }
-
-  // Som via Web Audio API (sem arquivo externo)
+  if(navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]);
   try {
-    var ctx = new (window.AudioContext || window.webkitAudioContext)();
-
-    function beep(freq, start, duration, vol) {
-      var osc = ctx.createOscillator();
-      var gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, ctx.currentTime + start);
-      gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + start + 0.01);
-      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + duration);
-      osc.start(ctx.currentTime + start);
-      osc.stop(ctx.currentTime + start + duration + 0.05);
-    }
-
-    // 3 bips crescentes — chamativo mas não irritante
-    beep(880, 0.0,  0.18, 0.8);
-    beep(880, 0.22, 0.18, 0.8);
-    beep(1100, 0.44, 0.30, 1.0);
-
-    // Fechar contexto após tocar
-    setTimeout(function() { ctx.close(); }, 1200);
-  } catch(e) {
-    console.warn('[Alerta] Web Audio não suportado:', e.message);
-  }
+    var ctx = _getAudioCtx();
+    if(!ctx) return;
+    ctx.resume().then(function() {
+      function beep(freq, start, duration, vol) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine'; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, ctx.currentTime + start);
+        gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + start + 0.01);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + duration);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + duration + 0.05);
+      }
+      beep(880,  0.0,  0.18, 0.8);
+      beep(880,  0.22, 0.18, 0.8);
+      beep(1100, 0.44, 0.30, 1.0);
+    });
+  } catch(e) { console.warn('[Alerta] Web Audio não suportado:', e.message); }
 }
 
 function showToast(icon, title, msg) {
