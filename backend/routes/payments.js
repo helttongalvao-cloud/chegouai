@@ -412,7 +412,19 @@ router.post('/webhook', async (req, res) => {
 
     if (type === 'order.paid') {
       if (!orderId) {
-        console.warn('[Webhook] order.paid sem metadata.order_id:', data.id);
+        // Pagar.me às vezes não inclui metadata — busca pelo pagarme_order_id
+        console.warn('[Webhook] order.paid sem metadata.order_id, buscando por pagarme_order_id:', data.id);
+        const { data: pedidoFallback } = await supabaseAdmin
+          .from('pedidos')
+          .select('id')
+          .eq('pagarme_order_id', data.id)
+          .in('pagamento_status', ['aguardando', 'pendente'])
+          .maybeSingle();
+        if (!pedidoFallback) {
+          console.warn('[Webhook] Pedido não encontrado para pagarme_order_id:', data.id);
+          return;
+        }
+        await processarPagamentoAprovado(pedidoFallback.id, data.id);
         return;
       }
       await processarPagamentoAprovado(orderId, data.id);
