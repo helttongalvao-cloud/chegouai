@@ -186,6 +186,34 @@ router.post(
         if (cupomData.usos_atual >= cupomData.usos_max) {
           return res.status(400).json({ error: 'Cupom esgotado' });
         }
+        // Validações especiais para o cupom VOLTEI (frete grátis para clientes recorrentes)
+        if (cupomData.codigo === 'VOLTEI') {
+          if (!clienteId) return res.status(400).json({ error: 'Faça login para usar este cupom' });
+          if (subtotal < 30) return res.status(400).json({ error: 'Cupom VOLTEI válido para pedidos acima de R$ 30,00' });
+          const { data: pedidosAnt } = await supabaseAdmin
+            .from('pedidos')
+            .select('id')
+            .eq('cliente_id', clienteId)
+            .eq('pagamento_status', 'aprovado')
+            .limit(1);
+          if (!pedidosAnt || pedidosAnt.length === 0) {
+            return res.status(400).json({ error: 'Este cupom é exclusivo para quem já fez um pedido antes' });
+          }
+          // Aplica frete grátis — o desconto cobre a taxa de entrega
+          cupomCodigo = cupomData.codigo;
+          // Incrementar uso
+          const { data: cupomAtualizado } = await supabaseAdmin
+            .from('cupons')
+            .update({ usos_atual: cupomData.usos_atual + 1 })
+            .eq('id', cupomData.id)
+            .lt('usos_atual', cupomData.usos_max)
+            .select('id');
+          if (!cupomAtualizado || cupomAtualizado.length === 0) {
+            return res.status(400).json({ error: 'Cupom esgotado' });
+          }
+          // Frete será zerado em 5b abaixo via flag
+          req.body.freteGratis = true;
+        } else {
         if (cupomData.desconto_tipo === 'percentual') {
           desconto = parseFloat((subtotal * cupomData.desconto_valor / 100).toFixed(2));
         } else {
@@ -202,6 +230,7 @@ router.post(
         if (!cupomAtualizado || cupomAtualizado.length === 0) {
           return res.status(400).json({ error: 'Cupom esgotado' });
         }
+        } // fim else (cupons normais)
       }
 
       // 5. Calcular taxa de entrega final — calculada por distância para ambos os tipos
