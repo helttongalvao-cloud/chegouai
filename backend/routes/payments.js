@@ -52,15 +52,19 @@ async function salvarCobranca(pedidoId, pagarmeOrderId, split) {
 
 // ─── Helper: processar pagamento aprovado (idempotente) ──────────────────
 async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
+  console.log(`[Processar] Iniciando: orderId=${orderId} pagarmeId=${pagarmeOrderId}`);
   // Atomic: WHERE pagamento_status != 'aprovado' garante que apenas uma execução
   // concorrente (webhook duplicado ou cartão + webhook) insere os repasses
-  const { data: pedido } = await supabaseAdmin
+  const { data: pedido, error: updateError } = await supabaseAdmin
     .from('pedidos')
     .update({ pagamento_status: 'aprovado', status: 'aceito', pagarme_order_id: pagarmeOrderId })
     .eq('id', orderId)
     .neq('pagamento_status', 'aprovado')
     .select('subtotal, taxa_entrega, total, forma_pagamento, guest_nome, endereco_entrega, profiles(nome), estabelecimentos(tipo_entrega, user_id, nome, whatsapp), itens_pedido(qtd, nome)')
     .maybeSingle();
+
+  if (updateError) console.error(`[Processar] Erro Supabase:`, updateError.message);
+  console.log(`[Processar] Update resultado: ${pedido ? 'OK' : 'null (0 linhas afetadas)'}`);
 
   if (!pedido) {
     console.log(`[Pagar.me] Pedido ${orderId} já processado — ignorando`);
