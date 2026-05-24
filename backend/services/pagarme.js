@@ -425,9 +425,8 @@ function verificarWebhook(req) {
 
   const authHeader = req.headers['authorization'];
 
-  // Pagar.me pode não enviar Basic Auth dependendo da configuração —
-  // se não vier header, aceitar (evita 401 e retentativas infinitas)
-  if (!authHeader) return true;
+  // Se não vier header de auth, rejeitar (mais seguro)
+  if (!authHeader) return false;
 
   if (!authHeader.startsWith('Basic ')) return false;
 
