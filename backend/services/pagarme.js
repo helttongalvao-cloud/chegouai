@@ -186,10 +186,25 @@ async function criarCobrancaPix({ total, orderId, customerId, splitRules }) {
   };
 
   const order  = await pagarmeRequest('POST', '/orders', body);
-  console.log('[Pagar.me Pix] order.status:', order.status, '| charges count:', order.charges?.length);
-  console.log('[Pagar.me Pix] last_transaction:', JSON.stringify(order.charges?.[0]?.last_transaction));
-  const charge = order.charges?.[0];
-  const pix    = charge?.last_transaction;
+  console.log('[Pagar.me Pix] order.status:', order.status, '| charges:', order.charges?.length);
+
+  let charge = order.charges?.[0];
+  let pix    = charge?.last_transaction;
+
+  // Se qr_code não veio na criação, busca o charge diretamente (retry até 3x)
+  if (charge?.id && !pix?.qr_code) {
+    for (let t = 1; t <= 3; t++) {
+      await new Promise(r => setTimeout(r, 800 * t));
+      try {
+        const chargeData = await pagarmeRequest('GET', `/charges/${charge.id}`);
+        pix = chargeData.last_transaction;
+        console.log(`[Pagar.me Pix] Retry ${t} charge/${charge.id}: qr_code=${!!pix?.qr_code}`);
+        if (pix?.qr_code) break;
+      } catch(e) { console.error('[Pagar.me Pix] Retry erro:', e.message); }
+    }
+  }
+
+  console.log('[Pagar.me Pix] qr_code presente:', !!pix?.qr_code);
 
   return {
     orderId: order.id,

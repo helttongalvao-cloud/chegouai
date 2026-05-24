@@ -473,8 +473,9 @@ router.get('/status/:pedidoId', [
       try {
         const { buscarPedido } = require('../services/pagarme');
         const order = await buscarPedido(pagarmeId);
-        console.log('[Status fallback] Pagar.me order status:', order.status);
+        console.log('[Status fallback] Pagar.me order status:', order.status, '| pedido:', req.params.pedidoId);
         if (order.status === 'paid') {
+          console.warn('[Status fallback] ⚠️ Aprovando via polling — Pagar.me retornou paid para', pagarmeId);
           // Garantir pagarme_order_id no DB caso salvarCobranca tenha falhado
           if (!pedido.pagarme_order_id) {
             await supabaseAdmin.from('pedidos').update({ pagarme_order_id: pagarmeId }).eq('id', pedido.id);
