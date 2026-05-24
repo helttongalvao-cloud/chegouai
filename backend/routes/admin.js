@@ -655,11 +655,10 @@ router.get('/cupons', async (req, res, next) => {
       .order('id', { ascending: false });
     if (error) {
       console.error('[Admin] Erro ao listar cupons:', error.message, error.code);
-      // Tabela pode não existir — retornar lista vazia em vez de erro 500
       if (error.code === '42P01' || error.message?.includes('does not exist')) {
         return res.json([]);
       }
-      throw error;
+      return res.status(500).json({ error: `Cupons: ${error.message} (code: ${error.code})` });
     }
     res.json(data || []);
   } catch (err) { next(err); }
