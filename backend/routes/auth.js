@@ -63,14 +63,38 @@ router.post('/register', validateRegister, async (req, res, next) => {
     }
 
     // Criar usuário no Supabase Auth com e-mail interno
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    let { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: emailInterno,
       password: senha,
       email_confirm: true,
       user_metadata: { nome, telefone: telLimpo },
     });
 
-    if (authError) throw authError;
+    // Se o email já existe no Auth mas não há perfil (usuário órfão de cadastro incompleto),
+    // deletar o auth user antigo e recriar
+    if (authError && authError.message && authError.message.toLowerCase().includes('already been registered')) {
+      const { data: usuariosExistentes } = await supabaseAdmin.auth.admin.listUsers();
+      const orphan = usuariosExistentes?.users?.find((u) => u.email === emailInterno);
+      if (orphan) {
+        await supabaseAdmin.auth.admin.deleteUser(orphan.id);
+        const resultado = await supabaseAdmin.auth.admin.createUser({
+          email: emailInterno,
+          password: senha,
+          email_confirm: true,
+          user_metadata: { nome, telefone: telLimpo },
+        });
+        authData = resultado.data;
+        authError = resultado.error;
+      }
+    }
+
+    if (authError) {
+      const msg = authError.message || '';
+      if (msg.toLowerCase().includes('already been registered')) {
+        return res.status(409).json({ error: 'Telefone já cadastrado. Tente fazer login.' });
+      }
+      throw authError;
+    }
 
     // Atualizar perfil criado pelo trigger
     const { error: profileError } = await supabaseAdmin
