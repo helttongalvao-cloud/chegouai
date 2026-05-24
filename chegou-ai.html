@@ -6225,6 +6225,12 @@ function renderFaseEntrega(pedido, fase) {
       '</div>' +
     '</div>';
 
+  var cabecalhoPedido =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">' +
+      '<span style="font-size:12px;color:var(--texto2);">Pedido</span>' +
+      '<span style="font-size:16px;font-weight:900;color:var(--verde);font-family:monospace;letter-spacing:2px;">#' + codigo + '</span>' +
+    '</div>';
+
   var conteudo = '';
 
   if(fase === 'indo_loja') {
@@ -6287,6 +6293,7 @@ function renderFaseEntrega(pedido, fase) {
   }
 
   return '<div class="entrega-card" style="border-color:var(--verde);">' +
+    cabecalhoPedido +
     progressoHtml +
     conteudo +
   '</div>';
