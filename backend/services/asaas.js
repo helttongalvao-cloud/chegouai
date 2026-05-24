@@ -94,8 +94,14 @@ async function criarCobrancaPix({ total, orderId, customerId, split }) {
 
   const cobranca = await asaasRequest('POST', '/payments', body);
 
-  // Buscar QR code
-  const pixData = await asaasRequest('GET', `/payments/${cobranca.id}/pixQrCode`);
+  // Buscar QR code — Asaas pode demorar alguns ms para gerar; retenta até 3x
+  let pixData = {};
+  for (let tentativa = 1; tentativa <= 3; tentativa++) {
+    if (tentativa > 1) await new Promise(r => setTimeout(r, 1200 * tentativa));
+    pixData = await asaasRequest('GET', `/payments/${cobranca.id}/pixQrCode`);
+    console.log(`[Asaas] pixQrCode tentativa ${tentativa}:`, JSON.stringify(pixData).substring(0, 300));
+    if (pixData.payload || pixData.encodedImage) break;
+  }
 
   return {
     chargeId: cobranca.id,
