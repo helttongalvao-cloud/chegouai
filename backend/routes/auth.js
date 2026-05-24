@@ -59,7 +59,13 @@ router.post('/register', validateRegister, async (req, res, next) => {
       .maybeSingle();
 
     if (existente) {
-      return res.status(409).json({ error: 'Telefone já cadastrado' });
+      // Verificar se o auth user correspondente existe — se não, é perfil órfão; limpar e prosseguir
+      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(existente.id);
+      if (authUser?.user) {
+        return res.status(409).json({ error: 'Telefone já cadastrado. Tente fazer login.' });
+      }
+      // Perfil sem auth user — remover o órfão e permitir novo cadastro
+      await supabaseAdmin.from('profiles').delete().eq('id', existente.id);
     }
 
     // Criar usuário no Supabase Auth com e-mail interno
