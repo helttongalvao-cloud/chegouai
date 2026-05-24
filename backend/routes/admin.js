@@ -720,6 +720,17 @@ router.patch('/cupons/:id', async (req, res, next) => {
 });
 
 // =============================================
+// POST /api/admin/aviso — Definir ou limpar aviso na home
+// =============================================
+router.post('/aviso', async (req, res, next) => {
+  try {
+    const { setAviso } = require('../services/aviso');
+    await setAviso(req.body.texto || '');
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // POST /api/admin/push-broadcast — Notificação para todos os clientes
 // =============================================
 router.post('/push-broadcast', async (req, res, next) => {

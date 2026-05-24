@@ -697,6 +697,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     </div>
   </div>
 
+  <div id="banner-aviso-home" style="display:none;background:linear-gradient(135deg,#FF6D00,#ff9800);color:#fff;font-size:14px;font-weight:600;padding:12px 16px;text-align:center;line-height:1.4;"></div>
+
   <div class="home-content">
     <!-- Saudação -->
     <div class="home-greeting" id="home-greeting" style="padding:16px 0 12px;">Olá! O que vai <span>pedir?</span></div>
@@ -1302,6 +1304,15 @@ async function inicializarApp() {
   } catch(e) {
     console.warn('[Config] Erro ao carregar config do servidor:', e.message);
   }
+  // Carregar aviso da home
+  try {
+    var av = await fetch('/api/aviso').then(function(r){ return r.json(); });
+    var bannerEl = document.getElementById('banner-aviso-home');
+    if(bannerEl && av.aviso) {
+      bannerEl.textContent = av.aviso;
+      bannerEl.style.display = 'block';
+    }
+  } catch(_) {}
 }
 inicializarApp();
 
@@ -6687,6 +6698,9 @@ async function renderAdminCupons() {
 
     var broadcastHtml =
       '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:16px;margin-top:16px;">' +
+      '<h4 style="margin-bottom:12px;font-size:14px;">Aviso na tela inicial do app</h4>' +
+      '<textarea id="aviso-texto" placeholder="Digite o aviso que vai aparecer para todos (deixe em branco para remover)" rows="2" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;margin-bottom:8px;box-sizing:border-box;resize:vertical;font-family:inherit;"></textarea>' +
+      '<button class="btn-principal" onclick="salvarAviso()" style="padding:12px;margin-bottom:16px;">Salvar aviso</button>' +
       '<h4 style="margin-bottom:12px;font-size:14px;">Enviar notificação para todos os clientes</h4>' +
       '<input type="text" id="bc-titulo" placeholder="Título da notificação" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;margin-bottom:8px;box-sizing:border-box;">' +
       '<textarea id="bc-corpo" placeholder="Mensagem..." rows="3" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;margin-bottom:8px;box-sizing:border-box;resize:vertical;font-family:inherit;"></textarea>' +
@@ -6709,6 +6723,14 @@ async function criarCupom() {
   try {
     await apiCall('/api/admin/cupons', { method: 'POST', body: { codigo, desconto_tipo: tipo, desconto_valor: valor, usos_max: usos, validade: validade || null } });
     renderAdminCupons();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function salvarAviso() {
+  var texto = (document.getElementById('aviso-texto').value || '').trim();
+  try {
+    await apiCall('/api/admin/aviso', { method: 'POST', body: { texto } });
+    alert(texto ? 'Aviso publicado na home!' : 'Aviso removido.');
   } catch(e) { alert('Erro: ' + e.message); }
 }
 

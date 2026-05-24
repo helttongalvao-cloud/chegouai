@@ -176,6 +176,17 @@ app.get('/api/config', (req, res) => {
 });
 
 // =============================================
+// AVISO HOME — Banner público para todos os usuários
+// =============================================
+app.get('/api/aviso', async (req, res) => {
+  try {
+    const { getAviso } = require('./services/aviso');
+    const texto = await getAviso();
+    res.json({ aviso: texto || '' });
+  } catch (_) { res.json({ aviso: '' }); }
+});
+
+// =============================================
 // GEOCODE PROXY — evita bloqueio do Nominatim no browser
 // =============================================
 app.get('/api/geocode', async (req, res) => {
