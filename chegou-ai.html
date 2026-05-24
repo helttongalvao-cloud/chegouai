@@ -2479,7 +2479,7 @@ async function cadastrarCliente() {
       method: 'POST',
       body,
     });
-    mostrarToast('✅ Conta criada! Faça login para continuar.');
+    showToast('✅', 'Conta criada!', 'Faça login para continuar.');
     irTela('tela-login');
   } catch(e) {
     alert(e.message || 'Erro ao criar conta. Tente novamente.');
