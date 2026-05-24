@@ -2295,8 +2295,26 @@ setTimeout(function(){
     // verificarSessao() valida em background e desloga se token expirou
     entrarComo(currentUser.perfil);
   } else if(pedidoAtualId) {
-    // Pedido ativo guest para rastrear
-    irTela('tela-confirmado'); ultimoStatusConhecido = {}; iniciarPollingPedidos();
+    // Pedido ativo guest — verificar se já foi pago antes de mostrar confirmado
+    apiCall('/api/orders/' + pedidoAtualId).then(function(resp) {
+      var pagamentoOk = resp && (resp.pagamento_status === 'aprovado' || resp.forma_pagamento === 'dinheiro');
+      var statusFinal = ['entregue', 'cancelado'];
+      var recente = resp && resp.criado_em && (Date.now() - new Date(resp.criado_em).getTime()) < 6 * 60 * 60 * 1000;
+      if(pagamentoOk && recente && resp.status && statusFinal.indexOf(resp.status) === -1) {
+        irTela('tela-confirmado'); ultimoStatusConhecido = {}; iniciarPollingPedidos();
+      } else if(resp && resp.pagamento_status === 'aguardando' && resp.forma_pagamento === 'pix') {
+        // Pix gerado mas não pago — reapresenta QR code
+        pagarPix(pedidoAtualId);
+      } else {
+        pedidoAtualId = null;
+        localStorage.removeItem('chegouai_pedido_id');
+        irTela('tela-login');
+      }
+    }).catch(function() {
+      pedidoAtualId = null;
+      localStorage.removeItem('chegouai_pedido_id');
+      irTela('tela-login');
+    });
   } else {
     // Mostrar boas-vindas até 2x por dispositivo
     var bvisto = parseInt(localStorage.getItem('chegouai_bvisto') || '0');
@@ -7881,9 +7899,9 @@ function atualizarRastreioPedido(status) {
   if(tituloEl) tituloEl.textContent = info.titulo;
   if(subEl) subEl.textContent = info.sub;
 
-  // Botão cancelar só quando pendente
+  // Botão cancelar só quando recebido (ainda não aceito pela loja)
   var btnCancelar = document.getElementById('btn-cancelar-pedido-wrap');
-  if(btnCancelar) btnCancelar.style.display = (status === 'pendente') ? 'block' : 'none';
+  if(btnCancelar) btnCancelar.style.display = (status === 'recebido') ? 'block' : 'none';
 
   // Botão de chat — disponível desde o aceite do pedido
   var btnChatRastreio = document.getElementById('btn-chat-rastreio');
