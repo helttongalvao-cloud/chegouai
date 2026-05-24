@@ -171,7 +171,7 @@ router.post(
       let cupomCodigo = null;
       if (cupom) {
         const { data: cupomData, error: cupomErr } = await supabaseAdmin
-          .from('cupons')
+          .from('cupons_plataforma')
           .select('*')
           .eq('codigo', cupom.toUpperCase())
           .eq('ativo', true)
@@ -203,7 +203,7 @@ router.post(
           cupomCodigo = cupomData.codigo;
           // Incrementar uso
           const { data: cupomAtualizado } = await supabaseAdmin
-            .from('cupons')
+            .from('cupons_plataforma')
             .update({ usos_atual: cupomData.usos_atual + 1 })
             .eq('id', cupomData.id)
             .lt('usos_atual', cupomData.usos_max)
@@ -222,7 +222,7 @@ router.post(
         cupomCodigo = cupomData.codigo;
         // Incrementar uso atomicamente — só atualiza se ainda abaixo do limite (evita race condition)
         const { data: cupomAtualizado } = await supabaseAdmin
-          .from('cupons')
+          .from('cupons_plataforma')
           .update({ usos_atual: cupomData.usos_atual + 1 })
           .eq('id', cupomData.id)
           .lt('usos_atual', cupomData.usos_max)
@@ -347,7 +347,7 @@ router.get('/cupom/:codigo', requireAuth, async (req, res, next) => {
     const codigo = req.params.codigo.toUpperCase();
 
     const { data: cupom, error } = await supabaseAdmin
-      .from('cupons')
+      .from('cupons_plataforma')
       .select('*')
       .eq('codigo', codigo)
       .eq('ativo', true)

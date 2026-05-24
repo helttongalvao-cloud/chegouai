@@ -650,7 +650,7 @@ router.delete('/motoboys/:id', async (req, res, next) => {
 router.get('/cupons', async (req, res, next) => {
   try {
     const { data, error } = await supabaseAdmin
-      .from('cupons')
+      .from('cupons_plataforma')
       .select('*')
       .order('id', { ascending: false });
     if (error) {
@@ -684,7 +684,7 @@ router.post(
     const { codigo, desconto_tipo, desconto_valor, usos_max, validade } = req.body;
     try {
       const { data, error } = await supabaseAdmin
-        .from('cupons')
+        .from('cupons_plataforma')
         .insert({
           codigo: codigo.toUpperCase(),
           desconto_tipo,
@@ -710,7 +710,7 @@ router.patch('/cupons/:id', async (req, res, next) => {
   try {
     const { ativo } = req.body;
     const { data, error } = await supabaseAdmin
-      .from('cupons')
+      .from('cupons_plataforma')
       .update({ ativo: !!ativo })
       .eq('id', req.params.id)
       .select()
