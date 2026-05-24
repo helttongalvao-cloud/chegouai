@@ -3605,26 +3605,8 @@ function irCheckout() {
   }).join('');
 
   // Mostrar endereços salvos
-  var endSalvos = JSON.parse(localStorage.getItem('chegouai_enderecos') || '[]');
-  // Filtrar entradas inválidas (textos de display sem informação real)
-  endSalvos = endSalvos.filter(function(e) {
-    if(!e || e.trim().length < 3) return false;
-    if(/localiza[çc][aã]o/i.test(e) && !/Lat:\s*[-\d.]+/i.test(e)) return false;
-    return true;
-  });
-  localStorage.setItem('chegouai_enderecos', JSON.stringify(endSalvos));
   var endSalvoEl = document.getElementById('enderecos-salvos');
-  if(endSalvoEl && endSalvos.length > 0) {
-    endSalvoEl.style.display = 'block';
-    endSalvoEl.innerHTML = '<div style="font-size:12px;color:var(--texto2);margin-bottom:6px;">Endereços anteriores:</div>' +
-      endSalvos.slice(0,3).map(function(e) {
-        var ehCoordenada = /Lat:\s*[-\d.]+/i.test(e);
-        var label = ehCoordenada ? '📍 GPS salvo (toque para usar)' : '📍 ' + sanitizar(e);
-        return '<div onclick="usarEnderecoSalvo(\'' + e.replace(/'/g, "\\'") + '\')" style="padding:8px 12px;border:1.5px solid var(--cinza3);border-radius:8px;font-size:13px;cursor:pointer;margin-bottom:4px;background:var(--cinza2);">' + label + '</div>';
-      }).join('');
-  } else if(endSalvoEl) {
-    endSalvoEl.style.display = 'none';
-  }
+  if(endSalvoEl) endSalvoEl.style.display = 'none';
   
   // Resetar mapa picker e link ao abrir checkout
   if(mapPicker) { mapPicker.remove(); mapPicker = null; pinPicker = null; }
