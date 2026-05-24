@@ -652,7 +652,7 @@ router.get('/cupons', async (req, res, next) => {
     const { data, error } = await supabaseAdmin
       .from('cupons')
       .select('*')
-      .order('criado_em', { ascending: false });
+      .order('id', { ascending: false });
     if (error) throw error;
     res.json(data);
   } catch (err) { next(err); }
