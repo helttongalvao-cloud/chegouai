@@ -884,6 +884,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div id="mapa-picker-wrap" style="display:none;margin-top:10px;">
         <div id="mapa-picker" style="height:220px;border-radius:12px;overflow:hidden;border:1.5px solid var(--cinza3);"></div>
         <div style="font-size:12px;color:var(--texto2);margin-top:6px;text-align:center;">📌 Arraste o mapa para ajustar o ponto de entrega</div>
+        <button id="btn-confirmar-localizacao" onclick="confirmarLocalizacaoMapa()" style="width:100%;margin-top:8px;padding:12px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:14px;font-weight:700;cursor:pointer;">✓ Confirmar localização</button>
       </div>
       <div id="link-gmaps-wrap" style="display:none;margin-top:10px;">
         <div style="font-size:12px;color:var(--texto2);margin-bottom:8px;line-height:1.4;">
@@ -2227,6 +2228,7 @@ function calcularTaxaEntrega(distanciaKm) {
 // Coordenadas GPS do cliente (capturadas ao usar "minha localização")
 var clienteLat = null;
 var clienteLng = null;
+var localizacaoConfirmada = false;
 
 // Modelo progressivo de comissão
 function calcularComissao(cadastroMes) {
@@ -3771,6 +3773,12 @@ async function confirmarPedido() {
       alert('Use o botão 📡 "Minha localização" para confirmar onde você está');
       return;
     }
+    var mapaAberto = document.getElementById('mapa-picker-wrap')?.style.display !== 'none';
+    if(mapaAberto && !localizacaoConfirmada) {
+      alert('Confirme sua localização no mapa antes de continuar');
+      document.getElementById('btn-confirmar-localizacao')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
   }
 
   if(!estAtual || !estAtual.id) { alert('Erro: estabelecimento não identificado. Volte ao cardápio e tente novamente.'); return; }
@@ -3992,6 +4000,10 @@ function mostrarMapaPicker(lat, lng, zoom) {
   if(!wrap) return;
   var zoomInicial = zoom || 17;
   wrap.style.display = 'block';
+  // Resetar confirmação ao abrir/atualizar mapa
+  localizacaoConfirmada = false;
+  var btnConf = document.getElementById('btn-confirmar-localizacao');
+  if(btnConf) { btnConf.textContent = '✓ Confirmar localização'; btnConf.style.background = 'var(--cinza3)'; btnConf.style.color = 'var(--texto)'; btnConf.style.border = '1.5px solid var(--cinza3)'; btnConf.disabled = false; }
   // Guardar lat/lng no dataset do campo; exibir label amigável
   endInput.dataset.latLng = 'Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6);
   endInput.value = '📍 Localização selecionada no mapa';
@@ -4033,6 +4045,18 @@ function mostrarMapaPicker(lat, lng, zoom) {
     mapPicker.invalidateSize();
   }
   simularFrete(endInput.dataset.latLng || '');
+}
+
+function confirmarLocalizacaoMapa() {
+  localizacaoConfirmada = true;
+  var btn = document.getElementById('btn-confirmar-localizacao');
+  if(btn) {
+    btn.textContent = '✅ Localização confirmada';
+    btn.style.background = 'var(--verde)';
+    btn.style.color = '#000';
+    btn.style.border = '1.5px solid var(--verde)';
+    btn.disabled = true;
+  }
 }
 
 // CACHE DO ESTABELECIMENTO
