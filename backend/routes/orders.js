@@ -180,7 +180,7 @@ router.post(
         if (cupomErr || !cupomData) {
           return res.status(400).json({ error: 'Cupom inválido ou expirado' });
         }
-        if (cupomData.validade && new Date(cupomData.validade) < new Date()) {
+        if (cupomData.validade && new Date(cupomData.validade) < new Date(new Date().toDateString())) {
           return res.status(400).json({ error: 'Cupom expirado' });
         }
         if (cupomData.usos_atual >= cupomData.usos_max) {
@@ -356,8 +356,26 @@ router.get('/cupom/:codigo', requireAuth, async (req, res, next) => {
       .single();
 
     if (error || !cupom) return res.status(404).json({ error: 'Cupom não encontrado ou inativo' });
-    if (cupom.validade && new Date(cupom.validade) < new Date()) return res.status(400).json({ error: 'Cupom expirado' });
+    // Comparar só a data (sem hora) para evitar problema de fuso horário
+    if (cupom.validade) {
+      const valDate = new Date(cupom.validade);
+      const hoje = new Date(); hoje.setHours(23, 59, 59, 999);
+      if (valDate < new Date(new Date().toDateString())) return res.status(400).json({ error: 'Cupom expirado' });
+    }
     if (cupom.usos_atual >= cupom.usos_max) return res.status(400).json({ error: 'Cupom esgotado' });
+
+    // VOLTEI: frete grátis para clientes recorrentes com pedido >= R$30
+    if (cupom.codigo === 'VOLTEI') {
+      if (subtotal < 30) return res.status(400).json({ error: 'Cupom VOLTEI válido para pedidos acima de R$ 30,00' });
+      const clienteId = req.user?.profile?.id || req.user?.id;
+      if (!clienteId) return res.status(400).json({ error: 'Faça login para usar este cupom' });
+      const { data: pedidosAnt } = await supabaseAdmin
+        .from('pedidos').select('id').eq('cliente_id', clienteId).eq('pagamento_status', 'aprovado').limit(1);
+      if (!pedidosAnt || pedidosAnt.length === 0) {
+        return res.status(400).json({ error: 'Este cupom é exclusivo para quem já fez um pedido antes' });
+      }
+      return res.json({ codigo: cupom.codigo, desconto_tipo: 'frete_gratis', desconto_valor: 0, desconto: 0, freteGratis: true });
+    }
 
     let desconto = 0;
     if (cupom.desconto_tipo === 'percentual') {

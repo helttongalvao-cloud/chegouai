@@ -3703,18 +3703,24 @@ async function aplicarCupom() {
     var resp = await apiCall('/api/orders/cupom/' + encodeURIComponent(codigo) + '?subtotal=' + subtotal);
     cupomAplicado = resp;
     resultEl.style.color = 'var(--verde)';
-    resultEl.textContent = '✅ Cupom aplicado! Desconto: R$ ' + parseFloat(resp.desconto).toFixed(2).replace('.',',');
-    // Atualizar total exibido
     var descontoEl = document.getElementById('desconto-valor');
     var descontoLbl = document.getElementById('desconto-label');
     var linhaDesc = document.getElementById('linha-desconto');
-    if(descontoEl) descontoEl.textContent = '-R$ ' + parseFloat(resp.desconto).toFixed(2).replace('.',',');
-    if(descontoLbl) descontoLbl.textContent = 'Cupom ' + codigo;
-    if(linhaDesc) linhaDesc.style.display = 'flex';
-    // Recalc total
     var taxa = window.taxaEntregaSimulada || 0;
     var totalEl = document.getElementById('total-valor');
-    if(totalEl) totalEl.textContent = 'R$ ' + Math.max(0, subtotal + taxa - resp.desconto).toFixed(2).replace('.',',');
+    if(resp.freteGratis) {
+      resultEl.textContent = '✅ Frete grátis aplicado!';
+      if(descontoEl) descontoEl.textContent = '-R$ ' + parseFloat(taxa).toFixed(2).replace('.',',');
+      if(descontoLbl) descontoLbl.textContent = 'Frete grátis (VOLTEI)';
+      if(linhaDesc) linhaDesc.style.display = 'flex';
+      if(totalEl) totalEl.textContent = 'R$ ' + Math.max(0, subtotal).toFixed(2).replace('.',',');
+    } else {
+      resultEl.textContent = '✅ Cupom aplicado! Desconto: R$ ' + parseFloat(resp.desconto).toFixed(2).replace('.',',');
+      if(descontoEl) descontoEl.textContent = '-R$ ' + parseFloat(resp.desconto).toFixed(2).replace('.',',');
+      if(descontoLbl) descontoLbl.textContent = 'Cupom ' + codigo;
+      if(linhaDesc) linhaDesc.style.display = 'flex';
+      if(totalEl) totalEl.textContent = 'R$ ' + Math.max(0, subtotal + taxa - resp.desconto).toFixed(2).replace('.',',');
+    }
   } catch(e) {
     cupomAplicado = null;
     resultEl.style.color = 'var(--erro)';
