@@ -3628,7 +3628,7 @@ function irCheckout() {
   var secaoCupom = document.getElementById('secao-cupom');
   var campoCpf = document.getElementById('campo-cpf-pix');
   if(secaoGuest) secaoGuest.style.display = !authToken ? '' : 'none';
-  if(secaoCupom) secaoCupom.style.display = !authToken ? 'none' : '';
+  if(secaoCupom) secaoCupom.style.display = '';
   if(campoCpf && !authToken) campoCpf.style.display = 'block';
   // Pré-preencher telefone se já logado e verificar frete grátis
   if(authToken && currentUser && currentUser.telefone) {
