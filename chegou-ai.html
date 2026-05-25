@@ -3100,7 +3100,7 @@ window.addEventListener('DOMContentLoaded', function() {
         ultimoStatusConhecido = {};
         irTela('tela-confirmado');
         iniciarPollingPedidos();
-      } else if(resp && resp.pagamento_status === 'aguardando' && resp.forma_pagamento === 'pix') {
+      } else if(resp && resp.pagamento_status === 'aguardando' && resp.forma_pagamento === 'pix' && recente && ['cancelado','entregue'].indexOf(resp.status) === -1) {
         pagarPix(pedidoAtualId);
       } else {
         pedidoAtualId = null;
@@ -3115,6 +3115,12 @@ window.addEventListener('DOMContentLoaded', function() {
   } else {
     irTela('tela-login');
   }
+
+  // Segurança: se ainda na splash após 3s (ex: Pix expirado, token em retry), vai para login
+  setTimeout(function() {
+    var tela = document.querySelector('.tela.ativa');
+    if(tela && tela.id === 'tela-splash') irTela('tela-login');
+  }, 3000);
 });
 
 // CARDÁPIO
@@ -7521,12 +7527,16 @@ if('serviceWorker' in navigator) {
       } catch(e2) { /* refresh falhou */ }
     }
 
-    // Tudo falhou: limpar sessão
+    // Tudo falhou: limpar sessão e redirecionar para login
     authToken = null;
     currentUser = null;
     localStorage.removeItem('chegouai_token');
     localStorage.removeItem('chegouai_user');
     localStorage.removeItem('chegouai_refresh');
+    var telaFalha = document.querySelector('.tela.ativa');
+    if(!telaFalha || telaFalha.id === 'tela-splash' || telaFalha.id === 'tela-login') {
+      irTela('tela-login');
+    }
   }
 })();
 
