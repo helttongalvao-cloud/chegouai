@@ -94,11 +94,12 @@ async function criarOuBuscarCliente({ nome, email, cpf, telefone }) {
       const res = await pagarmeRequest('GET', `/customers?document=${doc}`);
       if (res.data?.length > 0) {
         const cliente = res.data[0];
-        // Se o cliente não tem telefone e temos um, atualiza antes de retornar
-        if (phonePayload && !cliente.phones?.mobile_phone) {
+        const nomeAtualizado = nome && nome.trim() && nome.trim() !== cliente.name;
+        const semTelefone = phonePayload && !cliente.phones?.mobile_phone;
+        if (nomeAtualizado || semTelefone) {
           await pagarmeRequest('PUT', `/customers/${cliente.id}`, {
-            name: cliente.name,
-            ...phonePayload,
+            name: nomeAtualizado ? nome.trim() : cliente.name,
+            ...(semTelefone ? phonePayload : {}),
           });
         }
         return cliente.id;
