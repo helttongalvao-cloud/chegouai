@@ -5804,8 +5804,8 @@ async function renderAdmin(secao) {
         '<input id="repasse-desde" type="date" value="' + desde + '" style="padding:6px 10px;border-radius:8px;border:1px solid var(--borda);background:var(--card);color:var(--texto);font-size:13px;">' +
         '<label style="font-size:13px;color:var(--texto2);">Até:</label>' +
         '<input id="repasse-ate" type="date" value="' + ate + '" style="padding:6px 10px;border-radius:8px;border:1px solid var(--borda);background:var(--card);color:var(--texto);font-size:13px;">' +
-        '<button class="btn-principal" style="font-size:13px;padding:7px 16px;" onclick="renderAdmin(\'repasses\')">Filtrar</button>' +
-        '<button class="btn-principal" style="font-size:12px;padding:7px 14px;background:var(--card);color:var(--texto2);border:1px solid var(--borda);" onclick="adminReconciliarRepasses(this)">🔄 Sincronizar</button>' +
+        '<button onclick="renderAdmin(\'repasses\')" style="padding:7px 18px;font-size:13px;font-weight:600;background:var(--verde);color:#fff;border:none;border-radius:8px;cursor:pointer;">Filtrar</button>' +
+        '<button onclick="adminReconciliarRepasses(this)" style="padding:7px 14px;font-size:12px;font-weight:500;background:var(--card);color:var(--texto2);border:1px solid var(--borda);border-radius:8px;cursor:pointer;">🔄 Sincronizar</button>' +
         '</div>';
       el.innerHTML = filtroHtml + resumoHtml + tabelaHtml;
     } catch(e) {

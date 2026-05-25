@@ -119,12 +119,12 @@ router.get('/repasses', async (req, res, next) => {
       .select(`
         *,
         motoboys (id, nome, telefone, chave_pix),
-        pedidos (id, total, subtotal, taxa_entrega, criado_em, estabelecimentos(id, nome), motoboys(id, nome, chave_pix))
+        pedidos!inner (id, total, subtotal, taxa_entrega, criado_em, estabelecimentos(id, nome), motoboys(id, nome, chave_pix))
       `)
       .order('criado_em', { ascending: false });
 
-    if (desde) query = query.gte('criado_em', desde);
-    if (ate) query = query.lte('criado_em', ate + 'T23:59:59');
+    if (desde) query = query.gte('pedidos.criado_em', desde);
+    if (ate) query = query.lte('pedidos.criado_em', ate + 'T23:59:59');
 
     const { data, error } = await query;
     if (error) throw error;
