@@ -885,7 +885,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       </div>
       <div id="mapa-picker-wrap" style="display:none;margin-top:10px;">
         <div id="mapa-picker" style="height:220px;border-radius:12px;overflow:hidden;border:1.5px solid var(--cinza3);"></div>
-        <div style="font-size:12px;color:var(--texto2);margin-top:6px;text-align:center;">📌 Arraste o mapa para ajustar o ponto de entrega</div>
+        <div style="font-size:12px;color:var(--texto2);margin-top:6px;text-align:center;">📌 Arraste o mapa até o <strong style="color:var(--texto);">portão da sua casa</strong> e confirme</div>
         <button id="btn-confirmar-localizacao" onclick="confirmarLocalizacaoMapa()" style="width:100%;margin-top:8px;padding:12px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:14px;font-weight:700;cursor:pointer;">✓ Confirmar localização</button>
       </div>
       <div id="link-gmaps-wrap" style="display:none;margin-top:10px;">
@@ -4035,7 +4035,8 @@ function mostrarMapaPicker(lat, lng, zoom) {
   if(!mapPicker) {
     mapPicker = L.map('mapa-picker', { zoomControl: true, attributionControl: false }).setView([lat, lng], zoomInicial);
     // Google Maps híbrido — satélite + ruas + nomes (melhor para cidades da Amazônia)
-    L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['0','1','2','3'] }).addTo(mapPicker);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, attribution: '' }).addTo(mapPicker);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, attribution: '' }).addTo(mapPicker);
     pinPicker = L.marker([lat, lng], { icon: pinIcon, draggable: true }).addTo(mapPicker);
     // Pin segue o centro do mapa ao arrastar o mapa (mais intuitivo no celular)
     mapPicker.on('move', function() {
