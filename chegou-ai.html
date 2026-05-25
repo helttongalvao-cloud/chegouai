@@ -3732,7 +3732,7 @@ async function aplicarCupom() {
     if(resp.freteGratis) {
       resultEl.textContent = '✅ Frete grátis aplicado!';
       if(descontoEl) descontoEl.textContent = '-R$ ' + parseFloat(taxa).toFixed(2).replace('.',',');
-      if(descontoLbl) descontoLbl.textContent = 'Frete grátis (VOLTEI)';
+      if(descontoLbl) descontoLbl.textContent = 'Frete grátis (' + codigo + ')';
       if(linhaDesc) linhaDesc.style.display = 'flex';
       if(totalEl) totalEl.textContent = 'R$ ' + Math.max(0, subtotal).toFixed(2).replace('.',',');
     } else {
@@ -6704,10 +6704,11 @@ async function renderAdminCupons() {
       : '<div class="tabela">' + cupons.map(function(c) {
           var validade = c.validade ? new Date(c.validade).toISOString().split('T')[0].split('-').reverse().join('/') : 'Sem validade';
           var ativo = c.ativo ? '<span style="color:var(--verde);">Ativo</span>' : '<span style="color:var(--erro);">Inativo</span>';
-          var descTxt = c.desconto_tipo === 'percentual' ? c.desconto_valor + '%' : 'R$ ' + parseFloat(c.desconto_valor).toFixed(2).replace('.',',');
+          var descTxt = c.frete_gratis ? '🚚 Frete grátis' : (c.desconto_tipo === 'percentual' ? c.desconto_valor + '%' : 'R$ ' + parseFloat(c.desconto_valor).toFixed(2).replace('.',','));
+          var usosTxt = c.usos_max >= 999999 ? c.usos_atual + '/∞' : c.usos_atual + '/' + c.usos_max;
           return '<div class="tabela-row">' +
             '<div class="info"><div class="nome">🎟️ ' + c.codigo + ' — ' + descTxt + '</div>' +
-            '<div class="sub">Usos: ' + c.usos_atual + '/' + c.usos_max + ' • Val: ' + validade + ' • ' + ativo + '</div></div>' +
+            '<div class="sub">Usos: ' + usosTxt + ' • Val: ' + validade + ' • ' + ativo + '</div></div>' +
             '<button onclick="toggleCupom(\'' + c.id + '\',' + (!c.ativo) + ',this)" style="padding:6px 12px;border-radius:8px;border:1.5px solid var(--cinza3);background:transparent;color:var(--texto);font-size:12px;cursor:pointer;">' + (c.ativo ? 'Desativar' : 'Ativar') + '</button>' +
           '</div>';
         }).join('') + '</div>';
