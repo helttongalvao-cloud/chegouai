@@ -4059,16 +4059,9 @@ async function confirmarLinkGMaps(btn) {
 }
 
 function _aplicarCoordsEntrega(lat, lng) {
-  var endInput = document.getElementById('endereco-entrega');
-  if(!endInput) return;
-  endInput.dataset.latLng = 'Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6);
-  endInput.value = '📍 Localização confirmada via link';
-  endInput.readOnly = true;
-  endInput.style.color = 'var(--verde)';
-  clienteLat = lat; clienteLng = lng;
-  simularFrete(endInput.dataset.latLng);
   document.getElementById('link-gmaps-wrap').style.display = 'none';
-  showToast('✅', 'Localização confirmada', 'Coordenadas extraídas com sucesso');
+  mostrarMapaPicker(lat, lng, 18);
+  showToast('✅', 'Localização encontrada', 'Ajuste o pin se necessário e confirme');
 }
 
 function mostrarMapaPicker(lat, lng, zoom) {
