@@ -141,10 +141,13 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
     );
   }
 
-  // WhatsApp para o admin
+  // WhatsApp + push para o admin
   alertarAdmin(
     `🔔 *Novo pedido pago*\n🏪 ${lojaInfo?.nome || 'Loja'}\n💰 ${valorStr}\n👤 ${clienteNome}`
   );
+  supabaseAdmin.from('profiles').select('id').eq('perfil', 'admin').then(({ data: admins }) => {
+    (admins || []).forEach(a => enviarPush(a.id, `🔔 Novo pedido — ${lojaInfo?.nome || 'Loja'}`, `${valorStr} · ${clienteNome}`, { pedidoId: orderId }));
+  });
 
   // Timer 40s: se lojista não mover para 'preparando', alertar admin
   setTimeout(async () => {

@@ -1195,6 +1195,15 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     </div>
     <button class="header-acao" onclick="irLogin()">Sair</button>
   </div>
+  <div id="banner-push-admin" style="display:none;background:#b71c1c;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;flex-direction:column;gap:8px;">
+    <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;">
+      <span>🔕 Ative as notificações para não precisar ficar olhando a tela</span>
+      <button onclick="var b=this;b.disabled=true;b.textContent='...';ativarNotificacoesPush().then(verificarBannerPush).finally(function(){b.disabled=false;b.textContent='Ativar';})" style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Ativar</button>
+    </div>
+  </div>
+  <div id="banner-push-admin-ok" style="display:none;background:#1b5e20;color:#fff;padding:8px 16px;font-size:12px;">
+    <span>🔔 Notificações ativas — você será avisado de cada pedido</span>
+  </div>
   <div class="admin-content">
     <div class="admin-stats">
       <div class="admin-stat destaque">
@@ -1463,8 +1472,15 @@ async function verificarBannerPush() {
 
   var bannerEst  = document.getElementById('banner-push-est');
   var bannerMoto = document.getElementById('banner-push-moto');
+  var bannerAdmin = document.getElementById('banner-push-admin');
   var bannerEstOk  = document.getElementById('banner-push-est-ok');
   var bannerMotoOk = document.getElementById('banner-push-moto-ok');
+  var bannerAdminOk = document.getElementById('banner-push-admin-ok');
+
+  if(bannerAdmin) {
+    bannerAdmin.style.display = (concedido && !precisaRenovar) ? 'none' : 'flex';
+    if(bannerAdminOk) bannerAdminOk.style.display = (concedido && !precisaRenovar) ? 'block' : 'none';
+  }
 
   [bannerEst, bannerMoto].forEach(function(b) {
     if(!b) return;
@@ -2423,7 +2439,7 @@ function entrarComo(perfil) {
       });
     }
   }
-  else if(perfil === 'admin') { renderAdmin('pedidos'); irTela('tela-admin'); }
+  else if(perfil === 'admin') { renderAdmin('pedidos'); irTela('tela-admin'); ativarNotificacoesPush().then(verificarBannerPush); verificarBannerPush(); }
 }
 
 function irCadastro() { irTela('tela-cadastro'); }
