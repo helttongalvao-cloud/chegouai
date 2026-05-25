@@ -4022,6 +4022,12 @@ async function confirmarLinkGMaps(btn) {
   erroEl.style.display = 'none';
   if(!texto) { erroEl.textContent = 'Cole um link ou coordenadas'; erroEl.style.display = 'block'; return; }
 
+  if(texto.includes('compartilhar=1')) {
+    erroEl.textContent = 'Este é o link para enviar — cole aqui o link que a pessoa te devolver com a localização dela.';
+    erroEl.style.display = 'block';
+    return;
+  }
+
   var coords = _extrairCoordsTexto(texto);
   if(coords) { _aplicarCoordsEntrega(coords.lat, coords.lng); return; }
 
