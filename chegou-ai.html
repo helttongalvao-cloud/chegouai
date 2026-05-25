@@ -889,14 +889,18 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <button id="btn-confirmar-localizacao" onclick="confirmarLocalizacaoMapa()" style="width:100%;margin-top:8px;padding:12px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:14px;font-weight:700;cursor:pointer;">✓ Confirmar localização</button>
       </div>
       <div id="link-gmaps-wrap" style="display:none;margin-top:10px;">
-        <div style="font-size:12px;color:var(--texto2);margin-bottom:10px;line-height:1.5;">
-          Envie o link abaixo para quem está em casa. Ela abre, toca em um botão e te manda as coordenadas. Cole aqui o link que ela te enviar.
+        <div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:12px;padding:12px;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:6px;">Passo 1 — Envie o link para quem está em casa</div>
+          <div style="font-size:12px;color:var(--texto2);margin-bottom:8px;line-height:1.5;">A pessoa abre o link, toca em um botão e te manda as coordenadas.</div>
+          <button onclick="gerarLinkCompartilhar()" style="width:100%;padding:10px;background:var(--cinza3);border:1.5px solid var(--verde);border-radius:10px;color:var(--verde);font-size:13px;font-weight:700;cursor:pointer;">📤 Copiar link para enviar</button>
         </div>
-        <button onclick="gerarLinkCompartilhar()" style="width:100%;padding:11px;margin-bottom:10px;background:var(--cinza3);border:1.5px solid var(--verde);border-radius:10px;color:var(--verde);font-size:13px;font-weight:700;cursor:pointer;">📤 Gerar link para quem está em casa</button>
-        <input type="text" id="input-link-gmaps" placeholder="Cole aqui o link que a pessoa te enviou..."
-          style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;">
-        <div id="link-gmaps-erro" style="font-size:12px;color:var(--erro);margin-top:4px;display:none;"></div>
-        <button onclick="confirmarLinkGMaps(this)" style="width:100%;padding:12px;margin-top:8px;background:var(--verde);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;cursor:pointer;">📍 Confirmar localização</button>
+        <div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:12px;padding:12px;">
+          <div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:6px;">Passo 2 — Cole o link que ela te enviou de volta</div>
+          <input type="text" id="input-link-gmaps" placeholder="Cole aqui o link recebido..."
+            style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza3);color:var(--texto);font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;">
+          <div id="link-gmaps-erro" style="font-size:12px;color:var(--erro);margin-top:4px;display:none;"></div>
+          <button onclick="confirmarLinkGMaps(this)" style="width:100%;padding:12px;margin-top:8px;background:var(--verde);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;cursor:pointer;">📍 Confirmar localização</button>
+        </div>
       </div>
       <label style="display:flex;align-items:center;margin-top:8px;font-size:14px;color:var(--texto);cursor:pointer;">
         <input type="checkbox" id="salvar-endereco" checked style="margin-right:8px;accent-color:var(--verde);">
