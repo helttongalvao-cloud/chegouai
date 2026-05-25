@@ -940,6 +940,26 @@ router.get('/me/extrato-repasse', requireRole('estabelecimento'), async (req, re
       .gte('criado_em', desde)
       .order('criado_em', { ascending: false });
 
+    // Reconciliar: criar repasses faltantes para pedidos aprovados sem entrada na tabela
+    if ((pedidos || []).length > 0) {
+      const pedidoIds = pedidos.map(p => p.id);
+      const { data: repassesExist } = await supabaseAdmin
+        .from('repasses').select('pedido_id').eq('tipo', 'lojista').in('pedido_id', pedidoIds);
+      const comRepasse = new Set((repassesExist || []).map(r => r.pedido_id));
+      const { calcularSplit } = require('../services/commission');
+      const faltando = pedidos.filter(p => !comRepasse.has(p.id));
+      if (faltando.length > 0) {
+        const novos = faltando.map(p => {
+          const split = calcularSplit({ subtotal: p.subtotal, taxaEntrega: p.taxa_entrega, formaPagamento: p.forma_pagamento, tipoEntrega: est.tipo_entrega });
+          const rows = [{ pedido_id: p.id, tipo: 'lojista', valor: split.valorLojista, status: 'pendente' },
+                        { pedido_id: p.id, tipo: 'plataforma', valor: split.valorPlataforma, status: 'pago' }];
+          if (split.valorMotoboy > 0) rows.splice(1, 0, { pedido_id: p.id, tipo: 'motoboy', valor: split.valorMotoboy, status: 'pendente' });
+          return rows;
+        }).flat();
+        await supabaseAdmin.from('repasses').insert(novos);
+      }
+    }
+
     const lista = (pedidos || []).map(p => {
       const subtotal = parseFloat(p.subtotal || 0);
       const taxa     = parseFloat(p.taxa_entrega || 0);
