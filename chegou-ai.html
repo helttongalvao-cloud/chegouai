@@ -3974,8 +3974,8 @@ async function confirmarLinkGMaps(btn) {
   var coords = _extrairCoordsTexto(texto);
   if(coords) { _aplicarCoordsEntrega(coords.lat, coords.lng); return; }
 
-  // Link encurtado — pedir ao backend para resolver
-  if(/goo\.gl|maps\.app\.goo\.gl|bit\.ly/.test(texto)) {
+  // Link encurtado ou Apple Maps — pedir ao backend para resolver
+  if(/goo\.gl|maps\.app\.goo\.gl|bit\.ly|maps\.apple\.com/.test(texto)) {
     btn.disabled = true; btn.textContent = 'Resolvendo...';
     try {
       var resp = await apiCall('/api/features/resolve-location', {

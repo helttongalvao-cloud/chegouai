@@ -241,19 +241,28 @@ router.post('/resolve-location', async (req, res) => {
   let coords = extractCoords(url);
   if (coords) return res.json(coords);
 
-  // Tentar seguir redirect (links encurtados: maps.app.goo.gl, goo.gl, etc.)
+  // Seguir cadeia de redirects (até 5 saltos) para links encurtados e Apple Maps
   try {
     const https = require('https');
-    const expanded = await new Promise((resolve, reject) => {
-      const r = https.request(url, { method: 'HEAD', timeout: 5000 }, (resp) => {
-        resolve(resp.headers['location'] || url);
+    const http  = require('http');
+    let current = url;
+    for (let i = 0; i < 5; i++) {
+      const finalUrl = await new Promise((resolve, reject) => {
+        const mod = current.startsWith('https') ? https : http;
+        const r = mod.request(current, { method: 'HEAD', timeout: 5000 }, (resp) => {
+          const loc = resp.headers['location'];
+          if (loc) resolve(loc.startsWith('http') ? loc : new URL(loc, current).href);
+          else resolve(current);
+        });
+        r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); });
+        r.on('error', reject);
+        r.end();
       });
-      r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); });
-      r.on('error', reject);
-      r.end();
-    });
-    coords = extractCoords(expanded);
-    if (coords) return res.json(coords);
+      coords = extractCoords(finalUrl);
+      if (coords) return res.json(coords);
+      if (finalUrl === current) break;
+      current = finalUrl;
+    }
   } catch (_) {}
 
   return res.status(422).json({ error: 'Não foi possível extrair as coordenadas deste link' });
