@@ -1377,12 +1377,7 @@ async function ativarNotificacoesPush() {
     return; // Promise resolve implícita — .then() não quebra
   }
   try {
-    // Se já bloqueado no sistema, mostrar instruções imediatamente
-    if('Notification' in window && Notification.permission === 'denied') {
-      mostrarInstrucoesNotif();
-      return;
-    }
-    var perm = await Notification.requestPermission();
+    var perm = ('Notification' in window) ? await Notification.requestPermission() : 'denied';
     if(perm === 'denied') {
       mostrarInstrucoesNotif();
       return;
