@@ -935,7 +935,7 @@ router.get('/me/extrato-repasse', requireRole('estabelecimento'), async (req, re
       .from('pedidos')
       .select('id, subtotal, total, taxa_entrega, status, pagamento_status, criado_em, forma_pagamento, motoboy_proprio_id, motoboys_proprios(id, nome), itens_pedido(nome, quantidade, preco_unitario)')
       .eq('estabelecimento_id', est.id)
-      .in('pagamento_status', ['aprovado', 'aguardando'])
+      .eq('pagamento_status', 'aprovado')
       .neq('status', 'cancelado')
       .gte('criado_em', desde)
       .order('criado_em', { ascending: false });
