@@ -241,27 +241,46 @@ router.post('/resolve-location', async (req, res) => {
   let coords = extractCoords(url);
   if (coords) return res.json(coords);
 
-  // Seguir cadeia de redirects (até 5 saltos) para links encurtados e Apple Maps
+  // Seguir cadeia de redirects (até 5 saltos) — com User-Agent para Apple Maps
+  const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
   try {
     const https = require('https');
     const http  = require('http');
     let current = url;
     for (let i = 0; i < 5; i++) {
-      const finalUrl = await new Promise((resolve, reject) => {
+      const result = await new Promise((resolve, reject) => {
         const mod = current.startsWith('https') ? https : http;
-        const r = mod.request(current, { method: 'HEAD', timeout: 5000 }, (resp) => {
+        const r = mod.request(current, { method: 'GET', timeout: 6000, headers: { 'User-Agent': UA } }, (resp) => {
           const loc = resp.headers['location'];
-          if (loc) resolve(loc.startsWith('http') ? loc : new URL(loc, current).href);
-          else resolve(current);
+          if (loc) {
+            resp.destroy();
+            resolve({ url: loc.startsWith('http') ? loc : new URL(loc, current).href, body: null });
+          } else {
+            let body = '';
+            resp.on('data', c => { body += c; if (body.length > 50000) resp.destroy(); });
+            resp.on('end', () => resolve({ url: current, body }));
+          }
         });
         r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); });
         r.on('error', reject);
         r.end();
       });
-      coords = extractCoords(finalUrl);
+
+      // Tentar extrair da URL final
+      coords = extractCoords(result.url);
       if (coords) return res.json(coords);
-      if (finalUrl === current) break;
-      current = finalUrl;
+
+      // Tentar extrair do HTML (Apple Maps embeds coords no body)
+      if (result.body) {
+        coords = extractCoords(result.body);
+        if (coords) return res.json(coords);
+        // Apple Maps JSON embed: "coordinate":{"latitude":X,"longitude":Y}
+        const jm = result.body.match(/"latitude"\s*:\s*([-\d.]+).*?"longitude"\s*:\s*([-\d.]+)/s);
+        if (jm) return res.json({ lat: parseFloat(jm[1]), lng: parseFloat(jm[2]) });
+      }
+
+      if (result.url === current) break;
+      current = result.url;
     }
   } catch (_) {}
 
