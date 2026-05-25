@@ -5139,16 +5139,23 @@ async function renderEstabelecimento() {
         itensTxt = '📝 <em style="color:var(--texto2);">' + sanitizar(p.lista_compras).replace(/\n/g,'<br>') + '</em>';
       } else {
         itensTxt = (p.itens_pedido || []).map(function(i){
-          var linhas = '<div style="padding:5px 0;border-bottom:1px solid var(--cinza3);">' +
-            '<span style="font-weight:700;color:var(--texto);">' + (Number.isInteger(i.quantidade) ? i.quantidade + 'x' : String(i.quantidade).replace('.',',') + ' kg') + ' ' + sanitizar(i.nome) + '</span>';
+          var imgUrl = i.produtos && i.produtos.imagem_url;
+          var emoji  = i.produtos && i.produtos.emoji;
+          var thumb = imgUrl
+            ? '<img src="' + imgUrl + '" style="width:44px;height:44px;object-fit:cover;border-radius:8px;flex-shrink:0;" loading="lazy">'
+            : (emoji ? '<div style="width:44px;height:44px;border-radius:8px;background:var(--cinza3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">' + emoji + '</div>' : '');
+          var qtdNome = '<span style="font-weight:700;color:var(--texto);">' + (Number.isInteger(i.quantidade) ? i.quantidade + 'x' : String(i.quantidade).replace('.',',') + ' kg') + ' ' + sanitizar(i.nome) + '</span>';
+          var extras = '';
           if(i.complementos && i.complementos.length) {
-            linhas += '<div style="color:var(--texto2);font-size:12px;padding-left:10px;margin-top:2px;">› ' +
-              i.complementos.map(function(c){ return sanitizar(c.nome); }).join(' · ') + '</div>';
+            extras += '<div style="color:var(--texto2);font-size:12px;margin-top:2px;">› ' + i.complementos.map(function(c){ return sanitizar(c.nome); }).join(' · ') + '</div>';
           }
           if(i.observacao) {
-            linhas += '<div style="color:var(--verde);font-size:12px;padding-left:10px;">✎ ' + sanitizar(i.observacao) + '</div>';
+            extras += '<div style="color:var(--verde);font-size:12px;">✎ ' + sanitizar(i.observacao) + '</div>';
           }
-          return linhas + '</div>';
+          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid var(--cinza3);">' +
+            thumb +
+            '<div>' + qtdNome + extras + '</div>' +
+            '</div>';
         }).join('');
       }
       var telNum = p.telefone_cliente ? p.telefone_cliente.replace(/\D/g,'') : '';
