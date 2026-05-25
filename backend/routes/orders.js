@@ -685,15 +685,15 @@ router.patch(
       }
 
       // Notificar admins nos eventos-chave
-      if (['aceito', 'pronto', 'saiu_para_entrega', 'entregue'].includes(status)) {
+      if (['aceito', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue'].includes(status)) {
         const lojaNomeAdmin = pedido.estabelecimentos?.nome || 'Loja';
         const valorAdmin = `R$ ${parseFloat(pedido.total || 0).toFixed(2).replace('.', ',')}`;
         const clienteAdmin = pedido.profiles?.nome || pedido.guest_nome || 'Cliente';
-        const tituloAdmin = { aceito: `✅ Lojista aceitou — ${lojaNomeAdmin}`, pronto: `📦 Pronto para coleta — ${lojaNomeAdmin}`, saiu_para_entrega: `🛵 Motoboy a caminho — ${lojaNomeAdmin}`, entregue: `🎉 Entregue — ${lojaNomeAdmin}` }[status];
+        const tituloAdmin = { aceito: `✅ Lojista aceitou — ${lojaNomeAdmin}`, pronto: `📦 Pronto para coleta — ${lojaNomeAdmin}`, coletado: `🛵 Motoboy coletou — ${lojaNomeAdmin}`, saiu_para_entrega: `🛵 Motoboy a caminho — ${lojaNomeAdmin}`, entregue: `🎉 Entregue — ${lojaNomeAdmin}` }[status];
         supabaseAdmin.from('profiles').select('id').eq('perfil', 'admin').then(({ data: admins }) => {
           (admins || []).forEach(a => enviarPush(a.id, tituloAdmin, `${valorAdmin} · ${clienteAdmin}`, { pedidoId: orderId, status }));
         });
-        const msgTelegram = { aceito: `✅ <b>Lojista aceitou</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, pronto: `📦 <b>Pronto para coleta!</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, saiu_para_entrega: `🛵 <b>Motoboy a caminho</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, entregue: `🎉 <b>Pedido entregue!</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}` }[status];
+        const msgTelegram = { aceito: `✅ <b>Lojista aceitou</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, pronto: `📦 <b>Pronto para coleta!</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, coletado: `🛵 <b>Motoboy coletou!</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, saiu_para_entrega: `🛵 <b>Motoboy a caminho</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, entregue: `🎉 <b>Pedido entregue!</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}` }[status];
         enviarTelegram(msgTelegram);
       }
 
