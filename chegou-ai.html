@@ -1205,7 +1205,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <span>🔔 Notificações ativas — você será avisado de cada pedido</span>
   </div>
   <div class="admin-content">
-    <div id="card-push-admin" style="display:none;background:#b71c1c;border-radius:14px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+    <div id="card-push-admin" style="display:none;background:#b71c1c;border-radius:14px;padding:14px 16px;margin-bottom:16px;align-items:center;justify-content:space-between;gap:12px;">
       <span style="color:#fff;font-size:13px;font-weight:600;">🔕 Ative as notificações para não precisar ficar olhando a tela</span>
       <button onclick="var b=this;b.disabled=true;b.textContent='...';ativarNotificacoesPush().then(verificarBannerPush).finally(function(){b.disabled=false;b.textContent='Ativar';})" style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">Ativar</button>
     </div>
@@ -2445,7 +2445,7 @@ function entrarComo(perfil) {
       });
     }
   }
-  else if(perfil === 'admin') { renderAdmin('pedidos'); irTela('tela-admin'); ativarNotificacoesPush().then(verificarBannerPush); verificarBannerPush(); }
+  else if(perfil === 'admin') { renderAdmin('pedidos'); irTela('tela-admin'); verificarBannerPush(); }
 }
 
 function irCadastro() { irTela('tela-cadastro'); }
