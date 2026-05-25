@@ -10,6 +10,7 @@
  */
 const https  = require('https');
 const crypto = require('crypto');
+const QRCode = require('qrcode');
 
 const PAGARME_BASE = 'https://api.pagar.me/core/v5';
 
@@ -217,12 +218,23 @@ async function criarCobrancaPix({ total, orderId, customerId, splitRules }) {
 
   console.log('[Pagar.me Pix] qr_code presente:', !!pix?.qr_code, '| qr_code_url:', !!pix?.qr_code_url);
 
+  // Gerar QR code localmente se Pagar.me não retornou a imagem mas temos o texto
+  let qrCodeBase64Local = pix?.qr_code_url || null;
+  if (!qrCodeBase64Local && pix?.qr_code) {
+    try {
+      qrCodeBase64Local = await QRCode.toDataURL(pix.qr_code, { width: 300, margin: 2 });
+      console.log('[Pagar.me Pix] QR gerado localmente via qrcode lib');
+    } catch (e) {
+      console.warn('[Pagar.me Pix] Falha ao gerar QR local:', e.message);
+    }
+  }
+
   return {
     orderId: order.id,
     chargeId: charge?.id,
     status: order.status,
     qrCode: pix?.qr_code,
-    qrCodeBase64: pix?.qr_code_url,
+    qrCodeBase64: qrCodeBase64Local,
     expiresAt: pix?.expires_at,
   };
 }
