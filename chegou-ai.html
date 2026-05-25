@@ -4089,10 +4089,7 @@ function mostrarMapaPicker(lat, lng, zoom) {
 
   if(!mapPicker) {
     mapPicker = L.map('mapa-picker', { zoomControl: true, attributionControl: false }).setView([lat, lng], zoomInicial);
-    // OSM como base (cobertura universal) + satélite Esri por cima quando disponível
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '' }).addTo(mapPicker);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, attribution: '', opacity: 0.85, errorTileUrl: '' }).addTo(mapPicker);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, attribution: '' }).addTo(mapPicker);
     pinPicker = L.marker([lat, lng], { icon: pinIcon, draggable: true }).addTo(mapPicker);
     // Pin segue o centro do mapa ao arrastar o mapa (mais intuitivo no celular)
     mapPicker.on('move', function() {
