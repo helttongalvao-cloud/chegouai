@@ -1477,12 +1477,10 @@ async function verificarBannerPush() {
       if(spanEl) spanEl.textContent = '🔕 Notificações bloqueadas — ative nas configurações do navegador.';
       if(btnEl) { btnEl.textContent = 'Como ativar'; btnEl.onclick = mostrarInstrucoesNotif; }
     } else if(concedido && precisaRenovar) {
-      // Permissão concedida mas subscription ausente/vencida — renovar automaticamente
+      // Permissão concedida mas subscription ausente/vencida — mostrar botão, sem loop automático
       b.style.display = 'flex';
-      if(spanEl) spanEl.textContent = '🔄 Reconectando notificações...';
+      if(spanEl) spanEl.textContent = '🔄 Notificações precisam ser renovadas';
       if(btnEl) { btnEl.textContent = 'Renovar'; btnEl.onclick = function() { ativarNotificacoesPush().then(verificarBannerPush); }; }
-      ativarNotificacoesPush().then(verificarBannerPush);
-      return;
     } else {
       if(spanEl) spanEl.textContent = '🔕 Notificações desativadas — você pode perder pedidos!';
       if(btnEl) { btnEl.textContent = 'Ativar'; btnEl.onclick = function() { ativarNotificacoesPush().then(verificarBannerPush); }; }
