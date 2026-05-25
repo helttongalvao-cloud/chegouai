@@ -4059,6 +4059,7 @@ async function confirmarLinkGMaps(btn) {
 }
 
 function _aplicarCoordsEntrega(lat, lng) {
+  clienteLat = lat; clienteLng = lng;
   document.getElementById('link-gmaps-wrap').style.display = 'none';
   mostrarMapaPicker(lat, lng, 18);
   showToast('✅', 'Localização encontrada', 'Ajuste o pin se necessário e confirme');
