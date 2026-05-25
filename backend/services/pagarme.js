@@ -191,16 +191,26 @@ async function criarCobrancaPix({ total, orderId, customerId, splitRules }) {
   let charge = order.charges?.[0];
   let pix    = charge?.last_transaction;
 
-  // Se QR code não veio na criação, buscar a charge diretamente (até 3 tentativas)
-  if ((!pix?.qr_code && !pix?.qr_code_url) && charge?.id) {
-    for (let i = 1; i <= 3; i++) {
-      await new Promise(r => setTimeout(r, 1500 * i));
+  // Retry até 5x: se não tem charge ou não tem QR code, busca order/charge novamente
+  if (!pix?.qr_code && !pix?.qr_code_url) {
+    for (let i = 1; i <= 5; i++) {
+      await new Promise(r => setTimeout(r, 2000));
       try {
-        const chargeData = await pagarmeRequest('GET', `/charges/${charge.id}`);
-        const pixRetry = chargeData?.last_transaction;
-        console.log(`[Pagar.me Pix] retry ${i}: qr_code=${!!pixRetry?.qr_code}`);
-        if (pixRetry?.qr_code || pixRetry?.qr_code_url) { pix = pixRetry; break; }
-      } catch (_) {}
+        if (!charge?.id) {
+          // Charge ainda não existe: rebuscar o order inteiro
+          const orderRetry = await pagarmeRequest('GET', `/orders/${order.id}`);
+          charge = orderRetry.charges?.[0];
+          console.log(`[Pagar.me Pix] retry ${i}: order rebuscado, charge.id=${charge?.id}`);
+        }
+        if (charge?.id) {
+          const chargeData = await pagarmeRequest('GET', `/charges/${charge.id}`);
+          pix = chargeData?.last_transaction;
+          console.log(`[Pagar.me Pix] retry ${i}: qr_code=${!!pix?.qr_code} qr_code_url=${!!pix?.qr_code_url}`);
+          if (pix?.qr_code || pix?.qr_code_url) break;
+        }
+      } catch (e) {
+        console.warn(`[Pagar.me Pix] retry ${i} erro:`, e.message);
+      }
     }
   }
 
