@@ -6,6 +6,7 @@ const { calcularSplit } = require('../services/commission');
 const { criarTransferenciaPix } = require('../services/pagarme');
 const { enviarPush } = require('./notifications');
 const { alertarAdmin, enviarWhatsApp } = require('../services/whatsapp');
+const { enviarTelegram } = require('../services/telegram');
 
 const router = express.Router();
 
@@ -689,6 +690,8 @@ router.patch(
         supabaseAdmin.from('profiles').select('id').eq('perfil', 'admin').then(({ data: admins }) => {
           (admins || []).forEach(a => enviarPush(a.id, tituloAdmin, `${valorAdmin} · ${clienteAdmin}`, { pedidoId: orderId, status }));
         });
+        const msgTelegram = { aceito: `✅ <b>Lojista aceitou</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, saiu_para_entrega: `🛵 <b>Motoboy a caminho</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, entregue: `🎉 <b>Pedido entregue!</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}` }[status];
+        enviarTelegram(msgTelegram);
       }
 
       // Quando pedido fica pronto, notificar motoboys disponíveis

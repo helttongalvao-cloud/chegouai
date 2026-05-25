@@ -14,6 +14,7 @@ const {
 const { calcularSplit } = require('../services/commission');
 const { enviarPush } = require('./notifications');
 const { enviarWhatsApp, alertarAdmin } = require('../services/whatsapp');
+const { enviarTelegram } = require('../services/telegram');
 
 const router = express.Router();
 
@@ -141,10 +142,11 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
     );
   }
 
-  // WhatsApp + push para o admin
+  // WhatsApp + push + Telegram para o admin
   alertarAdmin(
     `🔔 *Novo pedido pago*\n🏪 ${lojaInfo?.nome || 'Loja'}\n💰 ${valorStr}\n👤 ${clienteNome}`
   );
+  enviarTelegram(`🔔 <b>Novo pedido!</b>\n🏪 ${lojaInfo?.nome || 'Loja'}\n💰 ${valorStr}\n👤 ${clienteNome}`);
   supabaseAdmin.from('profiles').select('id').eq('perfil', 'admin').then(({ data: admins }) => {
     (admins || []).forEach(a => enviarPush(a.id, `🔔 Novo pedido — ${lojaInfo?.nome || 'Loja'}`, `${valorStr} · ${clienteNome}`, { pedidoId: orderId }));
   });
