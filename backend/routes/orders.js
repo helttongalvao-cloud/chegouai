@@ -681,11 +681,11 @@ router.patch(
       }
 
       // Notificar admins nos eventos-chave
-      if (['aceito', 'saiu_para_entrega', 'entregue', 'cancelado'].includes(status)) {
+      if (['aceito', 'saiu_para_entrega', 'entregue'].includes(status)) {
         const lojaNomeAdmin = pedido.estabelecimentos?.nome || 'Loja';
         const valorAdmin = `R$ ${parseFloat(pedido.total || 0).toFixed(2).replace('.', ',')}`;
         const clienteAdmin = pedido.profiles?.nome || pedido.guest_nome || 'Cliente';
-        const tituloAdmin = { aceito: `✅ Lojista aceitou — ${lojaNomeAdmin}`, saiu_para_entrega: `🛵 Motoboy a caminho — ${lojaNomeAdmin}`, entregue: `🎉 Entregue — ${lojaNomeAdmin}`, cancelado: `❌ Cancelado — ${lojaNomeAdmin}` }[status];
+        const tituloAdmin = { aceito: `✅ Lojista aceitou — ${lojaNomeAdmin}`, saiu_para_entrega: `🛵 Motoboy a caminho — ${lojaNomeAdmin}`, entregue: `🎉 Entregue — ${lojaNomeAdmin}` }[status];
         supabaseAdmin.from('profiles').select('id').eq('perfil', 'admin').then(({ data: admins }) => {
           (admins || []).forEach(a => enviarPush(a.id, tituloAdmin, `${valorAdmin} · ${clienteAdmin}`, { pedidoId: orderId, status }));
         });
