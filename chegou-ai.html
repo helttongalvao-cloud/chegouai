@@ -5512,11 +5512,26 @@ async function renderAdmin(secao) {
           '<button style="background:#fff;color:#b71c1c;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">Ativar</button>';
         card.querySelector('button').onclick = function() {
           var b = this; b.disabled = true; b.textContent = '...';
+          var done = false;
+          var tOut = setTimeout(function() {
+            if(done) return;
+            done = true;
+            b.disabled = false; b.textContent = 'Ativar';
+            showToast('⚠️', 'Tempo esgotado', 'Não foi possível registrar. Tente novamente.');
+          }, 12000);
           ativarNotificacoesPush().then(function() {
-            card.style.cssText = 'background:#1a3a2a;border:1.5px solid var(--verde);border-radius:14px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;';
-            card.innerHTML = '<span style="color:#4ade80;font-size:13px;font-weight:600;">🔔 Notificações ativas!</span>';
-            setTimeout(function(){ card.remove(); }, 3000);
-          }).catch(function() { b.disabled = false; b.textContent = 'Ativar'; });
+            if(done) return; done = true; clearTimeout(tOut);
+            apiCall('/api/notifications/status').then(function(st) {
+              if(st && st.active) {
+                card.style.cssText = 'background:#1a3a2a;border:1.5px solid var(--verde);border-radius:14px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;';
+                card.innerHTML = '<span style="color:#4ade80;font-size:13px;font-weight:600;">🔔 Notificações ativas!</span>';
+                setTimeout(function(){ card.remove(); }, 3000);
+              } else {
+                b.disabled = false; b.textContent = 'Ativar';
+                showToast('⚠️', 'Não registrado', 'O servidor não recebeu a subscription. Tente de novo.');
+              }
+            }).catch(function() { b.disabled = false; b.textContent = 'Ativar'; });
+          }).catch(function() { if(done) return; done = true; clearTimeout(tOut); b.disabled = false; b.textContent = 'Ativar'; });
         };
       }
     }).catch(function() { card.remove(); });
