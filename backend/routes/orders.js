@@ -193,12 +193,15 @@ router.post(
         }
 
         // Incrementar uso atomicamente (comum a todos os tipos)
-        const { data: cupomAtualizado } = await supabaseAdmin
+        let incrementQuery = supabaseAdmin
           .from('cupons_plataforma')
           .update({ usos_atual: cupomData.usos_atual + 1 })
-          .eq('id', cupomData.id)
-          .lt('usos_atual', cupomData.usos_max)
-          .select('id');
+          .eq('id', cupomData.id);
+        // Só adiciona condição de limite quando usos_max não é null (cupons com limite)
+        if (cupomData.usos_max !== null && cupomData.usos_max !== undefined) {
+          incrementQuery = incrementQuery.lt('usos_atual', cupomData.usos_max);
+        }
+        const { data: cupomAtualizado } = await incrementQuery.select('id');
         if (!cupomAtualizado || cupomAtualizado.length === 0) {
           return res.status(400).json({ error: 'Cupom esgotado' });
         }
@@ -682,15 +685,15 @@ router.patch(
       }
 
       // Notificar admins nos eventos-chave
-      if (['aceito', 'saiu_para_entrega', 'entregue'].includes(status)) {
+      if (['aceito', 'pronto', 'saiu_para_entrega', 'entregue'].includes(status)) {
         const lojaNomeAdmin = pedido.estabelecimentos?.nome || 'Loja';
         const valorAdmin = `R$ ${parseFloat(pedido.total || 0).toFixed(2).replace('.', ',')}`;
         const clienteAdmin = pedido.profiles?.nome || pedido.guest_nome || 'Cliente';
-        const tituloAdmin = { aceito: `✅ Lojista aceitou — ${lojaNomeAdmin}`, saiu_para_entrega: `🛵 Motoboy a caminho — ${lojaNomeAdmin}`, entregue: `🎉 Entregue — ${lojaNomeAdmin}` }[status];
+        const tituloAdmin = { aceito: `✅ Lojista aceitou — ${lojaNomeAdmin}`, pronto: `📦 Pronto para coleta — ${lojaNomeAdmin}`, saiu_para_entrega: `🛵 Motoboy a caminho — ${lojaNomeAdmin}`, entregue: `🎉 Entregue — ${lojaNomeAdmin}` }[status];
         supabaseAdmin.from('profiles').select('id').eq('perfil', 'admin').then(({ data: admins }) => {
           (admins || []).forEach(a => enviarPush(a.id, tituloAdmin, `${valorAdmin} · ${clienteAdmin}`, { pedidoId: orderId, status }));
         });
-        const msgTelegram = { aceito: `✅ <b>Lojista aceitou</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, saiu_para_entrega: `🛵 <b>Motoboy a caminho</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, entregue: `🎉 <b>Pedido entregue!</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}` }[status];
+        const msgTelegram = { aceito: `✅ <b>Lojista aceitou</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, pronto: `📦 <b>Pronto para coleta!</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, saiu_para_entrega: `🛵 <b>Motoboy a caminho</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}`, entregue: `🎉 <b>Pedido entregue!</b>\n🏪 ${lojaNomeAdmin}\n💰 ${valorAdmin}\n👤 ${clienteAdmin}` }[status];
         enviarTelegram(msgTelegram);
       }
 
