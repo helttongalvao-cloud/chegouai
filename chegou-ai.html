@@ -1122,12 +1122,18 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <div class="stat-card"><div class="stat-valor" id="est-pedidos-periodo">—</div><div class="stat-label" id="dash-label-pedidos">Pedidos hoje</div></div>
         <div class="stat-card"><div class="stat-valor" id="est-faturamento-periodo">—</div><div class="stat-label" id="dash-label-fat">Faturamento hoje</div></div>
       </div>
-      <div id="loja-status-bar" style="margin-bottom:16px;padding:12px 16px;border-radius:14px;border:1.5px solid var(--cinza3);background:var(--cinza2);display:flex;align-items:center;justify-content:space-between;gap:10px;">
-        <div>
-          <div style="font-weight:600;font-size:14px;" id="loja-status-label">🟢 Loja aberta</div>
-          <div style="font-size:12px;color:var(--texto2);">Pausar para não receber pedidos</div>
+      <div id="loja-status-bar" style="margin-bottom:16px;padding:12px 16px;border-radius:14px;border:1.5px solid var(--cinza3);background:var(--cinza2);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div>
+            <div style="font-weight:600;font-size:14px;" id="loja-status-label">🟢 Loja aberta</div>
+            <div style="font-size:12px;color:var(--texto2);" id="loja-status-sub">Pausar para não receber pedidos</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button id="btn-toggle-pausar" onclick="togglePausar()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Pausar</button>
+            <button id="btn-pausa-almoco" onclick="abrirPausaAlmoco()" style="padding:8px 14px;border-radius:10px;border:1.5px solid var(--cinza3);background:transparent;color:var(--texto);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">☕ Almoço</button>
+          </div>
         </div>
-        <button id="btn-toggle-pausar" onclick="togglePausar()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Pausar</button>
+        <div id="almoco-countdown" style="display:none;margin-top:8px;font-size:12px;color:#fb923c;font-weight:600;">⏱ Reabre em <span id="almoco-tempo"></span> — <button onclick="cancelarPausaAlmoco()" style="background:none;border:none;color:#fb923c;font-weight:700;font-size:12px;cursor:pointer;text-decoration:underline;">Abrir agora</button></div>
       </div>
       <div class="busca-bar" style="margin-bottom:10px;">
         <span class="busca-icon">🔍</span>
@@ -5049,10 +5055,16 @@ async function renderEstabelecimento() {
         '<div class="stat-card"><div class="stat-valor" id="est-pedidos-periodo">—</div><div class="stat-label" id="dash-label-pedidos">Pedidos hoje</div></div>' +
         '<div class="stat-card"><div class="stat-valor" id="est-faturamento-periodo">—</div><div class="stat-label" id="dash-label-fat">Faturamento hoje</div></div>' +
       '</div>' +
-      '<div id="loja-status-bar" style="margin-bottom:16px;padding:12px 16px;border-radius:14px;border:1.5px solid var(--cinza3);background:var(--cinza2);display:flex;align-items:center;justify-content:space-between;gap:10px;">' +
-        '<div><div style="font-weight:600;font-size:14px;" id="loja-status-label">🟢 Loja aberta</div>' +
-        '<div style="font-size:12px;color:var(--texto2);">Pausar para não receber pedidos</div></div>' +
-        '<button id="btn-toggle-pausar" onclick="togglePausar()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Pausar</button>' +
+      '<div id="loja-status-bar" style="margin-bottom:16px;padding:12px 16px;border-radius:14px;border:1.5px solid var(--cinza3);background:var(--cinza2);">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">' +
+          '<div><div style="font-weight:600;font-size:14px;" id="loja-status-label">🟢 Loja aberta</div>' +
+          '<div style="font-size:12px;color:var(--texto2);" id="loja-status-sub">Pausar para não receber pedidos</div></div>' +
+          '<div style="display:flex;gap:6px;">' +
+            '<button id="btn-toggle-pausar" onclick="togglePausar()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Pausar</button>' +
+            '<button id="btn-pausa-almoco" onclick="abrirPausaAlmoco()" style="padding:8px 14px;border-radius:10px;border:1.5px solid var(--cinza3);background:transparent;color:var(--texto);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">☕ Almoço</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="almoco-countdown" style="display:none;margin-top:8px;font-size:12px;color:#fb923c;font-weight:600;">⏱ Reabre em <span id="almoco-tempo"></span> — <button onclick="cancelarPausaAlmoco()" style="background:none;border:none;color:#fb923c;font-weight:700;font-size:12px;cursor:pointer;text-decoration:underline;">Abrir agora</button></div>' +
       '</div>' +
       (('Notification' in window && Notification.permission !== 'granted') ? '<div style="margin-bottom:12px;padding:12px 16px;border-radius:14px;background:rgba(255,180,0,0.12);border:1.5px solid #ffb400;display:flex;align-items:center;justify-content:space-between;gap:10px;"><div style="font-size:13px;font-weight:600;color:#ffb400;">🔔 Notificações desativadas</div><button onclick="ativarPushDoCard()" style="padding:8px 14px;border-radius:10px;border:none;background:#ffb400;color:#000;font-weight:700;font-size:12px;cursor:pointer;">' + (Notification.permission === 'denied' ? 'Como ativar' : 'Ativar') + '</button></div>' : '') +
       '<div class="busca-bar" style="margin-bottom:10px;"><span class="busca-icon">🔍</span><input type="text" id="busca-pedidos-lojista" placeholder="Buscar por nome, telefone, item..." oninput="filtrarPedidosLojista(this.value)" style="height:44px;"></div>' +
@@ -5081,6 +5093,7 @@ async function renderEstabelecimento() {
       if(btnPausar) { btnPausar.textContent = estasPausado ? 'Retomar' : 'Pausar'; btnPausar.style.background = estasPausado ? 'var(--erro)' : 'var(--verde)'; }
       if(labelPausado) labelPausado.textContent = estasPausado ? '🔴 Loja pausada' : '🟢 Loja aberta';
       verificarHorarioAuto(data.estabelecimento);
+      verificarPausaAlmocoSalva();
     }
     var pedidos = data.pedidosAbertos || [];
     lista = document.getElementById('pedidos-estabelecimento');
@@ -5448,6 +5461,106 @@ async function togglePausar() {
     if(btn) { btn.disabled = false; }
     alert('Erro ao pausar loja: ' + e.message);
   }
+}
+
+var _almocoInterval = null;
+
+function abrirPausaAlmoco() {
+  var opcoes = [
+    { label: '30 minutos', min: 30 },
+    { label: '1 hora',     min: 60 },
+    { label: '1h30',       min: 90 },
+    { label: '2 horas',    min: 120 },
+  ];
+  var html = '<div style="padding:20px;">' +
+    '<div style="font-size:16px;font-weight:700;margin-bottom:4px;">☕ Pausa para almoço</div>' +
+    '<div style="font-size:13px;color:var(--texto2);margin-bottom:16px;">A loja reabre automaticamente após o tempo escolhido.</div>' +
+    opcoes.map(function(o) {
+      return '<button onclick="iniciarPausaAlmoco(' + o.min + ');fecharModalGenerico();" style="display:block;width:100%;padding:14px;margin-bottom:8px;border-radius:12px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;text-align:left;">' + o.label + '</button>';
+    }).join('') +
+    '<button onclick="fecharModalGenerico()" style="display:block;width:100%;padding:12px;margin-top:4px;border-radius:12px;border:none;background:transparent;color:var(--texto2);font-size:13px;cursor:pointer;">Cancelar</button>' +
+    '</div>';
+  abrirModalGenerico(html);
+}
+
+async function iniciarPausaAlmoco(minutos) {
+  var ate = Date.now() + minutos * 60 * 1000;
+  var estId = window._lojistaEstId;
+  if (!estId) return;
+  localStorage.setItem('chegouai_almoco_ate_' + estId, String(ate));
+  // Pausar se não estiver pausada
+  var btnP = document.getElementById('btn-toggle-pausar');
+  if (btnP && btnP.textContent.trim() === 'Pausar') {
+    await togglePausar();
+  }
+  _iniciarCountdownAlmoco(ate);
+}
+
+function _iniciarCountdownAlmoco(ate) {
+  var countdown = document.getElementById('almoco-countdown');
+  var tempoEl   = document.getElementById('almoco-tempo');
+  if (countdown) countdown.style.display = 'block';
+  if (_almocoInterval) clearInterval(_almocoInterval);
+  _almocoInterval = setInterval(async function() {
+    var restante = ate - Date.now();
+    if (restante <= 0) {
+      clearInterval(_almocoInterval);
+      _almocoInterval = null;
+      var estId = window._lojistaEstId;
+      if (estId) localStorage.removeItem('chegouai_almoco_ate_' + estId);
+      if (countdown) countdown.style.display = 'none';
+      var btnP = document.getElementById('btn-toggle-pausar');
+      if (btnP && btnP.textContent.trim() === 'Retomar') await togglePausar();
+      showToast('🟢', 'Loja reaberta', 'Pausa de almoço encerrada. Aceitando pedidos!');
+      return;
+    }
+    var min = Math.floor(restante / 60000);
+    var seg = Math.floor((restante % 60000) / 1000);
+    if (tempoEl) tempoEl.textContent = min + 'min ' + (seg < 10 ? '0' : '') + seg + 's';
+  }, 1000);
+}
+
+async function cancelarPausaAlmoco() {
+  if (_almocoInterval) { clearInterval(_almocoInterval); _almocoInterval = null; }
+  var estId = window._lojistaEstId;
+  if (estId) localStorage.removeItem('chegouai_almoco_ate_' + estId);
+  var countdown = document.getElementById('almoco-countdown');
+  if (countdown) countdown.style.display = 'none';
+  var btnP = document.getElementById('btn-toggle-pausar');
+  if (btnP && btnP.textContent.trim() === 'Retomar') await togglePausar();
+}
+
+function verificarPausaAlmocoSalva() {
+  var estId = window._lojistaEstId;
+  if (!estId) return;
+  var ate = parseInt(localStorage.getItem('chegouai_almoco_ate_' + estId) || '0');
+  if (!ate) return;
+  if (Date.now() >= ate) {
+    localStorage.removeItem('chegouai_almoco_ate_' + estId);
+    // Loja ainda pode estar pausada — retomar
+    var btnP = document.getElementById('btn-toggle-pausar');
+    if (btnP && btnP.textContent.trim() === 'Retomar') togglePausar();
+    return;
+  }
+  _iniciarCountdownAlmoco(ate);
+}
+
+function abrirModalGenerico(html) {
+  var el = document.getElementById('modal-generico');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'modal-generico';
+    el.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;justify-content:center;';
+    el.addEventListener('click', function(e){ if(e.target === el) fecharModalGenerico(); });
+    document.body.appendChild(el);
+  }
+  el.innerHTML = '<div style="background:var(--cinza2);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;">' + html + '</div>';
+  el.style.display = 'flex';
+}
+
+function fecharModalGenerico() {
+  var el = document.getElementById('modal-generico');
+  if (el) el.style.display = 'none';
 }
 
 async function atualizarStatusPedido(pedidoId, novoStatus, btn) {
