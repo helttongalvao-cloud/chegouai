@@ -194,7 +194,7 @@ router.post('/pix', paymentLimiter, optionalAuth, [
       tipoEntrega:    pedido.estabelecimentos?.tipo_entrega,
     });
     // Aplicar desconto (ex: frete grátis) ao total cobrado do cliente
-    if (pedido.desconto > 0) split.total = parseFloat((split.total - pedido.desconto).toFixed(2));
+    if (pedido.desconto > 0) split.total = parseFloat(Math.max(0, split.total - pedido.desconto).toFixed(2));
 
     const guestTel = (pedido.guest_telefone || pedido.telefone_cliente || '').replace(/\D/g, '');
     const customerId = await criarOuBuscarCliente({
@@ -315,7 +315,7 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
       tipoEntrega:    pedido.estabelecimentos?.tipo_entrega,
     });
     // Aplicar desconto (ex: frete grátis) ao total cobrado do cliente
-    if (pedido.desconto > 0) split.total = parseFloat((split.total - pedido.desconto).toFixed(2));
+    if (pedido.desconto > 0) split.total = parseFloat(Math.max(0, split.total - pedido.desconto).toFixed(2));
 
     let customerId;
     if (cardId && savedCustomerId) {

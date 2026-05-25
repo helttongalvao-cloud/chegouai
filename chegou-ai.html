@@ -1981,7 +1981,7 @@ function _finalizarPagamentoCartao(resp) {
     iniciarPollingPedidos();
   } else {
     document.getElementById('pag-instrucao').textContent = 'Aguardando confirmação do pagamento...';
-    startPollingPagamento(resp.chargeId);
+    startPollingPagamento(resp.orderId);
   }
 }
 
