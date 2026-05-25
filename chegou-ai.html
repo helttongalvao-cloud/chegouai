@@ -1393,7 +1393,11 @@ async function ativarNotificacoesPush() {
     }
     var convertedKey = urlBase64ToUint8Array(appKey);
 
-    var reg = await navigator.serviceWorker.ready;
+    var reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      navigator.serviceWorker.getRegistration().then(function(r){ return r || navigator.serviceWorker.ready; }),
+      new Promise(function(_,rj){ setTimeout(function(){ rj(new Error('Service worker timeout')); }, 8000); })
+    ]);
     var existingSub = await reg.pushManager.getSubscription();
 
     // Verificar se a subscription existente usa a mesma chave VAPID
