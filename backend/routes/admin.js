@@ -112,7 +112,9 @@ router.get('/pedidos', async (req, res, next) => {
 // =============================================
 router.get('/repasses', async (req, res, next) => {
   try {
-    const { data, error } = await supabaseAdmin
+    const { desde, ate } = req.query;
+
+    let query = supabaseAdmin
       .from('repasses')
       .select(`
         *,
@@ -121,6 +123,10 @@ router.get('/repasses', async (req, res, next) => {
       `)
       .order('criado_em', { ascending: false });
 
+    if (desde) query = query.gte('criado_em', desde);
+    if (ate) query = query.lte('criado_em', ate + 'T23:59:59');
+
+    const { data, error } = await query;
     if (error) throw error;
     res.json(data);
   } catch (err) {

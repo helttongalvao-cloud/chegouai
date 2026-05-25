@@ -5723,9 +5723,14 @@ async function renderAdmin(secao) {
   } else if(secao === 'repasses') {
     // Buscar repasses do backend
     try {
-      var repasses = await apiCall('/api/admin/repasses');
+      var hoje = new Date().toISOString().slice(0,10);
+      var inputDesde = document.getElementById('repasse-desde');
+      var inputAte   = document.getElementById('repasse-ate');
+      var desde = inputDesde ? inputDesde.value : '2026-05-18';
+      var ate   = inputAte   ? inputAte.value   : hoje;
+      var repasses = await apiCall('/api/admin/repasses?desde=' + desde + '&ate=' + ate);
       if(!Array.isArray(repasses)) repasses = [];
-      
+
       // Agrupar por loja e por motoboy
       var porLoja = {}, porMoto = {}, pagoTotal = 0;
       repasses.forEach(function(r) {
@@ -5792,8 +5797,16 @@ async function renderAdmin(secao) {
         ? '<div class="tabela"><div class="tabela-row"><div class="info">Nenhum repasse pendente.</div></div></div>'
         : '<div class="secao-titulo">Repasses pendentes</div><div class="tabela">' + lojaRows.join('') + motoRows.join('') + '</div>';
 
-      var reconciliarHtml = '<div style="margin-bottom:12px;text-align:right;"><button class="btn-principal" style="font-size:12px;padding:8px 16px;" onclick="adminReconciliarRepasses(this)">🔄 Sincronizar repasses faltantes</button></div>';
-      el.innerHTML = reconciliarHtml + resumoHtml + tabelaHtml;
+      var filtroHtml =
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;">' +
+        '<label style="font-size:13px;color:var(--texto2);">De:</label>' +
+        '<input id="repasse-desde" type="date" value="' + desde + '" style="padding:6px 10px;border-radius:8px;border:1px solid var(--borda);background:var(--card);color:var(--texto);font-size:13px;">' +
+        '<label style="font-size:13px;color:var(--texto2);">Até:</label>' +
+        '<input id="repasse-ate" type="date" value="' + ate + '" style="padding:6px 10px;border-radius:8px;border:1px solid var(--borda);background:var(--card);color:var(--texto);font-size:13px;">' +
+        '<button class="btn-principal" style="font-size:13px;padding:7px 16px;" onclick="renderAdmin(\'repasses\')">Filtrar</button>' +
+        '<button class="btn-principal" style="font-size:12px;padding:7px 14px;background:var(--card);color:var(--texto2);border:1px solid var(--borda);" onclick="adminReconciliarRepasses(this)">🔄 Sincronizar</button>' +
+        '</div>';
+      el.innerHTML = filtroHtml + resumoHtml + tabelaHtml;
     } catch(e) {
       el.innerHTML =
         '<div class="secao-titulo">Repasses</div>' +
