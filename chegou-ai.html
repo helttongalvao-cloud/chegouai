@@ -3104,10 +3104,27 @@ window.addEventListener('DOMContentLoaded', function() {
     iniciarPollingPedidos();
     entrarComo(currentUser.perfil);
   } else if(!authToken && pedidoAtualId) {
-    // Guest com pedido ativo: ir direto para rastreio
-    ultimoStatusConhecido = {};
-    irTela('tela-confirmado');
-    iniciarPollingPedidos(); // o polling já chama iniciarRealtimeGps quando status = coletado
+    // Guest com pedido ativo: verificar pagamento antes de mostrar rastreio
+    apiCall('/api/orders/' + pedidoAtualId).then(function(resp) {
+      var pagamentoOk = resp && (resp.pagamento_status === 'aprovado' || resp.forma_pagamento === 'dinheiro');
+      var recente = resp && resp.criado_em && (Date.now() - new Date(resp.criado_em).getTime()) < 6 * 60 * 60 * 1000;
+      var statusFinal = ['entregue', 'cancelado'];
+      if(pagamentoOk && recente && resp.status && statusFinal.indexOf(resp.status) === -1) {
+        ultimoStatusConhecido = {};
+        irTela('tela-confirmado');
+        iniciarPollingPedidos();
+      } else if(resp && resp.pagamento_status === 'aguardando' && resp.forma_pagamento === 'pix') {
+        pagarPix(pedidoAtualId);
+      } else {
+        pedidoAtualId = null;
+        localStorage.removeItem('chegouai_pedido_id');
+        irTela('tela-login');
+      }
+    }).catch(function() {
+      pedidoAtualId = null;
+      localStorage.removeItem('chegouai_pedido_id');
+      irTela('tela-login');
+    });
   }
 });
 
