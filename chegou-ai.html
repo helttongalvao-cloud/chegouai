@@ -3165,7 +3165,6 @@ async function abrirCardapio(id, _prodId) {
       bannerFechado = document.createElement('div');
       bannerFechado.id = 'banner-est-fechado';
       bannerFechado.style.cssText = 'margin:0 0 12px;padding:12px 16px;border-radius:12px;background:rgba(244,63,94,0.12);border:1.5px solid #fb7185;color:#fb7185;font-size:13px;font-weight:600;text-align:center;';
-      var lista = document.getElementById('lista-itens');
       if(lista) lista.parentNode.insertBefore(bannerFechado, lista);
     }
     if(!estAtual.aberto) {
