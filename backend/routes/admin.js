@@ -128,6 +128,47 @@ router.get('/repasses', async (req, res, next) => {
   }
 });
 
+// POST /api/admin/repasses/reconciliar — Cria repasses faltantes para todos os pedidos aprovados
+router.post('/repasses/reconciliar', async (req, res, next) => {
+  try {
+    const { calcularSplit } = require('../services/commission');
+
+    // Buscar todos os pedidos aprovados sem repasse lojista
+    const { data: pedidos } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, subtotal, taxa_entrega, forma_pagamento, estabelecimentos(tipo_entrega)')
+      .eq('pagamento_status', 'aprovado')
+      .neq('status', 'cancelado');
+
+    if (!pedidos || pedidos.length === 0) return res.json({ criados: 0 });
+
+    const pedidoIds = pedidos.map(p => p.id);
+    const { data: repassesExist } = await supabaseAdmin
+      .from('repasses').select('pedido_id').eq('tipo', 'lojista').in('pedido_id', pedidoIds);
+
+    const comRepasse = new Set((repassesExist || []).map(r => r.pedido_id));
+    const faltando = pedidos.filter(p => !comRepasse.has(p.id));
+
+    if (faltando.length === 0) return res.json({ criados: 0, msg: 'Nenhum repasse faltando' });
+
+    const novos = faltando.map(p => {
+      const tipoEntrega = p.estabelecimentos?.tipo_entrega || 'app';
+      const split = calcularSplit({ subtotal: p.subtotal, taxaEntrega: p.taxa_entrega, formaPagamento: p.forma_pagamento, tipoEntrega });
+      const rows = [
+        { pedido_id: p.id, tipo: 'lojista',    valor: split.valorLojista,    status: 'pendente' },
+        { pedido_id: p.id, tipo: 'plataforma', valor: split.valorPlataforma, status: 'pago' },
+      ];
+      if (split.valorMotoboy > 0) rows.splice(1, 0, { pedido_id: p.id, tipo: 'motoboy', valor: split.valorMotoboy, status: 'pendente' });
+      return rows;
+    }).flat();
+
+    const { error } = await supabaseAdmin.from('repasses').insert(novos);
+    if (error) throw error;
+
+    res.json({ criados: faltando.length, repasses_inseridos: novos.length });
+  } catch (err) { next(err); }
+});
+
 // PATCH /api/admin/repasses/:id/pagar — Marcar repasse como pago
 router.patch('/repasses/:id/pagar', async (req, res, next) => {
   try {

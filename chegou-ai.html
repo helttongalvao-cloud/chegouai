@@ -5792,7 +5792,8 @@ async function renderAdmin(secao) {
         ? '<div class="tabela"><div class="tabela-row"><div class="info">Nenhum repasse pendente.</div></div></div>'
         : '<div class="secao-titulo">Repasses pendentes</div><div class="tabela">' + lojaRows.join('') + motoRows.join('') + '</div>';
 
-      el.innerHTML = resumoHtml + tabelaHtml;
+      var reconciliarHtml = '<div style="margin-bottom:12px;text-align:right;"><button class="btn-principal" style="font-size:12px;padding:8px 16px;" onclick="adminReconciliarRepasses(this)">🔄 Sincronizar repasses faltantes</button></div>';
+      el.innerHTML = reconciliarHtml + resumoHtml + tabelaHtml;
     } catch(e) {
       el.innerHTML =
         '<div class="secao-titulo">Repasses</div>' +
@@ -5888,6 +5889,18 @@ async function renderAdmin(secao) {
         '</div></div>' +
         '<button class="btn-principal" id="btn-cad-moto" onclick="cadastrarMotoboy()">Cadastrar motoboy</button>' +
       '</div>';
+  }
+}
+
+async function adminReconciliarRepasses(btn) {
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ Sincronizando...'; }
+  try {
+    var r = await apiCall('/api/admin/repasses/reconciliar', { method: 'POST' });
+    showToast('✅', 'Sincronizado', r.criados > 0 ? r.criados + ' repasses criados' : 'Nenhum repasse faltando');
+    renderAdmin('repasses');
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
+    if(btn) { btn.disabled = false; btn.textContent = '🔄 Sincronizar repasses faltantes'; }
   }
 }
 
