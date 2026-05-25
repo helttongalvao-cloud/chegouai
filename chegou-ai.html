@@ -889,10 +889,11 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <button id="btn-confirmar-localizacao" onclick="confirmarLocalizacaoMapa()" style="width:100%;margin-top:8px;padding:12px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:14px;font-weight:700;cursor:pointer;">✓ Confirmar localização</button>
       </div>
       <div id="link-gmaps-wrap" style="display:none;margin-top:10px;">
-        <div style="font-size:12px;color:var(--texto2);margin-bottom:8px;line-height:1.4;">
-          Peça para quem vai receber abrir o <strong style="color:var(--texto);">Google Maps</strong> → pressionar a localização da casa → tocar em <strong style="color:var(--texto);">Compartilhar</strong> → enviar o link pelo WhatsApp. Cole o link abaixo:
+        <div style="font-size:12px;color:var(--texto2);margin-bottom:10px;line-height:1.5;">
+          Envie o link abaixo para quem está em casa. Ela abre, toca em um botão e te manda as coordenadas. Cole aqui o link que ela te enviar.
         </div>
-        <input type="text" id="input-link-gmaps" placeholder="Cole o link do Google Maps aqui..."
+        <button onclick="gerarLinkCompartilhar()" style="width:100%;padding:11px;margin-bottom:10px;background:var(--cinza3);border:1.5px solid var(--verde);border-radius:10px;color:var(--verde);font-size:13px;font-weight:700;cursor:pointer;">📤 Gerar link para quem está em casa</button>
+        <input type="text" id="input-link-gmaps" placeholder="Cole aqui o link que a pessoa te enviou..."
           style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;">
         <div id="link-gmaps-erro" style="font-size:12px;color:var(--erro);margin-top:4px;display:none;"></div>
         <button onclick="confirmarLinkGMaps(this)" style="width:100%;padding:12px;margin-top:8px;background:var(--verde);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;cursor:pointer;">📍 Confirmar localização</button>
@@ -2283,8 +2284,10 @@ function irTela(id) {
 restaurarCarrinho();
 atualizarCarrinho();
 setTimeout(function(){
-  // Modo mesa: /mesa?loja=ID&mesa=N — não requer login
+  // Modo compartilhar localização — quem está em casa abre este link
   var params = new URLSearchParams(window.location.search);
+  if(params.get('compartilhar') === '1') { mostrarTelaCompartilharLocalizacao(); return; }
+  // Modo mesa: /mesa?loja=ID&mesa=N — não requer login
   var lojaParam = params.get('loja');
   if(window.location.pathname === '/mesa' && lojaParam) {
     iniciarModoMesa(lojaParam, params.get('mesa') || '');
@@ -3943,6 +3946,9 @@ function mostrarInputLinkGMaps() {
 function _extrairCoordsTexto(texto) {
   texto = texto.trim();
   var m;
+  // ?loc=lat,lng — formato Chegou Aí
+  m = texto.match(/[?&]loc=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if(m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
   // @lat,lng — formato padrão Google Maps com câmera
   m = texto.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
   if(m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
@@ -3962,6 +3968,52 @@ function _extrairCoordsTexto(texto) {
   m = texto.match(/^(-?\d{1,3}\.?\d+)\s*,\s*(-?\d{1,3}\.?\d+)$/);
   if(m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
   return null;
+}
+
+function gerarLinkCompartilhar() {
+  var link = window.location.origin + '/app?compartilhar=1';
+  navigator.clipboard.writeText(link).then(function() {
+    showToast('✅', 'Link copiado!', 'Envie pelo WhatsApp para quem está em casa');
+  }).catch(function() {
+    prompt('Copie este link e envie para quem está em casa:', link);
+  });
+}
+
+function mostrarTelaCompartilharLocalizacao() {
+  document.body.innerHTML = '';
+  document.body.style.cssText = 'margin:0;padding:0;background:#0a0a0a;font-family:DM Sans,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;';
+  document.body.innerHTML =
+    '<div style="max-width:380px;width:90%;text-align:center;padding:32px 24px;">' +
+      '<div style="font-size:56px;margin-bottom:16px;">📍</div>' +
+      '<div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:10px;">Compartilhar localização</div>' +
+      '<div style="font-size:15px;color:#71717a;margin-bottom:32px;line-height:1.5;">Toque no botão abaixo para enviar sua localização exata para quem está fazendo o pedido.</div>' +
+      '<button id="btn-compartilhar-loc" onclick="enviarLocalizacaoCompartilhada()" style="width:100%;padding:18px;border-radius:14px;border:none;background:#00c853;color:#000;font-size:17px;font-weight:800;cursor:pointer;">📡 Enviar minha localização</button>' +
+      '<div id="compartilhar-status" style="margin-top:20px;font-size:14px;color:#71717a;"></div>' +
+    '</div>';
+}
+
+function enviarLocalizacaoCompartilhada() {
+  var btn = document.getElementById('btn-compartilhar-loc');
+  var status = document.getElementById('compartilhar-status');
+  btn.disabled = true; btn.textContent = '📡 Obtendo localização...';
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    var lat = pos.coords.latitude.toFixed(6);
+    var lng = pos.coords.longitude.toFixed(6);
+    var link = window.location.origin + '/app?loc=' + lat + ',' + lng;
+    navigator.clipboard.writeText(link).then(function() {
+      btn.textContent = '✅ Link copiado!';
+      btn.style.background = '#166534';
+      status.innerHTML = '<div style="color:#4ade80;font-weight:600;margin-bottom:8px;">Cole este link no WhatsApp para quem está pedindo:</div>' +
+        '<div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:12px;word-break:break-all;font-size:12px;color:#a3a3a3;">' + link + '</div>';
+    }).catch(function() {
+      btn.textContent = '✅ Localização obtida';
+      status.innerHTML = '<div style="color:#4ade80;font-weight:600;margin-bottom:8px;">Copie e envie para quem está pedindo:</div>' +
+        '<input value="' + link + '" readonly onclick="this.select()" style="width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#fff;font-size:12px;box-sizing:border-box;">';
+    });
+  }, function() {
+    btn.disabled = false; btn.textContent = '📡 Enviar minha localização';
+    status.innerHTML = '<div style="color:#ef4444;">Permita o acesso à localização e tente novamente.</div>';
+  }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
 async function confirmarLinkGMaps(btn) {
