@@ -3946,7 +3946,9 @@ function usarLocalizacao() {
     btn.textContent = '📍 Usar minha localização atual';
     btn.style.color = 'var(--texto2)';
     if (err.code === 1) {
-      showToast('📍', 'Localização bloqueada', 'Permita nas Configurações → ' + (isIOS ? 'Safari' : 'Chrome') + ' → Localização.');
+      var instrLoc = isIOS ? 'Configurações → Safari → Localização'
+        : (window.Capacitor ? 'Configurações → Apps → Chegou Aí → Permissões → Localização' : 'Configurações → Chrome → Localização');
+      showToast('📍', 'Localização bloqueada', 'Permita em: ' + instrLoc);
     } else {
       showToast('📍', 'Localização indisponível', 'Digite o endereço completo no campo acima.');
     }
