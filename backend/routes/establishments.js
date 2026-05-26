@@ -979,14 +979,10 @@ router.get('/me/extrato-repasse', requireRole('estabelecimento'), async (req, re
     }
 
     const lista = (pedidos || []).map(p => {
+      const subtotal = parseFloat(p.subtotal || 0);
       const taxa     = parseFloat(p.taxa_entrega || 0);
-      const total    = parseFloat(p.total || 0);
-      // Usa total - taxa_entrega para garantir que subtotal nunca inclua frete
-      // (corrige casos onde subtotal foi salvo incorretamente com frete embutido)
-      const subtotal = parseFloat(Math.max(parseFloat(p.subtotal || 0), total - taxa).toFixed(2));
-      const subtotalProdutos = parseFloat((total - taxa).toFixed(2)) || subtotal;
-      const desconto = parseFloat((subtotalProdutos * COMISSAO).toFixed(2));
-      const liquido  = parseFloat((subtotalProdutos - desconto).toFixed(2));
+      const desconto = parseFloat((subtotal * COMISSAO).toFixed(2));
+      const liquido  = parseFloat((subtotal - desconto).toFixed(2));
       return {
         id: p.id,
         data: p.criado_em,
@@ -1001,7 +997,7 @@ router.get('/me/extrato-repasse', requireRole('estabelecimento'), async (req, re
       };
     });
 
-    const totalBruto    = lista.reduce((s, p) => s + (parseFloat(p.total||0) - parseFloat(p.taxa_entrega||0)), 0);
+    const totalBruto    = lista.reduce((s, p) => s + p.subtotal, 0);
     const totalDesconto = lista.reduce((s, p) => s + p.desconto, 0);
     const totalLiquido  = lista.reduce((s, p) => s + p.liquido, 0);
 
