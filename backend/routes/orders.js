@@ -181,8 +181,11 @@ router.post(
         if (cupomErr || !cupomData) {
           return res.status(400).json({ error: 'Cupom inválido ou expirado' });
         }
-        if (cupomData.validade && cupomData.validade.split('T')[0] < new Date().toISOString().split('T')[0]) {
-          return res.status(400).json({ error: 'Cupom expirado' });
+        if (cupomData.validade) {
+          const hojeEirunepe = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Eirunepe' })).toISOString().split('T')[0];
+          if (cupomData.validade.split('T')[0] < hojeEirunepe) {
+            return res.status(400).json({ error: 'Cupom expirado' });
+          }
         }
         if (cupomData.usos_atual >= cupomData.usos_max) {
           return res.status(400).json({ error: 'Cupom esgotado' });
@@ -351,9 +354,11 @@ router.get('/cupom/:codigo', async (req, res, next) => {
       .single();
 
     if (error || !cupom) return res.status(404).json({ error: 'Cupom não encontrado ou inativo' });
-    // Comparar só a data (sem hora) para evitar problema de fuso horário
-    if (cupom.validade && cupom.validade.split('T')[0] < new Date().toISOString().split('T')[0]) {
-      return res.status(400).json({ error: 'Cupom expirado' });
+    if (cupom.validade) {
+      const hojeEirunepe = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Eirunepe' })).toISOString().split('T')[0];
+      if (cupom.validade.split('T')[0] < hojeEirunepe) {
+        return res.status(400).json({ error: 'Cupom expirado' });
+      }
     }
     if (cupom.usos_atual >= cupom.usos_max) return res.status(400).json({ error: 'Cupom esgotado' });
     const valorMinimo = parseFloat(cupom.valor_minimo || 0);
