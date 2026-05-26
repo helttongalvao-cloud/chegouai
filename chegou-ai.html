@@ -2663,7 +2663,7 @@ async function irHome() {
 
 // Cache local de estabelecimentos vindos da API (reutiliza a variável já declarada acima)
 
-async function carregarEstabelecimentos(cat) {
+async function carregarEstabelecimentos(cat, _retry) {
   const lista = document.getElementById('lista-estabelecimentos');
   lista.innerHTML = [1,2,3,4,5].map(function(){ return '<div class="card-est" style="pointer-events:none;"><div style="width:62px;height:62px;border-radius:16px;flex-shrink:0;" class="skeleton"></div><div style="flex:1;"><div class="sk-linha larga skeleton" style="height:14px;margin-bottom:8px;border-radius:7px;"></div><div class="sk-linha curta skeleton" style="height:11px;border-radius:6px;"></div></div></div>'; }).join('');
   try {
@@ -2679,7 +2679,12 @@ async function carregarEstabelecimentos(cat) {
     }
     renderEstabelecimentos(cat);
   } catch(e) {
-    lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar. Verifique a conexão.</div>';
+    // No Capacitor o WebView pode não estar pronto na primeira abertura — tenta de novo uma vez
+    if(!_retry && window.Capacitor) {
+      setTimeout(function() { carregarEstabelecimentos(cat, true); }, 1500);
+    } else {
+      lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar. Verifique a conexão.</div>';
+    }
   }
 }
 
