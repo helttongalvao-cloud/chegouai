@@ -991,4 +991,40 @@ router.get('/metrics', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/admin/gerar-slugs — Auto-gera slugs para lojas sem link personalizado
+router.post('/gerar-slugs', async (req, res, next) => {
+  try {
+    const { data: lojas, error } = await supabaseAdmin
+      .from('estabelecimentos')
+      .select('id, nome, slug')
+      .is('slug', null);
+    if (error) throw error;
+
+    const slugify = (str) => str
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 40);
+
+    const usados = new Set();
+    const updates = [];
+    for (const loja of (lojas || [])) {
+      let base = slugify(loja.nome || 'loja');
+      if (!base) base = 'loja';
+      let slug = base;
+      let i = 2;
+      while (usados.has(slug)) { slug = base + '-' + i++; }
+      usados.add(slug);
+      updates.push({ id: loja.id, slug });
+    }
+
+    for (const u of updates) {
+      await supabaseAdmin.from('estabelecimentos').update({ slug: u.slug }).eq('id', u.id);
+    }
+
+    res.json({ atualizadas: updates.length, slugs: updates.map(u => u.slug) });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

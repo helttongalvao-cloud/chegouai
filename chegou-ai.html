@@ -5858,6 +5858,9 @@ async function renderAdmin(secao) {
     const lojas = adminDataCache.estabelecimentos || [];
     el.innerHTML =
       '<div class="secao-titulo">Estabelecimentos parceiros</div>' +
+      '<div style="margin-bottom:10px;">' +
+      '<button onclick="gerarSlugsLojas(this)" style="padding:8px 16px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:13px;cursor:pointer;">🔗 Gerar links personalizados automáticos</button>' +
+      '</div>' +
       '<div class="tabela">' +
       (lojas.length === 0 ? '<div class="tabela-row"><div class="info">Nenhuma loja cadastrada.</div></div>' :
       lojas.map(function(e) {
@@ -5969,6 +5972,18 @@ async function adminPagarRepasses(ids, btn) {
     }));
     renderAdmin('repasses');
   } catch(e) { alert('Erro: ' + e.message); if(btn) { btn.disabled=false; btn.textContent='✅ Marcar pago'; } }
+}
+
+async function gerarSlugsLojas(btn) {
+  btn.disabled = true; btn.textContent = 'Gerando...';
+  try {
+    var r = await apiCall('/api/admin/gerar-slugs', { method: 'POST' });
+    showToast('✅', 'Links gerados!', r.atualizadas + ' lojas atualizadas.');
+    btn.textContent = '✅ Concluído';
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
+    btn.disabled = false; btn.textContent = '🔗 Gerar links personalizados automáticos';
+  }
 }
 
 async function adminToggleLoja(id) {
