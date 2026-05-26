@@ -6989,7 +6989,7 @@ async function renderAdminCupons() {
         '<input type="number" id="cup-minimo" placeholder="Valor mínimo (R$)" min="0" step="0.01" value="0" style="padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;">' +
         '<div style="display:flex;gap:4px;">' +
         '<input type="date" id="cup-validade" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;">' +
-        '<button type="button" onclick="document.getElementById(\'cup-validade\').value=\'\';" style="padding:8px 10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto2);font-size:12px;cursor:pointer;" title="Sem validade">✕</button>' +
+        '<button type="button" onclick="limparValidade()" style="padding:8px 10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto2);font-size:12px;cursor:pointer;" title="Sem validade">✕</button>' +
         '</div>' +
       '</div>' +
       '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--texto2);margin-bottom:10px;cursor:pointer;">' +
@@ -7030,6 +7030,11 @@ async function renderAdminCupons() {
   } catch(e) {
     el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro: ' + e.message + '</div>';
   }
+}
+
+function limparValidade() {
+  var el = document.getElementById('cup-validade');
+  if (el) { el.value = ''; el.defaultValue = ''; el.removeAttribute('value'); }
 }
 
 async function criarCupom() {
