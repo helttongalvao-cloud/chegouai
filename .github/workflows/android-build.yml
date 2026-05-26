@@ -69,9 +69,9 @@ jobs:
 
       - name: Set targetSdkVersion to 35
         run: |
-          sed -i 's/targetSdkVersion .*/targetSdkVersion 35/' android-app/android/variables.gradle || true
-          sed -i 's/targetSdk .*/targetSdk 35/' android-app/android/variables.gradle || true
-          grep -r "targetSdkVersion\|targetSdk" android-app/android/variables.gradle 2>/dev/null || true
+          sed -i 's/targetSdkVersion = .*/targetSdkVersion = 35/' android-app/android/variables.gradle || true
+          sed -i 's/targetSdk = .*/targetSdk = 35/' android-app/android/variables.gradle || true
+          cat android-app/android/variables.gradle 2>/dev/null || true
 
       - name: Configure signing in build.gradle
         run: |
