@@ -4576,13 +4576,8 @@ async function renderInfoLoja() {
   var linkLoja = window.location.origin + '/app?loja=' + est.id;
   var cupomFreteAtivo = '';
   try {
-    var cupons = await apiCall('/api/orders/cupom-check?preview=1').catch(function(){ return null; });
-  } catch(_) {}
-  // Buscar cupom frete grátis ativo via admin
-  try {
-    var todosC = await apiCall('/api/admin/cupons').catch(function(){ return []; });
-    var cf = (todosC || []).find(function(c){ return c.frete_gratis && c.ativo; });
-    if(cf) cupomFreteAtivo = cf.codigo;
+    var cfResp = await apiCall('/api/orders/frete-gratis').catch(function(){ return null; });
+    if (cfResp && cfResp.codigo) cupomFreteAtivo = cfResp.codigo;
   } catch(_) {}
 
   var msgFreteExtra = cupomFreteAtivo

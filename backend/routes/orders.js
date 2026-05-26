@@ -1187,4 +1187,19 @@ router.patch('/:id/chat/lida', requireAuth, [param('id').isUUID()], async (req, 
   } catch (err) { next(err); }
 });
 
+// GET /api/orders/frete-gratis — cupom de frete grátis ativo (público, para lojistas)
+router.get('/frete-gratis', async (req, res, next) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('cupons_plataforma')
+      .select('codigo')
+      .eq('frete_gratis', true)
+      .eq('ativo', true)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    res.json({ codigo: data ? data.codigo : null });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
