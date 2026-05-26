@@ -982,7 +982,10 @@ router.get('/me/extrato-repasse', requireRole('estabelecimento'), async (req, re
       const subtotal = parseFloat(p.subtotal || 0);
       const taxa     = parseFloat(p.taxa_entrega || 0);
       const desconto = parseFloat((subtotal * COMISSAO).toFixed(2));
-      const liquido  = parseFloat((subtotal - desconto).toFixed(2));
+      // Entrega própria: lojista recebe frete para pagar o motoboy dele
+      const liquido  = temMotoboyProprio
+        ? parseFloat((subtotal - desconto + taxa).toFixed(2))
+        : parseFloat((subtotal - desconto).toFixed(2));
       return {
         id: p.id,
         data: p.criado_em,
