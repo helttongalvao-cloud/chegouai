@@ -6987,7 +6987,10 @@ async function renderAdminCupons() {
       '</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">' +
         '<input type="number" id="cup-minimo" placeholder="Valor mínimo (R$)" min="0" step="0.01" value="0" style="padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;">' +
-        '<input type="date" id="cup-validade" style="padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;">' +
+        '<div style="display:flex;gap:4px;">' +
+        '<input type="date" id="cup-validade" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;">' +
+        '<button type="button" onclick="document.getElementById(\'cup-validade\').value=\'\';" style="padding:8px 10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto2);font-size:12px;cursor:pointer;" title="Sem validade">✕</button>' +
+        '</div>' +
       '</div>' +
       '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--texto2);margin-bottom:10px;cursor:pointer;">' +
         '<input type="checkbox" id="cup-frete-gratis" style="width:16px;height:16px;"> Frete grátis (ignora valor de desconto)' +
