@@ -67,10 +67,11 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android-app/android/app/chegouai.jks
 
-      - name: Set targetSdkVersion to 35
+      - name: Set targetSdkVersion to 35 and bump versionCode
         run: |
           sed -i 's/targetSdkVersion = .*/targetSdkVersion = 35/' android-app/android/variables.gradle || true
           sed -i 's/targetSdk = .*/targetSdk = 35/' android-app/android/variables.gradle || true
+          sed -i 's/versionCode .*/versionCode 2/' android-app/android/app/build.gradle || true
           cat android-app/android/variables.gradle 2>/dev/null || true
 
       - name: Configure signing in build.gradle
