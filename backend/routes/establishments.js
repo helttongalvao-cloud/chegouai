@@ -302,10 +302,10 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         profiles!pedidos_cliente_id_fkey (nome)
       `)
         .eq('estabelecimento_id', est.id)
-        .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue'])
+        .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue', 'cancelado'])
         .or('pagamento_status.eq.aprovado,tipo.eq.lista')
-        .gte('criado_em', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-        .order('criado_em', { ascending: true }),
+        .gte('criado_em', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+        .order('criado_em', { ascending: false }),
     ]);
 
     if (errPedidos) console.error('[dashboard] pedidosAbertos query error:', errPedidos);
