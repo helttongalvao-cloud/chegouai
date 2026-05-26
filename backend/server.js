@@ -235,6 +235,11 @@ app.use((err, req, res, next) => {
 });
 
 // 404 para rotas não encontradas
+// Slugs de loja: /:slug → serve o app com ?slug=... para o frontend resolver
+app.get('/:slug([a-z0-9][a-z0-9-]{1,39})', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'chegou-ai.html'));
+});
+
 app.use((req, res) => {
   res.status(404).json({ error: 'Rota não encontrada' });
 });

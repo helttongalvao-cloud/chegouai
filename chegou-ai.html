@@ -2288,6 +2288,13 @@ setTimeout(function(){
     var lojaIdParam = params.get('loja');
     irTela('tela-home');
     setTimeout(function() { abrirCardapio(lojaIdParam); }, 300);
+  } else if(window.location.pathname.match(/^\/[a-z0-9][a-z0-9-]{1,39}$/)) {
+    // Slug da loja: /hamburguitos → resolve para UUID e abre cardápio
+    var slugPath = window.location.pathname.replace(/^\//, '');
+    irTela('tela-home');
+    apiCall('/api/establishments/slug/' + slugPath).then(function(loja) {
+      if(loja && loja.id) setTimeout(function() { abrirCardapio(loja.id); }, 300);
+    }).catch(function() {});
   } else if(authToken && currentUser) {
     // Sessão salva: ir direto para a tela correta sem esperar verificarSessao()
     // verificarSessao() valida em background e desloga se token expirou
@@ -4573,7 +4580,9 @@ async function renderInfoLoja() {
     }).join('');
 
   var fotoPreviewStyle = est.foto_url ? '' : 'display:none;';
-  var linkLoja = window.location.origin + '/app?loja=' + est.id;
+  var linkLoja = est.slug
+    ? window.location.origin + '/' + est.slug
+    : window.location.origin + '/app?loja=' + est.id;
   var cupomFreteAtivo = '';
   try {
     var cfResp = await apiCall('/api/orders/frete-gratis').catch(function(){ return null; });
@@ -4607,6 +4616,13 @@ async function renderInfoLoja() {
     '</div>' +
     '<div class="form-grupo"><label>Nome da loja</label>' +
     '<input type="text" id="loja-nome-input" class="modal-campo" style="margin:0;" autocomplete="off" value="' + (est.nome || '') + '"></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>🔗 Link personalizado</label>' +
+    '<div style="display:flex;align-items:center;gap:4px;background:var(--cinza1);border:1.5px solid var(--cinza3);border-radius:8px;padding:8px 10px;">' +
+      '<span style="color:var(--texto2);font-size:12px;white-space:nowrap;">chegouaiapp.com.br/</span>' +
+      '<input type="text" id="loja-slug-input" placeholder="minha-loja" style="border:none;background:transparent;color:var(--texto);font-size:13px;flex:1;outline:none;" value="' + (est.slug || '') + '" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,\'\');" maxlength="40">' +
+    '</div>' +
+    '<span style="font-size:11px;color:var(--texto2);margin-top:4px;display:block;">Apenas letras minúsculas, números e hífens. Clientes vão usar este link curto.</span>' +
+    '</div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Emoji da loja</label>' +
     '<input type="text" id="loja-emoji-input" class="modal-campo" style="margin:0;font-size:22px;" maxlength="4" value="' + (est.emoji || '🏪') + '"></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Categoria</label>' +
@@ -4752,6 +4768,7 @@ async function salvarInfoLoja() {
   var minimoStr = document.getElementById('loja-minimo-input') ? document.getElementById('loja-minimo-input').value : null;
   var minimo = minimoStr !== null ? parseFloat(minimoStr) : null;
   var whatsapp = document.getElementById('loja-whatsapp-input') ? document.getElementById('loja-whatsapp-input').value.replace(/\D/g,'') : null;
+  var slug = document.getElementById('loja-slug-input') ? document.getElementById('loja-slug-input').value.trim() : null;
 
   // Coletar horários
   var dias = ['seg','ter','qua','qui','sex','sab','dom'];
@@ -4776,6 +4793,7 @@ async function salvarInfoLoja() {
     if(taxa && !isNaN(taxa)) body.taxa_entrega = taxa;
     if(minimo !== null && !isNaN(minimo)) body.valor_minimo = minimo;
     if(whatsapp) body.whatsapp = whatsapp;
+    if(slug !== null) body.slug = slug || null;
     if(Object.keys(horarios).length > 0) body.horarios = horarios;
     if(aberto !== null) body.aberto = aberto;
     var fotoUrl = document.getElementById('loja-foto-url');

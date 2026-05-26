@@ -165,6 +165,23 @@ router.get('/', async (req, res, next) => {
   }
 });
 
+// GET /api/establishments/slug/:slug — Resolve slug para dados da loja (público)
+router.get('/slug/:slug', async (req, res, next) => {
+  try {
+    const slug = (req.params.slug || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (!slug) return res.status(400).json({ error: 'Slug inválido' });
+    const { data, error } = await supabaseAdmin
+      .from('estabelecimentos')
+      .select('id, nome, emoji, categoria')
+      .eq('slug', slug)
+      .eq('ativo', true)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Loja não encontrada' });
+    res.json(data);
+  } catch (err) { next(err); }
+});
+
 // =============================================
 // GET /api/establishments/:id — Detalhes + cardápio
 // =============================================
@@ -349,6 +366,7 @@ router.put(
     body('foto_url').optional().trim(),
     body('lat').optional().isFloat({ min: -90, max: 90 }),
     body('lng').optional().isFloat({ min: -180, max: 180 }),
+    body('slug').optional({ nullable: true, checkFalsy: true }).trim().matches(/^[a-z0-9-]{2,40}$/).withMessage('Link personalizado inválido (use letras minúsculas, números e hífens)'),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -357,7 +375,7 @@ router.put(
     }
 
     const campos = {};
-    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'valor_minimo', 'aberto', 'mp_user_id', 'whatsapp', 'horarios', 'foto_url', 'lat', 'lng'].forEach((key) => {
+    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'valor_minimo', 'aberto', 'mp_user_id', 'whatsapp', 'horarios', 'foto_url', 'lat', 'lng', 'slug'].forEach((key) => {
       if (req.body[key] !== undefined) campos[key] = req.body[key];
     });
 
