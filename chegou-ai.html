@@ -6084,6 +6084,11 @@ function adminEditarLoja(e) {
     '<div class="form-grupo" style="flex:1;"><label>Pedido mínimo (R$)</label><input id="adm-loja-minimo" class="modal-campo" style="margin:0;" type="number" step="1" min="0" value="' + (e.valor_minimo || '0') + '"></div>' +
     '</div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>WhatsApp (só números)</label><input id="adm-loja-whatsapp" class="modal-campo" style="margin:0;" placeholder="97999999999" value="' + sanitizar(e.whatsapp || '') + '"></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>🔗 Link personalizado</label>' +
+    '<div style="display:flex;align-items:center;gap:4px;background:var(--cinza1);border:1.5px solid var(--cinza3);border-radius:8px;padding:8px 10px;">' +
+    '<span style="color:var(--texto2);font-size:12px;white-space:nowrap;">chegouaiapp.com.br/</span>' +
+    '<input type="text" id="adm-loja-slug" placeholder="minha-loja" style="border:none;background:transparent;color:var(--texto);font-size:13px;flex:1;outline:none;" value="' + sanitizar(e.slug || '') + '" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,\'\');" maxlength="40">' +
+    '</div></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Endereço da loja (para GPS do motoboy)</label>' +
     '<div style="display:flex;gap:6px;">' +
     '<input id="adm-loja-endereco" class="modal-campo" style="margin:0;flex:1;" placeholder="Rua, número, bairro" value="' + sanitizar(e.endereco || '') + '" oninput="geocodificarLojaEdit()">' +
@@ -6160,6 +6165,7 @@ async function adminSalvarLoja(id) {
     taxa_entrega: parseFloat(document.getElementById('adm-loja-taxa').value) || 4,
     valor_minimo: parseFloat(document.getElementById('adm-loja-minimo').value) || 0,
     whatsapp:     document.getElementById('adm-loja-whatsapp').value.replace(/\D/g,''),
+    slug:         document.getElementById('adm-loja-slug').value.trim() || null,
     aberto:       document.getElementById('adm-loja-aberta').checked,
     endereco:     document.getElementById('adm-loja-endereco').value.trim() || null,
     lat:          window._admLojaLat || null,

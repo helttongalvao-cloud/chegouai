@@ -517,7 +517,7 @@ router.post(
 router.put('/establishments/:id', async (req, res, next) => {
   try {
     const campos = {};
-    ['nome', 'categoria', 'tempo_entrega', 'taxa_entrega', 'emoji', 'aberto', 'whatsapp', 'valor_minimo', 'endereco', 'lat', 'lng'].forEach((k) => {
+    ['nome', 'categoria', 'tempo_entrega', 'taxa_entrega', 'emoji', 'aberto', 'whatsapp', 'valor_minimo', 'endereco', 'lat', 'lng', 'slug'].forEach((k) => {
       if (req.body[k] !== undefined) campos[k] = req.body[k];
     });
     const { data, error } = await supabaseAdmin
