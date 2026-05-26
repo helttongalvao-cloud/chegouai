@@ -6977,7 +6977,10 @@ async function renderAdminCupons() {
           return '<div class="tabela-row">' +
             '<div class="info"><div class="nome">🎟️ ' + c.codigo + ' — ' + descTxt + '</div>' +
             '<div class="sub">Usos: ' + usosTxt + ' • Val: ' + validade + ' • ' + ativo + '</div></div>' +
+            '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">' +
             '<button onclick="toggleCupom(\'' + c.id + '\',' + (!c.ativo) + ',this)" style="padding:6px 12px;border-radius:8px;border:1.5px solid var(--cinza3);background:transparent;color:var(--texto);font-size:12px;cursor:pointer;">' + (c.ativo ? 'Desativar' : 'Ativar') + '</button>' +
+            '<button onclick="excluirCupom(\'' + c.id + '\',\'' + c.codigo + '\')" style="padding:6px 12px;border-radius:8px;border:1.5px solid var(--erro);background:transparent;color:var(--erro);font-size:12px;cursor:pointer;">Excluir</button>' +
+            '</div>' +
           '</div>';
         }).join('') + '</div>';
 
@@ -7054,6 +7057,15 @@ async function toggleCupom(id, ativo, btn) {
     renderAdminCupons();
   } catch(e) { alert('Erro: ' + e.message); if(btn) btn.disabled = false; }
 }
+
+async function excluirCupom(id, codigo) {
+  if(!confirm('Excluir cupom ' + codigo + '?')) return;
+  try {
+    await apiCall('/api/admin/cupons/' + id, { method: 'DELETE' });
+    renderAdminCupons();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
 
 // ADMIN
 async function adminAtivarTransferencia(lojaId, btn) {

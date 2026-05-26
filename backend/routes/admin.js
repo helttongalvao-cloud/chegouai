@@ -752,19 +752,40 @@ router.post(
 );
 
 // =============================================
-// PATCH /api/admin/cupons/:id — Ativar/desativar cupom
+// PATCH /api/admin/cupons/:id — Ativar/desativar ou editar cupom
 // =============================================
 router.patch('/cupons/:id', async (req, res, next) => {
   try {
-    const { ativo } = req.body;
+    const campos = {};
+    if (req.body.ativo !== undefined) campos.ativo = !!req.body.ativo;
+    if (req.body.frete_gratis !== undefined) campos.frete_gratis = !!req.body.frete_gratis;
+    if (req.body.desconto_tipo !== undefined) campos.desconto_tipo = req.body.desconto_tipo;
+    if (req.body.desconto_valor !== undefined) campos.desconto_valor = parseFloat(req.body.desconto_valor);
+    if (req.body.usos_max !== undefined) campos.usos_max = parseInt(req.body.usos_max);
+    if (req.body.valor_minimo !== undefined) campos.valor_minimo = parseFloat(req.body.valor_minimo);
+    if (req.body.validade !== undefined) campos.validade = req.body.validade || null;
     const { data, error } = await supabaseAdmin
       .from('cupons_plataforma')
-      .update({ ativo: !!ativo })
+      .update(campos)
       .eq('id', req.params.id)
       .select()
       .single();
     if (error) throw error;
     res.json(data);
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// DELETE /api/admin/cupons/:id — Excluir cupom
+// =============================================
+router.delete('/cupons/:id', async (req, res, next) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from('cupons_plataforma')
+      .delete()
+      .eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ ok: true });
   } catch (err) { next(err); }
 });
 
