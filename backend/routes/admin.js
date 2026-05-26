@@ -721,7 +721,7 @@ router.post(
     body('desconto_tipo').isIn(['percentual', 'fixo']).withMessage('Tipo inválido'),
     body('desconto_valor').isFloat({ min: 0.01 }).withMessage('Valor inválido'),
     body('usos_max').optional().isInt({ min: 1 }),
-    body('validade').optional().isISO8601().withMessage('Data inválida'),
+    body('validade').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Data inválida'),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
