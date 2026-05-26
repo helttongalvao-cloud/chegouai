@@ -4595,7 +4595,7 @@ async function renderInfoLoja() {
     '<h4 style="font-size:15px;font-weight:700;margin-bottom:4px;">📲 Mensagem para clientes no WhatsApp</h4>' +
     '<p style="font-size:12px;color:var(--texto2);margin-bottom:10px;">Envie para quem pedir pelo WhatsApp e direcione para o app.</p>' +
     '<div style="background:var(--cinza1);border-radius:10px;padding:12px;font-size:13px;color:var(--texto);line-height:1.6;white-space:pre-line;margin-bottom:10px;">' + msgWhats + '</div>' +
-    '<button onclick="navigator.clipboard.writeText(' + JSON.stringify(msgWhats) + ').then(function(){showToast(\'📋\',\'Copiado!\',\'Mensagem pronta para colar no WhatsApp.\');})" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--verde);color:#fff;font-size:14px;font-weight:700;cursor:pointer;">📋 Copiar mensagem</button>' +
+    '<button data-msg="' + encodeURIComponent(msgWhats) + '" onclick="var m=decodeURIComponent(this.getAttribute(\'data-msg\'));navigator.clipboard.writeText(m).then(function(){showToast(\'📋\',\'Copiado!\',\'Mensagem pronta para colar no WhatsApp.\');}).catch(function(){});" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--verde);color:#fff;font-size:14px;font-weight:700;cursor:pointer;">📋 Copiar mensagem</button>' +
     '</div>' +
     '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:16px;padding:16px;">' +
     '<h4 style="font-size:15px;font-weight:700;margin-bottom:14px;">Configurações da loja</h4>' +
