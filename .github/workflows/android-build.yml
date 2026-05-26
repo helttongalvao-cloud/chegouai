@@ -71,8 +71,15 @@ jobs:
         run: |
           sed -i 's/targetSdkVersion = .*/targetSdkVersion = 35/' android-app/android/variables.gradle || true
           sed -i 's/targetSdk = .*/targetSdk = 35/' android-app/android/variables.gradle || true
-          sed -i 's/versionCode .*/versionCode 3/' android-app/android/app/build.gradle || true
+          sed -i 's/versionCode .*/versionCode 4/' android-app/android/app/build.gradle || true
           cat android-app/android/variables.gradle 2>/dev/null || true
+
+      - name: Add location permissions to AndroidManifest
+        run: |
+          MANIFEST="android-app/android/app/src/main/AndroidManifest.xml"
+          grep -q 'ACCESS_FINE_LOCATION' "$MANIFEST" || \
+            sed -i 's|<uses-permission android:name="android.permission.INTERNET"|<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.INTERNET"|' "$MANIFEST"
+          grep 'LOCATION' "$MANIFEST" || true
 
       - name: Configure signing in build.gradle
         run: |
