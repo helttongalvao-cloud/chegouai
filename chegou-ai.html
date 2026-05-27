@@ -2812,13 +2812,20 @@ async function irHome() {
   if(elLista) elLista.style.display = '';
   detectarECarregarCidade(); // Detecta cidade pelo GPS e filtra estabelecimentos
   carregarAvisoHome();
-  // Fallback: se após 3s a lista ainda estiver vazia (ex: race condition de inicialização), recarrega
-  setTimeout(function() {
+  // Fallback: verifica a cada 2s se a lista continua vazia e recarrega (até 5 tentativas)
+  if(window._homeVerifTimer) clearInterval(window._homeVerifTimer);
+  var _homeVerifTentativas = 0;
+  window._homeVerifTimer = setInterval(function() {
+    _homeVerifTentativas++;
     var l = document.getElementById('lista-estabelecimentos');
-    if (l && !l.querySelector('.card-est-animado') && !l.querySelector('[data-sem-cobertura]')) {
+    var telaCerta = document.querySelector('.tela.ativa') && document.querySelector('.tela.ativa').id === 'tela-home';
+    if(!l || !telaCerta || _homeVerifTentativas >= 5) { clearInterval(window._homeVerifTimer); window._homeVerifTimer = null; return; }
+    if(!l.querySelector('.card-est-animado') && !l.querySelector('[data-sem-cobertura]')) {
       carregarEstabelecimentos('todos');
+    } else {
+      clearInterval(window._homeVerifTimer); window._homeVerifTimer = null;
     }
-  }, 3000);
+  }, 2000);
 }
 
 // =============================================
