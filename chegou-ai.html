@@ -2405,7 +2405,7 @@ function entrarComo(perfil) {
   }
   else if(perfil === 'estabelecimento') {
     irTela('tela-estabelecimento');
-    setTimeout(function() { renderEstabelecimento(); }, 50);
+    setTimeout(function() { renderEstabelecimento(); mostrarOnboardingLojista(); }, 50);
     if(window.estPollingTimer) clearInterval(window.estPollingTimer);
     window.estPollingTimer = setInterval(function() { renderEstabelecimento(); }, 15000);
     // Reconectar Realtime e re-renderizar ao voltar ao foco (app em background no Android)
@@ -2445,6 +2445,85 @@ function entrarComo(perfil) {
     }
   }
   else if(perfil === 'admin') { renderAdmin('pedidos'); irTela('tela-admin'); }
+}
+
+// =============================================
+// ONBOARDING DO LOJISTA
+// =============================================
+var _onboardingPassos = [
+  {
+    emoji: '👋',
+    titulo: 'Bem-vindo ao Chegou Aí!',
+    texto: 'Em poucos minutos você estará recebendo pedidos. Veja como funciona — são só 5 passos rápidos.',
+    btn: 'Vamos lá →'
+  },
+  {
+    emoji: '🔔',
+    titulo: 'Ative as notificações',
+    texto: 'Quando chegar um pedido, você recebe uma notificação sonora no celular — mesmo com a tela bloqueada. Toque em <strong>"Ativar notificações"</strong> na tela principal.',
+    btn: 'Entendi →'
+  },
+  {
+    emoji: '📦',
+    titulo: 'Chegou um pedido!',
+    texto: 'Os pedidos aparecem na aba <strong>"Novos"</strong>. Você vê o que o cliente pediu, o endereço e a forma de pagamento. Toque em <strong>"Aceitar"</strong> para confirmar.',
+    btn: 'Entendi →'
+  },
+  {
+    emoji: '✅',
+    titulo: 'Pedido pronto?',
+    texto: 'Quando o lanche estiver pronto para entregar, toque em <strong>"Marcar pronto"</strong>. O motoboy é avisado para buscar. Simples assim.',
+    btn: 'Entendi →'
+  },
+  {
+    emoji: '💰',
+    titulo: 'Seu extrato',
+    texto: 'Na aba <strong>"Extrato"</strong> você vê tudo que vendeu, a comissão descontada e o valor líquido que o Chegou Aí vai te repassar. Transparência total.',
+    btn: 'Entendi →'
+  },
+  {
+    emoji: '🚀',
+    titulo: 'Tudo pronto!',
+    texto: 'Sua loja está ativa. Qualquer dúvida, fale com o suporte pelo WhatsApp. Boas vendas! 🎉',
+    btn: 'Começar a vender'
+  }
+];
+
+function mostrarOnboardingLojista() {
+  var chave = 'chegouai_onboarding_lojista_v1';
+  if(localStorage.getItem(chave)) return;
+  _exibirPassoOnboarding(0);
+}
+
+function _exibirPassoOnboarding(idx) {
+  var ex = document.getElementById('overlay-onboarding');
+  if(ex) ex.remove();
+  var passo = _onboardingPassos[idx];
+  var total = _onboardingPassos.length;
+  var dots = _onboardingPassos.map(function(_, i) {
+    return '<div style="width:' + (i === idx ? '20px' : '8px') + ';height:8px;border-radius:4px;background:' + (i === idx ? '#f97316' : '#333') + ';transition:all 0.3s;"></div>';
+  }).join('');
+  document.body.insertAdjacentHTML('beforeend',
+    '<div id="overlay-onboarding" style="position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10000;display:flex;align-items:flex-end;justify-content:center;">' +
+    '<div style="background:#1a1a1a;border-radius:24px 24px 0 0;padding:36px 28px 48px;max-width:480px;width:100%;text-align:center;">' +
+      '<div style="font-size:56px;margin-bottom:16px;">' + passo.emoji + '</div>' +
+      '<div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:12px;font-family:\'Plus Jakarta Sans\',sans-serif;">' + passo.titulo + '</div>' +
+      '<div style="font-size:15px;color:#aaa;line-height:1.6;margin-bottom:28px;">' + passo.texto + '</div>' +
+      '<div style="display:flex;justify-content:center;gap:6px;margin-bottom:28px;">' + dots + '</div>' +
+      '<button onclick="_avancarOnboarding(' + idx + ',' + total + ')" style="width:100%;padding:16px;border-radius:14px;border:none;background:#f97316;color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:\'Plus Jakarta Sans\',sans-serif;">' + passo.btn + '</button>' +
+      (idx > 0 ? '<button onclick="document.getElementById(\'overlay-onboarding\').remove();localStorage.setItem(\'chegouai_onboarding_lojista_v1\',\'1\')" style="background:none;border:none;color:#555;font-size:13px;cursor:pointer;margin-top:14px;display:block;width:100%;">Pular tutorial</button>' : '') +
+    '</div></div>'
+  );
+}
+
+function _avancarOnboarding(idx, total) {
+  if(idx + 1 >= total) {
+    var el = document.getElementById('overlay-onboarding');
+    if(el) el.remove();
+    localStorage.setItem('chegouai_onboarding_lojista_v1', '1');
+  } else {
+    _exibirPassoOnboarding(idx + 1);
+  }
 }
 
 function irCadastro() { irTela('tela-cadastro'); }
