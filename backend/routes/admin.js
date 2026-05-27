@@ -311,6 +311,8 @@ router.post(
     body('whatsapp').optional().trim().matches(/^\d{0,15}$/),
     body('lat').optional().isFloat({ min: -90, max: 90 }),
     body('lng').optional().isFloat({ min: -180, max: 180 }),
+    body('cidade').optional().trim().isLength({ max: 100 }),
+    body('estado').optional().trim().isLength({ max: 2 }),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -318,7 +320,7 @@ router.post(
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const { nome, telefone, email, senha, categoria, chave_pix, mpUserId, whatsapp, lat, lng } = req.body;
+    const { nome, telefone, email, senha, categoria, chave_pix, mpUserId, whatsapp, lat, lng, cidade, estado } = req.body;
 
     let authUserId = null;
     try {
@@ -368,6 +370,8 @@ router.post(
           cadastro_data: new Date().toISOString(),
           lat: lat || null,
           lng: lng || null,
+          cidade: cidade || null,
+          estado: estado || null,
         })
         .select()
         .single();

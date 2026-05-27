@@ -6101,6 +6101,8 @@ async function renderAdmin(secao) {
         '<div class="campo"><label>E-mail de acesso</label><input type="email" id="new-loja-email" placeholder="loja@email.com"></div>' +
         '<div class="campo"><label>Chave Pix (opcional)</label><input type="text" id="new-loja-pix" placeholder="CPF, e-mail, telefone ou chave aleatória"></div>' +
         '<div class="campo"><label>Categoria</label><select id="new-loja-cat" style="width:100%;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:16px 18px;color:var(--texto);font-size:16px;"><option value="lanche">Lanchonete</option><option value="restaurante">Restaurante</option><option value="mercado">Mercado</option><option value="farmacia">Farmácia</option></select></div>' +
+        '<div class="campo"><label>Cidade</label><input type="text" id="new-loja-cidade" placeholder="Ex: Guajará"></div>' +
+        '<div class="campo"><label>Estado (UF)</label><input type="text" id="new-loja-estado" placeholder="Ex: AM" maxlength="2" style="text-transform:uppercase;"></div>' +
         '<div class="campo"><label>Endereço da loja (para calcular frete)</label>' +
           '<input type="text" id="new-loja-endereco" placeholder="Ex: Rua das Flores, 123, Guajará-AM" oninput="geocodificarLoja()">' +
           '<div id="new-loja-geo" style="font-size:12px;color:var(--texto2);margin-top:4px;"></div>' +
@@ -6413,6 +6415,8 @@ async function cadastrarLoja() {
   const senha2 = document.getElementById('new-loja-senha2').value;
   const categoria = document.getElementById('new-loja-cat').value;
   const chavePix = sanitizar(document.getElementById('new-loja-pix').value);
+  const cidade = sanitizar(document.getElementById('new-loja-cidade').value.trim());
+  const estado = sanitizar(document.getElementById('new-loja-estado').value.trim().toUpperCase());
 
   if(!nome || telefone.length < 10 || !email || senha.length < 6) return alert('Preencha os campos corretamente');
   if(senha !== senha2) return alert('As senhas não coincidem. Verifique e tente novamente.');
@@ -6422,6 +6426,8 @@ async function cadastrarLoja() {
 
   try {
     var body = { nome, telefone, email, senha, categoria, chave_pix: chavePix };
+    if(cidade) body.cidade = cidade;
+    if(estado) body.estado = estado;
     if(lojaLatGeo && lojaLngGeo) { body.lat = lojaLatGeo; body.lng = lojaLngGeo; }
     await apiCall('/api/admin/establishments', { method: 'POST', body });
     alert('Loja cadastrada com sucesso!');
