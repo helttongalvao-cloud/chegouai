@@ -6917,7 +6917,7 @@ async function renderMotoboy() {
     var bannerTg = document.getElementById('banner-telegram-moto');
     var btnTg = document.getElementById('btn-vincular-telegram');
     var statusTg = document.getElementById('telegram-moto-status');
-    if(bannerTg && window._telegramBotUsername && usuarioLogado) {
+    if(bannerTg && window._telegramBotUsername && currentUser) {
       bannerTg.style.display = 'flex';
       if(data.telegram_chat_id) {
         statusTg.textContent = '✅ Telegram vinculado — você receberá alertas';
@@ -6931,7 +6931,7 @@ async function renderMotoboy() {
         statusTg.style.color = '#94a3b8';
         btnTg.textContent = 'Vincular';
         btnTg.style.background = '#2563eb';
-        btnTg.href = 'https://t.me/' + window._telegramBotUsername + '?start=' + usuarioLogado.id;
+        btnTg.href = 'https://t.me/' + window._telegramBotUsername + '?start=' + currentUser.id;
         btnTg.onclick = null;
       }
     }
