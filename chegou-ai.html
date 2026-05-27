@@ -1288,7 +1288,7 @@ async function apiCall(path, options) {
 
   var resp;
   try {
-    resp = await fetch(API_BASE + path, opts);
+    resp = await fetch(API_BASE + path, Object.assign({ cache: 'no-store' }, opts));
   } catch(netErr) {
     throw new Error('Servidor indisponível. Verifique sua conexão e tente novamente.');
   }
