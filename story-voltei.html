@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<title>Story VOLTEI — Chegou Aí</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#111; display:flex; flex-direction:column; align-items:center; gap:12px; padding:16px 20px; font-family:'Plus Jakarta Sans',sans-serif; }
+
+  .controles { display:flex; gap:12px; }
+  .controles button {
+    padding:10px 24px; border-radius:8px; border:none; cursor:pointer;
+    font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:700;
+    background:#00c853; color:#000;
+  }
+  .controles button.off { background:#333; color:#fff; }
+  .label { color:#666; font-size:13px; text-align:center; }
+
+  /* ═══ FEED 1080×1080 ═══ */
+  .post-feed {
+    width:1080px; height:1080px; position:relative; overflow:hidden;
+    background:#070707; flex-shrink:0;
+  }
+
+  /* ═══ STORY 1080×1920 ═══ */
+  .story-wrapper {
+    width:540px; height:960px; overflow:hidden; flex-shrink:0; display:none;
+  }
+  .post-story {
+    width:1080px; height:1920px; position:relative; overflow:hidden;
+    background:#070707; flex-shrink:0;
+    transform:scale(0.5); transform-origin:top left;
+  }
+
+  .glow-top {
+    position:absolute; top:-200px; left:50%; transform:translateX(-50%);
+    width:900px; height:700px; border-radius:50%;
+    background:radial-gradient(ellipse, rgba(0,200,83,0.18) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .glow-mid {
+    position:absolute; top:40%; left:50%; transform:translateX(-50%);
+    width:1100px; height:600px; border-radius:50%;
+    background:radial-gradient(ellipse, rgba(0,200,83,0.08) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .glow-bottom {
+    position:absolute; bottom:-200px; right:-100px;
+    width:700px; height:700px; border-radius:50%;
+    background:radial-gradient(ellipse, rgba(0,200,83,0.1) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .grid {
+    position:absolute; inset:0; pointer-events:none;
+    background-image:
+      linear-gradient(rgba(0,200,83,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,83,0.03) 1px, transparent 1px);
+    background-size:80px 80px;
+  }
+
+  /* ════════ FEED ════════ */
+  .feed-inner {
+    position:relative; z-index:2; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:60px 72px; gap:0; text-align:center;
+  }
+  .feed-logo { display:flex; align-items:center; gap:14px; margin-bottom:40px; }
+  .feed-logo-box {
+    width:64px; height:64px; border-radius:18px; background:#00c853;
+    display:flex; align-items:center; justify-content:center; font-size:32px;
+    box-shadow:0 0 36px rgba(0,200,83,0.5);
+  }
+  .feed-logo-text { font-size:30px; font-weight:800; background:linear-gradient(90deg,#00C853 0%,#ffffff 70%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .feed-logo-text span { }
+
+  .feed-tag {
+    display:inline-flex; align-items:center; gap:10px; margin-bottom:28px;
+    background:rgba(0,200,83,0.1); border:1.5px solid rgba(0,200,83,0.3);
+    border-radius:100px; padding:12px 32px;
+    font-size:22px; font-weight:800; color:#4ade80; letter-spacing:1px; text-transform:uppercase;
+  }
+
+  .feed-titulo {
+    font-size:80px; font-weight:900; color:#fff; line-height:1.0; letter-spacing:-2px; margin-bottom:20px;
+  }
+  .feed-titulo .verde { color:#00c853; }
+
+  .feed-sub { font-size:22px; color:rgba(255,255,255,0.5); font-weight:500; margin-bottom:40px; line-height:1.5; }
+
+  .feed-cupom {
+    width:100%; background:linear-gradient(135deg,#003d1a,#005224);
+    border:2px solid rgba(0,200,83,0.4); border-radius:28px; padding:36px 44px;
+    display:flex; flex-direction:column; align-items:center; gap:14px; margin-bottom:36px;
+  }
+  .cupom-label { font-size:18px; color:rgba(255,255,255,0.5); font-weight:600; text-transform:uppercase; letter-spacing:2px; }
+  .cupom-codigo {
+    font-size:80px; font-weight:900; color:#00c853; letter-spacing:6px;
+    text-shadow:0 0 40px rgba(0,200,83,0.6);
+  }
+  .cupom-desc { font-size:22px; color:#fff; font-weight:700; }
+  .cupom-cond { font-size:16px; color:rgba(255,255,255,0.4); margin-top:4px; }
+
+  .feed-cta {
+    background:#00c853; color:#000; font-size:22px; font-weight:800;
+    padding:22px 60px; border-radius:100px;
+    box-shadow:0 0 48px rgba(0,200,83,0.4);
+  }
+  .feed-url { font-size:18px; font-weight:700; color:#4ade80; margin-top:16px; }
+
+  /* ════════ STORY ════════ */
+  .story-inner {
+    position:relative; z-index:2; height:100%;
+    display:flex; flex-direction:column; align-items:center;
+    padding:120px 80px 100px; gap:0; text-align:center;
+  }
+
+  .story-logo { display:flex; flex-direction:column; align-items:center; gap:16px; margin-bottom:56px; }
+  .story-logo-box {
+    width:120px; height:120px; border-radius:32px; background:#00c853;
+    display:flex; align-items:center; justify-content:center; font-size:62px;
+    box-shadow:0 0 70px rgba(0,200,83,0.6);
+  }
+  .story-logo-text { font-size:46px; font-weight:800; background:linear-gradient(90deg,#00C853 0%,#ffffff 70%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .story-logo-text span { }
+  .story-badge {
+    border:1.5px solid rgba(0,200,83,0.3); border-radius:100px;
+    padding:10px 30px; font-size:20px; font-weight:700; color:#4ade80;
+    background:rgba(0,200,83,0.08);
+  }
+
+  .story-tag {
+    display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:44px;
+    background:rgba(0,200,83,0.1); border:1.5px solid rgba(0,200,83,0.25);
+    border-radius:100px; padding:20px 60px; width:100%;
+    font-size:30px; font-weight:800; color:#4ade80; letter-spacing:2px; text-transform:uppercase;
+  }
+
+  .story-titulo {
+    font-size:88px; font-weight:900; color:#fff; line-height:0.95; letter-spacing:-3px; margin-bottom:28px;
+  }
+  .story-titulo .verde { color:#00c853; }
+
+  .story-sub { font-size:30px; color:rgba(255,255,255,0.5); font-weight:500; margin-bottom:56px; line-height:1.4; }
+
+  .story-cupom {
+    width:100%; background:linear-gradient(135deg,#003d1a,#005224);
+    border:2px solid rgba(0,200,83,0.4); border-radius:36px; padding:52px 56px;
+    display:flex; flex-direction:column; align-items:center; gap:18px; margin-bottom:52px;
+  }
+  .story-cupom-label { font-size:22px; color:rgba(255,255,255,0.5); font-weight:600; text-transform:uppercase; letter-spacing:3px; }
+  .story-cupom-codigo {
+    font-size:120px; font-weight:900; color:#00c853; letter-spacing:8px;
+    text-shadow:0 0 60px rgba(0,200,83,0.7);
+  }
+  .story-cupom-desc { font-size:32px; color:#fff; font-weight:700; line-height:1.3; }
+  .story-cupom-cond { font-size:22px; color:rgba(255,255,255,0.4); margin-top:6px; }
+
+  .story-cta {
+    width:100%; background:#00c853; color:#000; font-size:34px; font-weight:800;
+    padding:32px; border-radius:100px; margin-bottom:20px;
+    box-shadow:0 0 70px rgba(0,200,83,0.45);
+  }
+  .story-url { font-size:26px; font-weight:700; color:#4ade80; }
+</style>
+</head>
+<body>
+
+<div class="controles">
+  <button onclick="mostrar('feed')" id="btn-feed">📐 Feed (1080×1080)</button>
+  <button onclick="mostrar('story')" id="btn-story" class="off">📱 Story (1080×1920)</button>
+</div>
+
+<!-- ══════════════════ FEED ══════════════════ -->
+<p class="label" id="label-feed">↓ Cmd+Shift+4 e selecione o quadrado abaixo</p>
+<div class="post-feed" id="post-feed">
+  <div class="glow-top"></div>
+  <div class="glow-bottom"></div>
+  <div class="grid"></div>
+
+  <div class="feed-inner">
+    <div class="feed-logo">
+      <div class="feed-logo-box"><img src="backend/public/icons/icon-192.png" style="width:52px;height:52px;border-radius:14px;object-fit:cover;"></div>
+      <div class="feed-logo-text">Chegou <span>Aí</span></div>
+    </div>
+
+    <div class="feed-tag">🎁 Oferta exclusiva</div>
+
+    <div class="feed-titulo">
+      Tem cadastro<br>no Chegou Aí?<br><span class="verde">Entrega grátis!</span>
+    </div>
+
+    <div class="feed-sub">
+      Quem já tem conta e fez ao menos<br>um pedido ganhou frete grátis.
+    </div>
+
+    <div class="feed-cupom">
+      <div class="cupom-label">Use o cupom</div>
+      <div class="cupom-codigo">VOLTEI</div>
+      <div class="cupom-desc"><img src="backend/public/icons/icon-192.png" style="width:32px;height:32px;border-radius:8px;vertical-align:middle;margin-right:8px;">Entrega grátis no seu pedido</div>
+      <div class="cupom-cond">Válido para pedidos acima de R$ 30,00</div>
+    </div>
+
+    <div class="feed-cta">Peça agora →</div>
+    <div class="feed-url">chegouaiapp.com.br</div>
+  </div>
+</div>
+
+<!-- ══════════════════ STORY ══════════════════ -->
+<p class="label" id="label-story" style="display:none;">↓ Cmd+Shift+4 e selecione o retângulo abaixo</p>
+<div class="story-wrapper" id="story-wrapper"><div class="post-story" id="post-story">
+  <div class="glow-top" style="width:1200px;height:900px;top:-300px;"></div>
+  <div class="glow-mid"></div>
+  <div class="glow-bottom" style="width:900px;height:900px;bottom:-300px;right:-200px;"></div>
+  <div class="grid"></div>
+
+  <div class="story-inner">
+    <div class="story-logo">
+      <div class="story-logo-box"><img src="backend/public/icons/icon-192.png" style="width:96px;height:96px;border-radius:24px;object-fit:cover;"></div>
+      <div class="story-logo-text">Chegou <span>Aí</span></div>
+      <div class="story-badge">📍 Guajará — AM</div>
+    </div>
+
+    <div class="story-tag">🎁 Oferta exclusiva</div>
+
+    <div class="story-titulo">
+      Tem cadastro<br>no Chegou Aí?<br><span class="verde">Frete<br>grátis!</span>
+    </div>
+
+    <div class="story-sub">
+      Quem já tem conta e fez<br>ao menos um pedido<br>ganhou frete grátis.
+    </div>
+
+    <div class="story-cupom">
+      <div class="story-cupom-label">Use o cupom</div>
+      <div class="story-cupom-codigo">VOLTEI</div>
+      <div class="story-cupom-desc"><img src="backend/public/icons/icon-192.png" style="width:48px;height:48px;border-radius:12px;vertical-align:middle;margin-right:10px;">Entrega grátis no seu pedido</div>
+      <div class="story-cupom-cond">Válido para pedidos acima de R$ 30,00</div>
+    </div>
+
+    <div class="story-cta">Peça em chegouaiapp.com.br →</div>
+    <div class="story-url">Link na bio 👆</div>
+  </div>
+</div></div>
+
+<script>
+function mostrar(tipo) {
+  var isFeed = tipo === 'feed';
+  document.getElementById('post-feed').style.display = isFeed ? 'block' : 'none';
+  document.getElementById('story-wrapper').style.display = isFeed ? 'none' : 'block';
+  document.getElementById('label-feed').style.display = isFeed ? 'block' : 'none';
+  document.getElementById('label-story').style.display = isFeed ? 'none' : 'block';
+  document.getElementById('btn-feed').classList.toggle('off', !isFeed);
+  document.getElementById('btn-story').classList.toggle('off', isFeed);
+}
+</script>
+</body>
+</html>

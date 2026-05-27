@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Posts WhatsApp — Chegou Aí</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    padding: 40px 20px 60px;
+  }
+
+  h2 {
+    color: rgba(255,255,255,0.35);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: -28px;
+  }
+
+  /* ── Card ── */
+  .card {
+    width: 600px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #0d0d0d;
+    border-radius: 4px;
+  }
+
+  /* Stripe topo */
+  .accent {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 5px;
+    z-index: 5;
+  }
+
+  /* ── Header Chegou Aí ── */
+  .card-header {
+    position: absolute;
+    top: 14px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 10;
+  }
+  .chegouai-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+    object-fit: cover;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  }
+  .chegouai-nome {
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+    line-height: 1.1;
+  }
+  .chegouai-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    font-weight: 500;
+  }
+
+  /* ── Topo: logo do estabelecimento ── */
+  .card-top {
+    flex: 0 0 280px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card-top-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(14px) brightness(0.35) saturate(1.3);
+    transform: scale(1.12);
+  }
+  .card-fade {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 80px;
+    background: linear-gradient(to bottom, transparent, #0d0d0d);
+    z-index: 3;
+  }
+  .est-logo {
+    position: relative;
+    z-index: 2;
+    width: 180px;
+    height: 180px;
+    border-radius: 28px;
+    object-fit: cover;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    border: 3px solid rgba(255,255,255,0.12);
+  }
+
+  /* ── Baixo: texto ── */
+  .card-bottom {
+    background: #0d0d0d;
+    padding: 20px 32px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .est-nome {
+    font-size: 38px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.05;
+    letter-spacing: -1px;
+  }
+  .tagline {
+    font-size: 15px;
+    color: rgba(255,255,255,0.5);
+    font-weight: 500;
+    line-height: 1.5;
+  }
+  .badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .badge {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 100px;
+    padding: 5px 14px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    font-weight: 600;
+  }
+
+  .url-pill {
+    background: #00C853;
+    border-radius: 100px;
+    padding: 12px 32px;
+    font-size: 15px;
+    font-weight: 800;
+    color: #fff;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ 1. SABOR NA BRASA ══ -->
+<h2>1 · Sabor na Brasa</h2>
+<div class="card">
+  <div class="accent" style="background:linear-gradient(90deg,#ff6d00,#ff9100);"></div>
+  <div class="card-header">
+    <img class="chegouai-logo" src="backend/public/icons/icon-192.png" alt="Chegou Aí">
+    <div>
+      <div class="chegouai-nome">Chegou Aí</div>
+      <div class="chegouai-sub">Delivery local</div>
+    </div>
+  </div>
+  <div class="card-top">
+    <div class="card-top-bg" style="background-image:url('sabor-na-brasa-logo.jpg');"></div>
+    <img class="est-logo" src="sabor-na-brasa-logo.jpg" alt="Sabor na Brasa">
+    <div class="card-fade"></div>
+  </div>
+  <div class="card-bottom">
+    <div>
+      <div class="est-nome">Sabor na Brasa</div>
+      <div class="tagline">Peça pelo app e receba em casa com rastreio em tempo real.</div>
+      <div class="badges">
+        <div class="badge">⚡ PIX</div>
+        <div class="badge">💳 Cartão</div>
+        <div class="badge">📍 Rastreio ao vivo</div>
+      </div>
+    </div>
+    <div class="url-pill">chegouaiapp.com.br</div>
+  </div>
+</div>
+
+<!-- ══ 2. BIOFARMA ══ -->
+<h2>2 · Biofarma</h2>
+<div class="card">
+  <div class="accent" style="background:linear-gradient(90deg,#0091EA,#00BCD4);"></div>
+  <div class="card-header">
+    <img class="chegouai-logo" src="backend/public/icons/icon-192.png" alt="Chegou Aí">
+    <div>
+      <div class="chegouai-nome">Chegou Aí</div>
+      <div class="chegouai-sub">Delivery local</div>
+    </div>
+  </div>
+  <div class="card-top">
+    <div class="card-top-bg" style="background-image:url('https://lgcepuednurxwsandgaf.supabase.co/storage/v1/object/public/produtos/78510864-f7ac-4133-85d1-1fbe57596d34_1777050158904.jpg');"></div>
+    <img class="est-logo" src="https://lgcepuednurxwsandgaf.supabase.co/storage/v1/object/public/produtos/78510864-f7ac-4133-85d1-1fbe57596d34_1777050158904.jpg" alt="Biofarma">
+    <div class="card-fade"></div>
+  </div>
+  <div class="card-bottom">
+    <div>
+      <div class="est-nome">Drogaria Biofarma</div>
+      <div class="tagline">Medicamentos e produtos de saúde entregues na sua porta.</div>
+      <div class="badges">
+        <div class="badge">⚡ PIX</div>
+        <div class="badge">💳 Cartão</div>
+        <div class="badge">📍 Rastreio ao vivo</div>
+      </div>
+    </div>
+    <div class="url-pill">chegouaiapp.com.br</div>
+  </div>
+</div>
+
+<!-- ══ 3. RENASCER ══ -->
+<h2>3 · Renascer</h2>
+<div class="card">
+  <div class="accent" style="background:linear-gradient(90deg,#7B1FA2,#E040FB);"></div>
+  <div class="card-header">
+    <img class="chegouai-logo" src="backend/public/icons/icon-192.png" alt="Chegou Aí">
+    <div>
+      <div class="chegouai-nome">Chegou Aí</div>
+      <div class="chegouai-sub">Delivery local</div>
+    </div>
+  </div>
+  <div class="card-top">
+    <div class="card-top-bg" style="background-image:url('https://lgcepuednurxwsandgaf.supabase.co/storage/v1/object/public/produtos/dc0f8479-02d3-4fa2-9299-333bd79e97b8_1779117382334.jpg');"></div>
+    <img class="est-logo" src="https://lgcepuednurxwsandgaf.supabase.co/storage/v1/object/public/produtos/dc0f8479-02d3-4fa2-9299-333bd79e97b8_1779117382334.jpg" alt="Renascer">
+    <div class="card-fade"></div>
+  </div>
+  <div class="card-bottom">
+    <div>
+      <div class="est-nome">Renascer</div>
+      <div class="tagline">Faça seu pedido pelo app e receba com comodidade.</div>
+      <div class="badges">
+        <div class="badge">⚡ PIX</div>
+        <div class="badge">💳 Cartão</div>
+        <div class="badge">📍 Rastreio ao vivo</div>
+      </div>
+    </div>
+    <div class="url-pill">chegouaiapp.com.br</div>
+  </div>
+</div>
+
+</body>
+</html>

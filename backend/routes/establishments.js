@@ -117,11 +117,11 @@ router.get('/products/search', async (req, res, next) => {
 // =============================================
 router.get('/', async (req, res, next) => {
   try {
-    const { categoria, busca } = req.query;
+    const { categoria, busca, cidade } = req.query;
 
     let query = supabaseAdmin
       .from('estabelecimentos')
-      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp, pausado, criado_em')
+      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp, pausado, criado_em, cidade, estado')
       .eq('ativo', true)
       .order('nome');
 
@@ -132,6 +132,10 @@ router.get('/', async (req, res, next) => {
     if (busca) {
       const termoBusca = busca.trim().slice(0, 100);
       query = query.ilike('nome', `%${termoBusca}%`);
+    }
+
+    if (cidade) {
+      query = query.ilike('cidade', cidade.trim().slice(0, 100));
     }
 
     const { data, error } = await query;
@@ -1133,6 +1137,23 @@ router.get('/favoritos/meus', requireAuth, async (req, res, next) => {
     const { data } = await supabaseAdmin
       .from('favoritos').select('estabelecimento_id').eq('user_id', req.user.id);
     res.json((data || []).map(f => f.estabelecimento_id));
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// POST /api/establishments/leads-cidade — Lead de cidade sem cobertura
+// =============================================
+router.post('/leads-cidade', async (req, res, next) => {
+  try {
+    const { email, cidade, estado } = req.body;
+    if (!email || !cidade) return res.status(400).json({ error: 'email e cidade obrigatórios' });
+    const emailLimpo = String(email).trim().toLowerCase().slice(0, 200);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpo)) return res.status(400).json({ error: 'email inválido' });
+    await supabaseAdmin.from('leads_cidade').upsert(
+      { email: emailLimpo, cidade: String(cidade).trim().slice(0, 100), estado: estado ? String(estado).trim().slice(0, 100) : null },
+      { onConflict: 'email,cidade' }
+    );
+    res.json({ ok: true });
   } catch (err) { next(err); }
 });
 

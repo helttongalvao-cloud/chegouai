@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<title>Post Instagram — Chegou Aí Guajará</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#111; display:flex; flex-direction:column; align-items:center; gap:12px; padding:16px 20px; font-family:'Plus Jakarta Sans',sans-serif; }
+
+  .controles { display:flex; gap:12px; }
+  .controles button {
+    padding:10px 24px; border-radius:8px; border:none; cursor:pointer;
+    font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:700;
+    background:#00c853; color:#000;
+  }
+  .controles button.off { background:#333; color:#fff; }
+  .label { color:#666; font-size:13px; text-align:center; }
+
+  /* ═══ FEED 1080×1080 ═══ */
+  .post-feed {
+    width:1080px; height:1080px; position:relative; overflow:hidden;
+    background:#070707; flex-shrink:0;
+  }
+
+  /* ═══ STORY 1080×1920 ═══ */
+  .story-wrapper {
+    width:540px; height:960px; overflow:hidden; flex-shrink:0; display:none;
+  }
+  .post-story {
+    width:1080px; height:1920px; position:relative; overflow:hidden;
+    background:#070707; flex-shrink:0;
+    transform:scale(0.5); transform-origin:top left;
+  }
+
+  .glow-top {
+    position:absolute; top:-200px; left:50%; transform:translateX(-50%);
+    width:900px; height:600px; border-radius:50%;
+    background:radial-gradient(ellipse, rgba(0,200,83,0.13) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .glow-bottom {
+    position:absolute; bottom:-200px; right:-100px;
+    width:600px; height:600px; border-radius:50%;
+    background:radial-gradient(ellipse, rgba(0,200,83,0.08) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .grid {
+    position:absolute; inset:0; pointer-events:none;
+    background-image:
+      linear-gradient(rgba(0,200,83,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,83,0.035) 1px, transparent 1px);
+    background-size:72px 72px;
+  }
+
+  /* ════════ FEED ════════ */
+  .feed-inner {
+    position:relative; z-index:2; height:100%;
+    display:flex; flex-direction:column; padding:48px 72px; gap:0;
+  }
+
+  .feed-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:36px; }
+  .logo { display:flex; align-items:center; gap:14px; }
+  .logo-box {
+    width:60px; height:60px; border-radius:16px; background:#00c853;
+    display:flex; align-items:center; justify-content:center; font-size:28px;
+    box-shadow:0 0 32px rgba(0,200,83,0.45);
+  }
+  .logo-text { font-size:26px; font-weight:800; color:#fff; }
+  .logo-text span { color:#00c853; }
+  .badge-cidade {
+    border:1.5px solid rgba(0,200,83,0.3); border-radius:100px;
+    padding:9px 22px; font-size:16px; font-weight:700; color:#4ade80;
+    background:rgba(0,200,83,0.08);
+  }
+
+  .feed-tag {
+    display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:24px;
+    background:rgba(0,200,83,0.1); border:1.5px solid rgba(0,200,83,0.25);
+    border-radius:100px; padding:14px 40px;
+    font-size:26px; font-weight:800; color:#4ade80; letter-spacing:2px; text-transform:uppercase;
+  }
+
+  .feed-titulo {
+    font-size:70px; font-weight:900; color:#fff; line-height:1.0; letter-spacing:-2px; margin-bottom:16px;
+  }
+  .feed-titulo .verde { color:#00c853; }
+
+  .feed-sub { font-size:20px; color:rgba(255,255,255,0.5); font-weight:500; margin-bottom:28px; line-height:1.5; }
+
+  /* Cards dos estabelecimentos */
+  .est-cards { display:flex; flex-direction:column; gap:10px; margin-bottom:24px; }
+  .est-card {
+    display:flex; align-items:center; gap:20px;
+    background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.07);
+    border-radius:20px; padding:20px 28px;
+  }
+  .est-emoji { font-size:36px; flex-shrink:0; }
+  .est-info { flex:1; }
+  .est-nome { font-size:22px; font-weight:800; color:#fff; }
+  .est-tipo { font-size:15px; color:rgba(255,255,255,0.45); margin-top:2px; }
+  .est-hora {
+    font-size:14px; font-weight:700; color:#4ade80;
+    background:rgba(0,200,83,0.1); border-radius:8px; padding:5px 12px; white-space:nowrap;
+  }
+
+  .feed-frete {
+    display:flex; align-items:center; justify-content:space-between; gap:20px;
+    background:linear-gradient(120deg,#003d1a,#005224);
+    border:1.5px solid rgba(0,200,83,0.35); border-radius:24px; padding:24px 32px;
+  }
+  .frete-esq h3 { font-size:30px; font-weight:900; color:#fff; }
+  .frete-esq p { font-size:16px; color:rgba(255,255,255,0.5); margin-top:4px; }
+  .frete-valor { font-size:36px; font-weight:900; color:#000; background:#00c853; border-radius:12px; padding:12px 24px; white-space:nowrap; }
+
+  .feed-footer { display:flex; align-items:center; justify-content:space-between; margin-top:20px; }
+  .footer-url { font-size:18px; font-weight:700; color:#4ade80; }
+  .footer-cta {
+    background:#00c853; color:#000; font-size:18px; font-weight:800;
+    padding:16px 36px; border-radius:100px;
+    box-shadow:0 0 32px rgba(0,200,83,0.35);
+  }
+
+  /* ════════ STORY ════════ */
+  .story-inner {
+    position:relative; z-index:2; height:100%;
+    display:flex; flex-direction:column; align-items:center;
+    padding:100px 72px 100px; gap:0; text-align:center;
+  }
+
+  .story-logo { display:flex; flex-direction:column; align-items:center; gap:16px; margin-bottom:60px; }
+  .story-logo-box {
+    width:110px; height:110px; border-radius:28px; background:#00c853;
+    display:flex; align-items:center; justify-content:center; font-size:56px;
+    box-shadow:0 0 60px rgba(0,200,83,0.55);
+  }
+  .story-logo-text { font-size:42px; font-weight:800; color:#fff; }
+  .story-logo-text span { color:#00c853; }
+  .story-badge {
+    border:1.5px solid rgba(0,200,83,0.3); border-radius:100px;
+    padding:10px 28px; font-size:20px; font-weight:700; color:#4ade80;
+    background:rgba(0,200,83,0.08);
+  }
+
+  .story-tag {
+    display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:36px;
+    background:rgba(0,200,83,0.1); border:1.5px solid rgba(0,200,83,0.25);
+    border-radius:100px; padding:20px 60px; width:100%;
+    font-size:32px; font-weight:800; color:#4ade80; letter-spacing:2px; text-transform:uppercase;
+  }
+
+  .story-titulo {
+    font-size:96px; font-weight:900; color:#fff; line-height:0.95; letter-spacing:-3px; margin-bottom:24px;
+  }
+  .story-titulo .verde { color:#00c853; }
+
+  .story-sub { font-size:28px; color:rgba(255,255,255,0.5); font-weight:500; margin-bottom:52px; line-height:1.4; }
+
+  .story-cards { display:flex; flex-direction:column; gap:16px; width:100%; margin-bottom:48px; }
+  .story-card {
+    display:flex; align-items:center; gap:24px;
+    background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.08);
+    border-radius:24px; padding:24px 32px; text-align:left;
+  }
+  .story-card-emoji { font-size:48px; flex-shrink:0; }
+  .story-card-info { flex:1; }
+  .story-card-nome { font-size:28px; font-weight:800; color:#fff; }
+  .story-card-tipo { font-size:18px; color:rgba(255,255,255,0.45); margin-top:3px; }
+  .story-card-hora {
+    font-size:17px; font-weight:700; color:#4ade80;
+    background:rgba(0,200,83,0.1); border-radius:10px; padding:6px 16px; white-space:nowrap;
+  }
+
+  .story-frete {
+    width:100%; display:flex; flex-direction:column; align-items:center; gap:12px;
+    background:linear-gradient(120deg,#003d1a,#005224);
+    border:1.5px solid rgba(0,200,83,0.35); border-radius:28px; padding:36px 40px;
+    margin-bottom:48px;
+  }
+  .story-frete h3 { font-size:48px; font-weight:900; color:#fff; line-height:1.1; }
+  .story-frete p { font-size:22px; color:rgba(255,255,255,0.5); }
+  .story-frete-val { font-size:48px; font-weight:900; color:#000; background:#00c853; border-radius:16px; padding:14px 40px; }
+
+  .story-cta {
+    width:100%; background:#00c853; color:#000; font-size:30px; font-weight:800;
+    padding:28px; border-radius:100px; margin-bottom:16px;
+    box-shadow:0 0 60px rgba(0,200,83,0.4);
+  }
+  .story-url { font-size:24px; font-weight:700; color:#4ade80; }
+</style>
+</head>
+<body>
+
+<div class="controles">
+  <button onclick="mostrar('feed')" id="btn-feed">📐 Feed (1080×1080)</button>
+  <button onclick="mostrar('story')" id="btn-story" class="off">📱 Story (1080×1920)</button>
+</div>
+
+<!-- ══════════════════ FEED ══════════════════ -->
+<p class="label" id="label-feed">↓ Cmd+Shift+4 e selecione o quadrado abaixo</p>
+<div class="post-feed" id="post-feed">
+  <div class="glow-top"></div>
+  <div class="glow-bottom"></div>
+  <div class="grid"></div>
+
+  <div class="feed-inner">
+    <div class="feed-header">
+      <div class="logo">
+        <div class="logo-box"><img src="backend/public/icons/icon-192.png" style="width:48px;height:48px;border-radius:12px;object-fit:cover;"></div>
+        <div class="logo-text">Chegou <span>Aí</span></div>
+      </div>
+      <div class="badge-cidade">📍 Guajará — AM</div>
+    </div>
+
+    <div class="feed-tag">🎉 Lançamento oficial</div>
+
+    <div class="feed-titulo" style="text-align:center;">
+      Sem sair de casa<br>
+      <span class="verde">peça em Guajará</span>
+    </div>
+
+    <div class="feed-sub" style="text-align:center;">
+      Os seus estabelecimentos favoritos entregando na sua porta.
+    </div>
+
+    <div class="est-cards">
+      <div class="est-card">
+        <img src="sabor-na-brasa-logo.jpg" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="Sabor na Brasa">
+        <div class="est-info">
+          <div class="est-nome">Churrascaria Sabor na Brasa</div>
+          <div class="est-tipo">Churrasco, lanches e muito mais</div>
+        </div>
+        <div class="est-hora">🌙 Noturno</div>
+      </div>
+      <div class="est-card">
+        <img src="https://lgcepuednurxwsandgaf.supabase.co/storage/v1/object/public/produtos/78510864-f7ac-4133-85d1-1fbe57596d34_1777050158904.jpg" style="width:56px;height:56px;border-radius:14px;object-fit:cover;flex-shrink:0;" alt="Biofarma">
+        <div class="est-info">
+          <div class="est-nome">Drogaria Biofarma</div>
+          <div class="est-tipo">Remédios e produtos de saúde</div>
+        </div>
+        <div class="est-hora">☀️ Diurno</div>
+      </div>
+      <div class="est-card">
+        <img src="https://lgcepuednurxwsandgaf.supabase.co/storage/v1/object/public/produtos/dc0f8479-02d3-4fa2-9299-333bd79e97b8_1779117382334.jpg" style="width:56px;height:56px;border-radius:14px;object-fit:cover;flex-shrink:0;" alt="Renascer">
+        <div class="est-info">
+          <div class="est-nome">Mercearia Renascer</div>
+          <div class="est-tipo">Mercado e produtos do dia a dia</div>
+        </div>
+        <div class="est-hora">☀️ Diurno</div>
+      </div>
+    </div>
+
+    <div class="feed-frete">
+      <div class="frete-esq">
+        <h3>🎁 Frete grátis no 1º pedido</h3>
+        <p>Sem taxa. Sem pegadinha. Só pedir.</p>
+      </div>
+      <div class="frete-valor">R$ 0,00</div>
+    </div>
+
+    <div class="feed-footer">
+      <div class="footer-url">chegouaiapp.com.br</div>
+      <div class="footer-cta">Peça agora →</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ STORY ══════════════════ -->
+<p class="label" id="label-story" style="display:none;">↓ Cmd+Shift+4 e selecione o retângulo abaixo</p>
+<div class="story-wrapper" id="story-wrapper"><div class="post-story" id="post-story">
+  <div class="glow-top" style="width:1200px;height:800px;top:-300px;"></div>
+  <div class="glow-bottom" style="width:800px;height:800px;bottom:-250px;right:-200px;"></div>
+  <div class="grid"></div>
+
+  <div class="story-inner">
+    <div class="story-logo">
+      <div class="story-logo-box"><img src="backend/public/icons/icon-192.png" style="width:88px;height:88px;border-radius:22px;object-fit:cover;"></div>
+      <div class="story-logo-text">Chegou <span>Aí</span></div>
+      <div class="story-badge">📍 Guajará — AM</div>
+    </div>
+
+    <div class="story-tag">🎉 Lançamento oficial</div>
+
+    <div class="story-titulo">
+      Sem sair<br>de casa<br><span class="verde">peça em<br>Guajará</span>
+    </div>
+
+    <div class="story-sub">
+      Seus estabelecimentos favoritos<br>entregando na sua porta.
+    </div>
+
+    <div class="story-cards">
+      <div class="story-card">
+        <img src="sabor-na-brasa-logo.jpg" style="width:68px;height:68px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="Sabor na Brasa">
+        <div class="story-card-info">
+          <div class="story-card-nome">Sabor na Brasa</div>
+          <div class="story-card-tipo">Churrasco e lanches</div>
+        </div>
+        <div class="story-card-hora">🌙 Noturno</div>
+      </div>
+      <div class="story-card">
+        <img src="https://lgcepuednurxwsandgaf.supabase.co/storage/v1/object/public/produtos/78510864-f7ac-4133-85d1-1fbe57596d34_1777050158904.jpg" style="width:68px;height:68px;border-radius:16px;object-fit:cover;flex-shrink:0;" alt="Biofarma">
+        <div class="story-card-info">
+          <div class="story-card-nome">Drogaria Biofarma</div>
+          <div class="story-card-tipo">Remédios e saúde</div>
+        </div>
+        <div class="story-card-hora">☀️ Diurno</div>
+      </div>
+      <div class="story-card">
+        <img src="https://lgcepuednurxwsandgaf.supabase.co/storage/v1/object/public/produtos/dc0f8479-02d3-4fa2-9299-333bd79e97b8_1779117382334.jpg" style="width:68px;height:68px;border-radius:16px;object-fit:cover;flex-shrink:0;" alt="Renascer">
+        <div class="story-card-info">
+          <div class="story-card-nome">Mercearia Renascer</div>
+          <div class="story-card-tipo">Mercado e compras</div>
+        </div>
+        <div class="story-card-hora">☀️ Diurno</div>
+      </div>
+    </div>
+
+    <div class="story-frete">
+      <h3>🎁 Frete grátis<br>no 1º pedido</h3>
+      <p>Sem taxa. Sem pegadinha. Só pedir.</p>
+      <div class="story-frete-val">R$ 0,00</div>
+    </div>
+
+    <div class="story-cta">Peça agora em chegouaiapp.com.br →</div>
+    <div class="story-url">Link na bio 👆</div>
+  </div>
+</div></div>
+
+<script>
+function mostrar(tipo) {
+  var isFeed = tipo === 'feed';
+  document.getElementById('post-feed').style.display = isFeed ? 'block' : 'none';
+  document.getElementById('story-wrapper').style.display = isFeed ? 'none' : 'block';
+  document.getElementById('label-feed').style.display = isFeed ? 'block' : 'none';
+  document.getElementById('label-story').style.display = isFeed ? 'none' : 'block';
+  document.getElementById('btn-feed').classList.toggle('off', !isFeed);
+  document.getElementById('btn-story').classList.toggle('off', isFeed);
+}
+</script>
+</body>
+</html>
