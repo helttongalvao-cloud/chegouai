@@ -128,7 +128,63 @@ app.get('/app', (req, res) => {
 
 // Download do APK Android
 app.get('/download', (req, res) => {
-  res.redirect(301, 'https://github.com/helttongalvao-cloud/chegouai/releases/latest/download/app-debug.apk');
+  const apkUrl = 'https://github.com/helttongalvao-cloud/chegouai/releases/latest/download/app-debug.apk';
+  const ua = req.headers['user-agent'] || '';
+  const isAndroid = /android/i.test(ua);
+  // Se não for Android, redireciona direto
+  if (!isAndroid) return res.redirect(302, apkUrl);
+  // Android: serve página com intent:// para abrir no Chrome mesmo vindo do WhatsApp
+  res.send(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baixar Chegou Aí</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#f8f8f8;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+  .card{background:#fff;border-radius:20px;padding:32px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.10)}
+  img.logo{width:80px;height:80px;border-radius:18px;margin-bottom:20px}
+  h1{font-size:22px;font-weight:700;color:#1a1a1a;margin-bottom:8px}
+  p{font-size:15px;color:#555;line-height:1.5;margin-bottom:24px}
+  .btn{display:block;width:100%;padding:16px;border-radius:12px;font-size:17px;font-weight:600;text-decoration:none;margin-bottom:12px;border:none;cursor:pointer}
+  .btn-primary{background:#f97316;color:#fff}
+  .btn-secondary{background:#f0f0f0;color:#333;font-size:14px}
+  .nota{font-size:12px;color:#999;margin-top:16px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="card">
+  <img class="logo" src="https://chegouaiapp.com.br/icons/icon-192.png" alt="Chegou Aí" onerror="this.style.display='none'">
+  <h1>Chegou Aí</h1>
+  <p>Toque no botão abaixo para baixar o app no seu celular Android.</p>
+  <a class="btn btn-primary" id="btnDownload" href="${apkUrl}">⬇ Baixar app (.apk)</a>
+  <p class="nota">Se o download não iniciar, o botão vai abrir no Chrome automaticamente.</p>
+</div>
+<script>
+var apk = ${JSON.stringify(apkUrl)};
+var btn = document.getElementById('btnDownload');
+// Detecta se está no WebView do WhatsApp/Instagram
+var ua = navigator.userAgent || '';
+var isWebView = /FBAN|FBAV|Instagram|WhatsApp/.test(ua) || (!/Chrome/.test(ua) && /Android/.test(ua));
+if (isWebView) {
+  // intent:// força abertura no Chrome
+  var intentUrl = 'intent://' + apk.replace(/^https?:\\/\\//, '') + '#Intent;scheme=https;package=com.android.chrome;end';
+  btn.href = intentUrl;
+  btn.onclick = function(e) {
+    e.preventDefault();
+    // Tenta intent:// primeiro; se falhar (Chrome não instalado), vai direto
+    var started = false;
+    var t = setTimeout(function() {
+      if (!started) window.location.href = apk;
+    }, 1500);
+    window.location.href = intentUrl;
+    window.addEventListener('blur', function() { started = true; clearTimeout(t); });
+  };
+}
+</script>
+</body>
+</html>`);
 });
 
 // Mesa — cardápio público via QR Code (sem login)
