@@ -407,6 +407,7 @@ router.get('/cupom/:codigo', async (req, res, next) => {
 // GET /api/orders/available — Entregas disponíveis + ativa (motoboy)
 // =============================================
 router.get('/available', requireRole('motoboy'), async (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
   try {
     // Buscar ID do motoboy logado
     const { data: motoboy } = await supabaseAdmin
