@@ -1354,14 +1354,17 @@ function inicializarFCM() {
 inicializarFCM();
 
 async function ativarNotificacoesPush() {
-  // No APK (Capacitor), usar FCM nativo
-  if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications) {
-    var PushNotifications = window.Capacitor.Plugins.PushNotifications;
-    try {
-      var result = await PushNotifications.requestPermissions();
-      if(result.receive !== 'granted') { mostrarInstrucoesNotif(); return; }
-      await PushNotifications.register();
-    } catch(e) { console.error('[FCM] Erro ao registrar:', e.message); }
+  // No APK (Capacitor), usar FCM nativo — nunca tentar Service Worker
+  if(window.Capacitor) {
+    if(window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications) {
+      var PushNotifications = window.Capacitor.Plugins.PushNotifications;
+      try {
+        var result = await PushNotifications.requestPermissions();
+        if(result.receive !== 'granted') { mostrarInstrucoesNotif(); return; }
+        await PushNotifications.register();
+      } catch(e) { console.error('[FCM] Erro ao registrar:', e.message); }
+    }
+    // Plugin ainda não pronto ou indisponível: inicializarFCM() já cuida disso — sair silenciosamente
     return;
   }
 
