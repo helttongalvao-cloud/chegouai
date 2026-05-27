@@ -1080,6 +1080,16 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <span style="font-weight:700;font-size:17px;">Meus Pedidos</span>
     </div>
   </div>
+  <div id="pedidos-guest-busca" style="display:none;padding:16px 16px 0;">
+    <p style="font-size:14px;color:var(--texto2);margin-bottom:10px;">Digite seu telefone para ver seus pedidos:</p>
+    <div style="display:flex;gap:8px;">
+      <input id="pedidos-guest-tel" type="tel" placeholder="(00) 00000-0000" maxlength="15"
+        style="flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:15px;"
+        oninput="mascaraTelefone(this)"
+        onkeydown="if(event.key==='Enter')buscarPedidosGuest()">
+      <button onclick="buscarPedidosGuest()" style="padding:12px 16px;border-radius:10px;background:var(--verde);color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer;">Buscar</button>
+    </div>
+  </div>
   <div id="pedidos-lista" style="flex:1;overflow-y:auto;padding:16px 16px 90px;"></div>
 </div>
 
@@ -3118,40 +3128,68 @@ function navPedidos() {
   }
 }
 
+function _renderPedidosLista(pedidos, el) {
+  if(!pedidos || pedidos.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:48px 20px;"><div style="font-size:48px;margin-bottom:16px;">📋</div><div style="font-weight:700;font-size:17px;margin-bottom:8px;">Nenhum pedido encontrado</div><div style="color:var(--texto2);font-size:14px;">Seus pedidos aparecerão aqui após a compra.</div></div>';
+    return;
+  }
+  var statusLabel = { pendente:'Pendente', confirmado:'Confirmado', pronto:'Pronto', saiu:'A caminho', entregue:'Entregue', cancelado:'Cancelado' };
+  var statusColor = { pendente:'#f97316', confirmado:'var(--verde)', pronto:'#3b82f6', saiu:'#8b5cf6', entregue:'var(--verde)', cancelado:'#ef4444' };
+  el.innerHTML = pedidos.map(function(p) {
+    var est = p.estabelecimentos || {};
+    var itens = (p.itens_pedido || []).slice(0,3).map(function(i){ return i.quantidade + 'x ' + sanitizar(i.nome); }).join(', ');
+    var mais = p.itens_pedido && p.itens_pedido.length > 3 ? ' +' + (p.itens_pedido.length - 3) + ' itens' : '';
+    var data = new Date(p.criado_em);
+    var dataStr = data.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }) + ' ' + data.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    var cor = statusColor[p.status] || 'var(--texto2)';
+    var label = statusLabel[p.status] || p.status;
+    var clickable = p.status !== 'entregue' && p.status !== 'cancelado';
+    return '<div style="background:var(--cinza2);border-radius:14px;padding:16px;margin-bottom:12px;' + (clickable ? 'cursor:pointer;' : '') + '"' +
+      (clickable ? ' onclick="pedidoAtualId=\'' + p.id + '\';ultimoStatusConhecido={};irTela(\'tela-confirmado\');iniciarPollingPedidos();"' : '') + '>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<span style="font-weight:700;font-size:15px;">' + (est.emoji || '🏪') + ' ' + sanitizar(est.nome || '') + '</span>' +
+        '<span style="font-size:12px;font-weight:600;color:' + cor + ';">' + label + '</span>' +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--texto2);margin-bottom:8px;">' + itens + mais + '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+        '<span style="font-size:12px;color:var(--texto2);">' + dataStr + '</span>' +
+        '<span style="font-weight:700;font-size:15px;">R$ ' + parseFloat(p.total || 0).toFixed(2).replace('.',',') + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
 async function carregarHistoricoPedidos() {
   var el = document.getElementById('pedidos-lista');
+  var guestBusca = document.getElementById('pedidos-guest-busca');
   if(!el) return;
+  if(!currentUser) {
+    if(guestBusca) guestBusca.style.display = 'block';
+    el.innerHTML = '';
+    return;
+  }
+  if(guestBusca) guestBusca.style.display = 'none';
   el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--texto2);">Carregando...</div>';
   try {
     var pedidos = await apiCall('/api/orders');
-    if(!pedidos || pedidos.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:48px 20px;"><div style="font-size:48px;margin-bottom:16px;">📋</div><div style="font-weight:700;font-size:17px;margin-bottom:8px;">Nenhum pedido ainda</div><div style="color:var(--texto2);font-size:14px;">Seus pedidos aparecerão aqui após a compra.</div></div>';
-      return;
-    }
-    var statusLabel = { pendente:'Pendente', confirmado:'Confirmado', pronto:'Pronto', saiu:'A caminho', entregue:'Entregue', cancelado:'Cancelado' };
-    var statusColor = { pendente:'#f97316', confirmado:'var(--verde)', pronto:'#3b82f6', saiu:'#8b5cf6', entregue:'var(--verde)', cancelado:'#ef4444' };
-    el.innerHTML = pedidos.map(function(p) {
-      var est = p.estabelecimentos || {};
-      var itens = (p.itens_pedido || []).slice(0,3).map(function(i){ return i.quantidade + 'x ' + sanitizar(i.nome); }).join(', ');
-      var mais = p.itens_pedido && p.itens_pedido.length > 3 ? ' +' + (p.itens_pedido.length - 3) + ' itens' : '';
-      var data = new Date(p.criado_em);
-      var dataStr = data.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }) + ' ' + data.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-      var cor = statusColor[p.status] || 'var(--texto2)';
-      var label = statusLabel[p.status] || p.status;
-      return '<div style="background:var(--cinza2);border-radius:14px;padding:16px;margin-bottom:12px;" onclick="' + (p.status !== 'entregue' && p.status !== 'cancelado' ? 'pedidoAtualId=\'' + p.id + '\';ultimoStatusConhecido={};irTela(\'tela-confirmado\');iniciarPollingPedidos();' : '') + '">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
-          '<span style="font-weight:700;font-size:15px;">' + (est.emoji || '🏪') + ' ' + sanitizar(est.nome || '') + '</span>' +
-          '<span style="font-size:12px;font-weight:600;color:' + cor + ';">' + label + '</span>' +
-        '</div>' +
-        '<div style="font-size:13px;color:var(--texto2);margin-bottom:8px;">' + itens + mais + '</div>' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-          '<span style="font-size:12px;color:var(--texto2);">' + dataStr + '</span>' +
-          '<span style="font-weight:700;font-size:15px;">R$ ' + parseFloat(p.total || 0).toFixed(2).replace('.',',') + '</span>' +
-        '</div>' +
-      '</div>';
-    }).join('');
+    _renderPedidosLista(pedidos, el);
   } catch(e) {
     el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--texto2);">Erro ao carregar pedidos</div>';
+  }
+}
+
+async function buscarPedidosGuest() {
+  var input = document.getElementById('pedidos-guest-tel');
+  var el = document.getElementById('pedidos-lista');
+  if(!input || !el) return;
+  var tel = input.value.replace(/\D/g,'');
+  if(tel.length < 10) { showToast('⚠️','Telefone inválido','Digite o número com DDD'); return; }
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--texto2);">Buscando...</div>';
+  try {
+    var pedidos = await apiCall('/api/orders/guest?telefone=' + tel);
+    _renderPedidosLista(pedidos, el);
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--texto2);">Erro ao buscar pedidos</div>';
   }
 }
 

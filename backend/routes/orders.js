@@ -526,6 +526,26 @@ router.get('/', requireAuth, async (req, res, next) => {
   }
 });
 
+// GET /api/orders/guest — histórico de pedidos por telefone (sem login)
+router.get('/guest', async (req, res, next) => {
+  try {
+    const tel = (req.query.telefone || '').replace(/\D/g, '').slice(-11);
+    if (tel.length < 10) return res.status(400).json({ error: 'Telefone inválido' });
+    const telFormatado = `(${tel.slice(0,2)}) ${tel.slice(2,7)}-${tel.slice(7)}`;
+    const { data, error } = await supabaseAdmin
+      .from('pedidos')
+      .select(`id, status, pagamento_status, total, subtotal, taxa_entrega, forma_pagamento, criado_em,
+        estabelecimentos (id, nome, emoji),
+        itens_pedido (nome, quantidade, preco_unitario)`)
+      .or(`telefone_cliente.eq.${tel},telefone_cliente.eq.${telFormatado}`)
+      .eq('pagamento_status', 'aprovado')
+      .order('criado_em', { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) { next(err); }
+});
+
 // GET /api/orders/frete-gratis — cupom de frete grátis ativo (público, para lojistas)
 router.get('/frete-gratis', async (req, res, next) => {
   try {
