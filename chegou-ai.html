@@ -2059,10 +2059,13 @@ function esconderLoadingPagamento() {
 
 // Exibir QR Code real do Pix
 function mostrarQRCodeReal(pixData) {
-  var total = document.getElementById('total-valor').textContent;
+  // Usa o valor real cobrado da API (correto com descontos como FRETEGRATIS)
+  var totalReal = (pixData.split && pixData.split.total != null)
+    ? 'R$ ' + parseFloat(pixData.split.total).toFixed(2).replace('.', ',')
+    : document.getElementById('total-valor').textContent;
   document.getElementById('modal-pagamento').classList.add('aberto');
   document.getElementById('pag-tipo').textContent = 'Pix';
-  document.getElementById('pag-valor').textContent = total;
+  document.getElementById('pag-valor').textContent = totalReal;
   document.getElementById('pag-instrucao').textContent = 'Escaneie o QR Code ou copie o código Pix';
 
   var qrHtml = '';
@@ -2682,6 +2685,11 @@ async function carregarEstabelecimentos(cat, _retry) {
   try {
     var params = cat && cat !== 'todos' ? '?categoria=' + cat : '';
     var data = await apiCall('/api/establishments' + params);
+    // Retry se retornar vazio na primeira tentativa (race condition de inicialização)
+    if((!data || data.length === 0) && !_retry) {
+      setTimeout(function() { carregarEstabelecimentos(cat, true); }, 1200);
+      return;
+    }
     estabelecimentos = data;
     // Buscar produtos destaque em paralelo (só na carga inicial)
     if(cat === 'todos' || !cat) {
@@ -2692,8 +2700,8 @@ async function carregarEstabelecimentos(cat, _retry) {
     }
     renderEstabelecimentos(cat);
   } catch(e) {
-    // No Capacitor o WebView pode não estar pronto na primeira abertura — tenta de novo uma vez
-    if(!_retry && window.Capacitor) {
+    // Retry na primeira falha (WebView pode não estar pronto na abertura)
+    if(!_retry) {
       setTimeout(function() { carregarEstabelecimentos(cat, true); }, 1500);
     } else {
       lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar. Verifique a conexão.</div>';
