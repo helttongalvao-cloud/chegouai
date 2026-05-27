@@ -1704,15 +1704,27 @@ function iniciarRealtimeCliente(pedidoId) {
         pedidoAtualId = null;
         pararRealtimeCliente();
         if(mapCliente) { mapCliente.remove(); mapCliente = null; markerMotoboy = null; }
-        var mw = document.getElementById('map-wrap');
-        var md = document.getElementById('map');
-        var ma = document.getElementById('map-aguardando');
-        if(mw) mw.style.display = 'none';
-        if(md) md.style.display = 'none';
-        if(ma) ma.style.display = 'block';
+        mostrarTelaPedidoEntregue();
       }
     })
     .subscribe();
+}
+
+// ============================================
+// TELA DE PEDIDO ENTREGUE
+// ============================================
+function mostrarTelaPedidoEntregue() {
+  var conf = document.getElementById('tela-confirmado');
+  if(!conf) { irHome(); return; }
+  irTela('tela-confirmado');
+  conf.classList.remove('modo-rastreio');
+  conf.innerHTML =
+    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 28px;text-align:center;">' +
+      '<div style="font-size:72px;margin-bottom:20px;animation:pulse 1s ease;">🎉</div>' +
+      '<div style="font-size:24px;font-weight:800;color:#fff;margin-bottom:10px;font-family:\'Plus Jakarta Sans\',sans-serif;">Pedido entregue!</div>' +
+      '<div style="font-size:15px;color:#888;margin-bottom:36px;line-height:1.6;">Seu pedido chegou. Bom apetite!<br>Obrigado por pedir pelo <strong style="color:#f97316;">Chegou Aí</strong>.</div>' +
+      '<button onclick="irHome()" style="width:100%;max-width:320px;padding:16px;border-radius:14px;border:none;background:#f97316;color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:\'Plus Jakarta Sans\',sans-serif;">Fazer novo pedido</button>' +
+    '</div>';
 }
 
 // ============================================
@@ -2459,8 +2471,8 @@ var _onboardingPassos = [
   },
   {
     emoji: '🔔',
-    titulo: 'Ative as notificações',
-    texto: 'Quando chegar um pedido, você recebe uma notificação sonora no celular — mesmo com a tela bloqueada. Toque em <strong>"Ativar notificações"</strong> na tela principal.',
+    titulo: 'Fique de olho nos pedidos',
+    texto: 'Quando chegar um pedido, o app toca um <strong>alerta sonoro</strong> e aparece na aba "Novos". Deixe o app aberto no celular enquanto sua loja estiver funcionando.',
     btn: 'Entendi →'
   },
   {
@@ -8322,7 +8334,7 @@ function iniciarPollingPedidos() {
           };
           if(msgs[novoStatus]) showToast(msgs[novoStatus].icon, msgs[novoStatus].title, msgs[novoStatus].msg);
           if(novoStatus === 'coletado' || novoStatus === 'saiu_para_entrega') iniciarRealtimeGps(pedidoAtualId);
-          if(novoStatus === 'entregue') { pararRealtimeGps(); localStorage.removeItem('chegouai_pedido_id'); }
+          if(novoStatus === 'entregue') { pararRealtimeGps(); localStorage.removeItem('chegouai_pedido_id'); pedidoAtualId = null; mostrarTelaPedidoEntregue(); }
         }
         // Atualizar mapa com posição do motoboy
         if(resp.motoboys && resp.motoboys.lat && resp.motoboys.lng) {
