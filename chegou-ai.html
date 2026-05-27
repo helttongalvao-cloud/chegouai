@@ -2076,23 +2076,19 @@ function mostrarQRCodeReal(pixData) {
   document.getElementById('pag-instrucao').textContent = 'Escaneie o QR Code ou copie o código Pix';
 
   var qrHtml = '';
-  // No Capacitor (Android WebView) data URLs em <img> podem ser bloqueadas — usa api.qrserver.com
   var qrServerUrl = pixData.qrCode
     ? 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(pixData.qrCode)
     : null;
-  var qrSrc;
-  if(window.Capacitor && qrServerUrl) {
-    qrSrc = qrServerUrl;
-  } else if(pixData.qrCodeBase64) {
-    // Corrige prefixo duplo: toDataURL() já retorna 'data:image/...' completo
-    qrSrc = (pixData.qrCodeBase64.startsWith('data:') || pixData.qrCodeBase64.startsWith('http'))
-      ? pixData.qrCodeBase64
-      : 'data:image/png;base64,' + pixData.qrCodeBase64;
-  } else {
-    qrSrc = qrServerUrl;
-  }
+  // Preferir base64 gerado localmente pelo backend (não depende de serviço externo)
+  var qrBase64 = pixData.qrCodeBase64
+    ? ((pixData.qrCodeBase64.startsWith('data:') || pixData.qrCodeBase64.startsWith('http'))
+        ? pixData.qrCodeBase64
+        : 'data:image/png;base64,' + pixData.qrCodeBase64)
+    : null;
+  var qrSrc = qrBase64 || qrServerUrl;
+  var qrFallbackSrc = qrBase64 ? qrServerUrl : null; // fallback para qrserver se base64 falhar
   if(qrSrc) {
-    var qrFallback = qrServerUrl ? ' onerror="this.onerror=null;this.src=\'' + qrServerUrl + '\'"' : '';
+    var qrFallback = qrFallbackSrc ? ' onerror="this.onerror=null;this.src=\'' + qrFallbackSrc + '\'"' : '';
     qrHtml = '<img src="' + qrSrc + '"' + qrFallback + ' style="width:200px;height:200px;border-radius:12px;margin:0 auto;display:block;" alt="QR Code Pix">';
   } else {
     qrHtml = '<div style="font-size:64px;text-align:center;">📱</div><div style="font-size:12px;color:var(--texto2);text-align:center;">QR Code indisponível. Use o código copia e cola.</div>';
