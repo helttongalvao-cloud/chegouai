@@ -732,6 +732,23 @@ router.get('/me/relatorio', requireRole('estabelecimento'), async (req, res, nex
     const todos = pedidos || [];
     const entregues = todos.filter(p => p.status === 'entregue');
     const faturamento = entregues.reduce((s, p) => s + (p.subtotal || 0), 0);
+    const COMISSAO = 0.05;
+    const faturamento_liquido = parseFloat((faturamento * (1 - COMISSAO)).toFixed(2));
+
+    // Gráfico diário — agrupar entregues por dia
+    const graficoDias = {};
+    for (let i = dias - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const key = d.toLocaleDateString('pt-BR', { timeZone: 'America/Manaus', day: '2-digit', month: '2-digit' });
+      graficoDias[key] = { data: key, faturamento: 0, pedidos: 0 };
+    }
+    entregues.forEach(p => {
+      const key = new Date(p.criado_em).toLocaleDateString('pt-BR', { timeZone: 'America/Manaus', day: '2-digit', month: '2-digit' });
+      if (graficoDias[key]) {
+        graficoDias[key].faturamento = parseFloat((graficoDias[key].faturamento + (p.subtotal || 0)).toFixed(2));
+        graficoDias[key].pedidos += 1;
+      }
+    });
 
     const contagem = {};
     todos.forEach(p => {
@@ -747,8 +764,10 @@ router.get('/me/relatorio', requireRole('estabelecimento'), async (req, res, nex
       total_pedidos: todos.length,
       pedidos_entregues: entregues.length,
       faturamento: parseFloat(faturamento.toFixed(2)),
+      faturamento_liquido,
       ticket_medio: entregues.length ? parseFloat((faturamento / entregues.length).toFixed(2)) : 0,
       top_produtos,
+      grafico_dias: Object.values(graficoDias),
     });
   } catch (err) { next(err); }
 });

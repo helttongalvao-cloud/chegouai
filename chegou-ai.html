@@ -4906,6 +4906,29 @@ async function renderRelatorio(periodo) {
         }).join('')
       : '<div style="color:var(--texto2);font-size:13px;padding:10px 0;">Nenhuma venda registrada ainda</div>';
 
+    // Gráfico de barras SVG
+    var graficoDias = data.grafico_dias || [];
+    var maxFat = Math.max.apply(null, graficoDias.map(function(d){ return d.faturamento; })) || 1;
+    var barW = graficoDias.length > 0 ? Math.floor(280 / graficoDias.length) - 2 : 20;
+    var svgBars = graficoDias.map(function(d, i) {
+      var h = Math.max(2, Math.round((d.faturamento / maxFat) * 80));
+      var x = i * (barW + 2);
+      var cor = d.faturamento > 0 ? 'var(--verde)' : 'var(--cinza3)';
+      var label = d.data.substring(0,5);
+      return '<g>' +
+        '<rect x="' + x + '" y="' + (80 - h) + '" width="' + barW + '" height="' + h + '" rx="3" fill="' + cor + '"/>' +
+        (graficoDias.length <= 14 ? '<text x="' + (x + barW/2) + '" y="100" text-anchor="middle" font-size="8" fill="var(--texto2)">' + label + '</text>' : '') +
+      '</g>';
+    }).join('');
+    var graficoHtml = graficoDias.length
+      ? '<div class="secao-titulo">📈 Faturamento por dia</div>' +
+        '<div style="background:var(--cinza2);border-radius:12px;padding:16px;margin-bottom:20px;overflow-x:auto;">' +
+          '<svg width="100%" viewBox="0 0 ' + Math.max(280, graficoDias.length * (barW+2)) + ' 110" style="min-width:' + (graficoDias.length * (barW+2)) + 'px;">' +
+            svgBars +
+          '</svg>' +
+        '</div>'
+      : '';
+
     el.innerHTML =
       '<div style="display:flex;gap:8px;margin-bottom:20px;">' +
         '<button onclick="renderRelatorio(\'7d\')" style="' + btnStyle('7d') + '">7 dias</button>' +
@@ -4916,8 +4939,10 @@ async function renderRelatorio(periodo) {
         '<div class="stat-card"><div class="stat-valor">' + data.total_pedidos + '</div><div class="stat-label">Pedidos recebidos</div></div>' +
         '<div class="stat-card"><div class="stat-valor">' + data.pedidos_entregues + '</div><div class="stat-label">Entregues</div></div>' +
         '<div class="stat-card"><div class="stat-valor" style="font-size:18px;">R$ ' + parseFloat(data.faturamento).toFixed(2).replace('.',',') + '</div><div class="stat-label">Faturamento bruto</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" style="font-size:18px;color:var(--verde);">R$ ' + parseFloat(data.faturamento_liquido || 0).toFixed(2).replace('.',',') + '</div><div class="stat-label">Faturamento líquido (−5%)</div></div>' +
         '<div class="stat-card"><div class="stat-valor" style="font-size:18px;">R$ ' + parseFloat(data.ticket_medio).toFixed(2).replace('.',',') + '</div><div class="stat-label">Ticket médio</div></div>' +
       '</div>' +
+      graficoHtml +
       '<div class="secao-titulo">🏆 Mais vendidos</div>' +
       '<div style="background:var(--cinza2);border-radius:12px;padding:4px 14px;">' + topHtml + '</div>';
   } catch(e) {
