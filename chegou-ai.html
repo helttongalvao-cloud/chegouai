@@ -2262,8 +2262,14 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Taxa de entrega por distância
+// Taxa de entrega por distância — respeita tipo_frete da loja
 function calcularTaxaEntrega(distanciaKm) {
+  if (estAtual && estAtual.tipo_frete === 'km') {
+    var base = parseFloat(estAtual.frete_base || 2);
+    var porKm = parseFloat(estAtual.frete_por_km || 1.5);
+    return parseFloat((base + porKm * distanciaKm).toFixed(2));
+  }
+  // Frete fixo (padrão Guajará)
   if (distanciaKm <= 5.0) return 2.00;
   return 3.00;
 }
@@ -4245,6 +4251,7 @@ async function confirmarPedido() {
       telefoneCliente: tel,
       formaPagamento: formaPag,
       ...(window.taxaEntregaSimulada > 0 && { taxaEntrega: window.taxaEntregaSimulada }),
+      ...(estAtual && estAtual.tipo_frete === 'km' && clienteLat && clienteLng && estAtual.lat && estAtual.lng && { distanciaKm: parseFloat(haversine(clienteLat, clienteLng, parseFloat(estAtual.lat), parseFloat(estAtual.lng)).toFixed(2)) }),
       freteGratis: freteGratis === true,
     };
     if(cupomAplicado) bodyPedido.cupom = cupomAplicado.codigo;
@@ -5039,7 +5046,18 @@ async function renderInfoLoja() {
     '<div id="loja-gps-info" style="flex:1;padding:12px;border-radius:10px;background:var(--cinza2);font-size:13px;color:var(--texto2);">' + (est.lat ? '✅ Localização salva (' + parseFloat(est.lat).toFixed(4) + ', ' + parseFloat(est.lng).toFixed(4) + ')' : '⚠️ Sem localização — clique em 📡 estando na loja') + '</div>' +
     '<button type="button" onclick="capturarGPSLojista()" style="background:var(--verde);border:none;border-radius:12px;padding:12px 16px;color:#000;font-size:20px;cursor:pointer;" title="Capturar GPS da loja">📡</button>' +
     '</div>' +
-    '<div style="font-size:11px;color:var(--texto2);margin-top:4px;">Frete: R$ 2,00–4,00 · calculado pela distância ao cliente</div></div>' +
+    '<div style="font-size:11px;color:var(--texto2);margin-top:4px;">Necessário para calcular o frete ao cliente.</div></div>' +
+    '<div class="form-grupo" style="margin-top:12px;"><label>Tipo de frete</label>' +
+    '<select id="loja-tipo-frete" class="modal-campo" style="margin:0;" onchange="toggleFretePorKm()">' +
+    '<option value="fixo"' + ((!est.tipo_frete || est.tipo_frete === 'fixo') ? ' selected' : '') + '>Fixo (R$ por faixa de distância)</option>' +
+    '<option value="km"' + (est.tipo_frete === 'km' ? ' selected' : '') + '>Por km (R$ base + R$/km)</option>' +
+    '</select></div>' +
+    '<div id="frete-km-campos" style="display:' + (est.tipo_frete === 'km' ? 'flex' : 'none') + ';gap:8px;margin-top:8px;">' +
+    '<div style="flex:1;"><label style="font-size:12px;color:var(--texto2);">R$ base</label>' +
+    '<input type="number" id="loja-frete-base" class="modal-campo" style="margin:0;" min="0" step="0.50" value="' + (est.frete_base || '2.00') + '"></div>' +
+    '<div style="flex:1;"><label style="font-size:12px;color:var(--texto2);">R$/km</label>' +
+    '<input type="number" id="loja-frete-por-km" class="modal-campo" style="margin:0;" min="0" step="0.10" value="' + (est.frete_por_km || '1.50') + '"></div>' +
+    '</div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Pedido mínimo (R$)</label>' +
     '<input type="number" id="loja-minimo-input" class="modal-campo" style="margin:0;" min="0" step="0.50" placeholder="0 = sem mínimo" value="' + (est.valor_minimo || '0') + '"></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>WhatsApp para notificações</label>' +
@@ -5190,6 +5208,16 @@ async function salvarInfoLoja() {
     if(cat) body.categoria = cat;
     if(tempo) body.tempo_entrega = tempo;
     if(taxa && !isNaN(taxa)) body.taxa_entrega = taxa;
+    var tipoFrete = document.getElementById('loja-tipo-frete') ? document.getElementById('loja-tipo-frete').value : null;
+    if(tipoFrete) {
+      body.tipo_frete = tipoFrete;
+      if(tipoFrete === 'km') {
+        var freteBase = parseFloat(document.getElementById('loja-frete-base') ? document.getElementById('loja-frete-base').value : 2);
+        var fretePorKm = parseFloat(document.getElementById('loja-frete-por-km') ? document.getElementById('loja-frete-por-km').value : 1.5);
+        if(!isNaN(freteBase)) body.frete_base = freteBase;
+        if(!isNaN(fretePorKm)) body.frete_por_km = fretePorKm;
+      }
+    }
     if(minimo !== null && !isNaN(minimo)) body.valor_minimo = minimo;
     if(whatsapp) body.whatsapp = whatsapp;
     if(slug !== null) body.slug = slug || null;
@@ -5208,6 +5236,12 @@ async function salvarInfoLoja() {
     showToast('❌', 'Erro ao salvar', e.message);
   }
 }
+function toggleFretePorKm() {
+  var sel = document.getElementById('loja-tipo-frete');
+  var campos = document.getElementById('frete-km-campos');
+  if(campos) campos.style.display = sel && sel.value === 'km' ? 'flex' : 'none';
+}
+
 let emojiSelecionado = '📦';
 
 

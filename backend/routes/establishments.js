@@ -121,7 +121,7 @@ router.get('/', async (req, res, next) => {
 
     let query = supabaseAdmin
       .from('estabelecimentos')
-      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp, pausado, criado_em, cidade, estado')
+      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, tipo_frete, frete_base, frete_por_km, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp, pausado, criado_em, cidade, estado')
       .eq('ativo', true)
       .order('nome');
 
@@ -371,6 +371,9 @@ router.put(
     body('lat').optional().isFloat({ min: -90, max: 90 }),
     body('lng').optional().isFloat({ min: -180, max: 180 }),
     body('slug').optional({ nullable: true, checkFalsy: true }).trim().matches(/^[a-z0-9-]{2,40}$/).withMessage('Link personalizado inválido (use letras minúsculas, números e hífens)'),
+    body('tipo_frete').optional().isIn(['fixo', 'km']),
+    body('frete_base').optional().isFloat({ min: 0, max: 100 }),
+    body('frete_por_km').optional().isFloat({ min: 0, max: 50 }),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -379,7 +382,7 @@ router.put(
     }
 
     const campos = {};
-    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'valor_minimo', 'aberto', 'mp_user_id', 'whatsapp', 'horarios', 'foto_url', 'lat', 'lng', 'slug'].forEach((key) => {
+    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'valor_minimo', 'aberto', 'mp_user_id', 'whatsapp', 'horarios', 'foto_url', 'lat', 'lng', 'slug', 'tipo_frete', 'frete_base', 'frete_por_km'].forEach((key) => {
       if (req.body[key] !== undefined) campos[key] = req.body[key];
     });
 

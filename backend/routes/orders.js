@@ -77,7 +77,7 @@ router.post(
       // 1. Validar estabelecimento
       const { data: est, error: estErr } = await supabaseAdmin
         .from('estabelecimentos')
-        .select('id, nome, aberto, taxa_entrega, cadastro_data, ativo, user_id, valor_minimo, whatsapp, tipo_entrega, pausado')
+        .select('id, nome, aberto, taxa_entrega, tipo_frete, frete_base, frete_por_km, cadastro_data, ativo, user_id, valor_minimo, whatsapp, tipo_entrega, pausado')
         .eq('id', estabelecimentoId)
         .eq('ativo', true)
         .single();
@@ -231,9 +231,17 @@ router.post(
         }
       }
 
-      // 5. Calcular taxa de entrega final — calculada por distância para ambos os tipos
+      // 5. Calcular taxa de entrega final
       let taxaFinal = split.taxaEntrega;
-      if (req.body.taxaEntrega !== undefined) {
+      if (est.tipo_frete === 'km') {
+        // Frete dinâmico por km — frontend envia distanciaKm
+        const distKm = parseFloat(req.body.distanciaKm);
+        if (!isNaN(distKm) && distKm > 0) {
+          const base = parseFloat(est.frete_base || 2);
+          const porKm = parseFloat(est.frete_por_km || 1.5);
+          taxaFinal = parseFloat((base + porKm * distKm).toFixed(2));
+        }
+      } else if (req.body.taxaEntrega !== undefined) {
         const taxaCliente = parseFloat(req.body.taxaEntrega);
         if (isNaN(taxaCliente) || taxaCliente < 2 || taxaCliente > 4) {
           return res.status(400).json({ error: 'Taxa de entrega inválida (deve ser entre R$2,00 e R$4,00)' });
