@@ -411,9 +411,17 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
     // Buscar ID do motoboy logado
     const { data: motoboy } = await supabaseAdmin
       .from('motoboys')
-      .select('id, disponivel, telegram_chat_id')
+      .select('id, disponivel')
       .eq('user_id', req.user.id)
       .single();
+
+    // telegram_chat_id em query separada para não quebrar se a coluna ainda não existir
+    let motoboyTelegramChatId = null;
+    try {
+      const { data: tgData } = await supabaseAdmin
+        .from('motoboys').select('telegram_chat_id').eq('user_id', req.user.id).maybeSingle();
+      motoboyTelegramChatId = tgData?.telegram_chat_id || null;
+    } catch (_) { /* coluna ainda não existe — ignorar */ }
 
     const selectPedido = 'id, status, total, taxa_entrega, endereco_entrega, telefone_cliente, guest_nome, codigo_coleta, ' +
       'estabelecimentos (nome, emoji, endereco, lat, lng), ' +
@@ -477,7 +485,7 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
       disponiveis: (dispRes.data || []).map(resolverNome),
       ativa: ativaRes.data ? resolverNome(ativaRes.data) : null,
       disponivel: motoboy ? motoboy.disponivel : null,
-      telegram_chat_id: motoboy ? motoboy.telegram_chat_id : null,
+      telegram_chat_id: motoboyTelegramChatId,
       stats: {
         entregasHoje,
         ganhoHoje: parseFloat(ganhoHoje.toFixed(2)),
