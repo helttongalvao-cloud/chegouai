@@ -1072,6 +1072,17 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   <div class="conteudo" id="mesa-pix-conteudo" style="align-items:center;text-align:center;"></div>
 </div>
 
+<!-- PEDIDOS DO CLIENTE -->
+<div class="tela" id="tela-pedidos">
+  <div class="header">
+    <div class="header-logo" style="gap:8px;">
+      <span style="font-size:20px;">📋</span>
+      <span style="font-weight:700;font-size:17px;">Meus Pedidos</span>
+    </div>
+  </div>
+  <div id="pedidos-lista" style="flex:1;overflow-y:auto;padding:16px 16px 90px;"></div>
+</div>
+
 <!-- ESTABELECIMENTO -->
 <div class="tela" id="tela-estabelecimento">
   <div class="header">
@@ -2293,9 +2304,13 @@ function irTela(id) {
   var bn = document.getElementById('bottom-nav');
   var cf = document.getElementById('carrinho-float');
   if(bn) {
-    if(id === 'tela-home') {
+    if(id === 'tela-home' || id === 'tela-pedidos') {
       bn.classList.remove('oculto');
       if(cf) cf.style.bottom = '76px';
+      // Ajustar destaque do nav
+      document.querySelectorAll('.bottom-nav-btn').forEach(function(b){ b.classList.remove('ativo'); });
+      if(id === 'tela-home') document.getElementById('nav-inicio') && document.getElementById('nav-inicio').classList.add('ativo');
+      if(id === 'tela-pedidos') document.getElementById('nav-pedidos') && document.getElementById('nav-pedidos').classList.add('ativo');
     } else {
       bn.classList.add('oculto');
       if(cf) cf.style.bottom = '24px';
@@ -3098,8 +3113,45 @@ function navPedidos() {
     irTela('tela-confirmado');
     iniciarPollingPedidos();
   } else {
-    showToast('📋', 'Sem pedidos ativos', 'Faça um pedido para acompanhar aqui');
-    setTimeout(function(){ document.getElementById('nav-inicio') && document.getElementById('nav-inicio').classList.add('ativo'); document.getElementById('nav-pedidos') && document.getElementById('nav-pedidos').classList.remove('ativo'); }, 2200);
+    irTela('tela-pedidos');
+    carregarHistoricoPedidos();
+  }
+}
+
+async function carregarHistoricoPedidos() {
+  var el = document.getElementById('pedidos-lista');
+  if(!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--texto2);">Carregando...</div>';
+  try {
+    var pedidos = await apiCall('/api/orders');
+    if(!pedidos || pedidos.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:48px 20px;"><div style="font-size:48px;margin-bottom:16px;">📋</div><div style="font-weight:700;font-size:17px;margin-bottom:8px;">Nenhum pedido ainda</div><div style="color:var(--texto2);font-size:14px;">Seus pedidos aparecerão aqui após a compra.</div></div>';
+      return;
+    }
+    var statusLabel = { pendente:'Pendente', confirmado:'Confirmado', pronto:'Pronto', saiu:'A caminho', entregue:'Entregue', cancelado:'Cancelado' };
+    var statusColor = { pendente:'#f97316', confirmado:'var(--verde)', pronto:'#3b82f6', saiu:'#8b5cf6', entregue:'var(--verde)', cancelado:'#ef4444' };
+    el.innerHTML = pedidos.map(function(p) {
+      var est = p.estabelecimentos || {};
+      var itens = (p.itens_pedido || []).slice(0,3).map(function(i){ return i.quantidade + 'x ' + sanitizar(i.nome); }).join(', ');
+      var mais = p.itens_pedido && p.itens_pedido.length > 3 ? ' +' + (p.itens_pedido.length - 3) + ' itens' : '';
+      var data = new Date(p.criado_em);
+      var dataStr = data.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }) + ' ' + data.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+      var cor = statusColor[p.status] || 'var(--texto2)';
+      var label = statusLabel[p.status] || p.status;
+      return '<div style="background:var(--cinza2);border-radius:14px;padding:16px;margin-bottom:12px;" onclick="' + (p.status !== 'entregue' && p.status !== 'cancelado' ? 'pedidoAtualId=\'' + p.id + '\';ultimoStatusConhecido={};irTela(\'tela-confirmado\');iniciarPollingPedidos();' : '') + '">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+          '<span style="font-weight:700;font-size:15px;">' + (est.emoji || '🏪') + ' ' + sanitizar(est.nome || '') + '</span>' +
+          '<span style="font-size:12px;font-weight:600;color:' + cor + ';">' + label + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px;color:var(--texto2);margin-bottom:8px;">' + itens + mais + '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<span style="font-size:12px;color:var(--texto2);">' + dataStr + '</span>' +
+          '<span style="font-weight:700;font-size:15px;">R$ ' + parseFloat(p.total || 0).toFixed(2).replace('.',',') + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--texto2);">Erro ao carregar pedidos</div>';
   }
 }
 
@@ -4799,7 +4851,7 @@ async function renderRelatorio(periodo) {
     var topHtml = data.top_produtos && data.top_produtos.length
       ? data.top_produtos.map(function(p, i) {
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--cinza3);">' +
-            '<span style="font-size:14px;">' + (i===0?'🥇':i===1?'🥈':i===2?'🥉':'  ') + ' ' + sanitizar(p.nome) + '</span>' +
+            '<span style="font-size:14px;">' + (i===0?'🥇':i===1?'🥈':i===2?'🥉':'  ') + ' ' + sanitizar(p.nome) + (p.preco ? ' <span style="color:var(--texto2);font-size:12px;">R$ ' + parseFloat(p.preco).toFixed(2).replace('.',',') + '</span>' : '') + '</span>' +
             '<span style="font-weight:700;color:var(--verde);font-size:13px;">' + p.qtd + ' vendidos</span>' +
           '</div>';
         }).join('')

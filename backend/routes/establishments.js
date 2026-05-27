@@ -723,7 +723,7 @@ router.get('/me/relatorio', requireRole('estabelecimento'), async (req, res, nex
 
     const { data: pedidos } = await supabaseAdmin
       .from('pedidos')
-      .select('id, subtotal, status, criado_em, itens_pedido(nome, quantidade)')
+      .select('id, subtotal, status, criado_em, itens_pedido(nome, quantidade, preco_unitario)')
       .eq('estabelecimento_id', est.id)
       .eq('pagamento_status', 'aprovado')
       .neq('status', 'cancelado')
@@ -736,7 +736,7 @@ router.get('/me/relatorio', requireRole('estabelecimento'), async (req, res, nex
     const contagem = {};
     todos.forEach(p => {
       (p.itens_pedido || []).forEach(item => {
-        if (!contagem[item.nome]) contagem[item.nome] = { nome: item.nome, qtd: 0 };
+        if (!contagem[item.nome]) contagem[item.nome] = { nome: item.nome, qtd: 0, preco: item.preco_unitario || 0 };
         contagem[item.nome].qtd += item.quantidade;
       });
     });
