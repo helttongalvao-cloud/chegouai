@@ -6,7 +6,7 @@ const { calcularSplit } = require('../services/commission');
 const { criarTransferenciaPix } = require('../services/pagarme');
 const { enviarPush } = require('./notifications');
 const { alertarAdmin, enviarWhatsApp } = require('../services/whatsapp');
-const { enviarTelegram } = require('../services/telegram');
+const { enviarTelegram, enviarTelegramChatId } = require('../services/telegram');
 
 const router = express.Router();
 
@@ -411,7 +411,7 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
     // Buscar ID do motoboy logado
     const { data: motoboy } = await supabaseAdmin
       .from('motoboys')
-      .select('id, disponivel')
+      .select('id, disponivel, telegram_chat_id')
       .eq('user_id', req.user.id)
       .single();
 
@@ -477,6 +477,7 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
       disponiveis: (dispRes.data || []).map(resolverNome),
       ativa: ativaRes.data ? resolverNome(ativaRes.data) : null,
       disponivel: motoboy ? motoboy.disponivel : null,
+      telegram_chat_id: motoboy ? motoboy.telegram_chat_id : null,
       stats: {
         entregasHoje,
         ganhoHoje: parseFloat(ganhoHoje.toFixed(2)),
@@ -762,15 +763,23 @@ router.patch(
           // Buscar telefones dos motoboys disponíveis para WhatsApp
           const motoIds = motosDisp.map((m) => m.user_id);
           const { data: motosInfo } = await supabaseAdmin
-            .from('motoboys').select('user_id, telefone').in('user_id', motoIds).eq('ativo', true);
+            .from('motoboys').select('user_id, telefone, telegram_chat_id').in('user_id', motoIds).eq('ativo', true);
 
           motosDisp.forEach((m) => {
             enviarPush(m.user_id, '🛵 Nova entrega disponível!', enderecoResumido || 'Toque para ver detalhes', { pedidoId: orderId });
           });
 
           if (motosInfo?.length) {
-            const msgMotoboy = `🛵 *Nova entrega disponível!*\n🏪 ${lojaNome}\n💰 ${valorStr}\n📍 ${enderecoResumido || 'Ver no app'}\n\nAbra o app para aceitar.`;
-            motosInfo.forEach((m) => { if (m.telefone) enviarWhatsApp(m.telefone, msgMotoboy); });
+            const lojaEndereco = pedido.estabelecimentos?.endereco || '';
+            const clienteNome = pedido.profiles?.nome || pedido.guest_nome || 'Cliente';
+            const clienteTel = pedido.profiles?.telefone || pedido.guest_telefone || '';
+            const freteStr = `R$ ${parseFloat(pedido.taxa_entrega || 0).toFixed(2).replace('.', ',')}`;
+            const msgWhatsApp = `🛵 *Nova entrega disponível!*\n🏪 ${lojaNome}\n💰 ${valorStr}\n📍 ${enderecoResumido || 'Ver no app'}\n\nAbra o app para aceitar.`;
+            const msgTelegramMoto = `🛵 <b>Nova entrega disponível!</b>\n🏪 ${lojaNome}${lojaEndereco ? ' — ' + lojaEndereco : ''}\n📦 Entregar para: ${clienteNome}${clienteTel ? '\n📞 ' + clienteTel : ''}\n💰 Frete: ${freteStr}\n➡️ <a href="https://chegouaiapp.com.br/app">Abrir app</a>`;
+            motosInfo.forEach((m) => {
+              if (m.telefone) enviarWhatsApp(m.telefone, msgWhatsApp);
+              if (m.telegram_chat_id) enviarTelegramChatId(m.telegram_chat_id, msgTelegramMoto);
+            });
           }
 
           // Timer 30s: se nenhum motoboy coletar, alertar admin
@@ -1011,6 +1020,19 @@ router.patch(
     }
   }
 );
+
+// =============================================
+// DELETE /api/orders/motoboy/telegram — Desvincular Telegram do motoboy
+// =============================================
+router.delete('/motoboy/telegram', requireRole('motoboy'), async (req, res, next) => {
+  try {
+    await supabaseAdmin
+      .from('motoboys')
+      .update({ telegram_chat_id: null })
+      .eq('user_id', req.user.id);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
 
 // =============================================
 // PATCH /api/orders/motoboy/location — Atualizar GPS do Motoboy

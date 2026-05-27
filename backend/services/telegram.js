@@ -1,12 +1,7 @@
 const https = require('https');
 
-async function enviarTelegram(mensagem) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) return;
-
+function _sendMessage(token, chatId, mensagem) {
   const body = JSON.stringify({ chat_id: chatId, text: mensagem, parse_mode: 'HTML' });
-
   return new Promise((resolve) => {
     const req = https.request({
       hostname: 'api.telegram.org',
@@ -24,4 +19,17 @@ async function enviarTelegram(mensagem) {
   });
 }
 
-module.exports = { enviarTelegram };
+async function enviarTelegram(mensagem) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+  return _sendMessage(token, chatId, mensagem);
+}
+
+async function enviarTelegramChatId(chatId, mensagem) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token || !chatId) return;
+  return _sendMessage(token, chatId, mensagem);
+}
+
+module.exports = { enviarTelegram, enviarTelegramChatId };

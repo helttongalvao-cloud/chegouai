@@ -210,6 +210,40 @@ router.post('/unsubscribe', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// =============================================
+// POST /api/notifications/telegram-webhook — Recebe updates do bot Telegram
+// Quando motoboy envia /start <userId>, salva telegram_chat_id
+// =============================================
+router.post('/telegram-webhook', async (req, res) => {
+  try {
+    const update = req.body;
+    const msg = update?.message;
+    if (!msg) return res.sendStatus(200);
+
+    const chatId = String(msg.chat?.id || '');
+    const text = (msg.text || '').trim();
+
+    // /start <userId>
+    if (text.startsWith('/start') && chatId) {
+      const parts = text.split(/\s+/);
+      const userId = parts[1] || '';
+      if (userId && userId.length > 10) {
+        await supabaseAdmin
+          .from('motoboys')
+          .update({ telegram_chat_id: chatId })
+          .eq('user_id', userId);
+
+        const { enviarTelegramChatId } = require('../services/telegram');
+        await enviarTelegramChatId(chatId, '✅ <b>Telegram vinculado!</b>\nVocê vai receber alertas de novas entregas aqui. 🛵');
+      }
+    }
+    res.sendStatus(200);
+  } catch (e) {
+    console.error('[TelegramWebhook]', e.message);
+    res.sendStatus(200);
+  }
+});
+
 module.exports = router;
 module.exports.enviarPush = enviarPush;
 module.exports.enviarFCMDireto = enviarFCM;

@@ -228,6 +228,8 @@ app.get('/api/config', (req, res) => {
     taxaCartaoCliente: parseFloat(process.env.ASAAS_TAXA_CARTAO || '2.99'),
     // Pedido mínimo global do app (configurável via Railway)
     pedidoMinimo: parseFloat(process.env.PEDIDO_MINIMO_GLOBAL || '0'),
+    // Username do bot Telegram (para deep link dos motoboys)
+    telegramBotUsername: process.env.TELEGRAM_BOT_USERNAME || '',
   });
 });
 
@@ -313,6 +315,19 @@ app.listen(PORT, () => {
 
   iniciarMonitorAlertas();
   iniciarMonitorPagamentos();
+
+  // Registrar webhook do Telegram automaticamente (idempotente)
+  if (process.env.NODE_ENV === 'production' && process.env.TELEGRAM_BOT_TOKEN && process.env.FRONTEND_URL) {
+    const webhookUrl = `${process.env.FRONTEND_URL}/api/notifications/telegram-webhook`;
+    fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/setWebhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: webhookUrl }),
+    })
+      .then(r => r.json())
+      .then(d => console.log('[Telegram] Webhook registrado:', d.ok ? '✅' : d.description))
+      .catch(e => console.error('[Telegram] Falha ao registrar webhook:', e.message));
+  }
 
   // Fix: atualiza logo Sabor na Brasa se ainda está com a imagem antiga
   const { supabaseAdmin } = require('./config/supabase');

@@ -1195,6 +1195,13 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <div class="stat-label">Ganhos hoje</div>
       </div>
     </div>
+    <div id="banner-telegram-moto" style="display:none;margin-bottom:12px;background:#1a1a2e;border:1px solid #2563eb44;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">📲 Alertas no Telegram</div>
+        <div id="telegram-moto-status" style="font-size:12px;color:#94a3b8;">Vincule para receber novas entregas</div>
+      </div>
+      <a id="btn-vincular-telegram" href="#" target="_blank" rel="noopener" style="background:#2563eb;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;cursor:pointer;">Vincular</a>
+    </div>
     <div class="secao-titulo">Entregas disponíveis</div>
     <div id="entregas-motoboy"></div>
     <div class="secao-titulo" style="margin-top:20px;">Minhas entregas recentes</div>
@@ -1318,6 +1325,7 @@ async function inicializarApp() {
     }
     if(cfg.taxaCartaoCliente) TAXA_CARTAO_CLIENTE = cfg.taxaCartaoCliente;
     if(cfg.pedidoMinimo) pedidoMinimoGlobal = parseFloat(cfg.pedidoMinimo);
+    if(cfg.telegramBotUsername) window._telegramBotUsername = cfg.telegramBotUsername;
   } catch(e) {
     console.warn('[Config] Erro ao carregar config do servidor:', e.message);
   }
@@ -6879,6 +6887,14 @@ function codigoPedido(id) {
   return (id || '').replace(/-/g,'').substring(0,6).toUpperCase();
 }
 
+async function desvincularTelegramMotoboy() {
+  if(!confirm('Desvincular Telegram? Você não receberá mais alertas de entregas.')) return;
+  try {
+    await apiCall('/api/orders/motoboy/telegram', { method: 'DELETE' });
+    renderMotoboy();
+  } catch(e) { showToast('Erro ao desvincular Telegram'); }
+}
+
 async function renderMotoboy() {
   destruirMapaMotoboy();
   var el = document.getElementById('entregas-motoboy');
@@ -6895,6 +6911,29 @@ async function renderMotoboy() {
       statusAtivo = data.disponivel;
       var toggle = document.getElementById('toggle-motoboy');
       if(toggle) toggle.classList.toggle('ativo', statusAtivo);
+    }
+
+    // Banner de vinculação do Telegram
+    var bannerTg = document.getElementById('banner-telegram-moto');
+    var btnTg = document.getElementById('btn-vincular-telegram');
+    var statusTg = document.getElementById('telegram-moto-status');
+    if(bannerTg && window._telegramBotUsername && usuarioLogado) {
+      bannerTg.style.display = 'flex';
+      if(data.telegram_chat_id) {
+        statusTg.textContent = '✅ Telegram vinculado — você receberá alertas';
+        statusTg.style.color = '#4ade80';
+        btnTg.textContent = 'Desvincular';
+        btnTg.style.background = '#374151';
+        btnTg.href = '#';
+        btnTg.onclick = function(e){ e.preventDefault(); desvincularTelegramMotoboy(); };
+      } else {
+        statusTg.textContent = 'Vincule para receber novas entregas';
+        statusTg.style.color = '#94a3b8';
+        btnTg.textContent = 'Vincular';
+        btnTg.style.background = '#2563eb';
+        btnTg.href = 'https://t.me/' + window._telegramBotUsername + '?start=' + usuarioLogado.id;
+        btnTg.onclick = null;
+      }
     }
 
     // Atualizar cards de stats
