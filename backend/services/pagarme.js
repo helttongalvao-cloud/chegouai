@@ -201,13 +201,21 @@ async function criarCobrancaPix({ total, orderId, customerId, splitRules }) {
         if (!charge?.id) {
           const orderRetry = await pagarmeRequest('GET', `/orders/${order.id}`);
           charge = orderRetry.charges?.[0];
-          console.log(`[Pagar.me Pix] retry ${i}: order rebuscado, charge.id=${charge?.id}`);
+          console.log(`[Pagar.me Pix] retry ${i}: order rebuscado, charge.id=${charge?.id} order.status=${orderRetry.status}`);
         }
         if (charge?.id) {
           const chargeData = await pagarmeRequest('GET', `/charges/${charge.id}`);
           pix = chargeData?.last_transaction;
-          console.log(`[Pagar.me Pix] retry ${i}: qr_code=${!!pix?.qr_code} qr_code_url=${!!pix?.qr_code_url} status=${chargeData?.status}`);
+          const chargeStatus = chargeData?.status;
+          console.log(`[Pagar.me Pix] retry ${i}: charge.status=${chargeStatus} qr_code=${!!pix?.qr_code}`);
           if (pix?.qr_code || pix?.qr_code_url) break;
+          // Sair cedo se charge já falhou definitivamente
+          if (chargeStatus === 'failed' || chargeStatus === 'canceled') {
+            const gw = pix?.gateway_response || chargeData?.last_transaction?.gateway_response;
+            console.error('[Pagar.me Pix] Charge falhou definitivamente:', chargeStatus,
+              '| errors:', JSON.stringify(gw?.errors || pix?.acquirer_message || '').substring(0, 300));
+            break;
+          }
         }
       } catch (e) {
         console.warn(`[Pagar.me Pix] retry ${i} erro:`, e.message);
@@ -215,7 +223,10 @@ async function criarCobrancaPix({ total, orderId, customerId, splitRules }) {
     }
   }
   if (!pix?.qr_code) {
-    console.error('[Pagar.me Pix] QR code não obtido após todas as tentativas. order.id:', order.id, '| charge.id:', charge?.id, '| pix:', JSON.stringify(pix)?.substring(0, 300));
+    console.error('[Pagar.me Pix] QR code não obtido. order.id:', order.id,
+      '| pix.status:', pix?.status,
+      '| acquirer_message:', pix?.acquirer_message,
+      '| gateway_response:', JSON.stringify(pix?.gateway_response)?.substring(0, 300));
   }
 
   console.log('[Pagar.me Pix] qr_code presente:', !!pix?.qr_code, '| qr_code_url:', !!pix?.qr_code_url);
