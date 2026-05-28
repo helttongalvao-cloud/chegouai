@@ -358,6 +358,13 @@ async function criarCobrancaCartao({
 // =============================================
 async function buscarPedido(pagarmeOrderId) {
   const data = await pagarmeRequest('GET', `/orders/${pagarmeOrderId}`);
+  const charge = data.charges?.[0];
+  const lastTx = charge?.last_transaction;
+  if (data.status === 'failed') {
+    console.error('[Pagar.me buscarPedido] order failed — charge.status:', charge?.status,
+      '| acquirer_message:', lastTx?.acquirer_message,
+      '| gateway_response errors:', JSON.stringify(lastTx?.gateway_response?.errors || []).substring(0, 400));
+  }
   return {
     id: data.id,
     status: data.status,

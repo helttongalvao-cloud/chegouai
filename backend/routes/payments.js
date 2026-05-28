@@ -239,6 +239,13 @@ router.post('/pix', paymentLimiter, optionalAuth, [
       splitRules,
     });
 
+    // Só salva no DB quando QR code foi gerado — mantém pedido 'pendente' para retry se falhar
+    if (!cobranca.qrCode) {
+      return res.status(400).json({
+        error: 'Não foi possível gerar o Pix. Verifique se o CPF está correto e tente novamente.',
+      });
+    }
+
     await salvarCobranca(pedidoId, cobranca.orderId, split);
 
     res.json({
