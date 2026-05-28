@@ -18,6 +18,20 @@ const { enviarTelegram } = require('../services/telegram');
 
 const router = express.Router();
 
+function validarCPFBackend(cpf) {
+  if (!cpf) return false;
+  cpf = cpf.replace(/\D/g, '');
+  if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+  let s = 0;
+  for (let i = 0; i < 9; i++) s += parseInt(cpf[i]) * (10 - i);
+  let r = (s * 10) % 11; if (r === 10 || r === 11) r = 0;
+  if (r !== parseInt(cpf[9])) return false;
+  s = 0;
+  for (let i = 0; i < 10; i++) s += parseInt(cpf[i]) * (11 - i);
+  r = (s * 10) % 11; if (r === 10 || r === 11) r = 0;
+  return r === parseInt(cpf[10]);
+}
+
 // ─── Helper: buscar pedido pendente do cliente ────────────────────────────
 async function buscarPedidoPendente(pedidoId, clienteId) {
   let query = supabaseAdmin
@@ -198,16 +212,17 @@ router.post('/pix', paymentLimiter, optionalAuth, [
 
     const guestTel = (pedido.guest_telefone || pedido.telefone_cliente || '').replace(/\D/g, '');
     const cpfBody = req.body.cpf ? String(req.body.cpf).replace(/\D/g, '') : null;
-    const cpfFinalPix = req.user
-      ? (req.user.profile.cpf || cpfBody)
-      : (pedido.guest_cpf || cpfBody);
 
-    if (!cpfFinalPix || cpfFinalPix.length !== 11) {
-      return res.status(400).json({ error: 'CPF obrigatório para pagamento via Pix.' });
+    // cpfBody do formulário tem prioridade sobre perfil (corrige CPF inválido salvo)
+    const cpfCandidato = cpfBody || (req.user ? req.user.profile.cpf : pedido.guest_cpf) || null;
+    const cpfFinalPix  = validarCPFBackend(cpfCandidato) ? cpfCandidato : null;
+
+    if (!cpfFinalPix) {
+      return res.status(400).json({ error: 'CPF inválido ou ausente. Informe um CPF válido para pagar via Pix.' });
     }
 
-    // Salvar CPF no perfil do usuário logado para uso futuro
-    if (req.user && !req.user.profile.cpf && cpfBody) {
+    // Salvar CPF válido no perfil do usuário logado
+    if (req.user && cpfBody && validarCPFBackend(cpfBody)) {
       supabaseAdmin.from('profiles').update({ cpf: cpfBody }).eq('id', req.user.id).catch(() => {});
     }
 
@@ -338,11 +353,10 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
     } else {
       const guestTel = (pedido.guest_telefone || pedido.telefone_cliente || '').replace(/\D/g, '');
       const cpfLimpo = cpf ? cpf.replace(/\D/g, '') : null;
-      const cpfFinal = req.user
-        ? (req.user.profile.cpf || cpfLimpo)
-        : (pedido.guest_cpf || cpfLimpo);
+      const cpfCandidatoCartao = cpfLimpo || (req.user ? req.user.profile.cpf : pedido.guest_cpf) || null;
+      const cpfFinal = validarCPFBackend(cpfCandidatoCartao) ? cpfCandidatoCartao : null;
 
-      if (req.user && !req.user.profile.cpf && cpfLimpo) {
+      if (req.user && cpfLimpo && validarCPFBackend(cpfLimpo)) {
         supabaseAdmin.from('profiles').update({ cpf: cpfLimpo }).eq('id', req.user.id).catch(() => {});
       }
       customerId = await criarOuBuscarCliente({

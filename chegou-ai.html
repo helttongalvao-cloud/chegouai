@@ -2650,6 +2650,19 @@ function mascaraCPF(input) {
   input.value = v;
 }
 
+function validarCPF(cpf) {
+  cpf = cpf.replace(/\D/g,'');
+  if(cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+  var s = 0;
+  for(var i=0;i<9;i++) s += parseInt(cpf[i])*(10-i);
+  var r = (s*10)%11; if(r===10||r===11) r=0;
+  if(r !== parseInt(cpf[9])) return false;
+  s = 0;
+  for(var i=0;i<10;i++) s += parseInt(cpf[i])*(11-i);
+  r = (s*10)%11; if(r===10||r===11) r=0;
+  return r === parseInt(cpf[10]);
+}
+
 async function cadastrarCliente() {
   const nome = sanitizar(document.getElementById('cad-nome').value);
   const tel = document.getElementById('cad-telefone').value.replace(/\D/g,'');
@@ -4264,15 +4277,17 @@ async function confirmarPedido() {
 
   var formaPag = document.querySelector('.opcao-pag.selecionado')?.dataset.tipo || 'pix';
 
-  // CPF obrigatório para Pix e cartão
+  // CPF obrigatório e válido para Pix e cartão
   if(formaPag === 'pix' || formaPag === 'cartao') {
     var cpfVal = _cpfCheckout();
-    var usuarioTemCpf = !!(currentUser && currentUser.cpf && currentUser.cpf.replace(/\D/g,'').length === 11);
-    if(!usuarioTemCpf && cpfVal.length !== 11) {
-      var campoCpfEl = document.getElementById('campo-cpf-pix');
-      if(campoCpfEl) { campoCpfEl.style.display = 'block'; campoCpfEl.scrollIntoView({ behavior:'smooth', block:'center' }); }
-      alert('Informe seu CPF para pagamento com ' + (formaPag === 'pix' ? 'Pix' : 'cartão') + '.');
-      return;
+    var cpfPerfilValido = !!(currentUser && currentUser.cpf && validarCPF(currentUser.cpf));
+    if(!cpfPerfilValido) {
+      if(!validarCPF(cpfVal)) {
+        var campoCpfEl = document.getElementById('campo-cpf-pix');
+        if(campoCpfEl) { campoCpfEl.style.display = 'block'; campoCpfEl.scrollIntoView({ behavior:'smooth', block:'center' }); }
+        alert('Informe um CPF válido para pagamento com ' + (formaPag === 'pix' ? 'Pix' : 'cartão') + '.');
+        return;
+      }
     }
   }
 
