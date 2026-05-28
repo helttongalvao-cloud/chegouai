@@ -250,10 +250,10 @@ router.post(
       }
       taxaFinal = Math.round(taxaFinal * 100) / 100;
 
-      // 5b. Frete grátis: cupom VOLTEI ou primeiro pedido confirmado pelo backend
+      // 5b. Frete grátis: cupom VOLTEI ou primeiro pedido (verificado sempre no backend)
       if (req.body._volteiAtivo === true) {
         desconto = parseFloat((desconto + taxaFinal).toFixed(2));
-      } else if (req.body.freteGratis === true) {
+      } else {
         const tel = telefoneCliente.replace(/\D/g, '').slice(-11);
         const telFormatado = `(${tel.slice(0,2)}) ${tel.slice(2,7)}-${tel.slice(7)}`;
         const [{ data: ant1 }, { data: ant2 }] = await Promise.all([
