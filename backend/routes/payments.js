@@ -197,10 +197,20 @@ router.post('/pix', paymentLimiter, optionalAuth, [
     if (pedido.desconto > 0) split.total = parseFloat(Math.max(0, split.total - pedido.desconto).toFixed(2));
 
     const guestTel = (pedido.guest_telefone || pedido.telefone_cliente || '').replace(/\D/g, '');
+    const cpfBody = req.body.cpf ? String(req.body.cpf).replace(/\D/g, '') : null;
+    const cpfFinalPix = req.user
+      ? (req.user.profile.cpf || cpfBody)
+      : (pedido.guest_cpf || cpfBody);
+
+    // Salvar CPF no perfil do usuário logado para uso futuro
+    if (req.user && !req.user.profile.cpf && cpfBody) {
+      supabaseAdmin.from('profiles').update({ cpf: cpfBody }).eq('id', req.user.id).catch(() => {});
+    }
+
     const customerId = await criarOuBuscarCliente({
       nome:     req.user ? req.user.profile.nome     : pedido.guest_nome,
       email:    req.user ? req.user.email            : `${guestTel}@guest.chegouai.com.br`,
-      cpf:      req.user ? req.user.profile.cpf      : pedido.guest_cpf,
+      cpf:      cpfFinalPix,
       telefone: req.user ? (pedido.telefone_cliente || req.user.profile.telefone) : guestTel,
     });
 
@@ -323,7 +333,14 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
       customerId = savedCustomerId;
     } else {
       const guestTel = (pedido.guest_telefone || pedido.telefone_cliente || '').replace(/\D/g, '');
-      const cpfFinal = req.user ? req.user.profile.cpf : (pedido.guest_cpf || (cpf ? cpf.replace(/\D/g, '') : null));
+      const cpfLimpo = cpf ? cpf.replace(/\D/g, '') : null;
+      const cpfFinal = req.user
+        ? (req.user.profile.cpf || cpfLimpo)
+        : (pedido.guest_cpf || cpfLimpo);
+
+      if (req.user && !req.user.profile.cpf && cpfLimpo) {
+        supabaseAdmin.from('profiles').update({ cpf: cpfLimpo }).eq('id', req.user.id).catch(() => {});
+      }
       customerId = await criarOuBuscarCliente({
         nome:     req.user ? req.user.profile.nome     : pedido.guest_nome,
         email:    req.user ? req.user.email            : `${guestTel}@guest.chegouai.com.br`,

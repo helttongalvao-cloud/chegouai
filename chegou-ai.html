@@ -1760,9 +1760,12 @@ function mostrarTelaPedidoEntregue() {
 async function pagarPix(pedidoId) {
   mostrarLoadingPagamento('Gerando QR Code Pix...');
   try {
+    var cpf = _cpfCheckout();
+    var pixBody = { pedidoId: pedidoId };
+    if(cpf && cpf.length === 11) pixBody.cpf = cpf;
     var resp = await apiCall('/api/payments/pix', {
       method: 'POST',
-      body: { pedidoId: pedidoId },
+      body: pixBody,
     });
     esconderLoadingPagamento();
     mostrarQRCodeReal(resp);
