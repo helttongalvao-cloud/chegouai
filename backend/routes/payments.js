@@ -202,6 +202,10 @@ router.post('/pix', paymentLimiter, optionalAuth, [
       ? (req.user.profile.cpf || cpfBody)
       : (pedido.guest_cpf || cpfBody);
 
+    if (!cpfFinalPix || cpfFinalPix.length !== 11) {
+      return res.status(400).json({ error: 'CPF obrigatório para pagamento via Pix.' });
+    }
+
     // Salvar CPF no perfil do usuário logado para uso futuro
     if (req.user && !req.user.profile.cpf && cpfBody) {
       supabaseAdmin.from('profiles').update({ cpf: cpfBody }).eq('id', req.user.id).catch(() => {});

@@ -4263,6 +4263,19 @@ async function confirmarPedido() {
   }
 
   var formaPag = document.querySelector('.opcao-pag.selecionado')?.dataset.tipo || 'pix';
+
+  // CPF obrigatório para Pix e cartão
+  if(formaPag === 'pix' || formaPag === 'cartao') {
+    var cpfVal = _cpfCheckout();
+    var usuarioTemCpf = !!(currentUser && currentUser.cpf && currentUser.cpf.replace(/\D/g,'').length === 11);
+    if(!usuarioTemCpf && cpfVal.length !== 11) {
+      var campoCpfEl = document.getElementById('campo-cpf-pix');
+      if(campoCpfEl) { campoCpfEl.style.display = 'block'; campoCpfEl.scrollIntoView({ behavior:'smooth', block:'center' }); }
+      alert('Informe seu CPF para pagamento com ' + (formaPag === 'pix' ? 'Pix' : 'cartão') + '.');
+      return;
+    }
+  }
+
   const btn = document.querySelector('#tela-checkout .btn-principal');
   if(btn) { btn.disabled = true; btn.textContent = 'Criando pedido...'; }
 
