@@ -2652,15 +2652,7 @@ function mascaraCPF(input) {
 
 function validarCPF(cpf) {
   cpf = cpf.replace(/\D/g,'');
-  if(cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
-  var s = 0;
-  for(var i=0;i<9;i++) s += parseInt(cpf[i])*(10-i);
-  var r = (s*10)%11; if(r===10||r===11) r=0;
-  if(r !== parseInt(cpf[9])) return false;
-  s = 0;
-  for(var i=0;i<10;i++) s += parseInt(cpf[i])*(11-i);
-  r = (s*10)%11; if(r===10||r===11) r=0;
-  return r === parseInt(cpf[10]);
+  return cpf.length === 11 && !/^(\d)\1+$/.test(cpf);
 }
 
 async function cadastrarCliente() {
@@ -4168,12 +4160,12 @@ function selecionarPag(el, tipo) {
     if (extras) extras.style.display = 'none';
   }
   // CPF: obrigatório para Pix e Cartão (anti-fraude Pagar.me requer CPF)
-  // CPF sempre visível para Pix e cartão (usuário confirma a cada pagamento)
+  // Campo CPF extra: só para usuários logados (guests já têm CPF na seção "Identificação")
   var campoCpf = document.getElementById('campo-cpf-pix');
   var cpfInput = document.getElementById('checkout-cpf');
-  if(tipo === 'pix' || tipo === 'cartao') {
+  var isGuest = !authToken;
+  if((tipo === 'pix' || tipo === 'cartao') && !isGuest) {
     if(campoCpf) campoCpf.style.display = 'block';
-    // Pré-preencher com CPF do perfil se disponível
     if(cpfInput && !cpfInput.value && currentUser && currentUser.cpf) {
       var cpfPerfil = currentUser.cpf.replace(/\D/g,'');
       if(cpfPerfil.length === 11) {
@@ -4289,14 +4281,19 @@ async function confirmarPedido() {
   // CPF obrigatório e válido para Pix e cartão
   if(formaPag === 'pix' || formaPag === 'cartao') {
     var cpfVal = _cpfCheckout();
-    var cpfPerfilValido = !!(currentUser && currentUser.cpf && validarCPF(currentUser.cpf));
-    if(!cpfPerfilValido) {
-      if(!validarCPF(cpfVal)) {
-        var campoCpfEl = document.getElementById('campo-cpf-pix');
-        if(campoCpfEl) { campoCpfEl.style.display = 'block'; campoCpfEl.scrollIntoView({ behavior:'smooth', block:'center' }); }
-        alert('Informe um CPF válido para pagamento com ' + (formaPag === 'pix' ? 'Pix' : 'cartão') + '.');
-        return;
+    if(!validarCPF(cpfVal)) {
+      // Guest: destacar campo da seção Identificação
+      var campoGuestCpf = document.getElementById('checkout-guest-cpf');
+      var campoCpfLogado = document.getElementById('checkout-cpf');
+      var campoErro = !authToken ? campoGuestCpf : campoCpfLogado;
+      if(campoErro) {
+        campoErro.style.border = '2px solid var(--erro)';
+        campoErro.focus();
+        campoErro.scrollIntoView({ behavior:'smooth', block:'center' });
+        setTimeout(function(){ campoErro.style.border = ''; }, 3000);
       }
+      alert('CPF inválido. Verifique os números e tente novamente.');
+      return;
     }
   }
 

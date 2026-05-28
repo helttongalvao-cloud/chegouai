@@ -21,15 +21,7 @@ const router = express.Router();
 function validarCPFBackend(cpf) {
   if (!cpf) return false;
   cpf = cpf.replace(/\D/g, '');
-  if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
-  let s = 0;
-  for (let i = 0; i < 9; i++) s += parseInt(cpf[i]) * (10 - i);
-  let r = (s * 10) % 11; if (r === 10 || r === 11) r = 0;
-  if (r !== parseInt(cpf[9])) return false;
-  s = 0;
-  for (let i = 0; i < 10; i++) s += parseInt(cpf[i]) * (11 - i);
-  r = (s * 10) % 11; if (r === 10 || r === 11) r = 0;
-  return r === parseInt(cpf[10]);
+  return cpf.length === 11 && !/^(\d)\1+$/.test(cpf);
 }
 
 // ─── Helper: buscar pedido pendente do cliente ────────────────────────────
