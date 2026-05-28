@@ -544,9 +544,22 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .codigo-erro { color:var(--erro); font-size:13px; text-align:center; margin-bottom:12px; min-height:18px; }
 .codigo-confirmar { width:100%; padding:16px; border-radius:14px; background:var(--verde); border:none; color:#000; font-size:16px; font-weight:700; cursor:pointer; }
 .codigo-confirmar:disabled { opacity:0.4; cursor:not-allowed; }
+
+@media print {
+  body > *:not(#print-comanda) { display:none !important; }
+  #print-comanda { display:block !important; font-family:monospace; font-size:12px; width:72mm; margin:0; padding:4mm; color:#000; background:#fff; }
+  #print-comanda h2 { font-size:15px; text-align:center; margin:0 0 2px; }
+  #print-comanda .sub { text-align:center; font-size:10px; color:#555; margin-bottom:4px; }
+  #print-comanda .linha { border-top:1px dashed #000; margin:5px 0; }
+  #print-comanda .titulo { font-weight:bold; font-size:11px; margin:3px 0; }
+  #print-comanda .row { display:flex; justify-content:space-between; padding:2px 0; }
+  #print-comanda .total { display:flex; justify-content:space-between; font-weight:bold; font-size:14px; padding:3px 0; }
+  #print-comanda .obs { font-size:10px; color:#555; padding-left:8px; }
+}
 </style>
 </head>
 <body>
+<div id="print-comanda" style="display:none;"></div>
 
 <!-- SPLASH -->
 <div class="tela ativa" id="tela-splash">
@@ -5716,60 +5729,67 @@ async function renderEstabelecimento() {
 
 function imprimirComanda(id) {
   var p = window._pedidosCache && window._pedidosCache[id];
-  if(!p) { alert('Pedido não encontrado. Atualize a tela e tente novamente.'); return; }
+  if(!p) { alert('Pedido não encontrado. Atualize a lista e tente novamente.'); return; }
+
+  var nomeLoja = (estAtual && estAtual.nome) || 'CHEGOU AÍ';
+  var nomeCliente = (p.profiles && p.profiles.nome) || p.guest_nome || 'Cliente';
+  var hora = new Date(p.criado_em).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  var data = new Date(p.criado_em).toLocaleDateString('pt-BR');
+  var pagLabel = { pix:'PIX', cartao:'CARTÃO' };
+  var pag = pagLabel[p.forma_pagamento] || (p.forma_pagamento||'').toUpperCase();
+
   var itensHtml = '';
   if(p.tipo === 'lista' && p.lista_compras) {
-    itensHtml = '<div style="white-space:pre-wrap;">' + p.lista_compras + '</div>';
+    itensHtml = '<div style="white-space:pre-wrap;">' + sanitizar(p.lista_compras) + '</div>';
   } else {
     itensHtml = (p.itens_pedido || []).map(function(i) {
-      var obs = i.observacao ? '<div style="font-size:10px;color:#555;padding-left:8px;">Obs: ' + i.observacao + '</div>' : '';
-      return '<div style="display:flex;justify-content:space-between;padding:2px 0;">' +
-        '<span>' + (Number.isInteger(i.quantidade) ? i.quantidade + 'x' : String(i.quantidade).replace('.',',') + ' kg') + ' ' + i.nome + '</span>' +
-        '<span>R$' + (parseFloat(i.preco_unitario) * i.quantidade).toFixed(2) + '</span>' +
-        '</div>' + obs;
+      var qtd = Number.isInteger(i.quantidade) ? i.quantidade + 'x' : String(i.quantidade).replace('.',',') + ' kg';
+      var val = 'R$' + (parseFloat(i.preco_unitario||0) * i.quantidade).toFixed(2);
+      var obs = i.observacao ? '<div class="obs">Obs: ' + sanitizar(i.observacao) + '</div>' : '';
+      // complementos
+      var comps = (i.complementos_selecionados || []).map(function(c){ return '+ ' + c.nome; }).join(', ');
+      var compsHtml = comps ? '<div class="obs">' + comps + '</div>' : '';
+      return '<div class="row"><span>' + qtd + ' ' + sanitizar(i.nome) + '</span><span>' + val + '</span></div>' + compsHtml + obs;
     }).join('');
   }
-  var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : 'Cliente';
-  var hora = new Date(p.criado_em).toLocaleString('pt-BR');
-  var pagIcones = { pix:'PIX', cartao:'CARTÃO' };
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
-    '<style>body{font-family:monospace;font-size:12px;width:72mm;margin:0;padding:4mm;}' +
-    'h2{font-size:15px;text-align:center;margin:0 0 2px;}' +
-    '.sub{text-align:center;font-size:10px;color:#555;margin-bottom:4px;}' +
-    '.linha{border-top:1px dashed #000;margin:5px 0;}' +
-    '.titulo{font-weight:bold;font-size:11px;margin:3px 0;}' +
-    '.total{display:flex;justify-content:space-between;font-weight:bold;font-size:14px;padding:3px 0;}' +
-    '@media print{body{width:72mm;}}' +
-    '</style></head><body>' +
-    '<h2>CHEGOU AÍ</h2>' +
-    '<div class="sub">Delivery em Guajará-AM</div>' +
-    '<div class="linha"></div>' +
-    '<div>Pedido: <b>#' + p.id.substring(0,8).toUpperCase() + '</b></div>' +
-    '<div>Hora: ' + hora + '</div>' +
+
+  var subtotal = parseFloat(p.subtotal||0).toFixed(2);
+  var frete = parseFloat(p.taxa_entrega||0).toFixed(2);
+  var total = parseFloat(p.total||0).toFixed(2);
+  var descontoHtml = (p.desconto > 0) ? '<div class="row"><span>Desconto</span><span>-R$' + parseFloat(p.desconto).toFixed(2) + '</span></div>' : '';
+
+  var enderecoHtml = '';
+  if(p.tipo_pedido === 'mesa') {
+    enderecoHtml = '<div>Mesa: <b>' + sanitizar(p.mesa_numero || '') + '</b></div>';
+  } else if(p.endereco_entrega) {
+    var cm = p.endereco_entrega.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
+    enderecoHtml = '<div>' + sanitizar(cm ? p.endereco_entrega.replace(cm[0],'').trim() : p.endereco_entrega) + '</div>';
+  }
+
+  var div = document.getElementById('print-comanda');
+  div.innerHTML =
+    '<h2>' + sanitizar(nomeLoja) + '</h2>' +
+    '<div class="sub">Pedido #' + p.id.substring(0,8).toUpperCase() + ' &nbsp;|&nbsp; ' + data + ' ' + hora + '</div>' +
     '<div class="linha"></div>' +
     '<div class="titulo">CLIENTE</div>' +
-    '<div>' + nomeCliente + '</div>' +
-    (p.telefone_cliente ? '<div>' + p.telefone_cliente + '</div>' : '') +
+    '<div>' + sanitizar(nomeCliente) + '</div>' +
+    (p.telefone_cliente ? '<div>' + sanitizar(p.telefone_cliente) + '</div>' : '') +
     '<div class="linha"></div>' +
     '<div class="titulo">ITENS</div>' +
     itensHtml +
     '<div class="linha"></div>' +
-    '<div style="display:flex;justify-content:space-between;"><span>Subtotal</span><span>R$' + parseFloat(p.subtotal||0).toFixed(2) + '</span></div>' +
-    '<div style="display:flex;justify-content:space-between;"><span>Entrega</span><span>R$' + parseFloat(p.taxa_entrega||0).toFixed(2) + '</span></div>' +
-    (p.cupom_codigo === 'FRETE_GRATIS_1P' ? '<div style="display:flex;justify-content:space-between;"><span>🎉 Frete grátis 1º pedido</span><span>-R$' + parseFloat(p.taxa_entrega||0).toFixed(2) + '</span></div>' : '') +
-    '<div class="total"><span>TOTAL</span><span>R$' + parseFloat(p.total||0).toFixed(2) + '</span></div>' +
+    '<div class="row"><span>Subtotal</span><span>R$' + subtotal + '</span></div>' +
+    '<div class="row"><span>Entrega</span><span>R$' + frete + '</span></div>' +
+    descontoHtml +
+    '<div class="total"><span>TOTAL</span><span>R$' + total + '</span></div>' +
     '<div class="linha"></div>' +
-    '<div>Pagamento: <b>' + (pagIcones[p.forma_pagamento] || (p.forma_pagamento||'').toUpperCase()) + '</b></div>' +
-    '<div class="linha"></div>' +
-    '<div class="titulo">ENTREGA</div>' +
-    '<div>' + (p.endereco_entrega||'') + '</div>' +
-    '</body></html>';
-  var win = window.open('', '_blank', 'width=420,height=600');
-  if(!win) { alert('Permita pop-ups para imprimir'); return; }
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  setTimeout(function(){ win.print(); win.close(); }, 400);
+    '<div>Pagamento: <b>' + pag + '</b></div>' +
+    (enderecoHtml ? '<div class="linha"></div><div class="titulo">ENTREGA</div>' + enderecoHtml : '') +
+    '<div class="linha"></div>';
+
+  window.print();
+  // Limpar após impressão (inclui cancelamento)
+  setTimeout(function(){ div.innerHTML = ''; }, 1000);
 }
 
 // === ABAS DE STATUS DE PEDIDOS ===
