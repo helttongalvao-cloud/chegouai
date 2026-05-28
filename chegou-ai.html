@@ -4168,13 +4168,22 @@ function selecionarPag(el, tipo) {
     if (extras) extras.style.display = 'none';
   }
   // CPF: obrigatório para Pix e Cartão (anti-fraude Pagar.me requer CPF)
-  // Esconde só se logado E já tem CPF salvo no perfil
+  // CPF sempre visível para Pix e cartão (usuário confirma a cada pagamento)
   var campoCpf = document.getElementById('campo-cpf-pix');
-  var usuarioTemCpf = !!(currentUser && currentUser.cpf && currentUser.cpf.replace(/\D/g,'').length === 11);
-  var precisaCpf = (tipo === 'pix' || tipo === 'cartao') && (!authToken || !usuarioTemCpf);
-  if(campoCpf) campoCpf.style.display = precisaCpf ? 'block' : 'none';
-  var cpfPlaceholder = document.getElementById('checkout-cpf');
-  if(cpfPlaceholder) cpfPlaceholder.placeholder = 'CPF (obrigatório)';
+  var cpfInput = document.getElementById('checkout-cpf');
+  if(tipo === 'pix' || tipo === 'cartao') {
+    if(campoCpf) campoCpf.style.display = 'block';
+    // Pré-preencher com CPF do perfil se disponível
+    if(cpfInput && !cpfInput.value && currentUser && currentUser.cpf) {
+      var cpfPerfil = currentUser.cpf.replace(/\D/g,'');
+      if(cpfPerfil.length === 11) {
+        cpfInput.value = cpfPerfil.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      }
+    }
+    if(cpfInput) cpfInput.placeholder = 'CPF (obrigatório)';
+  } else {
+    if(campoCpf) campoCpf.style.display = 'none';
+  }
 }
 
 var cupomAplicado = null; // { codigo, desconto_tipo, desconto_valor }
