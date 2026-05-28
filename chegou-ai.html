@@ -5779,7 +5779,7 @@ function imprimirComanda(id) {
     itensHtml +
     '<div class="linha"></div>' +
     '<div class="row"><span>Subtotal</span><span>R$' + subtotal + '</span></div>' +
-    '<div class="row"><span>Entrega</span><span>R$' + frete + '</span></div>' +
+    (parseFloat(frete) > 0 ? '<div class="row"><span>Entrega</span><span>R$' + frete + '</span></div>' : '') +
     descontoHtml +
     '<div class="total"><span>TOTAL</span><span>R$' + total + '</span></div>' +
     '<div class="linha"></div>' +
