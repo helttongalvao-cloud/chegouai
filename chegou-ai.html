@@ -2749,6 +2749,7 @@ function entrarComo(perfil) {
   }
   else if(perfil === 'estabelecimento') {
     irTela('tela-estabelecimento');
+    ativarWakeLock();
     setTimeout(function() { renderEstabelecimento(); mostrarOnboardingLojista(); }, 50);
     if(window.estPollingTimer) clearInterval(window.estPollingTimer);
     // Iniciar Realtime uma única vez no setup (não dentro de renderEstabelecimento)
@@ -3015,6 +3016,7 @@ async function entrar() {
 }
 
 function irLogin() {
+  liberarWakeLock();
   pararRealtime();
   pararRealtimeCliente();
   if(pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
@@ -8330,16 +8332,22 @@ let gpsTrackerId = null;
 var wakeLock = null;
 
 // Screen Wake Lock — mantém tela ligada durante entrega (evita GPS parar em segundo plano)
+var _wakeLockLojista = null;
+var _wakeLockAtivo = false;
 async function ativarWakeLock() {
-  if ('wakeLock' in navigator) {
-    try {
-      wakeLock = await navigator.wakeLock.request('screen');
-      wakeLock.addEventListener('release', function() { wakeLock = null; });
-    } catch(e) { console.warn('[WakeLock]', e.message); }
-  }
+  if (!('wakeLock' in navigator)) return;
+  _wakeLockAtivo = true;
+  try {
+    _wakeLockLojista = await navigator.wakeLock.request('screen');
+    _wakeLockLojista.addEventListener('release', function() {
+      _wakeLockLojista = null;
+      if (_wakeLockAtivo) setTimeout(ativarWakeLock, 1000); // reativa ao voltar de outra app
+    });
+  } catch(e) { console.warn('[WakeLock]', e.message); }
 }
 function liberarWakeLock() {
-  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+  _wakeLockAtivo = false;
+  if (_wakeLockLojista) { _wakeLockLojista.release(); _wakeLockLojista = null; }
 }
 
 var _ultimoEnvioGps = 0;
