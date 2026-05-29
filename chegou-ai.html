@@ -2403,10 +2403,17 @@ setTimeout(function(){
         localStorage.removeItem('chegouai_pedido_id');
         irTela('tela-login');
       }
-    }).catch(function() {
-      pedidoAtualId = null;
-      localStorage.removeItem('chegouai_pedido_id');
-      irTela('tela-login');
+    }).catch(function(e) {
+      // Erro de rede (sem internet): preservar pedido e ir para rastreio — polling retentará
+      if(!e || !e.status) {
+        irTela('tela-confirmado');
+        ultimoStatusConhecido = {};
+        iniciarPollingPedidos();
+      } else {
+        pedidoAtualId = null;
+        localStorage.removeItem('chegouai_pedido_id');
+        irTela('tela-login');
+      }
     });
   } else {
     // Mostrar boas-vindas até 2x por dispositivo
@@ -3540,10 +3547,16 @@ window.addEventListener('DOMContentLoaded', function() {
         localStorage.removeItem('chegouai_pedido_id');
         irTela('tela-login');
       }
-    }).catch(function() {
-      pedidoAtualId = null;
-      localStorage.removeItem('chegouai_pedido_id');
-      irTela('tela-login');
+    }).catch(function(e) {
+      if(!e || !e.status) {
+        irTela('tela-confirmado');
+        ultimoStatusConhecido = {};
+        iniciarPollingPedidos();
+      } else {
+        pedidoAtualId = null;
+        localStorage.removeItem('chegouai_pedido_id');
+        irTela('tela-login');
+      }
     });
   } else {
     irTela('tela-login');
@@ -8897,10 +8910,10 @@ function atualizarRastreioPedido(status) {
 
   // Atualizar card de status dinâmico
   var info = {
-    'pendente':   { icon:'⏳', titulo:'Pedido recebido!',       sub:'Aguardando o estabelecimento confirmar...', cls:'' },
+    'pendente':   { icon:'⏳', titulo:'Pedido recebido!',       sub:'Aguardando confirmação da loja...', cls:'' },
     'aceito':     { icon:'✅', titulo:'Pedido aceito!',          sub:'O estabelecimento confirmou seu pedido.',  cls:'' },
     'preparando': { icon:'👨‍🍳', titulo:'Preparando...',           sub:'Seu pedido está sendo preparado.',        cls:'' },
-    'pronto':            { icon:'📦', titulo:'Pronto para entrega!',   sub:'Aguardando entrega.',                      cls:'' },
+    'pronto':            { icon:'📦', titulo:'Pronto para entrega!',   sub:'Aguardando disponibilidade de motoboy. Em breve sairá para entrega.',  cls:'' },
     'coletado':          { icon:'🛵', titulo:'Motoboy a caminho!',     sub:'O motoboy está indo até você.',            cls:'coletado' },
     'saiu_para_entrega': { icon:'🛵', titulo:'Saiu para entrega!',     sub:'Toque em "Confirmar recebimento" quando chegar.', cls:'coletado' },
     'entregue':          { icon:'🎉', titulo:'Pedido entregue!',       sub:'Bom apetite! Obrigado por usar o Chegou Aí.', cls:'entregue' },
@@ -8917,7 +8930,7 @@ function atualizarRastreioPedido(status) {
 
   // Botão cancelar só quando recebido (ainda não aceito pela loja)
   var btnCancelar = document.getElementById('btn-cancelar-pedido-wrap');
-  if(btnCancelar) btnCancelar.style.display = (status === 'recebido') ? 'block' : 'none';
+  if(btnCancelar) btnCancelar.style.display = 'none';
 
   // Botão de chat — disponível desde o aceite do pedido
   var btnChatRastreio = document.getElementById('btn-chat-rastreio');
