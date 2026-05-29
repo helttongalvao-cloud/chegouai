@@ -7595,7 +7595,7 @@ async function renderAdminCupons() {
       '</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">' +
         '<input type="number" id="cup-valor" placeholder="Valor do desconto" min="0" step="0.01" style="padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;">' +
-        '<input type="number" id="cup-usos" placeholder="Usos máx." min="1" value="100" style="padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;">' +
+        '<input type="number" id="cup-usos" placeholder="Usos máx. (0 = ilimitado)" min="0" value="100" style="padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;">' +
       '</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">' +
         '<input type="number" id="cup-minimo" placeholder="Valor mínimo (R$)" min="0" step="0.01" value="0" style="padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;">' +
@@ -7618,7 +7618,7 @@ async function renderAdminCupons() {
           var validade = c.validade ? new Date(c.validade).toISOString().split('T')[0].split('-').reverse().join('/') : 'Sem validade';
           var ativo = c.ativo ? '<span style="color:var(--verde);">Ativo</span>' : '<span style="color:var(--erro);">Inativo</span>';
           var descTxt = c.frete_gratis ? '🚚 Frete grátis' : (c.desconto_tipo === 'percentual' ? c.desconto_valor + '%' : 'R$ ' + parseFloat(c.desconto_valor).toFixed(2).replace('.',','));
-          var usosTxt = c.usos_max >= 999999 ? c.usos_atual + '/∞' : c.usos_atual + '/' + c.usos_max;
+          var usosTxt = (!c.usos_max || c.usos_max >= 999999) ? c.usos_atual + '/∞' : c.usos_atual + '/' + c.usos_max;
           return '<div class="tabela-row">' +
             '<div class="info"><div class="nome">🎟️ ' + c.codigo + ' — ' + descTxt + '</div>' +
             '<div class="sub">Usos: ' + usosTxt + ' • Val: ' + validade + ' • ' + ativo + '</div></div>' +
@@ -7655,7 +7655,8 @@ async function criarCupom() {
   var codigo = (document.getElementById('cup-codigo').value || '').trim().toUpperCase();
   var tipo = document.getElementById('cup-tipo').value;
   var valor = parseFloat(document.getElementById('cup-valor').value);
-  var usos = parseInt(document.getElementById('cup-usos').value) || 100;
+  var _usosRaw = document.getElementById('cup-usos').value;
+  var usos = _usosRaw === '' ? 100 : parseInt(_usosRaw);
   var semValidade = document.getElementById('cup-sem-validade') && document.getElementById('cup-sem-validade').checked;
   var validade = semValidade ? '' : document.getElementById('cup-validade').value;
   var minimo = parseFloat(document.getElementById('cup-minimo').value) || 0;

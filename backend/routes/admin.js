@@ -724,7 +724,7 @@ router.post(
     body('codigo').trim().isLength({ min: 2, max: 50 }).withMessage('Código inválido'),
     body('desconto_tipo').isIn(['percentual', 'fixo']).withMessage('Tipo inválido'),
     body('desconto_valor').isFloat({ min: 0.01 }).withMessage('Valor inválido'),
-    body('usos_max').optional().isInt({ min: 1 }),
+    body('usos_max').optional().isInt({ min: 0 }),
     body('validade').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Data inválida'),
   ],
   async (req, res, next) => {
@@ -739,7 +739,7 @@ router.post(
           codigo: codigo.toUpperCase(),
           desconto_tipo,
           desconto_valor,
-          usos_max: usos_max || 1,
+          usos_max: (usos_max !== undefined && usos_max !== null && parseInt(usos_max) > 0) ? parseInt(usos_max) : null,
           validade: validade || null,
           valor_minimo: parseFloat(valor_minimo || 0),
           frete_gratis: !!frete_gratis,
