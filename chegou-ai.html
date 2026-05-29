@@ -885,7 +885,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       </div>
       <div id="mapa-picker-wrap" style="display:none;margin-top:10px;">
         <div id="mapa-picker" style="height:220px;border-radius:12px;overflow:hidden;border:1.5px solid var(--cinza3);"></div>
-        <div style="font-size:12px;color:var(--texto2);margin-top:6px;text-align:center;">📌 Arraste o mapa até o <strong style="color:var(--texto);">portão da sua casa</strong> e confirme</div>
+        <div class="mapa-instrucao" style="font-size:12px;color:var(--texto2);margin-top:6px;text-align:center;">📌 Arraste o mapa até o <strong style="color:var(--texto);">portão da sua casa</strong> e confirme</div>
         <button id="btn-confirmar-localizacao" onclick="confirmarLocalizacaoMapa()" style="width:100%;margin-top:8px;padding:12px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:14px;font-weight:700;cursor:pointer;">✓ Confirmar localização</button>
       </div>
       <div id="link-gmaps-wrap" style="display:none;margin-top:10px;">
@@ -4100,6 +4100,10 @@ function irCheckout() {
   if(endEl) { endEl.readOnly = false; endEl.style.color = ''; endEl.dataset.latLng = ''; }
   var ajusteWrapOld = document.getElementById('btn-ajustar-pin-wrap');
   if(ajusteWrapOld) ajusteWrapOld.remove();
+  var mapaBotoesOld = document.getElementById('mapa-botoes-confirma');
+  if(mapaBotoesOld) mapaBotoesOld.remove();
+  var btnConfOld = document.getElementById('btn-confirmar-localizacao');
+  if(btnConfOld) btnConfOld.style.display = '';
 
   irTela('tela-checkout');
 
@@ -4381,29 +4385,14 @@ function usarLocalizacao() {
   function _onGPS(pos) {
     clienteLat = pos.coords.latitude;
     clienteLng = pos.coords.longitude;
-    // Confirmar direto — sem abrir o mapa (evita arraste acidental ao rolar a tela)
-    localizacaoConfirmada = true;
-    var endInput = document.getElementById('endereco-entrega');
-    if(endInput) {
-      endInput.dataset.latLng = 'Lat: ' + clienteLat.toFixed(6) + ', Lng: ' + clienteLng.toFixed(6);
-      endInput.readOnly = true;
-    }
-    btn.textContent = '✅ GPS confirmado';
+    btn.textContent = '✅ GPS obtido — verifique o pin';
     btn.style.borderColor = 'var(--verde)';
     btn.style.color = 'var(--verde)';
     btn.style.background = 'rgba(0,200,83,0.12)';
-    // Mostrar botão de ajuste fino sem abrir o mapa automaticamente
-    var ajusteWrap = document.getElementById('btn-ajustar-pin-wrap');
-    if(!ajusteWrap) {
-      ajusteWrap = document.createElement('div');
-      ajusteWrap.id = 'btn-ajustar-pin-wrap';
-      ajusteWrap.style.cssText = 'margin-top:6px;';
-      ajusteWrap.innerHTML = '<button onclick="abrirMapaAjuste()" style="width:100%;padding:8px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:8px;color:var(--texto2);font-size:12px;font-weight:600;cursor:pointer;">📌 Ajustar pin no mapa</button>';
-      btn.parentNode.insertBefore(ajusteWrap, btn.nextSibling);
-    }
     var av = document.getElementById('guest-gps-aviso');
     if(av) av.style.display = 'none';
-    simularFrete(endInput ? endInput.dataset.latLng : '');
+    // Mostrar mapa bloqueado (sem drag) para o cliente confirmar visualmente
+    mostrarMapaVisualizacao(clienteLat, clienteLng);
   }
   function _onGPSErro(err) {
     btn.textContent = '📍 Usar minha localização atual';
@@ -4426,13 +4415,85 @@ function usarLocalizacao() {
   }, { timeout: 8000, enableHighAccuracy: true, maximumAge: 30000 });
 }
 
-function abrirMapaAjuste() {
-  // Abre o mapa para ajuste fino do pin (chamado após GPS confirmado)
-  var lat = clienteLat || (estAtual && estAtual.lat ? parseFloat(estAtual.lat) : -1.4167);
-  var lng = clienteLng || (estAtual && estAtual.lng ? parseFloat(estAtual.lng) : -70.0333);
-  mostrarMapaPicker(lat, lng, 18);
-  var wrap = document.getElementById('btn-ajustar-pin-wrap');
-  if(wrap) wrap.style.display = 'none';
+// Mostra o mapa BLOQUEADO (sem drag) com dois botões: "Está correto" e "Ajustar pin"
+function mostrarMapaVisualizacao(lat, lng) {
+  var wrap = document.getElementById('mapa-picker-wrap');
+  var endInput = document.getElementById('endereco-entrega');
+  if(!wrap) return;
+  localizacaoConfirmada = false;
+  wrap.style.display = 'block';
+  // Guardar coords e mostrar label
+  endInput.dataset.latLng = 'Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6);
+  endInput.value = '📍 Localização GPS — confirme o pin abaixo';
+  endInput.readOnly = true;
+  endInput.style.color = 'var(--verde)';
+  // Destruir mapa anterior se houver
+  if(mapPicker) { mapPicker.remove(); mapPicker = null; pinPicker = null; }
+  var pinIcon = L.divIcon({ className:'', html:'<div style="font-size:34px;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));">📍</div>', iconSize:[34,40], iconAnchor:[17,40] });
+  // Mapa NÃO interativo (dragging: false) — evita arraste acidental ao rolar
+  mapPicker = L.map('mapa-picker', { zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, touchZoom:false, doubleClickZoom:false, tap:false }).setView([lat, lng], 17);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:20 }).addTo(mapPicker);
+  pinPicker = L.marker([lat, lng], { icon:pinIcon, draggable:false }).addTo(mapPicker);
+  setTimeout(function(){ if(mapPicker) mapPicker.invalidateSize(); }, 300);
+  // Substituir botão de confirmar por dois botões: confirmar e ajustar
+  var btnConf = document.getElementById('btn-confirmar-localizacao');
+  if(btnConf) {
+    btnConf.style.display = 'none';
+    var instrEl = wrap.querySelector('.mapa-instrucao');
+    if(instrEl) instrEl.style.display = 'none';
+  }
+  var botoesId = 'mapa-botoes-confirma';
+  var botoesEl = document.getElementById(botoesId);
+  if(!botoesEl) {
+    botoesEl = document.createElement('div');
+    botoesEl.id = botoesId;
+    wrap.appendChild(botoesEl);
+  }
+  botoesEl.innerHTML =
+    '<div style="font-size:12px;color:var(--texto2);margin:6px 0 8px;text-align:center;">📌 O pin está na sua casa?</div>' +
+    '<div style="display:flex;gap:8px;">' +
+      '<button onclick="confirmarMapaVisualizacao()" style="flex:1;padding:12px;border-radius:10px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">✓ Está correto</button>' +
+      '<button onclick="ativarDragMapa()" style="flex:1;padding:12px;border-radius:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;">📌 Ajustar</button>' +
+    '</div>';
+  simularFrete(endInput.dataset.latLng);
+}
+
+function confirmarMapaVisualizacao() {
+  localizacaoConfirmada = true;
+  var botoesEl = document.getElementById('mapa-botoes-confirma');
+  if(botoesEl) botoesEl.innerHTML = '<div style="text-align:center;padding:10px;color:var(--verde);font-weight:700;font-size:14px;">✅ Localização confirmada</div>';
+}
+
+function ativarDragMapa() {
+  // Habilita drag para ajuste fino do pin
+  if(!mapPicker) return;
+  mapPicker.dragging.enable();
+  if(mapPicker.touchZoom) mapPicker.touchZoom.enable();
+  mapPicker.zoomControl && mapPicker.zoomControl.addTo(mapPicker);
+  // Reinstalar pin draggável
+  if(pinPicker) mapPicker.removeLayer(pinPicker);
+  var pinIcon = L.divIcon({ className:'', html:'<div style="font-size:34px;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));">📍</div>', iconSize:[34,40], iconAnchor:[17,40] });
+  pinPicker = L.marker([clienteLat, clienteLng], { icon:pinIcon, draggable:true }).addTo(mapPicker);
+  var endInput = document.getElementById('endereco-entrega');
+  mapPicker.on('move', function(){ var c = mapPicker.getCenter(); pinPicker.setLatLng(c); });
+  mapPicker.on('moveend', function(){
+    var c = mapPicker.getCenter();
+    clienteLat = c.lat; clienteLng = c.lng;
+    endInput.dataset.latLng = 'Lat: ' + c.lat.toFixed(6) + ', Lng: ' + c.lng.toFixed(6);
+    simularFrete(endInput.dataset.latLng);
+  });
+  pinPicker.on('dragend', function(e){
+    var p = e.target.getLatLng();
+    clienteLat = p.lat; clienteLng = p.lng;
+    endInput.dataset.latLng = 'Lat: ' + p.lat.toFixed(6) + ', Lng: ' + p.lng.toFixed(6);
+    simularFrete(endInput.dataset.latLng);
+  });
+  // Atualizar botões
+  var botoesEl = document.getElementById('mapa-botoes-confirma');
+  if(botoesEl) botoesEl.innerHTML =
+    '<div style="font-size:12px;color:var(--texto2);margin:6px 0 8px;text-align:center;">Arraste o mapa até o <strong style="color:var(--texto);">portão da sua casa</strong></div>' +
+    '<button onclick="confirmarMapaVisualizacao()" style="width:100%;padding:12px;border-radius:10px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">✓ Confirmar localização</button>';
+  localizacaoConfirmada = false;
 }
 
 function abrirMapaSemGPS() {
