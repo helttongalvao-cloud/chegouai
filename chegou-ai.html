@@ -4095,9 +4095,11 @@ function irCheckout() {
   var linkWrap = document.getElementById('link-gmaps-wrap');
   if(linkWrap) linkWrap.style.display = 'none';
   var btnLoc = document.getElementById('btn-localizacao');
-  if(btnLoc) { btnLoc.textContent = '📡 Minha localização'; btnLoc.style.color = 'var(--texto2)'; btnLoc.style.borderColor = 'var(--cinza3)'; }
+  if(btnLoc) { btnLoc.textContent = '📡 Minha localização'; btnLoc.style.color = 'var(--texto2)'; btnLoc.style.borderColor = 'var(--cinza3)'; btnLoc.style.background = ''; }
   var endEl = document.getElementById('endereco-entrega');
   if(endEl) { endEl.readOnly = false; endEl.style.color = ''; endEl.dataset.latLng = ''; }
+  var ajusteWrapOld = document.getElementById('btn-ajustar-pin-wrap');
+  if(ajusteWrapOld) ajusteWrapOld.remove();
 
   irTela('tela-checkout');
 
@@ -4379,12 +4381,29 @@ function usarLocalizacao() {
   function _onGPS(pos) {
     clienteLat = pos.coords.latitude;
     clienteLng = pos.coords.longitude;
-    btn.textContent = '✅ Localização obtida — ajuste o pin se precisar';
+    // Confirmar direto — sem abrir o mapa (evita arraste acidental ao rolar a tela)
+    localizacaoConfirmada = true;
+    var endInput = document.getElementById('endereco-entrega');
+    if(endInput) {
+      endInput.dataset.latLng = 'Lat: ' + clienteLat.toFixed(6) + ', Lng: ' + clienteLng.toFixed(6);
+      endInput.readOnly = true;
+    }
+    btn.textContent = '✅ GPS confirmado';
     btn.style.borderColor = 'var(--verde)';
     btn.style.color = 'var(--verde)';
+    btn.style.background = 'rgba(0,200,83,0.12)';
+    // Mostrar botão de ajuste fino sem abrir o mapa automaticamente
+    var ajusteWrap = document.getElementById('btn-ajustar-pin-wrap');
+    if(!ajusteWrap) {
+      ajusteWrap = document.createElement('div');
+      ajusteWrap.id = 'btn-ajustar-pin-wrap';
+      ajusteWrap.style.cssText = 'margin-top:6px;';
+      ajusteWrap.innerHTML = '<button onclick="abrirMapaAjuste()" style="width:100%;padding:8px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:8px;color:var(--texto2);font-size:12px;font-weight:600;cursor:pointer;">📌 Ajustar pin no mapa</button>';
+      btn.parentNode.insertBefore(ajusteWrap, btn.nextSibling);
+    }
     var av = document.getElementById('guest-gps-aviso');
     if(av) av.style.display = 'none';
-    mostrarMapaPicker(clienteLat, clienteLng);
+    simularFrete(endInput ? endInput.dataset.latLng : '');
   }
   function _onGPSErro(err) {
     btn.textContent = '📍 Usar minha localização atual';
@@ -4405,6 +4424,15 @@ function usarLocalizacao() {
       _onGPSErro(err);
     }
   }, { timeout: 8000, enableHighAccuracy: true, maximumAge: 30000 });
+}
+
+function abrirMapaAjuste() {
+  // Abre o mapa para ajuste fino do pin (chamado após GPS confirmado)
+  var lat = clienteLat || (estAtual && estAtual.lat ? parseFloat(estAtual.lat) : -1.4167);
+  var lng = clienteLng || (estAtual && estAtual.lng ? parseFloat(estAtual.lng) : -70.0333);
+  mostrarMapaPicker(lat, lng, 18);
+  var wrap = document.getElementById('btn-ajustar-pin-wrap');
+  if(wrap) wrap.style.display = 'none';
 }
 
 function abrirMapaSemGPS() {
