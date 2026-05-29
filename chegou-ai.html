@@ -2883,7 +2883,7 @@ async function detectarECarregarCidade() {
     coords = await new Promise(function(res, rej) {
       navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000, maximumAge: 300000 });
     });
-  } catch(e) { return; } // GPS negado — fica sem filtro de cidade
+  } catch(e) { trocarCidade(); return; } // GPS negado — pede cidade manualmente
   // Reverse geocode via Nominatim
   try {
     var geo = await fetch(
@@ -2937,7 +2937,6 @@ function trocarCidade() {
       '<div style="font-size:13px;color:#888;margin-bottom:20px;text-align:center;">Digite o nome da cidade para ver os estabelecimentos disponíveis</div>' +
       '<input id="input-cidade-manual" type="text" placeholder="Ex: Guajará" style="width:100%;padding:14px;border-radius:12px;border:1px solid #333;background:#111;color:#fff;font-size:16px;margin-bottom:12px;box-sizing:border-box;" autofocus>' +
       '<button onclick="salvarCidadeManual()" style="width:100%;padding:16px;border-radius:14px;border:none;background:#f97316;color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;">Buscar</button>' +
-      '<button onclick="document.getElementById(\'overlay-cidade\').remove()" style="width:100%;padding:14px;border-radius:14px;border:none;background:#2a2a2a;color:#888;font-size:14px;cursor:pointer;">Ver todos os estabelecimentos</button>' +
     '</div></div>'
   );
   setTimeout(function(){ var i = document.getElementById('input-cidade-manual'); if(i) i.focus(); }, 100);
