@@ -187,6 +187,12 @@ if (isWebView) {
 </html>`);
 });
 
+// Parceiro — auto-cadastro via convite
+app.get('/parceiro', (req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, '..', 'chegou-ai.html'));
+});
+
 // Mesa — cardápio público via QR Code (sem login)
 app.get('/mesa', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'chegou-ai.html'));

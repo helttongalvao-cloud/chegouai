@@ -63,6 +63,57 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 @keyframes toastIn { from { opacity:0; transform:translateX(100px); } to { opacity:1; transform:translateX(0); } }
 @keyframes toastOut { from { opacity:1; } to { opacity:0; transform:translateY(-20px); } }
 
+/* ===== PARCEIRO — AUTO-CADASTRO ===== */
+#tela-parceiro { background:var(--preto); }
+.parceiro-header { padding:24px 20px 0; display:flex; align-items:center; gap:12px; }
+.parceiro-logo { width:38px; height:38px; border-radius:10px; object-fit:cover; }
+.parceiro-titulo { font-size:20px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; }
+.parceiro-progresso { display:flex; gap:6px; padding:20px 20px 0; }
+.parceiro-prog-item { flex:1; height:4px; border-radius:4px; background:var(--cinza3); transition:background .3s; }
+.parceiro-prog-item.ativo { background:var(--verde); }
+.parceiro-prog-item.feito { background:var(--verde); opacity:0.5; }
+.parceiro-step { display:none; padding:24px 20px 120px; animation:fadeIn .3s; }
+.parceiro-step.ativo { display:block; }
+.parceiro-step-titulo { font-size:22px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; margin-bottom:6px; }
+.parceiro-step-sub { font-size:14px; color:var(--texto2); margin-bottom:24px; line-height:1.5; }
+.tipo-cards { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.tipo-card { background:var(--cinza2); border:2px solid var(--cinza3); border-radius:16px; padding:20px 12px; text-align:center; cursor:pointer; transition:all .2s; }
+.tipo-card:active, .tipo-card.selecionado { border-color:var(--verde); background:rgba(0,200,83,0.08); }
+.tipo-card-icon { font-size:36px; margin-bottom:8px; }
+.tipo-card-label { font-size:14px; font-weight:700; }
+.tipo-card-sub { font-size:11px; color:var(--texto2); margin-top:2px; }
+.modal-cards { display:flex; flex-direction:column; gap:10px; }
+.modal-card { background:var(--cinza2); border:2px solid var(--cinza3); border-radius:14px; padding:16px; cursor:pointer; display:flex; align-items:center; gap:14px; transition:all .2s; }
+.modal-card:active, .modal-card.selecionado { border-color:var(--verde); background:rgba(0,200,83,0.08); }
+.modal-card-icon { font-size:28px; flex-shrink:0; }
+.modal-card-info strong { font-size:14px; font-weight:700; display:block; }
+.modal-card-info span { font-size:12px; color:var(--texto2); }
+.parceiro-nav { position:fixed; bottom:0; left:0; right:0; padding:16px 20px 32px; background:var(--preto); border-top:1px solid var(--cinza3); display:flex; gap:10px; }
+.parceiro-campo { margin-bottom:16px; }
+.parceiro-campo label { font-size:13px; font-weight:600; color:var(--texto2); display:block; margin-bottom:6px; }
+.parceiro-campo input { width:100%; padding:14px 16px; border-radius:12px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto); font-size:15px; font-family:'DM Sans',sans-serif; box-sizing:border-box; }
+.parceiro-campo input:focus { border-color:var(--verde); outline:none; }
+.parceiro-resumo-item { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--cinza3); font-size:14px; }
+.parceiro-resumo-item:last-child { border-bottom:none; }
+.parceiro-resumo-label { color:var(--texto2); }
+.parceiro-resumo-val { font-weight:600; }
+/* Tour guiado */
+#tour-overlay { display:none; position:fixed; inset:0; z-index:10000; pointer-events:all; }
+#tour-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.82); }
+#tour-card { position:absolute; background:var(--cinza1); border:1.5px solid var(--verde); border-radius:18px; padding:20px; max-width:320px; width:calc(100% - 40px); box-shadow:0 8px 40px rgba(0,200,83,0.2); z-index:1; }
+#tour-card h3 { font-size:17px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; margin-bottom:6px; }
+#tour-card p { font-size:14px; color:var(--texto2); line-height:1.5; margin-bottom:16px; }
+.tour-btns { display:flex; gap:8px; }
+/* Onboarding checklist */
+.onboarding-card { background:linear-gradient(135deg,#0d1f0f,#0f2a12); border:1.5px solid var(--verde); border-radius:16px; padding:16px; margin-bottom:16px; }
+.onboarding-card h4 { font-size:15px; font-weight:700; margin-bottom:12px; color:var(--verde); }
+.onboarding-item { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer; }
+.onboarding-item:last-child { border-bottom:none; }
+.onboarding-check { width:22px; height:22px; border-radius:50%; border:2px solid var(--cinza3); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+.onboarding-check.feito { background:var(--verde); border-color:var(--verde); color:#000; }
+.onboarding-item-label { font-size:13px; font-weight:600; }
+.onboarding-item-sub { font-size:11px; color:var(--texto2); }
+
 /* BANNER INSTALAR APP */
 #install-banner { position:fixed; bottom:0; left:0; right:0; z-index:9998; background:var(--cinza1); border-top:1.5px solid var(--cinza3); padding:16px 20px 24px; display:none; flex-direction:column; gap:12px; animation: bannerUp 0.35s ease; box-shadow:0 -8px 32px rgba(0,0,0,0.5); }
 #install-banner.visivel { display:flex; }
@@ -1063,6 +1114,188 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   <button class="btn-principal mt16" onclick="sairRastreio()" style="width:100%;">Fazer novo pedido</button>
   <div id="btn-cancelar-pedido-wrap" style="display:none;margin-top:12px;">
     <button onclick="cancelarPedidoCliente()" style="width:100%;padding:14px;border-radius:12px;border:1.5px solid #e74c3c;background:transparent;color:#e74c3c;font-size:15px;font-weight:600;cursor:pointer;">Cancelar pedido</button>
+  </div>
+</div>
+
+<!-- PARCEIRO — Auto-cadastro via convite -->
+<div class="tela" id="tela-parceiro">
+  <div class="parceiro-header">
+    <img class="parceiro-logo" src="/icons/icon-192.png?v=4" alt="">
+    <span class="parceiro-titulo">Chegou Aí — Parceiros</span>
+  </div>
+  <div class="parceiro-progresso" id="parceiro-progresso"></div>
+
+  <!-- Step 0: Validando token -->
+  <div class="parceiro-step ativo" id="parceiro-step-0">
+    <div style="text-align:center;padding:60px 20px;">
+      <div class="loading-spinner" style="margin:0 auto 16px;"></div>
+      <div style="font-size:15px;color:var(--texto2);">Validando seu convite...</div>
+    </div>
+  </div>
+
+  <!-- Step 1: Tipo de estabelecimento -->
+  <div class="parceiro-step" id="parceiro-step-1">
+    <div class="parceiro-step-titulo">Qual é o seu negócio?</div>
+    <div class="parceiro-step-sub">Escolha o tipo que melhor descreve o que você vende.</div>
+    <div class="tipo-cards">
+      <div class="tipo-card" onclick="parceiroSelecionarTipo('lanche',this)">
+        <div class="tipo-card-icon">🍔</div>
+        <div class="tipo-card-label">Lanchonete</div>
+        <div class="tipo-card-sub">Sanduíches, hambúrgueres</div>
+      </div>
+      <div class="tipo-card" onclick="parceiroSelecionarTipo('restaurante',this)">
+        <div class="tipo-card-icon">🍽️</div>
+        <div class="tipo-card-label">Restaurante</div>
+        <div class="tipo-card-sub">Marmitas, refeições</div>
+      </div>
+      <div class="tipo-card" onclick="parceiroSelecionarTipo('mercado',this)">
+        <div class="tipo-card-icon">🛒</div>
+        <div class="tipo-card-label">Mercado</div>
+        <div class="tipo-card-sub">Mercearia, hortifruti</div>
+      </div>
+      <div class="tipo-card" onclick="parceiroSelecionarTipo('farmacia',this)">
+        <div class="tipo-card-icon">💊</div>
+        <div class="tipo-card-label">Farmácia</div>
+        <div class="tipo-card-sub">Medicamentos, higiene</div>
+      </div>
+      <div class="tipo-card" onclick="parceiroSelecionarTipo('loja',this)">
+        <div class="tipo-card-icon">🛍️</div>
+        <div class="tipo-card-label">Loja</div>
+        <div class="tipo-card-sub">Roupas, calçados, produtos</div>
+      </div>
+      <div class="tipo-card" onclick="parceiroSelecionarTipo('encomenda',this)">
+        <div class="tipo-card-icon">🎂</div>
+        <div class="tipo-card-label">Encomendas</div>
+        <div class="tipo-card-sub">Bolos, doces, artesanato</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Modalidade de entrega -->
+  <div class="parceiro-step" id="parceiro-step-2">
+    <div class="parceiro-step-titulo">Como funciona a entrega?</div>
+    <div class="parceiro-step-sub">Escolha como seus pedidos chegarão ao cliente.</div>
+    <div class="modal-cards">
+      <div class="modal-card" onclick="parceiroSelecionarModal('app',this)">
+        <div class="modal-card-icon">🛵</div>
+        <div class="modal-card-info">
+          <strong>Motoboys da plataforma</strong>
+          <span>O app cuida da entrega. Sem preocupação da sua parte.</span>
+        </div>
+      </div>
+      <div class="modal-card" onclick="parceiroSelecionarModal('proprio',this)">
+        <div class="modal-card-icon">🏍️</div>
+        <div class="modal-card-info">
+          <strong>Motoboy próprio</strong>
+          <span>Você tem sua equipe de entrega. O app organiza os pedidos.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Dados da loja -->
+  <div class="parceiro-step" id="parceiro-step-3">
+    <div class="parceiro-step-titulo">Sua loja</div>
+    <div class="parceiro-step-sub">Como os clientes vão te encontrar no app.</div>
+    <div class="parceiro-campo">
+      <label>Nome da loja *</label>
+      <input type="text" id="p-nome-loja" placeholder="Ex: Hamburgeria do João" maxlength="100">
+    </div>
+    <div class="parceiro-campo">
+      <label>Cidade *</label>
+      <input type="text" id="p-cidade" placeholder="Ex: Guajará">
+    </div>
+    <div class="parceiro-campo">
+      <label>Estado (UF) *</label>
+      <input type="text" id="p-estado" placeholder="AM" maxlength="2" style="text-transform:uppercase;width:80px;">
+    </div>
+  </div>
+
+  <!-- Step 4: Dados de acesso -->
+  <div class="parceiro-step" id="parceiro-step-4">
+    <div class="parceiro-step-titulo">Seu acesso</div>
+    <div class="parceiro-step-sub">Estes dados serão usados para entrar no app.</div>
+    <div class="parceiro-campo">
+      <label>Seu nome *</label>
+      <input type="text" id="p-nome-resp" placeholder="Nome do responsável" maxlength="100">
+    </div>
+    <div class="parceiro-campo">
+      <label>WhatsApp com DDD *</label>
+      <input type="tel" id="p-whatsapp" placeholder="(97) 99999-9999" oninput="mascaraTelefone(this)">
+    </div>
+    <div class="parceiro-campo">
+      <label>E-mail *</label>
+      <input type="email" id="p-email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="parceiro-campo">
+      <label>Senha (mínimo 6 caracteres) *</label>
+      <input type="password" id="p-senha" placeholder="••••••" autocomplete="new-password">
+    </div>
+  </div>
+
+  <!-- Step 5: Confirmação -->
+  <div class="parceiro-step" id="parceiro-step-5">
+    <div class="parceiro-step-titulo">Tudo certo!</div>
+    <div class="parceiro-step-sub">Confirme as informações antes de enviar.</div>
+    <div style="background:var(--cinza2);border-radius:14px;padding:16px;margin-bottom:16px;">
+      <div class="parceiro-resumo-item"><span class="parceiro-resumo-label">Loja</span><span class="parceiro-resumo-val" id="resumo-loja">—</span></div>
+      <div class="parceiro-resumo-item"><span class="parceiro-resumo-label">Tipo</span><span class="parceiro-resumo-val" id="resumo-tipo">—</span></div>
+      <div class="parceiro-resumo-item"><span class="parceiro-resumo-label">Entrega</span><span class="parceiro-resumo-val" id="resumo-modal">—</span></div>
+      <div class="parceiro-resumo-item"><span class="parceiro-resumo-label">Cidade</span><span class="parceiro-resumo-val" id="resumo-cidade">—</span></div>
+      <div class="parceiro-resumo-item"><span class="parceiro-resumo-label">Responsável</span><span class="parceiro-resumo-val" id="resumo-resp">—</span></div>
+      <div class="parceiro-resumo-item"><span class="parceiro-resumo-label">WhatsApp</span><span class="parceiro-resumo-val" id="resumo-wa">—</span></div>
+      <div class="parceiro-resumo-item"><span class="parceiro-resumo-label">E-mail</span><span class="parceiro-resumo-val" id="resumo-email">—</span></div>
+    </div>
+    <div style="font-size:13px;color:var(--texto2);background:var(--cinza2);border-radius:12px;padding:12px 14px;">
+      Após o envio, o administrador receberá sua solicitação e entrará em contato para ativar sua loja. 🚀
+    </div>
+  </div>
+
+  <!-- Step 6: Sucesso -->
+  <div class="parceiro-step" id="parceiro-step-6" style="text-align:center;padding:60px 20px 120px;">
+    <div style="font-size:72px;margin-bottom:20px;">🎉</div>
+    <div style="font-size:22px;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:10px;">Cadastro enviado!</div>
+    <div style="font-size:15px;color:var(--texto2);line-height:1.6;margin-bottom:32px;">
+      Seu cadastro foi recebido com sucesso.<br>O administrador irá analisar e você receberá uma mensagem no WhatsApp quando sua loja for aprovada.
+    </div>
+    <div style="background:var(--cinza2);border-radius:14px;padding:16px;text-align:left;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Próximos passos:</div>
+      <div style="font-size:13px;color:var(--texto2);line-height:2;">
+        ✅ Aguardar aprovação do administrador<br>
+        📱 Fazer login com seu e-mail e senha<br>
+        🖼️ Adicionar foto da loja<br>
+        🍽️ Cadastrar seus produtos<br>
+        🕒 Configurar horários de funcionamento
+      </div>
+    </div>
+  </div>
+
+  <!-- Erro de token inválido -->
+  <div class="parceiro-step" id="parceiro-step-erro" style="text-align:center;padding:60px 20px;">
+    <div style="font-size:64px;margin-bottom:16px;">🚫</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Convite inválido</div>
+    <div id="parceiro-erro-msg" style="font-size:14px;color:var(--texto2);margin-bottom:24px;"></div>
+    <div style="font-size:13px;color:var(--texto2);">Para se tornar um parceiro, solicite um convite ao administrador.</div>
+  </div>
+
+  <!-- Navegação -->
+  <div class="parceiro-nav" id="parceiro-nav" style="display:none;">
+    <button id="parceiro-btn-voltar" onclick="parceiroVoltar()" style="flex:1;padding:14px;border-radius:14px;border:1.5px solid var(--cinza3);background:transparent;color:var(--texto);font-size:15px;font-weight:700;cursor:pointer;display:none;">← Voltar</button>
+    <button id="parceiro-btn-proximo" onclick="parceiroProximo()" style="flex:2;padding:14px;border-radius:14px;border:none;background:var(--verde);color:var(--preto);font-size:15px;font-weight:800;cursor:pointer;">Próximo →</button>
+  </div>
+</div>
+
+<!-- TOUR GUIADO -->
+<div id="tour-overlay">
+  <div id="tour-backdrop" onclick=""></div>
+  <div id="tour-card">
+    <div style="font-size:11px;color:var(--texto2);margin-bottom:8px;" id="tour-progresso">Passo 1 de 5</div>
+    <h3 id="tour-titulo"></h3>
+    <p id="tour-texto"></p>
+    <div class="tour-btns">
+      <button onclick="tourPular()" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--cinza3);background:transparent;color:var(--texto2);font-size:13px;cursor:pointer;">Pular tour</button>
+      <button onclick="tourProximo()" id="tour-btn-prox" style="flex:2;padding:11px;border-radius:10px;border:none;background:var(--verde);color:var(--preto);font-size:14px;font-weight:700;cursor:pointer;">Próximo →</button>
+    </div>
   </div>
 </div>
 
@@ -3541,6 +3774,13 @@ window.addEventListener('DOMContentLoaded', function() {
   if(modalProd) modalProd.addEventListener('click', function(e) {
     if(e.target === this) fecharModalProduto();
   });
+  // Rota /parceiro — auto-cadastro
+  if(window.location.pathname === '/parceiro') {
+    irTela('tela-parceiro');
+    iniciarCadastroParceiro();
+    return;
+  }
+
   // Restaurar sessão ao recarregar página
   if(authToken && currentUser) {
     ultimoStatusConhecido = {};
@@ -3584,6 +3824,303 @@ window.addEventListener('DOMContentLoaded', function() {
     if(tela && tela.id === 'tela-splash') irTela('tela-login');
   }, 3000);
 });
+
+// =============================================
+// PARCEIRO — AUTO-CADASTRO
+// =============================================
+var _parceiroStep = 0;
+var _parceiroToken = '';
+var _parceiroData = { categoria: '', tipoEntrega: 'app' };
+var _parceiroSteps = [0, 1, 2, 3, 4, 5]; // step 2 pode ser pulado
+
+var _tipoLabels = { lanche:'Lanchonete', restaurante:'Restaurante', mercado:'Mercado', farmacia:'Farmácia', loja:'Loja de Produtos', encomenda:'Encomendas', bebida:'Bebidas' };
+var _modalLabels = { app:'Motoboys da plataforma', proprio:'Motoboy próprio' };
+
+async function iniciarCadastroParceiro() {
+  var params = new URLSearchParams(window.location.search);
+  _parceiroToken = params.get('token') || '';
+  document.getElementById('parceiro-nav').style.display = 'none';
+
+  if(!_parceiroToken) {
+    _parceiroMostrarErro('Este cadastro é por convite. Solicite o link ao administrador.');
+    return;
+  }
+
+  try {
+    var r = await fetch('/api/auth/convite/' + _parceiroToken).then(function(x){ return x.json(); });
+    if(!r.valid) { _parceiroMostrarErro(r.error || 'Convite inválido'); return; }
+    _parceiroIrStep(1);
+  } catch(_) {
+    _parceiroMostrarErro('Erro ao validar o convite. Verifique sua conexão.');
+  }
+}
+
+function _parceiroMostrarErro(msg) {
+  document.querySelectorAll('.parceiro-step').forEach(function(s){ s.classList.remove('ativo'); });
+  document.getElementById('parceiro-step-erro').classList.add('ativo');
+  document.getElementById('parceiro-erro-msg').textContent = msg;
+  document.getElementById('parceiro-nav').style.display = 'none';
+  _atualizarProgresso(-1);
+}
+
+function _parceiroIrStep(step) {
+  _parceiroStep = step;
+  document.querySelectorAll('.parceiro-step').forEach(function(s){ s.classList.remove('ativo'); });
+  var el = document.getElementById('parceiro-step-' + step);
+  if(el) el.classList.add('ativo');
+
+  // Navegar scroll para o topo
+  window.scrollTo(0, 0);
+
+  var nav = document.getElementById('parceiro-nav');
+  var btnVoltar = document.getElementById('parceiro-btn-voltar');
+  var btnProx = document.getElementById('parceiro-btn-proximo');
+
+  if(step === 0 || step === 6 || step === 99) {
+    nav.style.display = 'none';
+  } else if(step === 5) {
+    nav.style.display = 'flex';
+    btnVoltar.style.display = 'block';
+    btnProx.textContent = '🚀 Enviar cadastro';
+  } else {
+    nav.style.display = 'flex';
+    btnVoltar.style.display = step > 1 ? 'block' : 'none';
+    btnProx.textContent = 'Próximo →';
+  }
+  _atualizarProgresso(step);
+}
+
+function _atualizarProgresso(step) {
+  var wrap = document.getElementById('parceiro-progresso');
+  if(!wrap) return;
+  var totalSteps = 5;
+  var html = '';
+  for(var i = 1; i <= totalSteps; i++) {
+    var cls = i < step ? 'feito' : (i === step ? 'ativo' : '');
+    html += '<div class="parceiro-prog-item ' + cls + '"></div>';
+  }
+  wrap.innerHTML = html;
+}
+
+function parceiroSelecionarTipo(cat, el) {
+  document.querySelectorAll('.tipo-card').forEach(function(c){ c.classList.remove('selecionado'); });
+  el.classList.add('selecionado');
+  _parceiroData.categoria = cat;
+}
+
+function parceiroSelecionarModal(modal, el) {
+  document.querySelectorAll('.modal-card').forEach(function(c){ c.classList.remove('selecionado'); });
+  el.classList.add('selecionado');
+  _parceiroData.tipoEntrega = modal;
+}
+
+function parceiroProximo() {
+  if(_parceiroStep === 1) {
+    if(!_parceiroData.categoria) { showToast('⚠️','Selecione o tipo','Toque em uma das opções acima.'); return; }
+    _parceiroIrStep(2);
+  } else if(_parceiroStep === 2) {
+    if(!_parceiroData.tipoEntrega) { showToast('⚠️','Selecione a modalidade','Escolha como serão feitas as entregas.'); return; }
+    _parceiroIrStep(3);
+  } else if(_parceiroStep === 3) {
+    var nomeLoja = document.getElementById('p-nome-loja').value.trim();
+    var cidade   = document.getElementById('p-cidade').value.trim();
+    var estado   = document.getElementById('p-estado').value.trim().toUpperCase();
+    if(!nomeLoja) { showToast('⚠️','Nome obrigatório','Digite o nome da sua loja.'); return; }
+    if(!cidade || !estado) { showToast('⚠️','Cidade e estado obrigatórios','Preencha cidade e estado.'); return; }
+    _parceiroData.nomeLoja = nomeLoja;
+    _parceiroData.cidade = cidade;
+    _parceiroData.estado = estado;
+    _parceiroIrStep(4);
+  } else if(_parceiroStep === 4) {
+    var nome  = document.getElementById('p-nome-resp').value.trim();
+    var wa    = document.getElementById('p-whatsapp').value.trim();
+    var email = document.getElementById('p-email').value.trim();
+    var senha = document.getElementById('p-senha').value;
+    if(!nome) { showToast('⚠️','Nome obrigatório','Digite seu nome completo.'); return; }
+    if((wa.replace(/\D/g,'')).length < 10) { showToast('⚠️','WhatsApp inválido','Digite com DDD.'); return; }
+    if(!email.includes('@')) { showToast('⚠️','E-mail inválido','Digite um e-mail válido.'); return; }
+    if(senha.length < 6) { showToast('⚠️','Senha curta','Mínimo 6 caracteres.'); return; }
+    _parceiroData.nomeResponsavel = nome;
+    _parceiroData.whatsapp = wa;
+    _parceiroData.email = email;
+    _parceiroData.senha = senha;
+    // Preencher resumo
+    document.getElementById('resumo-loja').textContent = _parceiroData.nomeLoja;
+    document.getElementById('resumo-tipo').textContent = _tipoLabels[_parceiroData.categoria] || _parceiroData.categoria;
+    document.getElementById('resumo-modal').textContent = _modalLabels[_parceiroData.tipoEntrega] || _parceiroData.tipoEntrega;
+    document.getElementById('resumo-cidade').textContent = _parceiroData.cidade + ' — ' + _parceiroData.estado;
+    document.getElementById('resumo-resp').textContent = nome;
+    document.getElementById('resumo-wa').textContent = wa;
+    document.getElementById('resumo-email').textContent = email;
+    _parceiroIrStep(5);
+  } else if(_parceiroStep === 5) {
+    _parceiroEnviar();
+  }
+}
+
+function parceiroVoltar() {
+  if(_parceiroStep > 1) _parceiroIrStep(_parceiroStep - 1);
+}
+
+async function _parceiroEnviar() {
+  var btn = document.getElementById('parceiro-btn-proximo');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
+  try {
+    await fetch('/api/auth/cadastro-parceiro', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: _parceiroToken,
+        nomeLoja: _parceiroData.nomeLoja,
+        categoria: _parceiroData.categoria,
+        tipoEntrega: _parceiroData.tipoEntrega,
+        nomeResponsavel: _parceiroData.nomeResponsavel,
+        whatsapp: _parceiroData.whatsapp.replace(/\D/g,''),
+        email: _parceiroData.email,
+        senha: _parceiroData.senha,
+        cidade: _parceiroData.cidade,
+        estado: _parceiroData.estado,
+      }),
+    }).then(function(r) {
+      if(!r.ok) return r.json().then(function(d){ throw new Error(d.error || 'Erro'); });
+      return r.json();
+    });
+    _parceiroIrStep(6);
+  } catch(e) {
+    showToast('❌','Erro ao cadastrar', e.message || 'Tente novamente.');
+    if(btn) { btn.disabled = false; btn.textContent = '🚀 Enviar cadastro'; }
+  }
+}
+
+// =============================================
+// ADMIN — Convites e Pendentes
+// =============================================
+async function adminGerarConvite() {
+  try {
+    var r = await apiCall('/api/admin/convite', { method: 'POST', body: {} });
+    var link = r.link;
+    var expira = new Date(r.expira_em).toLocaleDateString('pt-BR');
+    var html =
+      '<div style="background:var(--cinza2);border-radius:14px;padding:16px;margin-bottom:12px;">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--verde);margin-bottom:6px;">✅ Link gerado! Válido até ' + expira + '</div>' +
+      '<div style="font-size:13px;word-break:break-all;margin-bottom:10px;color:var(--texto2);">' + link + '</div>' +
+      '<button onclick="navigator.clipboard.writeText(\'' + link + '\');showToast(\'📋\',\'Copiado!\',\'Link copiado para área de transferência.\')" style="width:100%;padding:11px;border-radius:10px;background:var(--verde);color:var(--preto);border:none;font-size:14px;font-weight:700;cursor:pointer;">📋 Copiar link</button>' +
+      '</div>';
+    var area = document.getElementById('admin-convite-area');
+    if(area) area.innerHTML = html;
+  } catch(e) { showToast('❌','Erro',e.message); }
+}
+
+async function adminAprovarPendente(id, btn) {
+  if(btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    await apiCall('/api/admin/pendentes/' + id + '/aprovar', { method: 'PATCH' });
+    showToast('✅','Aprovado!','Loja ativada e parceiro notificado.');
+    renderAdmin('lojas');
+  } catch(e) {
+    showToast('❌','Erro',e.message);
+    if(btn) { btn.disabled = false; btn.textContent = '✅ Aprovar'; }
+  }
+}
+
+async function adminRecusarPendente(id, nome, btn) {
+  if(!confirm('Recusar e excluir o cadastro de "' + nome + '"?')) return;
+  if(btn) { btn.disabled = true; }
+  try {
+    await apiCall('/api/admin/pendentes/' + id, { method: 'DELETE' });
+    showToast('🗑️','Recusado','Cadastro removido.');
+    renderAdmin('lojas');
+  } catch(e) {
+    showToast('❌','Erro',e.message);
+    if(btn) { btn.disabled = false; }
+  }
+}
+
+// =============================================
+// ONBOARDING — Checklist para lojista novo
+// =============================================
+function _renderOnboarding(data) {
+  var est = data.estabelecimento || {};
+  var produtos = data.produtos || [];
+  var horarios = est.horarios;
+
+  var temFoto     = !!est.foto_url;
+  var temProdutos = produtos.length > 0;
+  var temHorarios = horarios && Object.keys(horarios).some(function(k){ return horarios[k] && (horarios[k].aberto || horarios[k].abre); });
+  var temTaxa     = est.taxa_entrega !== null && est.taxa_entrega !== undefined;
+
+  var tudo = temFoto && temProdutos && temHorarios;
+  if(tudo) {
+    // Se acabou de completar, checar se tour já foi feito
+    var tourKey = 'chegouai_tour_' + (est.id || '');
+    if(!localStorage.getItem(tourKey) && !localStorage.getItem('chegouai_tour_viu')) iniciarTour();
+    return '';
+  }
+
+  var items = [
+    { feito: temFoto, label: 'Adicionar foto da loja', sub: 'Clientes confiam mais em lojas com foto', acao: "estNav(document.getElementById('est-nav-config'),'config')" },
+    { feito: temProdutos, label: 'Cadastrar primeiro produto', sub: 'Sem produtos, a loja não aparece no app', acao: "estNav(document.getElementById('est-nav-cardapio'),'cardapio');setTimeout(abrirModalProduto,300)" },
+    { feito: temHorarios, label: 'Configurar horário de funcionamento', sub: 'Defina quando sua loja está aberta', acao: "estNav(document.getElementById('est-nav-config'),'config')" },
+  ];
+
+  var html = '<div class="onboarding-card">' +
+    '<h4>🚀 Complete o cadastro da sua loja</h4>' +
+    items.map(function(item) {
+      return '<div class="onboarding-item" onclick="' + item.acao + '">' +
+        '<div class="onboarding-check ' + (item.feito ? 'feito' : '') + '">' + (item.feito ? '✓' : '') + '</div>' +
+        '<div><div class="onboarding-item-label">' + (item.feito ? '<s>' : '') + item.label + (item.feito ? '</s>' : '') + '</div>' +
+        '<div class="onboarding-item-sub">' + item.sub + '</div></div>' +
+        '</div>';
+    }).join('') +
+    '</div>';
+  return html;
+}
+
+// =============================================
+// TOUR GUIADO
+// =============================================
+var _tourSteps = [
+  { titulo:'🔔 Pedidos novos', texto:'Aqui chegam todos os pedidos em tempo real. Assim que aparecer um, toque em "Aceitar" para confirmar ao cliente.' },
+  { titulo:'👨‍🍳 Avançar o status', texto:'Cada pedido tem botões para avançar: Preparando → Pronto → Entregue. O cliente acompanha tudo em tempo real.' },
+  { titulo:'📖 Seu cardápio', texto:'Na aba Cardápio você adiciona produtos com foto, preço e descrição. Quanto mais completo, mais vendas!' },
+  { titulo:'⏸️ Pausar a loja', texto:'Precisa sair? Use o botão "Pausar" para não receber pedidos temporariamente. Clientes verão a loja como fechada.' },
+  { titulo:'✅ Está pronto!', texto:'Você já sabe o essencial. Se tiver dúvida, o botão ❓ no topo reabre este tour. Boas vendas! 🚀' },
+];
+var _tourIdx = 0;
+
+function iniciarTour() {
+  _tourIdx = 0;
+  _renderTourStep();
+  document.getElementById('tour-overlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function _renderTourStep() {
+  var step = _tourSteps[_tourIdx];
+  document.getElementById('tour-titulo').textContent = step.titulo;
+  document.getElementById('tour-texto').textContent = step.texto;
+  document.getElementById('tour-progresso').textContent = 'Passo ' + (_tourIdx + 1) + ' de ' + _tourSteps.length;
+  var btn = document.getElementById('tour-btn-prox');
+  if(btn) btn.textContent = _tourIdx < _tourSteps.length - 1 ? 'Próximo →' : '🎉 Concluir!';
+  // Posicionar card no centro
+  var card = document.getElementById('tour-card');
+  if(card) { card.style.top = '50%'; card.style.left = '50%'; card.style.transform = 'translate(-50%,-50%)'; }
+}
+
+function tourProximo() {
+  _tourIdx++;
+  if(_tourIdx >= _tourSteps.length) { tourPular(); return; }
+  _renderTourStep();
+}
+
+function tourPular() {
+  document.getElementById('tour-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+  // Marcar tour como visto para este estabelecimento
+  var estId = estDataCache && estDataCache.estabelecimento ? estDataCache.estabelecimento.id : 'ok';
+  localStorage.setItem('chegouai_tour_' + estId, '1');
+  localStorage.setItem('chegouai_tour_viu', '1');
+}
 
 // CARDÁPIO
 var produtosCache = [];
@@ -5794,6 +6331,19 @@ async function _renderEstabelecimentoInterno() {
       verificarHorarioAuto(data.estabelecimento);
       verificarPausaAlmocoSalva();
     }
+    // Onboarding — injetar checklist no topo da seção de pedidos
+    var onbArea = document.getElementById('onboarding-area');
+    if(!onbArea) {
+      var secaoPed = document.getElementById('est-secao-pedidos');
+      if(secaoPed) {
+        var onbDiv = document.createElement('div');
+        onbDiv.id = 'onboarding-area';
+        secaoPed.insertBefore(onbDiv, secaoPed.firstChild);
+        onbArea = onbDiv;
+      }
+    }
+    if(onbArea) onbArea.innerHTML = _renderOnboarding(data);
+
     var pedidos = data.pedidosAbertos || [];
     lista = document.getElementById('pedidos-estabelecimento');
     if(!lista) return;
@@ -6528,11 +7078,42 @@ async function renderAdmin(secao) {
     }
   } else if(secao === 'lojas') {
     const lojas = adminDataCache.estabelecimentos || [];
+    // Buscar pendentes
+    var pendentesHtml = '';
+    try {
+      var pendentes = await apiCall('/api/admin/pendentes');
+      if(pendentes && pendentes.length > 0) {
+        pendentesHtml =
+          '<div style="margin-bottom:16px;">' +
+          '<div class="secao-titulo" style="color:#fb923c;">⏳ Aguardando aprovação (' + pendentes.length + ')</div>' +
+          '<div class="tabela">' +
+          pendentes.map(function(p) {
+            var tipoLabel = { lanche:'Lanchonete', restaurante:'Restaurante', mercado:'Mercado', farmacia:'Farmácia', loja:'Loja', encomenda:'Encomendas', bebida:'Bebidas' }[p.categoria] || p.categoria;
+            var modalLabel = p.tipo_entrega === 'proprio' ? 'Motoboy próprio' : 'Motoboys da plataforma';
+            var dataStr = p.cadastro_data ? new Date(p.cadastro_data).toLocaleDateString('pt-BR') : '';
+            return '<div class="tabela-row" style="flex-direction:column;align-items:flex-start;gap:8px;">' +
+              '<div style="width:100%;">' +
+              '<div class="nome" style="font-size:15px;">' + sanitizar(p.nome) + '</div>' +
+              '<div style="font-size:12px;color:var(--texto2);">' + tipoLabel + ' · ' + modalLabel + (p.cidade ? ' · ' + sanitizar(p.cidade) + '/' + (p.estado||'') : '') + ' · ' + dataStr + '</div>' +
+              (p.whatsapp ? '<div style="font-size:12px;color:var(--texto2);">📞 ' + p.whatsapp + '</div>' : '') +
+              '</div>' +
+              '<div style="display:flex;gap:8px;width:100%;">' +
+              '<button class="btn-acao" onclick="adminAprovarPendente(\'' + p.id + '\',this)" style="flex:1;background:var(--verde);color:#000;">✅ Aprovar</button>' +
+              '<button class="btn-acao" onclick="adminRecusarPendente(\'' + p.id + '\',\'' + sanitizar(p.nome) + '\',this)" style="flex:1;background:var(--erro);color:#fff;">❌ Recusar</button>' +
+              '</div>' +
+              '</div>';
+          }).join('') +
+          '</div></div>';
+      }
+    } catch(_) {}
     el.innerHTML =
       '<div class="secao-titulo">Estabelecimentos parceiros</div>' +
-      '<div style="margin-bottom:10px;">' +
+      '<div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;">' +
+      '<button onclick="adminGerarConvite()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--verde);color:var(--preto);font-size:13px;font-weight:700;cursor:pointer;">🔗 Gerar link de convite</button>' +
       '<button onclick="gerarSlugsLojas(this)" style="padding:8px 16px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:13px;cursor:pointer;">🔗 Gerar links personalizados automáticos</button>' +
       '</div>' +
+      '<div id="admin-convite-area"></div>' +
+      pendentesHtml +
       '<div class="tabela">' +
       (lojas.length === 0 ? '<div class="tabela-row"><div class="info">Nenhuma loja cadastrada.</div></div>' :
       lojas.map(function(e) {

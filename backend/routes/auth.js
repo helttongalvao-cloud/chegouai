@@ -356,4 +356,104 @@ router.post('/reset-senha', [
   }
 });
 
+// =============================================
+// GET /api/auth/convite/:token — Validar token de convite (público)
+// =============================================
+router.get('/convite/:token', async (req, res) => {
+  const token = (req.params.token || '').replace(/[^a-f0-9]/gi, '').slice(0, 64);
+  if (!token) return res.json({ valid: false, error: 'Token inválido' });
+  try {
+    const { data } = await supabaseAdmin
+      .from('configuracoes').select('valor').eq('chave', `convite_${token}`).maybeSingle();
+    if (!data) return res.json({ valid: false, error: 'Convite não encontrado' });
+    const c = JSON.parse(data.valor);
+    if (c.usado) return res.json({ valid: false, error: 'Este convite já foi utilizado' });
+    if (new Date(c.expira_em) < new Date()) return res.json({ valid: false, error: 'Convite expirado' });
+    res.json({ valid: true });
+  } catch (_) { res.json({ valid: false, error: 'Erro ao validar convite' }); }
+});
+
+// =============================================
+// POST /api/auth/cadastro-parceiro — Auto-cadastro via convite
+// =============================================
+router.post('/cadastro-parceiro', async (req, res, next) => {
+  const { token, nomeLoja, categoria, tipoEntrega, nomeResponsavel, whatsapp, email, senha, cidade, estado } = req.body;
+
+  if (!token || !nomeLoja || !categoria || !nomeResponsavel || !email || !senha) {
+    return res.status(400).json({ error: 'Preencha todos os campos obrigatórios' });
+  }
+  if ((senha || '').length < 6) return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres' });
+  const telLimpo = (whatsapp || '').replace(/\D/g, '');
+  if (telLimpo.length < 10) return res.status(400).json({ error: 'WhatsApp inválido (com DDD)' });
+
+  try {
+    // Validar token
+    const { data: conviteData } = await supabaseAdmin
+      .from('configuracoes').select('valor').eq('chave', `convite_${token}`).maybeSingle();
+    if (!conviteData) return res.status(400).json({ error: 'Convite inválido' });
+    const convite = JSON.parse(conviteData.valor);
+    if (convite.usado) return res.status(400).json({ error: 'Convite já utilizado' });
+    if (new Date(convite.expira_em) < new Date()) return res.status(400).json({ error: 'Convite expirado' });
+
+    const emailNorm = email.toLowerCase().trim();
+
+    // Verificar e-mail e WhatsApp duplicados
+    const [{ data: existeEmail }, { data: existeTel }] = await Promise.all([
+      supabaseAdmin.from('profiles').select('id').eq('email', emailNorm).maybeSingle(),
+      supabaseAdmin.from('profiles').select('id').eq('telefone', telLimpo).maybeSingle(),
+    ]);
+    if (existeEmail) return res.status(409).json({ error: 'E-mail já cadastrado' });
+    if (existeTel) return res.status(409).json({ error: 'WhatsApp já cadastrado' });
+
+    // Criar usuário no Auth
+    const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+      email: emailNorm, password: senha, email_confirm: true,
+      user_metadata: { nome: nomeResponsavel, telefone: telLimpo },
+    });
+    if (authErr) {
+      if (authErr.message.includes('already been registered')) return res.status(409).json({ error: 'E-mail já cadastrado' });
+      throw authErr;
+    }
+    const userId = authData.user.id;
+
+    // Criar perfil
+    const { error: profErr } = await supabaseAdmin.from('profiles').upsert({
+      id: userId, nome: nomeResponsavel.trim(), telefone: telLimpo,
+      email: emailNorm, perfil: 'estabelecimento',
+    });
+    if (profErr) { await supabaseAdmin.auth.admin.deleteUser(userId); throw profErr; }
+
+    // Criar estabelecimento com ativo=false (aguardando aprovação)
+    const { data: est, error: estErr } = await supabaseAdmin
+      .from('estabelecimentos')
+      .insert({
+        user_id: userId,
+        nome: nomeLoja.trim().slice(0, 100),
+        categoria,
+        tipo_entrega: tipoEntrega || 'app',
+        whatsapp: telLimpo,
+        cidade: cidade || null,
+        estado: estado || null,
+        cadastro_data: new Date().toISOString(),
+        ativo: false,
+        aberto: false,
+      })
+      .select().single();
+    if (estErr) { await supabaseAdmin.auth.admin.deleteUser(userId); throw estErr; }
+
+    // Marcar token como usado
+    await supabaseAdmin.from('configuracoes')
+      .update({ valor: JSON.stringify({ ...convite, usado: true, usado_em: new Date().toISOString(), estabelecimento_id: est.id }) })
+      .eq('chave', `convite_${token}`);
+
+    // Notificar admin via Telegram
+    try {
+      const { enviarTelegram } = require('../services/telegram');
+      enviarTelegram(`🏪 <b>Novo parceiro aguardando aprovação!</b>\n📛 ${nomeLoja}\n📂 ${categoria}\n📞 ${telLimpo}\n👤 ${nomeResponsavel}\n\nAcesse o painel admin → Estabelecimentos para aprovar.`);
+    } catch (_) {}
+
+    res.status(201).json({ message: 'Cadastro enviado! Aguardando aprovação do administrador.' });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

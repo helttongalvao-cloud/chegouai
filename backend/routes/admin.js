@@ -1031,4 +1031,90 @@ router.post('/gerar-slugs', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// =============================================
+// POST /api/admin/convite — Gerar link de convite para parceiro
+// =============================================
+router.post('/convite', async (req, res, next) => {
+  try {
+    const token = require('crypto').randomBytes(16).toString('hex');
+    const expira_em = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const label = ((req.body && req.body.label) || '').trim().slice(0, 100);
+    await supabaseAdmin.from('configuracoes').upsert({
+      chave: `convite_${token}`,
+      valor: JSON.stringify({ token, criado_em: new Date().toISOString(), expira_em, usado: false, label }),
+    });
+    const base = process.env.FRONTEND_URL || 'https://chegouaiapp.com.br';
+    res.json({ token, link: `${base}/parceiro?token=${token}`, expira_em });
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/convites — Listar convites ativos
+router.get('/convites', async (req, res, next) => {
+  try {
+    const { data } = await supabaseAdmin.from('configuracoes').select('chave, valor').like('chave', 'convite_%');
+    const convites = (data || []).map(row => {
+      try { return { ...JSON.parse(row.valor), chave: row.chave }; } catch { return null; }
+    }).filter(c => c && !c.usado);
+    res.json(convites);
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/admin/convite/:token — Revogar convite
+router.delete('/convite/:token', async (req, res, next) => {
+  try {
+    await supabaseAdmin.from('configuracoes').delete().eq('chave', `convite_${req.params.token}`);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/pendentes — Estabelecimentos aguardando aprovação
+router.get('/pendentes', async (req, res, next) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('estabelecimentos')
+      .select('id, nome, categoria, tipo_entrega, whatsapp, cidade, estado, cadastro_data, user_id')
+      .eq('ativo', false)
+      .order('cadastro_data', { ascending: true });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/admin/pendentes/:id/aprovar — Aprovar estabelecimento
+router.patch('/pendentes/:id/aprovar', async (req, res, next) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('estabelecimentos')
+      .update({ ativo: true, aberto: false })
+      .eq('id', req.params.id)
+      .select('id, nome, whatsapp, user_id')
+      .single();
+    if (error || !data) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
+
+    // Push + WhatsApp ao parceiro
+    try {
+      const { enviarPush } = require('./notifications');
+      enviarPush(data.user_id, '🎉 Loja aprovada!', 'Sua loja foi aprovada! Faça login e complete o cadastro.', { tipo: 'aprovacao' });
+    } catch (_) {}
+    try {
+      const { enviarWhatsApp } = require('../services/whatsapp');
+      if (data.whatsapp) enviarWhatsApp(data.whatsapp, `🎉 Parabéns! Sua loja *${data.nome}* foi aprovada no Chegou Aí!\n\nAcesse o app, faça login e complete seu cadastro.\n\n*chegouaiapp.com.br/app*`);
+    } catch (_) {}
+
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/admin/pendentes/:id — Recusar e excluir estabelecimento pendente
+router.delete('/pendentes/:id', async (req, res, next) => {
+  try {
+    const { data: est } = await supabaseAdmin
+      .from('estabelecimentos').select('user_id').eq('id', req.params.id).eq('ativo', false).single();
+    if (!est) return res.status(404).json({ error: 'Não encontrado ou já ativo' });
+    await supabaseAdmin.from('estabelecimentos').delete().eq('id', req.params.id);
+    await supabaseAdmin.auth.admin.deleteUser(est.user_id);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
