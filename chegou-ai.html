@@ -565,7 +565,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 <div class="tela ativa" id="tela-splash">
   <div class="logo-wrap-pulsar"><img src="/icons/icon-192.png?v=4" class="logo-img-pulsar" alt="Chegou Aí"></div>
   <div class="nome-splash" style="font-size:36px;font-weight:800;letter-spacing:-0.5px;">Chegou Aí</div>
-  <div class="sub-splash">Delivery em Guajará-AM</div>
+  <div class="sub-splash">Peça agora, chegou já</div>
 </div>
 
 <!-- BOAS-VINDAS (aparece 1x por dispositivo) -->
@@ -1301,8 +1301,12 @@ async function apiCall(path, options) {
 
   var resp;
   try {
-    resp = await fetch(API_BASE + path, Object.assign({ cache: 'no-store' }, opts));
+    var _ctrl = new AbortController();
+    var _tid = setTimeout(function(){ _ctrl.abort(); }, 20000);
+    resp = await fetch(API_BASE + path, Object.assign({ cache: 'no-store', signal: _ctrl.signal }, opts));
+    clearTimeout(_tid);
   } catch(netErr) {
+    if(netErr.name === 'AbortError') throw new Error('Tempo limite excedido. Verifique sua conexão.');
     throw new Error('Servidor indisponível. Verifique sua conexão e tente novamente.');
   }
   var data = await resp.json().catch(function(){ return {}; });
@@ -2798,7 +2802,7 @@ async function submitResetSenha() {
 
 function cardEstAvatar(e) {
   if(e.foto_url) {
-    return '<div class="card-est-avatar"><img src="' + e.foto_url + '" alt="' + sanitizar(e.nome) + '" loading="lazy"></div>';
+    return '<div class="card-est-avatar"><img src="' + e.foto_url + '" alt="' + sanitizar(e.nome) + '" loading="lazy" onerror="this.parentNode.innerHTML=\'<span style=font-size:28px>' + (e.emoji || '🏪') + '</span>\'"></div>';
   }
   return '<div class="card-est-avatar" style="font-size:28px;">' + (e.emoji || '🏪') + '</div>';
 }
@@ -3284,7 +3288,7 @@ function sanitizar(str) {
     .replace(/</g, '')
     .replace(/>/g, '')
     .replace(/"/g, '')
-    .replace(/'/g, '')
+    .replace(/'/g, '&#39;')
     .trim()
     .slice(0, 200);
 }
@@ -4096,7 +4100,14 @@ function irCheckout() {
   var btnLoc = document.getElementById('btn-localizacao');
   if(btnLoc) { btnLoc.textContent = '📡 Minha localização'; btnLoc.style.color = 'var(--texto2)'; btnLoc.style.borderColor = 'var(--cinza3)'; btnLoc.style.background = ''; }
   var endEl = document.getElementById('endereco-entrega');
-  if(endEl) { endEl.readOnly = false; endEl.style.color = ''; endEl.dataset.latLng = ''; }
+  if(endEl) {
+    endEl.readOnly = false;
+    endEl.style.color = '';
+    endEl.dataset.latLng = '';
+    if(endEl.value === '📍 Localização GPS confirmada') endEl.value = '';
+  }
+  clienteLat = null;
+  clienteLng = null;
   localizacaoConfirmada = false;
 
   irTela('tela-checkout');
@@ -4384,6 +4395,7 @@ function usarLocalizacao() {
     var endInput = document.getElementById('endereco-entrega');
     if(endInput) {
       endInput.dataset.latLng = 'Lat: ' + clienteLat.toFixed(6) + ', Lng: ' + clienteLng.toFixed(6);
+      endInput.value = '📍 Localização GPS confirmada';
       endInput.readOnly = true;
       endInput.style.color = 'var(--verde)';
     }
@@ -4403,7 +4415,7 @@ function usarLocalizacao() {
         : (window.Capacitor ? 'Configurações → Apps → Chegou Aí → Permissões → Localização' : 'Configurações → Chrome → Localização');
       showToast('📍', 'Localização bloqueada', 'Permita em: ' + instrLoc);
     } else {
-      showToast('📍', 'Localização indisponível', 'Digite o endereço completo no campo acima.');
+      showToast('📍', 'Localização indisponível', 'Verifique o sinal de GPS e tente novamente.');
     }
   }
   // Tenta alta precisão primeiro; se falhar em 8s, tenta baixa precisão (mais rápida em ambientes cobertos)
