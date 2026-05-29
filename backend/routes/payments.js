@@ -263,7 +263,12 @@ router.post('/pix', paymentLimiter, optionalAuth, [
       },
     });
   } catch (err) {
-    console.error('[Pix]', err.message);
+    console.error('[Pix] ERRO:', err.message, '| status:', err.status, '| statusCode:', err.statusCode);
+    // Alertar admin via Telegram com detalhes do erro real
+    try {
+      const { enviarTelegram } = require('../services/telegram');
+      enviarTelegram(`❌ <b>Erro ao gerar Pix</b>\n<code>${err.message}</code>\nStatus: ${err.status || 'N/A'}`);
+    } catch (_) {}
     // Erros do Pagar.me: traduzir para 422 para que a mensagem apareça ao cliente
     if (!err.status || err.status >= 500) {
       err.status = 422;

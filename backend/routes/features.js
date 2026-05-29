@@ -112,14 +112,18 @@ router.get('/avaliacoes/:estId', async (req, res) => {
       .order('criado_em', { ascending: false })
       .limit(20);
 
-    if (error) throw error;
+    if (error) {
+      console.warn('[Avaliacoes] Erro ao buscar avaliações:', error.message);
+      return res.json({ media: 0, total: 0, avaliacoes: [] });
+    }
 
     const total = data.length;
     const media = total > 0 ? data.reduce((s, a) => s + a.nota, 0) / total : 0;
 
     res.json({ media: parseFloat(media.toFixed(1)), total, avaliacoes: data });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.warn('[Avaliacoes] Exceção:', err.message);
+    res.json({ media: 0, total: 0, avaliacoes: [] });
   }
 });
 
