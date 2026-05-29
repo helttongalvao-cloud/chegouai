@@ -1170,9 +1170,9 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <div class="tipo-card-sub">Roupas, calçados, produtos</div>
       </div>
       <div class="tipo-card" onclick="parceiroSelecionarTipo('encomenda',this)">
-        <div class="tipo-card-icon">🎂</div>
-        <div class="tipo-card-label">Encomendas</div>
-        <div class="tipo-card-sub">Bolos, doces, artesanato</div>
+        <div class="tipo-card-icon">🎨</div>
+        <div class="tipo-card-label">Personalizado</div>
+        <div class="tipo-card-sub">Canecas, bolos, camisetas e mais</div>
       </div>
     </div>
   </div>
@@ -2636,7 +2636,7 @@ setTimeout(function(){
     var lojaIdParam = params.get('loja');
     irTela('tela-home');
     setTimeout(function() { abrirCardapio(lojaIdParam); }, 300);
-  } else if(window.location.pathname.match(/^\/[a-z0-9][a-z0-9-]{1,39}$/)) {
+  } else if(window.location.pathname !== '/parceiro' && window.location.pathname.match(/^\/[a-z0-9][a-z0-9-]{1,39}$/)) {
     // Slug da loja: /hamburguitos → resolve para UUID e abre cardápio
     var slugPath = window.location.pathname.replace(/^\//, '');
     irTela('tela-home');
@@ -6385,7 +6385,7 @@ function labelCardapio(categoria) {
   if(categoria === 'restaurante') return '🍽️ Cardápio';
   if(categoria === 'lanche') return '🍔 Cardápio';
   if(categoria === 'loja') return '🛍️ Produtos';
-  if(categoria === 'encomenda') return '🎂 Encomendas';
+  if(categoria === 'encomenda') return '🎨 Personalizados';
   return '📦 Produtos';
 }
 

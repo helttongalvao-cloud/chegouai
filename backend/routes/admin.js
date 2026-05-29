@@ -305,7 +305,7 @@ router.post(
     body('telefone').matches(/^\d{10,11}$/).withMessage('Telefone inválido'),
     body('email').isEmail().normalizeEmail(),
     body('senha').isLength({ min: 6 }),
-    body('categoria').isIn(['restaurante', 'mercado', 'farmacia', 'lanche', 'bebida']),
+    body('categoria').isIn(['restaurante', 'mercado', 'farmacia', 'lanche', 'bebida', 'loja', 'encomenda']),
     body('chave_pix').optional().trim(),
     body('mpUserId').optional().trim(),
     body('whatsapp').optional().trim().matches(/^\d{0,15}$/),
