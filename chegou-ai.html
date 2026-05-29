@@ -7733,10 +7733,12 @@ async function renderAdminCupons() {
           '</div>';
         }).join('') + '</div>';
 
+    var avisoAtual = '';
+    try { var avResp = await fetch('/api/aviso').then(function(r){return r.json();}); avisoAtual = avResp.aviso || ''; } catch(_) {}
     var broadcastHtml =
       '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:16px;margin-top:16px;">' +
       '<h4 style="margin-bottom:12px;font-size:14px;">Aviso na tela inicial do app</h4>' +
-      '<textarea id="aviso-texto" placeholder="Digite o aviso que vai aparecer para todos (deixe em branco para remover)" rows="2" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;margin-bottom:8px;box-sizing:border-box;resize:vertical;font-family:inherit;"></textarea>' +
+      '<textarea id="aviso-texto" placeholder="Digite o aviso que vai aparecer para todos (deixe em branco para remover)" rows="2" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;margin-bottom:8px;box-sizing:border-box;resize:vertical;font-family:inherit;">' + avisoAtual.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea>' +
       '<button class="btn-principal" onclick="salvarAviso()" style="padding:12px;margin-bottom:16px;">Salvar aviso</button>' +
       '<h4 style="margin-bottom:12px;font-size:14px;">Enviar notificação para todos os clientes</h4>' +
       '<input type="text" id="bc-titulo" placeholder="Título da notificação" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;margin-bottom:8px;box-sizing:border-box;">' +
