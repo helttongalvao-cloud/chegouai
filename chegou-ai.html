@@ -6758,10 +6758,8 @@ function _gerarEscPos(p) {
   return new Uint8Array(bytes);
 }
 
-async function _autoImprimirBT(pedidoId) {
-  if (!_btPrinter.ativo) return;
-  var p = window._pedidosCache && window._pedidosCache[pedidoId];
-  if (!p) return;
+async function _autoImprimirBT(p) {
+  if (!_btPrinter.ativo || !p) return;
   await _btEnviar(_gerarEscPos(p));
 }
 
@@ -9695,7 +9693,7 @@ function iniciarPollingPedidos() {
               var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : (p.guest_nome || 'Cliente');
               iniciarLoopSom();
               showToast('🔔', 'Novo pedido de ' + nomeCliente + '!', 'R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') + ' · ' + (p.endereco_entrega || '').substring(0, 35));
-              _autoImprimirBT(p.id);
+              _autoImprimirBT(p);
             }
           });
         }
