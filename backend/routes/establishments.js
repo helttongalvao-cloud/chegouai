@@ -278,6 +278,7 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
       { data: pedidosSemana },
       { data: pedidosMes },
       { data: pedidosAbertos, error: errPedidos },
+      { count: totalProdutos },
     ] = await Promise.all([
       supabaseAdmin.from('pedidos')
         .select('id, subtotal, comissao_plataforma, status, pagamento_status')
@@ -310,6 +311,7 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         .or('pagamento_status.eq.aprovado,tipo.eq.lista')
         .gte('criado_em', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
         .order('criado_em', { ascending: false }),
+      supabaseAdmin.from('produtos').select('id', { count: 'exact', head: true }).eq('estabelecimento_id', est.id),
     ]);
 
     if (errPedidos) console.error('[dashboard] pedidosAbertos query error:', errPedidos);
@@ -332,6 +334,7 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
 
     res.json({
       estabelecimento: est,
+      produtos: totalProdutos > 0 ? [{ id: 'placeholder' }] : [],
       comissao,
       stats: {
         pedidosHoje: pedidosHoje?.length || 0,
