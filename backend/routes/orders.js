@@ -1286,4 +1286,31 @@ router.patch('/:id/chat/lida', requireAuth, [param('id').isUUID()], async (req, 
   } catch (err) { next(err); }
 });
 
+// =============================================
+// POST /api/orders/upload-arte — Upload de arte do cliente para encomenda
+// =============================================
+router.post('/upload-arte', async (req, res, next) => {
+  try {
+    const { base64, contentType } = req.body;
+    if (!base64 || !contentType) return res.status(400).json({ error: 'Dados inválidos' });
+
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowed.includes(contentType)) return res.status(400).json({ error: 'Tipo não permitido' });
+
+    const buffer = Buffer.from(base64, 'base64');
+    if (buffer.length > 8 * 1024 * 1024) return res.status(400).json({ error: 'Imagem muito grande (máx 8MB)' });
+
+    const ext = contentType === 'image/jpeg' ? 'jpg' : contentType.split('/')[1];
+    const filename = `arte_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { error } = await supabaseAdmin.storage
+      .from('produtos')
+      .upload(filename, buffer, { contentType, upsert: false });
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabaseAdmin.storage.from('produtos').getPublicUrl(filename);
+    res.json({ url: publicUrl });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
