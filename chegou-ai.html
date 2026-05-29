@@ -1299,10 +1299,14 @@ async function apiCall(path, options) {
   if(authToken) opts.headers['Authorization'] = 'Bearer ' + authToken;
   if(opts.body && typeof opts.body === 'object') opts.body = JSON.stringify(opts.body);
 
+  // Pagamentos precisam de mais tempo (Pagar.me pode levar até 60s gerando QR)
+  var isPagamento = path.indexOf('/api/payments/') === 0;
+  var timeoutMs = isPagamento ? 90000 : 20000;
+
   var resp;
   try {
     var _ctrl = new AbortController();
-    var _tid = setTimeout(function(){ _ctrl.abort(); }, 20000);
+    var _tid = setTimeout(function(){ _ctrl.abort(); }, timeoutMs);
     resp = await fetch(API_BASE + path, Object.assign({ cache: 'no-store', signal: _ctrl.signal }, opts));
     clearTimeout(_tid);
   } catch(netErr) {

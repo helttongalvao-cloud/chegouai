@@ -264,6 +264,11 @@ router.post('/pix', paymentLimiter, optionalAuth, [
     });
   } catch (err) {
     console.error('[Pix]', err.message);
+    // Erros do Pagar.me: traduzir para 422 para que a mensagem apareça ao cliente
+    if (!err.status || err.status >= 500) {
+      err.status = 422;
+      err.message = 'Serviço de pagamento indisponível no momento. Aguarde alguns minutos e tente novamente.';
+    }
     next(err);
   }
 });
