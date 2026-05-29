@@ -5745,7 +5745,7 @@ async function renderEstabelecimento() {
         codigoColetaTag +
         (p.tipo_pedido !== 'mesa' ? (function(end){
           var cm = end && end.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
-          if(cm) return '<div class="pedido-endereco">📍 <a href="https://maps.google.com/?q=' + cm[1] + ',' + cm[2] + '" target="_blank" style="color:var(--verde);text-decoration:none;font-weight:600;">Ver localização no Maps 🗺️</a></div>';
+          if(cm) return '<div class="pedido-endereco">📍 <a href="https://maps.google.com/maps?q=' + cm[1] + ',' + cm[2] + '" target="_blank" style="color:var(--verde);text-decoration:none;font-weight:600;">Ver localização no Maps 🗺️</a></div>';
           return '<div class="pedido-endereco">📍 ' + sanitizar(end || '') + '</div>';
         })(p.endereco_entrega) : '') +
         tel +
@@ -6878,8 +6878,12 @@ function inicializarMapaMotoboy(endereco, est) {
     if(destLat && destLng) {
       adicionarDestino(destLat, destLng, '');
     } else if(endereco) {
-      // Endereço textual — geocodificar
-      fetch('/api/geocode?q=' + encodeURIComponent(endereco))
+      // Endereço textual — geocodificar com contexto de cidade do estabelecimento
+      var _estCidadeGeo = pedidoAtivoMotoboy && pedidoAtivoMotoboy.estabelecimentos
+        ? (pedidoAtivoMotoboy.estabelecimentos.cidade || '') + (pedidoAtivoMotoboy.estabelecimentos.estado ? ', ' + pedidoAtivoMotoboy.estabelecimentos.estado : '') + ', Brasil'
+        : 'Brasil';
+      var _endGeo = endereco + (_estCidadeGeo !== 'Brasil' ? ', ' + _estCidadeGeo : '');
+      fetch('/api/geocode?q=' + encodeURIComponent(_endGeo))
         .then(function(r){ return r.json(); })
         .then(function(res) {
           if(!res || !res[0]) return;
@@ -6942,7 +6946,7 @@ function linkMaps(endereco) {
   if (!endereco || endereco === '—') return '';
   var coordC = endereco.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
   var url = coordC
-    ? 'https://maps.google.com/?q=' + coordC[1] + ',' + coordC[2]
+    ? 'https://maps.google.com/maps?q=' + coordC[1] + ',' + coordC[2]
     : 'https://maps.google.com/search?q=' + encodeURIComponent(endereco);
   return '<a href="' + url + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:13px;color:var(--verde);font-weight:600;text-decoration:none;">🗺️ Abrir no Maps</a>';
 }
@@ -7159,9 +7163,10 @@ function renderFaseEntrega(pedido, fase) {
   else if(fase === 'indo_cliente') {
     var endCliente = pedido.endereco_entrega || '—';
     var coordC = endCliente.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
+    var _cidadeEst = (pedido.estabelecimentos && (pedido.estabelecimentos.cidade || pedido.estabelecimentos.estado)) ? (pedido.estabelecimentos.cidade || '') + (pedido.estabelecimentos.estado ? ', ' + pedido.estabelecimentos.estado : '') + ', Brasil' : 'Brasil';
     var navUrl = coordC
       ? 'https://www.google.com/maps/dir/?api=1&destination=' + coordC[1] + ',' + coordC[2] + '&travelmode=driving'
-      : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(endCliente);
+      : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(endCliente + ', ' + _cidadeEst);
     // Ativar FAB do chat ao entrar no indo_cliente
     setTimeout(function() { mostrarChatFab(pedido.id, 'motoboy'); }, 100);
     conteudo =
@@ -7169,7 +7174,8 @@ function renderFaseEntrega(pedido, fase) {
         '<div style="font-size:12px;color:var(--texto2);margin-bottom:4px;">Entregando para:</div>' +
         '<div style="font-size:15px;font-weight:700;">👤 ' + sanitizar(nomeCliente) + '</div>' +
         '<div style="font-size:12px;color:var(--texto2);margin-top:2px;">📍 ' + (coordC ? 'Localização GPS confirmada' : sanitizar(endCliente)) + '</div>' +
-        '<a href="' + navUrl + '" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:12px;padding:14px;border-radius:12px;background:var(--verde);color:#000;font-size:15px;font-weight:800;text-decoration:none;">🗺️ Navegar no Google Maps</a>' +
+        '<div id="mapa-entrega-ativa" style="width:100%;height:180px;border-radius:12px;background:var(--cinza3);margin-top:12px;margin-bottom:4px;"></div>' +
+        '<a href="' + navUrl + '" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:var(--verde);color:#000;font-size:15px;font-weight:800;text-decoration:none;">🗺️ Navegar no Google Maps</a>' +
         '<div style="margin-top:8px;display:flex;align-items:center;gap:8px;">' +
           '<a href="tel:' + pedido.telefone_cliente + '" style="flex:1;padding:8px;border-radius:8px;background:var(--cinza3);color:var(--texto);text-decoration:none;text-align:center;font-size:13px;font-weight:600;">📞 Ligar</a>' +
           '<button onclick="abrirChat(\'' + pedido.id + '\',\'motoboy\')" style="flex:1;padding:8px;border-radius:8px;background:var(--cinza3);color:var(--texto);border:none;font-size:13px;font-weight:600;cursor:pointer;">💬 Chat</button>' +

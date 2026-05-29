@@ -425,7 +425,7 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
     } catch (_) { /* coluna ainda não existe — ignorar */ }
 
     const selectPedido = 'id, status, total, taxa_entrega, endereco_entrega, telefone_cliente, guest_nome, codigo_coleta, ' +
-      'estabelecimentos (nome, emoji, endereco, lat, lng), ' +
+      'estabelecimentos (nome, emoji, endereco, lat, lng, cidade, estado), ' +
       'profiles!pedidos_cliente_id_fkey (nome)';
 
     // Início do dia em Brasília (UTC-3 = 03:00 UTC)
