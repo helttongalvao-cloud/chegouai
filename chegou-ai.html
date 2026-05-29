@@ -838,10 +838,10 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <div id="secao-titulo-categorias">
       <div class="cat-icon-grid">
         <div class="cat-icon-item ativo" onclick="filtrarCatIcon(this,'todos')"><span>✨</span><span style="font-size:13px;font-weight:700;">Todos</span></div>
-        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'lanche')"><span>🍔</span><span style="font-size:13px;font-weight:700;">Lanches</span></div>
-        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'comercio')"><span>🛍️</span><span style="font-size:13px;font-weight:700;">Comércio</span></div>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'comida')"><span>🍔</span><span style="font-size:13px;font-weight:700;">Comida</span></div>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'loja')"><span>🛍️</span><span style="font-size:13px;font-weight:700;">Lojas</span></div>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'encomenda')"><span>🎨</span><span style="font-size:13px;font-weight:700;">Encomendas</span></div>
         <div class="cat-icon-item" onclick="filtrarCatIcon(this,'farmacia')"><span>💊</span><span style="font-size:13px;font-weight:700;">Farmácias</span></div>
-        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'bebida')"><span>🥤</span><span style="font-size:13px;font-weight:700;">Bebidas</span></div>
       </div>
     </div>
 
@@ -3308,8 +3308,9 @@ async function carregarEstabelecimentos(cat, _retry) {
 function renderEstabelecimentos(cat) {
   categoriaAtual = cat || 'todos';
   const lista = document.getElementById('lista-estabelecimentos');
+  var _catMap = { comida: ['lanche','restaurante'], loja: ['loja','mercado'] };
   var filtrados = (cat === 'todos' || !cat) ? estabelecimentos.slice()
-    : estabelecimentos.filter(function(e){ return e.categoria === cat; });
+    : estabelecimentos.filter(function(e){ return _catMap[cat] ? _catMap[cat].indexOf(e.categoria) !== -1 : e.categoria === cat; });
 
   // Abertos sempre antes dos fechados/pausados
   filtrados.sort(function(a, b) {
