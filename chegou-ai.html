@@ -4098,8 +4098,7 @@ function irCheckout() {
   if(btnLoc) { btnLoc.textContent = '📡 Minha localização'; btnLoc.style.color = 'var(--texto2)'; btnLoc.style.borderColor = 'var(--cinza3)'; btnLoc.style.background = ''; }
   var endEl = document.getElementById('endereco-entrega');
   if(endEl) { endEl.readOnly = false; endEl.style.color = ''; endEl.dataset.latLng = ''; }
-  var btnConfOld = document.getElementById('btn-confirmar-localizacao');
-  if(btnConfOld) { btnConfOld.style.display = ''; btnConfOld.textContent = '✓ Confirmar localização'; btnConfOld.style.background = 'var(--cinza3)'; btnConfOld.style.color = 'var(--texto)'; btnConfOld.disabled = false; }
+  localizacaoConfirmada = false;
 
   irTela('tela-checkout');
 
@@ -4381,12 +4380,21 @@ function usarLocalizacao() {
   function _onGPS(pos) {
     clienteLat = pos.coords.latitude;
     clienteLng = pos.coords.longitude;
-    btn.textContent = '✅ Localização obtida — ajuste o pin se precisar';
+    // Salvar coordenadas GPS diretamente — sem abrir mapa (evita arraste acidental)
+    localizacaoConfirmada = true;
+    var endInput = document.getElementById('endereco-entrega');
+    if(endInput) {
+      endInput.dataset.latLng = 'Lat: ' + clienteLat.toFixed(6) + ', Lng: ' + clienteLng.toFixed(6);
+      endInput.readOnly = true;
+      endInput.style.color = 'var(--verde)';
+    }
+    btn.textContent = '✅ Localização confirmada';
     btn.style.borderColor = 'var(--verde)';
     btn.style.color = 'var(--verde)';
+    btn.style.background = 'rgba(0,200,83,0.12)';
     var av = document.getElementById('guest-gps-aviso');
     if(av) av.style.display = 'none';
-    mostrarMapaPicker(clienteLat, clienteLng);
+    simularFrete(endInput ? endInput.dataset.latLng : '');
   }
   function _onGPSErro(err) {
     btn.textContent = '📍 Usar minha localização atual';
