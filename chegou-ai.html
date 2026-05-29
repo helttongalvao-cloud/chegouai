@@ -5986,6 +5986,18 @@ async function renderInfoLoja() {
 
   // Carregar motoboys se entrega própria estiver ativa
   if(est.tipo_entrega === 'proprio') carregarMotoboysProprios();
+
+  // Card impressora Bluetooth
+  var btCard = document.createElement('div');
+  btCard.style.cssText = 'background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:16px;padding:16px;margin-top:14px;';
+  btCard.innerHTML =
+    '<h4 style="font-size:15px;font-weight:700;margin-bottom:4px;">🖨️ Impressora Bluetooth</h4>' +
+    '<p style="font-size:12px;color:var(--texto2);margin-bottom:12px;">Conecte uma impressora térmica ESC/POS para imprimir pedidos automaticamente ao chegarem.</p>' +
+    '<div id="bt-printer-status" style="font-size:13px;margin-bottom:12px;"></div>' +
+    '<button onclick="conectarImpressora()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--verde);color:#000;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">📡 Conectar impressora</button>' +
+    '<button onclick="desconectarImpressora()" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--cinza3);background:transparent;color:var(--texto2);font-size:13px;cursor:pointer;">Remover impressora</button>';
+  el.appendChild(btCard);
+  _atualizarStatusImpressora();
 }
 
 function selecionarFotoLoja(input) {
@@ -6607,6 +6619,172 @@ async function _renderEstabelecimentoInterno() {
     renderTabsPedido(pedidos);
   } catch(e) {
     if(lista) lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar pedidos. Verifique a conexão.</div>';
+  }
+}
+
+// =============================================
+// IMPRESSORA BLUETOOTH — ESC/POS
+// =============================================
+var _btPrinter = { device: null, characteristic: null, ativo: false };
+var _BT_SERVICES = [
+  '000018f0-0000-1000-8000-00805f9b34fb',
+  'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+  '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+  '0000ff00-0000-1000-8000-00805f9b34fb',
+];
+var _BT_CHARS = [
+  '00002af1-0000-1000-8000-00805f9b34fb',
+  'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f',
+  '49535343-8841-43f4-a8d4-ecbe34729bb3',
+  '0000ff02-0000-1000-8000-00805f9b34fb',
+];
+
+async function conectarImpressora() {
+  if (!navigator.bluetooth) {
+    showToast('❌', 'Não suportado', 'Use o Chrome no Android para conectar impressora Bluetooth.');
+    return;
+  }
+  try {
+    var device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: _BT_SERVICES });
+    device.addEventListener('gattserverdisconnected', _btDesconectada);
+    var server = await device.gatt.connect();
+    var char = null;
+    for (var i = 0; i < _BT_SERVICES.length && !char; i++) {
+      try {
+        var svc = await server.getPrimaryService(_BT_SERVICES[i]);
+        for (var j = 0; j < _BT_CHARS.length && !char; j++) {
+          try { char = await svc.getCharacteristic(_BT_CHARS[j]); } catch(_) {}
+        }
+        if (!char) {
+          var all = await svc.getCharacteristics();
+          char = all.find(function(c){ return c.properties.writeWithoutResponse || c.properties.write; }) || null;
+        }
+      } catch(_) {}
+    }
+    if (!char) throw new Error('Impressora não reconhecida. Tente outra impressora ESC/POS.');
+    _btPrinter.device = device;
+    _btPrinter.characteristic = char;
+    _btPrinter.ativo = true;
+    localStorage.setItem('chegouai_printer_name', device.name || 'Impressora');
+    _atualizarStatusImpressora();
+    showToast('✅', 'Impressora conectada!', (device.name || 'Impressora') + ' — pronta para imprimir.');
+    await _btEnviar(_escposTexto('=== CHEGOU AI ===\nConectado com sucesso!\n\n\n\n'));
+  } catch(e) {
+    if (e.name !== 'NotFoundError') showToast('❌', 'Erro Bluetooth', e.message);
+  }
+}
+
+function _btDesconectada() {
+  _btPrinter.ativo = false;
+  _btPrinter.characteristic = null;
+  showToast('⚠️', 'Impressora desconectada', 'Reconecte em Configurações → Impressora.');
+  _atualizarStatusImpressora();
+}
+
+async function _btEnviar(dados) {
+  if (!_btPrinter.characteristic || !_btPrinter.ativo) return false;
+  try {
+    var chunk = 512;
+    for (var i = 0; i < dados.length; i += chunk) {
+      var slice = dados.slice(i, i + chunk);
+      if (_btPrinter.characteristic.properties.writeWithoutResponse) {
+        await _btPrinter.characteristic.writeValueWithoutResponse(slice);
+      } else {
+        await _btPrinter.characteristic.writeValue(slice);
+      }
+      await new Promise(function(r){ setTimeout(r, 20); });
+    }
+    return true;
+  } catch(e) {
+    _btPrinter.ativo = false;
+    _atualizarStatusImpressora();
+    return false;
+  }
+}
+
+function _escposTexto(texto) {
+  return new TextEncoder().encode(texto);
+}
+
+function _gerarEscPos(p) {
+  var ESC = 0x1B, GS = 0x1D, LF = 0x0A;
+  var bytes = [];
+  function add(arr) { arr.forEach(function(b){ bytes.push(b); }); }
+  function txt(t) { new TextEncoder().encode(t).forEach(function(b){ bytes.push(b); }); }
+  function nl(n) { for(var i=0;i<(n||1);i++) bytes.push(LF); }
+  function linha() { txt('--------------------------------\n'); }
+
+  add([ESC, 0x40]); // init
+  add([ESC, 0x61, 0x01]); // centralizar
+  add([ESC, 0x45, 0x01]); // negrito on
+  txt((estAtual && estAtual.nome) || 'CHEGOU AI'); nl();
+  add([ESC, 0x45, 0x00]); // negrito off
+  var hora = new Date(p.criado_em).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  var data = new Date(p.criado_em).toLocaleDateString('pt-BR');
+  txt('Pedido #' + p.id.substring(0,8).toUpperCase()); nl();
+  txt(data + ' ' + hora); nl();
+  add([ESC, 0x61, 0x00]); // alinhar esquerda
+  linha();
+  var nomeCliente = (p.profiles && p.profiles.nome) || p.guest_nome || 'Cliente';
+  txt('Cliente: ' + nomeCliente); nl();
+  if (p.telefone_cliente) { txt('Tel: ' + p.telefone_cliente); nl(); }
+  if (p.tipo_pedido === 'mesa') {
+    txt('Mesa: ' + (p.mesa_numero || '')); nl();
+  } else if (p.endereco_entrega) {
+    var cm = p.endereco_entrega.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
+    txt('End: ' + (cm ? p.endereco_entrega.replace(cm[0],'').trim() : p.endereco_entrega)); nl();
+  }
+  linha();
+  txt('ITENS:'); nl();
+  if (p.tipo === 'lista' && p.lista_compras) {
+    txt(p.lista_compras); nl();
+  } else {
+    (p.itens_pedido || []).forEach(function(i) {
+      var qtd = Number.isInteger(i.quantidade) ? i.quantidade + 'x' : String(i.quantidade).replace('.',',') + 'kg';
+      txt(qtd + ' ' + i.nome + '  R$' + (parseFloat(i.preco_unitario||0) * i.quantidade).toFixed(2)); nl();
+      if (i.observacao) { txt('  Obs: ' + i.observacao); nl(); }
+      (i.complementos_selecionados || []).forEach(function(c){ txt('  + ' + c.nome); nl(); });
+    });
+  }
+  linha();
+  txt('Subtotal: R$ ' + parseFloat(p.subtotal||0).toFixed(2)); nl();
+  if (parseFloat(p.taxa_entrega||0) > 0) { txt('Entrega:  R$ ' + parseFloat(p.taxa_entrega||0).toFixed(2)); nl(); }
+  add([ESC, 0x45, 0x01]);
+  txt('TOTAL:    R$ ' + parseFloat(p.total||0).toFixed(2)); nl();
+  add([ESC, 0x45, 0x00]);
+  var pagLabel = { pix:'PIX', cartao:'CARTAO', dinheiro:'DINHEIRO' };
+  txt('Pgto: ' + (pagLabel[p.forma_pagamento] || (p.forma_pagamento||'').toUpperCase())); nl(4);
+  add([GS, 0x56, 0x00]); // cortar papel
+  return new Uint8Array(bytes);
+}
+
+async function _autoImprimirBT(pedidoId) {
+  if (!_btPrinter.ativo) return;
+  var p = window._pedidosCache && window._pedidosCache[pedidoId];
+  if (!p) return;
+  await _btEnviar(_gerarEscPos(p));
+}
+
+function desconectarImpressora() {
+  if (_btPrinter.device && _btPrinter.device.gatt && _btPrinter.device.gatt.connected) {
+    _btPrinter.device.gatt.disconnect();
+  }
+  _btPrinter = { device: null, characteristic: null, ativo: false };
+  localStorage.removeItem('chegouai_printer_name');
+  _atualizarStatusImpressora();
+  showToast('🖨️', 'Impressora removida', '');
+}
+
+function _atualizarStatusImpressora() {
+  var el = document.getElementById('bt-printer-status');
+  if (!el) return;
+  var nome = localStorage.getItem('chegouai_printer_name') || '';
+  if (_btPrinter.ativo) {
+    el.innerHTML = '<span style="color:var(--verde);">● Conectada: ' + sanitizar(nome) + '</span>';
+  } else if (nome) {
+    el.innerHTML = '<span style="color:#f97316;">● Desconectada: ' + sanitizar(nome) + ' &nbsp;·&nbsp; <span onclick="conectarImpressora()" style="text-decoration:underline;cursor:pointer;color:var(--verde);">Reconectar</span></span>';
+  } else {
+    el.innerHTML = '<span style="color:var(--texto2);">Nenhuma impressora configurada</span>';
   }
 }
 
@@ -9517,6 +9695,7 @@ function iniciarPollingPedidos() {
               var nomeCliente = (p.profiles && p.profiles.nome) ? p.profiles.nome : (p.guest_nome || 'Cliente');
               iniciarLoopSom();
               showToast('🔔', 'Novo pedido de ' + nomeCliente + '!', 'R$ ' + parseFloat(p.total).toFixed(2).replace('.',',') + ' · ' + (p.endereco_entrega || '').substring(0, 35));
+              _autoImprimirBT(p.id);
             }
           });
         }
