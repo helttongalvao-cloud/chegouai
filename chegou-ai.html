@@ -4098,12 +4098,8 @@ function irCheckout() {
   if(btnLoc) { btnLoc.textContent = '📡 Minha localização'; btnLoc.style.color = 'var(--texto2)'; btnLoc.style.borderColor = 'var(--cinza3)'; btnLoc.style.background = ''; }
   var endEl = document.getElementById('endereco-entrega');
   if(endEl) { endEl.readOnly = false; endEl.style.color = ''; endEl.dataset.latLng = ''; }
-  var ajusteWrapOld = document.getElementById('btn-ajustar-pin-wrap');
-  if(ajusteWrapOld) ajusteWrapOld.remove();
-  var mapaBotoesOld = document.getElementById('mapa-botoes-confirma');
-  if(mapaBotoesOld) mapaBotoesOld.remove();
   var btnConfOld = document.getElementById('btn-confirmar-localizacao');
-  if(btnConfOld) btnConfOld.style.display = '';
+  if(btnConfOld) { btnConfOld.style.display = ''; btnConfOld.textContent = '✓ Confirmar localização'; btnConfOld.style.background = 'var(--cinza3)'; btnConfOld.style.color = 'var(--texto)'; btnConfOld.disabled = false; }
 
   irTela('tela-checkout');
 
@@ -4385,14 +4381,12 @@ function usarLocalizacao() {
   function _onGPS(pos) {
     clienteLat = pos.coords.latitude;
     clienteLng = pos.coords.longitude;
-    btn.textContent = '✅ GPS obtido — verifique o pin';
+    btn.textContent = '✅ Localização obtida — ajuste o pin se precisar';
     btn.style.borderColor = 'var(--verde)';
     btn.style.color = 'var(--verde)';
-    btn.style.background = 'rgba(0,200,83,0.12)';
     var av = document.getElementById('guest-gps-aviso');
     if(av) av.style.display = 'none';
-    // Mostrar mapa bloqueado (sem drag) para o cliente confirmar visualmente
-    mostrarMapaVisualizacao(clienteLat, clienteLng);
+    mostrarMapaPicker(clienteLat, clienteLng);
   }
   function _onGPSErro(err) {
     btn.textContent = '📍 Usar minha localização atual';
@@ -4416,7 +4410,7 @@ function usarLocalizacao() {
 }
 
 // Mostra o mapa BLOQUEADO (sem drag) com dois botões: "Está correto" e "Ajustar pin"
-function mostrarMapaVisualizacao(lat, lng) {
+function mostrarMapaVisualizacao(lat, lng, precisao) {
   var wrap = document.getElementById('mapa-picker-wrap');
   var endInput = document.getElementById('endereco-entrega');
   if(!wrap) return;
@@ -4449,11 +4443,15 @@ function mostrarMapaVisualizacao(lat, lng) {
     botoesEl.id = botoesId;
     wrap.appendChild(botoesEl);
   }
+  var gpsImpreciso = precisao && precisao > 50;
+  var avisoHtml = gpsImpreciso
+    ? '<div style="background:rgba(251,146,60,0.15);border:1.5px solid #fb923c;border-radius:8px;padding:8px 10px;margin:6px 0 8px;font-size:12px;color:#fb923c;font-weight:600;text-align:center;">⚠️ GPS impreciso (~' + precisao + 'm) — o pin pode estar longe da sua casa.<br>Use <b>Ajustar</b> para corrigir.</div>'
+    : '<div style="font-size:12px;color:var(--texto2);margin:6px 0 8px;text-align:center;">📌 O pin está na sua casa?</div>';
   botoesEl.innerHTML =
-    '<div style="font-size:12px;color:var(--texto2);margin:6px 0 8px;text-align:center;">📌 O pin está na sua casa?</div>' +
+    avisoHtml +
     '<div style="display:flex;gap:8px;">' +
       '<button onclick="confirmarMapaVisualizacao()" style="flex:1;padding:12px;border-radius:10px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">✓ Está correto</button>' +
-      '<button onclick="ativarDragMapa()" style="flex:1;padding:12px;border-radius:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;">📌 Ajustar</button>' +
+      '<button onclick="ativarDragMapa()" style="flex:1;padding:12px;border-radius:10px;background:' + (gpsImpreciso ? '#fb923c' : 'var(--cinza3)') + ';border:none;color:' + (gpsImpreciso ? '#000' : 'var(--texto)') + ';font-size:14px;font-weight:' + (gpsImpreciso ? '700' : '600') + ';cursor:pointer;">📌 Ajustar</button>' +
     '</div>';
   simularFrete(endInput.dataset.latLng);
 }
