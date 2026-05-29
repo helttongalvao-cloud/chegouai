@@ -2493,7 +2493,8 @@ function entrarComo(perfil) {
     irTela('tela-estabelecimento');
     setTimeout(function() { renderEstabelecimento(); mostrarOnboardingLojista(); }, 50);
     if(window.estPollingTimer) clearInterval(window.estPollingTimer);
-    window.estPollingTimer = setInterval(function() { renderEstabelecimento(); }, 15000);
+    // Iniciar Realtime uma única vez no setup (não dentro de renderEstabelecimento)
+    if(window._lojistaEstId) iniciarRealtimeLojista(window._lojistaEstId);
     // Reconectar Realtime e re-renderizar ao voltar ao foco (app em background no Android)
     if(!window._visibilityListenerEst) {
       window._visibilityListenerEst = true;
@@ -5710,7 +5711,13 @@ function atualizarLabelCardapio(cat) {
   if(btn) btn.textContent = labelCardapio(cat);
 }
 
+var _renderEstLock = false;
 async function renderEstabelecimento() {
+  if(_renderEstLock) return;
+  _renderEstLock = true;
+  try { await _renderEstabelecimentoInterno(); } finally { _renderEstLock = false; }
+}
+async function _renderEstabelecimentoInterno() {
   // Reinicializa estrutura se foi destruída ao trocar de aba
   if(!document.getElementById('pedidos-estabelecimento')) {
     var secao = document.getElementById('est-secao-pedidos');
@@ -5751,10 +5758,12 @@ async function renderEstabelecimento() {
     atualizarStatsPeriodo();
     // Atualizar label cardápio pela categoria real
     if(data.estabelecimento) {
+      var estIdAnterior = window._lojistaEstId;
       window._lojistaEstId = data.estabelecimento.id;
       var btnCap = document.getElementById('est-nav-cardapio');
       if(btnCap) btnCap.textContent = labelCardapio(data.estabelecimento.categoria);
-      iniciarRealtimeLojista(data.estabelecimento.id);
+      // Só (re)iniciar Realtime se o ID mudou ou ainda não foi iniciado
+      if(!estIdAnterior || estIdAnterior !== data.estabelecimento.id) iniciarRealtimeLojista(data.estabelecimento.id);
       // Atualizar estado de pausa
       var estasPausado = !!data.estabelecimento.pausado;
       var btnPausar = document.getElementById('btn-toggle-pausar');
