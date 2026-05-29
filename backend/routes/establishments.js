@@ -359,7 +359,7 @@ router.put(
   [
     body('nome').optional().trim().isLength({ min: 2, max: 100 }).escape(),
     body('emoji').optional().trim().isLength({ min: 1, max: 8 }),
-    body('categoria').optional().isIn(['restaurante', 'mercado', 'farmacia', 'lanche', 'bebida']),
+    body('categoria').optional().isIn(['restaurante', 'mercado', 'farmacia', 'lanche', 'bebida', 'encomenda', 'loja']),
     body('tempo_entrega').optional().trim().isLength({ max: 30 }).escape(),
     body('taxa_entrega').optional().isFloat({ min: 0, max: 50 }).withMessage('Taxa de entrega inválida'),
     body('valor_minimo').optional().isFloat({ min: 0 }).withMessage('Valor mínimo inválido'),

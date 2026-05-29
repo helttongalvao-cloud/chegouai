@@ -1048,6 +1048,17 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <button onclick="confirmarRecebimento()" style="width:100%;padding:14px;border-radius:12px;background:var(--verde);border:none;color:var(--preto);font-size:15px;font-weight:700;cursor:pointer;">✅ Confirmar recebimento</button>
     <p style="font-size:12px;color:var(--texto2);text-align:center;margin-top:6px;">Toque quando o entregador chegar</p>
   </div>
+  <!-- Banner confirmação de endereço — aparece quando pronto -->
+  <div id="banner-confirma-endereco" style="display:none;background:linear-gradient(135deg,#1a2e1a,#0f2010);border:1.5px solid var(--verde);border-radius:16px;padding:16px;margin-bottom:12px;">
+    <div style="font-size:14px;font-weight:700;color:var(--verde);margin-bottom:6px;">📍 Confirme seu endereço de entrega</div>
+    <div id="confirma-end-texto" style="font-size:13px;color:var(--texto);background:var(--cinza2);border-radius:10px;padding:10px;margin-bottom:10px;word-break:break-word;"></div>
+    <div style="font-size:12px;color:var(--texto2);margin-bottom:10px;">⏱ O motoboy será acionado em <b id="confirma-end-timer" style="color:var(--verde);">30:00</b></div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="fecharBannerConfirmacaoEndereco(false)" style="flex:1;padding:11px;border-radius:10px;background:var(--verde);color:var(--preto);border:none;font-size:14px;font-weight:700;cursor:pointer;">✅ Confirmar</button>
+      <button onclick="alterarEnderecoEntrega()" style="flex:1;padding:11px;border-radius:10px;background:var(--cinza3);color:var(--texto);border:none;font-size:13px;font-weight:600;cursor:pointer;">✏️ Alterar</button>
+    </div>
+  </div>
+
   <button onclick="atualizarStatusManual()" style="width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--cinza3);background:transparent;color:var(--texto2);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;" id="btn-atualizar-status">🔄 Atualizar status</button>
   <button class="btn-principal mt16" onclick="sairRastreio()" style="width:100%;">Fazer novo pedido</button>
   <div id="btn-cancelar-pedido-wrap" style="display:none;margin-top:12px;">
@@ -3629,6 +3640,8 @@ async function abrirCardapio(id, _prodId) {
     var tituloCardapio = 'Cardápio';
     if(estAtual.categoria === 'mercado') tituloCardapio = 'Produtos';
     else if(estAtual.categoria === 'farmacia') tituloCardapio = 'Medicamentos';
+    else if(estAtual.categoria === 'loja') tituloCardapio = 'Produtos';
+    else if(estAtual.categoria === 'encomenda') tituloCardapio = 'Encomendas';
     var btnVoltar = document.querySelector('#tela-cardapio .btn-voltar');
     if(btnVoltar) btnVoltar.textContent = '← Voltar';
 
@@ -5230,6 +5243,8 @@ async function renderInfoLoja() {
     '<option value="mercado">Mercado</option>' +
     '<option value="farmacia">Farmácia</option>' +
     '<option value="bebida">Bebidas</option>' +
+    '<option value="loja">Loja de Produtos</option>' +
+    '<option value="encomenda">Encomendas Personalizadas</option>' +
     '</select></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Tempo médio de entrega</label>' +
     '<input type="text" id="loja-tempo-input" class="modal-campo" style="margin:0;" value="' + (est.tempo_entrega || '25-35 min') + '"></div>' +
@@ -5448,6 +5463,10 @@ function abrirModalProduto(idx) {
     ? [['medicamento','Medicamento'],['perfumaria','Perfumaria'],['controlado','Controlado'],['higiene','Higiene'],['outros','Outros']]
     : catAtual === 'mercado'
     ? [['principal','Principal'],['hortifruti','Hortifruti'],['acougue','Açougue'],['padaria','Padaria'],['bebidas','Bebidas'],['limpeza','Limpeza'],['higiene','Higiene'],['outros','Outros']]
+    : catAtual === 'loja'
+    ? [['roupas','Roupas'],['calcados','Calçados'],['acessorios','Acessórios'],['eletronicos','Eletrônicos'],['utilidades','Utilidades'],['outros','Outros']]
+    : catAtual === 'encomenda'
+    ? [['bolo','Bolo'],['doces','Doces'],['salgados','Salgados'],['artesanato','Artesanato'],['arte','Arte Personalizada'],['outros','Outros']]
     : [['principal','Principal'],['entradas','Entradas'],['lanches','Lanches'],['bebidas','Bebidas'],['sobremesas','Sobremesas'],['porcoes','Porções'],['combos','Combos'],['adicionais','Adicionais']];
   catSel.innerHTML = opcoes.map(function(o){ return '<option value="'+o[0]+'">'+o[1]+'</option>'; }).join('');
 
@@ -5703,6 +5722,8 @@ function labelCardapio(categoria) {
   if(categoria === 'mercado') return '🛒 Produtos';
   if(categoria === 'restaurante') return '🍽️ Cardápio';
   if(categoria === 'lanche') return '🍔 Cardápio';
+  if(categoria === 'loja') return '🛍️ Produtos';
+  if(categoria === 'encomenda') return '🎂 Encomendas';
   return '📦 Produtos';
 }
 
@@ -5786,20 +5807,32 @@ async function _renderEstabelecimentoInterno() {
     lista.innerHTML = pedidos.map(function(p) {
       var sc = p.status === 'aceito' ? 'badge-novo'
              : p.status === 'preparando' ? 'badge-preparando'
+             : p.status === 'em_producao' ? 'badge-preparando'
+             : p.status === 'separando' ? 'badge-preparando'
              : p.status === 'pronto' ? 'badge-pronto'
              : p.status === 'coletado' ? 'badge-coletado'
              : p.status === 'entregue' ? 'badge-entregue' : 'badge-pronto';
       var sl = p.status === 'aceito' ? '🔔 Novo'
              : p.status === 'preparando' ? '👨‍🍳 Preparando'
+             : p.status === 'em_producao' ? '🏭 Em produção'
+             : p.status === 'separando' ? '📦 Separando'
              : p.status === 'pronto' ? '✅ Pronto'
              : p.status === 'coletado' ? '🛵 Em entrega'
              : p.status === 'entregue' ? '✅ Entregue' : '✅ Pronto';
       var isEncerrado = p.status === 'coletado' || p.status === 'entregue';
+      var catEst = estDataCache && estDataCache.estabelecimento ? estDataCache.estabelecimento.categoria : '';
+      var isLojaEncomenda = catEst === 'loja' || catEst === 'encomenda';
       var botao = '';
       if(p.status === 'pendente')
         botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'aceito\',this)">✅ Aceitar pedido</button>';
       else if(p.status === 'aceito')
-        botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'preparando\',this)">Iniciar preparo</button>';
+        botao = isLojaEncomenda
+          ? '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'em_producao\',this)">🏭 Iniciar produção</button>'
+          : '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'preparando\',this)">Iniciar preparo</button>';
+      else if(p.status === 'em_producao')
+        botao = '<button class="btn-acao" onclick="atualizarStatusPedido(\'' + p.id + '\',\'separando\',this)">📦 Separar pedido</button>';
+      else if(p.status === 'separando')
+        botao = '<button class="btn-acao" onclick="escolherTipoEntregaModal(\'' + p.id + '\')">✅ Marcar pronto</button>';
       else if(p.status === 'preparando')
         botao = '<button class="btn-acao" onclick="escolherTipoEntregaModal(\'' + p.id + '\')">Marcar pronto</button>';
       else if(p.status === 'pronto')
@@ -5963,7 +5996,7 @@ var _tabPedidoAtiva = 'novos';
 
 var _tabsCfg = [
   { id: 'novos',   label: '🔔 Novos',    statuses: ['pendente','aceito'] },
-  { id: 'fazendo', label: '👨‍🍳 Fazendo',  statuses: ['preparando'] },
+  { id: 'fazendo', label: '👨‍🍳 Fazendo',  statuses: ['preparando','em_producao','separando'] },
   { id: 'prontos', label: '✅ Prontos',   statuses: ['pronto'] },
   { id: 'saindo',  label: '🛵 Saindo',   statuses: ['coletado','saiu_para_entrega'] },
   { id: 'todos',   label: '📋 Todos',    statuses: null },
@@ -6553,7 +6586,7 @@ async function renderAdmin(secao) {
         '<div class="campo"><label>Telefone</label><input type="tel" id="new-loja-tel" placeholder="(97) 99999-9999" oninput="mascaraTelefone(this)"></div>' +
         '<div class="campo"><label>E-mail de acesso</label><input type="email" id="new-loja-email" placeholder="loja@email.com"></div>' +
         '<div class="campo"><label>Chave Pix (opcional)</label><input type="text" id="new-loja-pix" placeholder="CPF, e-mail, telefone ou chave aleatória"></div>' +
-        '<div class="campo"><label>Categoria</label><select id="new-loja-cat" style="width:100%;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:16px 18px;color:var(--texto);font-size:16px;"><option value="lanche">Lanchonete</option><option value="restaurante">Restaurante</option><option value="mercado">Mercado</option><option value="farmacia">Farmácia</option></select></div>' +
+        '<div class="campo"><label>Categoria</label><select id="new-loja-cat" style="width:100%;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:16px 18px;color:var(--texto);font-size:16px;"><option value="lanche">Lanchonete</option><option value="restaurante">Restaurante</option><option value="mercado">Mercado</option><option value="farmacia">Farmácia</option><option value="loja">Loja de Produtos</option><option value="encomenda">Encomendas Personalizadas</option></select></div>' +
         '<div class="campo"><label>Cidade</label><input type="text" id="new-loja-cidade" placeholder="Ex: Guajará"></div>' +
         '<div class="campo"><label>Estado (UF)</label><input type="text" id="new-loja-estado" placeholder="Ex: AM" maxlength="2" style="text-transform:uppercase;"></div>' +
         '<div class="campo"><label>Endereço da loja (para calcular frete)</label>' +
@@ -6718,6 +6751,7 @@ function adminEditarLoja(e) {
     '<select id="adm-loja-cat" style="width:100%;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:14px 18px;color:var(--texto);font-size:15px;">' +
     '<option value="lanche">Lanchonete</option><option value="restaurante">Restaurante</option>' +
     '<option value="mercado">Mercado</option><option value="farmacia">Farmácia</option><option value="bebida">Bebidas</option>' +
+    '<option value="loja">Loja de Produtos</option><option value="encomenda">Encomendas Personalizadas</option>' +
     '</select></div>' +
     '<div class="form-grupo" style="margin-top:12px;"><label>Tempo de entrega</label><input id="adm-loja-tempo" class="modal-campo" style="margin:0;" placeholder="Ex: 30-45 min" value="' + sanitizar(e.tempo_entrega || '30-45 min') + '"></div>' +
     '<div style="display:flex;gap:8px;margin-top:12px;">' +
@@ -8903,12 +8937,8 @@ function mostrarCodigoEntrega(telefone) {
 }
 
 function atualizarRastreioPedido(status) {
-  var etapas = ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue'];
-  var idx = etapas.indexOf(status);
-  if(idx === -1) idx = 0;
-  // Mapear status → step visual (0-3)
-  var stepMap = [0, 0, 1, 2, 2, 2, 3];
-  var step = stepMap[Math.min(idx, stepMap.length - 1)];
+  var stepMap = { pendente:0, aceito:1, preparando:1, em_producao:1, separando:1, pronto:2, coletado:3, saiu_para_entrega:3, entregue:3 };
+  var step = stepMap[status] !== undefined ? stepMap[status] : 0;
 
   // Atualizar steps e conectores
   for(var i = 0; i <= 3; i++) {
@@ -8925,13 +8955,15 @@ function atualizarRastreioPedido(status) {
 
   // Atualizar card de status dinâmico
   var info = {
-    'pendente':   { icon:'⏳', titulo:'Pedido recebido!',       sub:'Aguardando confirmação da loja...', cls:'' },
-    'aceito':     { icon:'✅', titulo:'Pedido aceito!',          sub:'O estabelecimento confirmou seu pedido.',  cls:'' },
-    'preparando': { icon:'👨‍🍳', titulo:'Preparando...',           sub:'Seu pedido está sendo preparado.',        cls:'' },
-    'pronto':            { icon:'📦', titulo:'Pronto para entrega!',   sub:'Aguardando disponibilidade de motoboy. Em breve sairá para entrega.',  cls:'' },
-    'coletado':          { icon:'🛵', titulo:'Motoboy a caminho!',     sub:'O motoboy está indo até você.',            cls:'coletado' },
-    'saiu_para_entrega': { icon:'🛵', titulo:'Saiu para entrega!',     sub:'Toque em "Confirmar recebimento" quando chegar.', cls:'coletado' },
-    'entregue':          { icon:'🎉', titulo:'Pedido entregue!',       sub:'Bom apetite! Obrigado por usar o Chegou Aí.', cls:'entregue' },
+    'pendente':          { icon:'⏳', titulo:'Pedido recebido!',        sub:'Aguardando confirmação da loja...', cls:'' },
+    'aceito':            { icon:'✅', titulo:'Pedido aceito!',           sub:'O estabelecimento confirmou seu pedido.', cls:'' },
+    'preparando':        { icon:'👨‍🍳', titulo:'Preparando...',            sub:'Seu pedido está sendo preparado.',       cls:'' },
+    'em_producao':       { icon:'🏭', titulo:'Em produção!',             sub:'Seu pedido está sendo produzido com cuidado.', cls:'' },
+    'separando':         { icon:'📦', titulo:'Separando pedido!',        sub:'Quase lá! Seu pedido está sendo separado.', cls:'' },
+    'pronto':            { icon:'📦', titulo:'Pedido pronto!',           sub:'Confirme seu endereço de entrega abaixo.',  cls:'' },
+    'coletado':          { icon:'🛵', titulo:'Motoboy a caminho!',       sub:'O motoboy está indo até você.',            cls:'coletado' },
+    'saiu_para_entrega': { icon:'🛵', titulo:'Saiu para entrega!',       sub:'Toque em "Confirmar recebimento" quando chegar.', cls:'coletado' },
+    'entregue':          { icon:'🎉', titulo:'Pedido entregue!',         sub:'Obrigado por usar o Chegou Aí! 😊',       cls:'entregue' },
   }[status] || { icon:'⏳', titulo:'Pedido recebido!', sub:'Aguardando confirmação...', cls:'' };
 
   var card = document.getElementById('confirmado-status-card');
@@ -8947,9 +8979,12 @@ function atualizarRastreioPedido(status) {
   var btnCancelar = document.getElementById('btn-cancelar-pedido-wrap');
   if(btnCancelar) btnCancelar.style.display = 'none';
 
+  // Banner de confirmação de endereço quando pronto
+  mostrarBannerConfirmacaoEndereco(status);
+
   // Botão de chat — disponível desde o aceite do pedido
   var btnChatRastreio = document.getElementById('btn-chat-rastreio');
-  var chatAtivo = (status === 'aceito' || status === 'preparando' || status === 'pronto' || status === 'coletado' || status === 'saiu_para_entrega');
+  var chatAtivo = (status === 'aceito' || status === 'preparando' || status === 'em_producao' || status === 'separando' || status === 'pronto' || status === 'coletado' || status === 'saiu_para_entrega');
   if(btnChatRastreio) btnChatRastreio.style.display = chatAtivo ? 'flex' : 'none';
   if(chatAtivo && currentUser && currentUser.perfil === 'cliente' && pedidoAtualId) {
     mostrarChatFab(pedidoAtualId, 'cliente');
@@ -8970,6 +9005,67 @@ function atualizarRastreioPedido(status) {
   } else {
     if(tela) tela.classList.remove('modo-rastreio');
     if(overlay) overlay.style.display = 'none';
+  }
+}
+
+// === CONFIRMAÇÃO DE ENDEREÇO QUANDO PRONTO ===
+var _confirmEnderecoTimer = null;
+
+function mostrarBannerConfirmacaoEndereco(status) {
+  var banner = document.getElementById('banner-confirma-endereco');
+  if(!banner) return;
+  if(status !== 'pronto') { banner.style.display = 'none'; clearInterval(_confirmEnderecoTimer); return; }
+
+  // Já confirmado?
+  var jaConfirmado = pedidoAtualId && localStorage.getItem('chegouai_end_ok_' + pedidoAtualId);
+  if(jaConfirmado) { banner.style.display = 'none'; return; }
+
+  // Buscar endereço atual
+  if(pedidoAtualId) {
+    apiCall('/api/orders/' + pedidoAtualId).then(function(r) {
+      var endEl = document.getElementById('confirma-end-texto');
+      if(endEl) endEl.textContent = r.endereco_entrega || '';
+      // Calcular tempo restante (30 min a partir de atualizado_em)
+      var prontoEm = r.atualizado_em ? new Date(r.atualizado_em).getTime() : Date.now();
+      var expiresAt = prontoEm + 30 * 60 * 1000;
+      _iniciarTimerConfirmacao(expiresAt);
+    }).catch(function(){});
+  }
+  banner.style.display = 'block';
+}
+
+function _iniciarTimerConfirmacao(expiresAt) {
+  clearInterval(_confirmEnderecoTimer);
+  function tick() {
+    var resto = Math.max(0, expiresAt - Date.now());
+    var min = Math.floor(resto / 60000);
+    var seg = Math.floor((resto % 60000) / 1000);
+    var el = document.getElementById('confirma-end-timer');
+    if(el) el.textContent = min + ':' + (seg < 10 ? '0' : '') + seg;
+    if(resto <= 0) { clearInterval(_confirmEnderecoTimer); fecharBannerConfirmacaoEndereco(true); }
+  }
+  tick();
+  _confirmEnderecoTimer = setInterval(tick, 1000);
+}
+
+function fecharBannerConfirmacaoEndereco(automatico) {
+  var banner = document.getElementById('banner-confirma-endereco');
+  if(banner) banner.style.display = 'none';
+  clearInterval(_confirmEnderecoTimer);
+  if(pedidoAtualId) localStorage.setItem('chegouai_end_ok_' + pedidoAtualId, '1');
+}
+
+async function alterarEnderecoEntrega() {
+  var novoEnd = prompt('Digite o novo endereço de entrega:');
+  if(!novoEnd || novoEnd.trim().length < 5) return;
+  try {
+    await apiCall('/api/orders/' + pedidoAtualId + '/endereco', { method: 'PATCH', body: { endereco: novoEnd.trim() } });
+    var endEl = document.getElementById('confirma-end-texto');
+    if(endEl) endEl.textContent = novoEnd.trim();
+    showToast('✅', 'Endereço atualizado!', 'O motoboy receberá o novo endereço.');
+    fecharBannerConfirmacaoEndereco(false);
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
   }
 }
 

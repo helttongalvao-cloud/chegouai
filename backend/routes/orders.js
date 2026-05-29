@@ -629,6 +629,27 @@ router.get('/:id', optionalAuth, [param('id').isUUID()], async (req, res, next) 
 });
 
 // =============================================
+// PATCH /api/orders/:id/endereco — Cliente atualiza endereço enquanto pronto
+// =============================================
+router.patch('/:id/endereco', async (req, res, next) => {
+  const { endereco } = req.body;
+  if (!endereco || endereco.trim().length < 5) {
+    return res.status(400).json({ error: 'Endereço muito curto' });
+  }
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('pedidos')
+      .update({ endereco_entrega: endereco.trim().slice(0, 300) })
+      .eq('id', req.params.id)
+      .in('status', ['pronto', 'pendente', 'aceito', 'preparando', 'em_producao', 'separando'])
+      .select('id')
+      .single();
+    if (error || !data) return res.status(404).json({ error: 'Pedido não encontrado ou já foi coletado' });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // PATCH /api/orders/:id/status — Atualizar status
 // (usado por estabelecimento e motoboy)
 // =============================================
@@ -638,7 +659,7 @@ router.patch(
   [
     param('id').isUUID(),
     body('status')
-      .isIn(['aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue', 'cancelado'])
+      .isIn(['aceito', 'preparando', 'em_producao', 'separando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue', 'cancelado'])
       .withMessage('Status inválido'),
   ],
   async (req, res, next) => {
@@ -653,7 +674,7 @@ router.patch(
 
     // Mapeamento de quem pode fazer qual transição
     const transicoesPermitidas = {
-      estabelecimento: ['aceito', 'preparando', 'pronto', 'saiu_para_entrega', 'entregue', 'cancelado'],
+      estabelecimento: ['aceito', 'preparando', 'em_producao', 'separando', 'pronto', 'saiu_para_entrega', 'entregue', 'cancelado'],
       motoboy: ['coletado', 'entregue'],
       admin: ['aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue', 'cancelado'],
     };
@@ -723,8 +744,10 @@ router.patch(
       const tituloStatus = {
         aceito:            '✅ Pedido confirmado!',
         preparando:        '👨‍🍳 Preparando seu pedido',
-        pronto:            '📦 Pedido pronto!',
-        coletado:          '🛵 Saiu para entrega!',
+        em_producao:       '🏭 Em produção!',
+        separando:         '📦 Separando seu pedido',
+        pronto:            '📦 Pedido pronto! Confirme seu endereço',
+        coletado:          '🛵 Motoboy a caminho!',
         saiu_para_entrega: '🛵 Saiu para entrega!',
         entregue:          '🎉 Pedido entregue!',
         cancelado:         '❌ Pedido cancelado',
@@ -732,10 +755,12 @@ router.patch(
       const corpStatus = {
         aceito:            'A loja aceitou seu pedido e já começou a preparar.',
         preparando:        'Seu pedido está sendo preparado com cuidado.',
-        pronto:            'Seu pedido está pronto e aguardando o motoboy.',
+        em_producao:       'Seu pedido está sendo produzido. Aguarde!',
+        separando:         'Quase lá! Seu pedido está sendo separado.',
+        pronto:            'Confirme seu endereço de entrega. Toque para ver.',
         coletado:          'O motoboy pegou seu pedido. Toque para acompanhar.',
-        saiu_para_entrega: 'Seu pedido está a caminho. Toque para acompanhar.',
-        entregue:          'Seu pedido chegou! Bom apetite 😋',
+        saiu_para_entrega: 'Seu motoboy saiu para buscar seu pedido!',
+        entregue:          'Seu pedido chegou! Obrigado por usar o Chegou Aí 😊',
         cancelado:         'Infelizmente seu pedido foi cancelado.',
       };
       if (pedido.cliente_id && tituloStatus[status]) {
