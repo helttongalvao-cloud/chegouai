@@ -215,7 +215,7 @@ router.post('/pix', paymentLimiter, optionalAuth, [
 
     // Salvar CPF válido no perfil do usuário logado
     if (req.user && cpfBody && validarCPFBackend(cpfBody)) {
-      supabaseAdmin.from('profiles').update({ cpf: cpfBody }).eq('id', req.user.id).catch(() => {});
+      supabaseAdmin.from('profiles').update({ cpf: cpfBody }).eq('id', req.user.id).then(() => {}).catch(() => {});
     }
 
     const customerId = await criarOuBuscarCliente({
@@ -366,7 +366,7 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
       const cpfFinal = validarCPFBackend(cpfCandidatoCartao) ? cpfCandidatoCartao : null;
 
       if (req.user && cpfLimpo && validarCPFBackend(cpfLimpo)) {
-        supabaseAdmin.from('profiles').update({ cpf: cpfLimpo }).eq('id', req.user.id).catch(() => {});
+        supabaseAdmin.from('profiles').update({ cpf: cpfLimpo }).eq('id', req.user.id).then(() => {}).catch(() => {});
       }
       customerId = await criarOuBuscarCliente({
         nome:     req.user ? req.user.profile.nome     : pedido.guest_nome,
