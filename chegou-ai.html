@@ -3280,10 +3280,16 @@ async function carregarEstabelecimentos(cat, _retry) {
     if (_cidadeAtual && _cidadeAtual.cidade) params += 'cidade=' + encodeURIComponent(_cidadeAtual.cidade) + '&';
     params = params.replace(/[?&]$/, '');
     var data = await apiCall('/api/establishments' + params);
-    // Se cidade filtrada e sem resultado, mostrar tela de sem cobertura (não é race condition)
+    // Se cidade filtrada e sem resultado, tentar sem filtro antes de mostrar sem cobertura
     if((!data || data.length === 0) && _cidadeAtual && _cidadeAtual.cidade) {
-      _mostrarSemCobertura(_cidadeAtual.cidade);
-      return;
+      var paramsSemCidade = params.replace(/cidade=[^&]+&?/, '').replace(/[?&]$/, '');
+      var dataFallback = await apiCall('/api/establishments' + (paramsSemCidade || '')).catch(function(){ return null; });
+      if(dataFallback && dataFallback.length > 0) {
+        data = dataFallback; // mostra todas as lojas — cidade GPS não bateu com o banco
+      } else {
+        _mostrarSemCobertura(_cidadeAtual.cidade);
+        return;
+      }
     }
     // Retry se retornar vazio na primeira tentativa sem filtro (race condition de inicialização)
     if((!data || data.length === 0) && !_retry) {
