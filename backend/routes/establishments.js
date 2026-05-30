@@ -309,7 +309,7 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         .eq('estabelecimento_id', est.id)
         .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue', 'cancelado'])
         .or('pagamento_status.eq.aprovado,tipo.eq.lista')
-        .gte('criado_em', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+        .gte('criado_em', (() => { const d = new Date(); d.setHours(0,0,0,0); return d.toISOString(); })())
         .order('criado_em', { ascending: false }),
       supabaseAdmin.from('produtos').select('id', { count: 'exact', head: true }).eq('estabelecimento_id', est.id),
     ]);
