@@ -30,7 +30,7 @@ async function buscarPedidoPendente(pedidoId, clienteId) {
     .from('pedidos')
     .select('*, estabelecimentos(nome, pagarme_recipient_id, tipo_entrega)')
     .eq('id', pedidoId)
-    .eq('pagamento_status', 'pendente');
+    .in('pagamento_status', ['pendente', 'aguardando']);
 
   if (clienteId) {
     query = query.eq('cliente_id', clienteId);
@@ -39,7 +39,7 @@ async function buscarPedidoPendente(pedidoId, clienteId) {
   }
 
   const { data: pedido, error } = await query.single();
-  if (error || !pedido) throw Object.assign(new Error('Pedido não encontrado'), { status: 404 });
+  if (error || !pedido) throw Object.assign(new Error('Pedido não encontrado ou já foi pago'), { status: 404 });
   return pedido;
 }
 
@@ -193,6 +193,29 @@ router.post('/pix', paymentLimiter, optionalAuth, [
     const { pedidoId } = req.body;
 
     const pedido = await buscarPedidoPendente(pedidoId, req.user?.id || null);
+
+    // Se já tem Pix gerado (aguardando pagamento), rebuscar o QR no Pagar.me em vez de criar novo
+    if (pedido.pagamento_status === 'aguardando' && pedido.pagarme_order_id) {
+      try {
+        const { buscarChargePix } = require('../services/pagarme');
+        const pixExistente = await buscarChargePix(pedido.pagarme_order_id);
+        if (pixExistente.qrCode) {
+          return res.json({
+            paymentId:    pedido.pagarme_order_id,
+            qrCode:       pixExistente.qrCode,
+            qrCodeBase64: pixExistente.qrCodeBase64,
+            expiresAt:    pixExistente.expiresAt,
+          });
+        }
+      } catch (e) {
+        console.warn('[Pix retry] Falha ao rebuscar QR existente:', e.message);
+      }
+      // Se não conseguir rebuscar, resetar para pendente e tentar novamente
+      await supabaseAdmin.from('pedidos').update({ pagamento_status: 'pendente', pagarme_order_id: null }).eq('id', pedidoId);
+      pedido.pagamento_status = 'pendente';
+      pedido.pagarme_order_id = null;
+    }
+
     const split  = calcularSplit({
       subtotal:       pedido.subtotal,
       taxaEntrega:    pedido.taxa_entrega,

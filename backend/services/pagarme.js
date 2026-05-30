@@ -354,6 +354,29 @@ async function criarCobrancaCartao({
 }
 
 // =============================================
+// BUSCAR PIX EXISTENTE — para reexibir QR já gerado
+// =============================================
+async function buscarChargePix(pagarmeOrderId) {
+  const data = await pagarmeRequest('GET', `/orders/${pagarmeOrderId}`);
+  const charge = data.charges?.[0];
+  const pix = charge?.last_transaction;
+
+  let qrCodeBase64 = pix?.qr_code_url || null;
+  if (!qrCodeBase64 && pix?.qr_code) {
+    try {
+      qrCodeBase64 = await QRCode.toDataURL(pix.qr_code, { width: 300, margin: 2 });
+    } catch (_) {}
+  }
+
+  return {
+    qrCode: pix?.qr_code || null,
+    qrCodeBase64,
+    expiresAt: pix?.expires_at || null,
+    status: data.status,
+  };
+}
+
+// =============================================
 // BUSCAR PEDIDO
 // =============================================
 async function buscarPedido(pagarmeOrderId) {
@@ -487,6 +510,7 @@ module.exports = {
   criarCobrancaPix,
   criarCobrancaCartao,
   buscarPedido,
+  buscarChargePix,
   montarSplitRules,
   cadastrarRecebedor,
   atualizarTransferenciaRecebedor,
