@@ -2646,9 +2646,11 @@ setTimeout(function(){
       if(loja && loja.id) setTimeout(function() { abrirCardapio(loja.id); }, 300);
     }).catch(function() {});
   } else if(authToken && currentUser) {
-    // Sessão salva: ir direto para a tela correta sem esperar verificarSessao()
-    // verificarSessao() valida em background e desloga se token expirou
-    entrarComo(currentUser.perfil);
+    // DOMContentLoaded handler já chama entrarComo; só agir se ainda na splash
+    var _telaInicio = document.querySelector('.tela.ativa');
+    if(!_telaInicio || _telaInicio.id === 'tela-splash') {
+      entrarComo(currentUser.perfil);
+    }
   } else if(pedidoAtualId) {
     // Pedido ativo guest — verificar se já foi pago antes de mostrar confirmado
     apiCall('/api/orders/' + pedidoAtualId).then(function(resp) {
