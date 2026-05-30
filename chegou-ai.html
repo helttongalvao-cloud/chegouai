@@ -5861,14 +5861,7 @@ async function renderInfoLoja() {
   var linkLoja = est.slug
     ? window.location.origin + '/' + est.slug
     : window.location.origin + '/app?loja=' + est.id;
-  var cupomFreteAtivo = '';
-  try {
-    var cfResp = await apiCall('/api/orders/frete-gratis').catch(function(){ return null; });
-    if (cfResp && cfResp.codigo) cupomFreteAtivo = cfResp.codigo;
-  } catch(_) {}
-
-  var freteInfo = cupomFreteAtivo ? '\n\n🎁 Use o cupom *' + cupomFreteAtivo + '* e ganhe frete grátis no primeiro pedido!' : '';
-  var msgWhats = 'Oi! Agora você pode pedir no *' + (est.nome || 'nossa loja') + '* pelo app Chegou Aí! Mais fácil, mais rápido.\n\n👉 ' + linkLoja + freteInfo + '\n\nÉ só clicar, escolher e aguardar! 😊';
+  var msgWhats = 'Oi! Agora você pode pedir no *' + (est.nome || 'nossa loja') + '* pelo app Chegou Aí! Mais fácil, mais rápido.\n\n👉 ' + linkLoja + '\n\n🎁 Primeira compra com frete grátis!\n\nÉ só clicar, escolher e aguardar! 😊';
 
   el.innerHTML =
     '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:16px;padding:16px;margin-bottom:14px;">' +
