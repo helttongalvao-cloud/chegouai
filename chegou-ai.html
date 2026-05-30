@@ -4299,11 +4299,7 @@ async function abrirCardapio(id, _prodId) {
     }
 
     // Título dinâmico conforme categoria
-    var tituloCardapio = 'Cardápio';
-    if(estAtual.categoria === 'mercado') tituloCardapio = 'Produtos';
-    else if(estAtual.categoria === 'farmacia') tituloCardapio = 'Medicamentos';
-    else if(estAtual.categoria === 'loja') tituloCardapio = 'Produtos';
-    else if(estAtual.categoria === 'encomenda') tituloCardapio = 'Encomendas';
+    var tituloCardapio = labelCardapio(estAtual.categoria).replace(/^[^\s]+\s/, '');
     var btnVoltar = document.querySelector('#tela-cardapio .btn-voltar');
     if(btnVoltar) btnVoltar.textContent = '← Voltar';
 
@@ -4359,8 +4355,9 @@ function renderProdutos(produtos) {
   var lista = document.getElementById('lista-itens');
   if(!produtos.length) {
     var cat = estAtual && estAtual.categoria;
-    var vazioIcon = cat === 'mercado' ? '🛒' : cat === 'farmacia' ? '💊' : '🍽️';
-    var vazioTxt  = cat === 'mercado' ? 'Nenhum produto disponível' : cat === 'farmacia' ? 'Nenhum medicamento disponível' : 'Cardápio vazio';
+    var _lbl = labelCardapio(cat);
+    var vazioIcon = _lbl.split(' ')[0];
+    var vazioTxt  = _lbl.replace(/^[^\s]+\s/, '') + ' vazio';
     lista.innerHTML = '<div class="vazio"><div class="vazio-icon">' + vazioIcon + '</div>' + vazioTxt + '</div>';
     return;
   }
@@ -6403,6 +6400,7 @@ function labelCardapio(categoria) {
   if(categoria === 'restaurante') return '🍽️ Cardápio';
   if(categoria === 'lanche') return '🍔 Cardápio';
   if(categoria === 'loja') return '🛍️ Produtos';
+  if(categoria === 'bebida') return '🥤 Produtos';
   if(categoria === 'encomenda') return '🎨 Personalizados';
   return '📦 Produtos';
 }
