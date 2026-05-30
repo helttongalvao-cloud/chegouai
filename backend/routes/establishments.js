@@ -267,12 +267,18 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
 
     if (estErr || !est) return res.status(404).json({ error: 'Loja não encontrada' });
 
-    // Datas para filtros — meia-noite no fuso de Guajará-AM (UTC-4)
-    const BRAZIL_OFFSET = 4 * 60 * 60 * 1000;
-    const midnightBrasil = (d) => { const b = new Date(d.getTime() - BRAZIL_OFFSET); b.setUTCHours(0,0,0,0); return new Date(b.getTime() + BRAZIL_OFFSET); };
-    const hoje = midnightBrasil(new Date());
-    const inicioSemana = midnightBrasil(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000));
-    const inicioMes = (() => { const b = new Date(new Date() - BRAZIL_OFFSET); b.setUTCDate(1); b.setUTCHours(0,0,0,0); return new Date(b.getTime() + BRAZIL_OFFSET); })();
+    // Datas para filtros — meia-noite no fuso America/Eirunepe (UTC-4, sem horário de verão)
+    const midnightEirunepe = (d) => {
+      const dataLocal = d.toLocaleDateString('en-CA', { timeZone: 'America/Eirunepe' }); // "YYYY-MM-DD"
+      return new Date(dataLocal + 'T00:00:00-04:00');
+    };
+    const hoje = midnightEirunepe(new Date());
+    const inicioSemana = midnightEirunepe(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000));
+    const inicioMes = (() => {
+      const d = new Date();
+      const ano = d.toLocaleDateString('en-CA', { timeZone: 'America/Eirunepe' }).slice(0, 7); // "YYYY-MM"
+      return new Date(ano + '-01T00:00:00-04:00');
+    })();
 
     // Todas as queries de pedidos em paralelo
     const [
