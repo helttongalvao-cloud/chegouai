@@ -4665,7 +4665,7 @@ function alterarQtdCarrinho(idx, delta) {
   atualizarCarrinho();
   if(document.getElementById('tela-checkout').classList.contains('ativa')) {
     if(carrinho.length === 0) irTela('tela-cardapio');
-    else irCheckout(); // recarrega checkout
+    else irCheckout(true); // recarrega checkout sem mover scroll
   }
 }
 
@@ -4753,7 +4753,7 @@ function simularFrete(endereco) {
 }
 
 // CHECKOUT
-function irCheckout() {
+function irCheckout(_manterScroll) {
   var subtotal = calcularTotalCarrinho();
   document.getElementById('subtotal-valor').textContent = 'R$ ' + subtotal.toFixed(2).replace('.',',');
   
@@ -4809,6 +4809,7 @@ function irCheckout() {
   localizacaoConfirmada = false;
 
   irTela('tela-checkout');
+  if(!_manterScroll) window.scrollTo(0, 0);
 
   // Mostrar campo nome e CPF, esconder cupom para guest
   var secaoGuest = document.getElementById('secao-guest-nome');
