@@ -267,10 +267,12 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
 
     if (estErr || !est) return res.status(404).json({ error: 'Loja não encontrada' });
 
-    // Datas para filtros
-    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    const inicioSemana = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000); inicioSemana.setHours(0, 0, 0, 0);
-    const inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
+    // Datas para filtros — meia-noite no fuso de Guajará-AM (UTC-4)
+    const BRAZIL_OFFSET = 4 * 60 * 60 * 1000;
+    const midnightBrasil = (d) => { const b = new Date(d.getTime() - BRAZIL_OFFSET); b.setUTCHours(0,0,0,0); return new Date(b.getTime() + BRAZIL_OFFSET); };
+    const hoje = midnightBrasil(new Date());
+    const inicioSemana = midnightBrasil(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000));
+    const inicioMes = (() => { const b = new Date(new Date() - BRAZIL_OFFSET); b.setUTCDate(1); b.setUTCHours(0,0,0,0); return new Date(b.getTime() + BRAZIL_OFFSET); })();
 
     // Todas as queries de pedidos em paralelo
     const [
