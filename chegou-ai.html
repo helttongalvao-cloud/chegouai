@@ -3160,12 +3160,10 @@ async function detectarECarregarCidade() {
       navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000, maximumAge: 300000 });
     });
   } catch(e) { trocarCidade(); return; } // GPS negado — pede cidade manualmente
-  // Reverse geocode via Nominatim
+  // Reverse geocode via proxy do backend (evita bloqueio do Nominatim no browser)
   try {
     var geo = await fetch(
-      'https://nominatim.openstreetmap.org/reverse?lat=' + coords.coords.latitude +
-      '&lon=' + coords.coords.longitude + '&format=json&accept-language=pt',
-      { headers: { 'Accept-Language': 'pt' } }
+      '/api/geocode/reverse?lat=' + coords.coords.latitude + '&lon=' + coords.coords.longitude
     ).then(function(r){ return r.json(); });
     var cidade = (geo.address && (geo.address.city || geo.address.town || geo.address.village || geo.address.municipality)) || null;
     var estado = (geo.address && geo.address.state) || null;
@@ -9709,9 +9707,12 @@ function iniciarPollingPedidos() {
         // Detectar mudanças de status em pedidos existentes e sempre atualizar tela
         var mudou = pedidos.some(function(p) { return ultimoStatusConhecido[p.id] !== p.status; });
         pedidos.forEach(function(p) { ultimoStatusConhecido[p.id] = p.status; });
-        // Parar loop de som quando não há mais pedidos pendentes
-        var temPendente = pedidos.some(function(p) { return p.status === 'pendente'; });
-        if(temPendente) iniciarLoopSom(); else pararLoopSom();
+        // Alerta sonoro apenas para pedidos novos criados hoje (evita som de pedidos antigos)
+        var hojeInicio = new Date(); hojeInicio.setHours(0,0,0,0);
+        var temPendenteHoje = pedidos.some(function(p) {
+          return p.status === 'aceito' && new Date(p.criado_em) >= hojeInicio;
+        });
+        if(temPendenteHoje) iniciarLoopSom(); else pararLoopSom();
         if(mudou) {
           if(document.getElementById('tela-estabelecimento').classList.contains('ativa')) {
             renderEstabelecimento();
