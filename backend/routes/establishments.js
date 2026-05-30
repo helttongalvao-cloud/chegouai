@@ -309,7 +309,11 @@ router.get('/me/dashboard', requireRole('estabelecimento'), async (req, res, nex
         .eq('estabelecimento_id', est.id)
         .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega', 'entregue', 'cancelado'])
         .or('pagamento_status.eq.aprovado,tipo.eq.lista')
-        .gte('criado_em', (() => { const d = new Date(); d.setHours(0,0,0,0); return d.toISOString(); })())
+        .gte('criado_em', (() => {
+          // Pedidos ativos: mostrar últimas 48h (cobre pedidos em andamento de ontem à noite)
+          // Pedidos entregues/cancelados antigos somem depois de 48h
+          return new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+        })())
         .order('criado_em', { ascending: false }),
       supabaseAdmin.from('produtos').select('id', { count: 'exact', head: true }).eq('estabelecimento_id', est.id),
     ]);
