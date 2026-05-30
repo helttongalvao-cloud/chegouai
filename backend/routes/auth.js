@@ -320,34 +320,52 @@ router.post('/reset-senha', [
     if (!profile) return res.status(404).json({ error: 'Telefone não cadastrado' });
 
     const emailInterno = `tel_${tel}@chegouai.app`;
+    const novaSenha = req.body.novaSenha;
 
-    // 1. Tentar atualizar senha diretamente
+    // 1. Tentar atualizar pelo ID do perfil
     const { error: updateErr } = await supabaseAdmin.auth.admin.updateUser(
-      profile.id, { password: req.body.novaSenha }
+      profile.id, { password: novaSenha }
     );
 
-    if (updateErr) {
-      console.warn('[reset-senha] updateUser falhou:', updateErr.message);
+    if (!updateErr) return res.json({ ok: true });
 
-      // 2. Apagar e recriar
-      const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(profile.id);
-      if (delErr) console.warn('[reset-senha] deleteUser:', delErr.message);
+    console.warn('[reset-senha] updateUser por ID falhou:', updateErr.message);
 
-      const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
-        id: profile.id,
-        email: emailInterno,
-        password: req.body.novaSenha,
-        email_confirm: true,
-      });
+    // 2. Buscar auth user pelo email interno (ID pode estar dessincronizado)
+    let authUserId = null;
+    try {
+      const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+      const found = listData?.users?.find(u => u.email === emailInterno);
+      if (found) authUserId = found.id;
+    } catch (_) {}
 
-      // 3. Se create também falhou (user ainda existe), tentar update de novo
-      if (createErr) {
-        console.warn('[reset-senha] createUser falhou:', createErr.message, '— tentando update final');
-        const { error: updateErr2 } = await supabaseAdmin.auth.admin.updateUser(
-          profile.id, { password: req.body.novaSenha }
-        );
-        if (updateErr2) throw updateErr2;
+    if (authUserId && authUserId !== profile.id) {
+      // Auth user existe mas com ID diferente do perfil — atualizar senha e corrigir o perfil
+      const { error: updateErr2 } = await supabaseAdmin.auth.admin.updateUser(authUserId, { password: novaSenha });
+      if (!updateErr2) {
+        // Corrigir o ID do perfil para bater com o auth user
+        await supabaseAdmin.from('profiles').update({ id: authUserId }).eq('telefone', tel);
+        return res.json({ ok: true });
       }
+      console.warn('[reset-senha] updateUser por email falhou:', updateErr2.message);
+    }
+
+    // 3. Auth user não existe ou está corrompido — deletar e recriar com o ID do perfil
+    await supabaseAdmin.auth.admin.deleteUser(profile.id).catch(() => {});
+    if (authUserId && authUserId !== profile.id) {
+      await supabaseAdmin.auth.admin.deleteUser(authUserId).catch(() => {});
+    }
+
+    const { error: createErr } = await supabaseAdmin.auth.admin.createUser({
+      id: profile.id,
+      email: emailInterno,
+      password: novaSenha,
+      email_confirm: true,
+    });
+
+    if (createErr) {
+      console.error('[reset-senha] createUser falhou:', createErr.message);
+      return res.status(500).json({ error: 'Não foi possível redefinir a senha. Contate o suporte.' });
     }
 
     res.json({ ok: true });
