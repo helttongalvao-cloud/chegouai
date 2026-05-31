@@ -3187,7 +3187,8 @@ function _mostrarOverlayCidade(cidade, estado) {
       '<div style="font-size:28px;font-weight:800;color:#f97316;margin-bottom:4px;" id="overlay-cidade-nome">' + cidade + '</div>' +
       '<div style="font-size:13px;color:#888;margin-bottom:28px;">' + uf + '</div>' +
       '<button onclick="confirmarCidade()" style="width:100%;padding:16px;border-radius:14px;border:none;background:#f97316;color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;">✓ Confirmar</button>' +
-      '<button onclick="trocarCidade()" style="width:100%;padding:14px;border-radius:14px;border:none;background:#2a2a2a;color:#888;font-size:14px;cursor:pointer;">Trocar cidade</button>' +
+      '<button onclick="trocarCidade()" style="width:100%;padding:14px;border-radius:14px;border:none;background:#2a2a2a;color:#888;font-size:14px;cursor:pointer;margin-bottom:8px;">Trocar cidade</button>' +
+      '<button onclick="(function(){var el=document.getElementById(\'overlay-cidade\');if(el)el.remove();})()" style="width:100%;padding:10px;border:none;background:none;color:#555;font-size:13px;cursor:pointer;">Pular</button>' +
     '</div></div>'
   );
 }
@@ -3213,6 +3214,7 @@ function trocarCidade() {
       '<div style="font-size:13px;color:#888;margin-bottom:20px;text-align:center;">Digite o nome da cidade para ver os estabelecimentos disponíveis</div>' +
       '<input id="input-cidade-manual" type="text" placeholder="Ex: Guajará" style="width:100%;padding:14px;border-radius:12px;border:1px solid #333;background:#111;color:#fff;font-size:16px;margin-bottom:12px;box-sizing:border-box;" autofocus>' +
       '<button onclick="salvarCidadeManual()" style="width:100%;padding:16px;border-radius:14px;border:none;background:#f97316;color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;">Buscar</button>' +
+      '<button onclick="(function(){var el=document.getElementById(\'overlay-cidade\');if(el)el.remove();})()" style="width:100%;padding:10px;border:none;background:none;color:#555;font-size:13px;cursor:pointer;">Ver lojas sem filtrar cidade</button>' +
     '</div></div>'
   );
   setTimeout(function(){ var i = document.getElementById('input-cidade-manual'); if(i) i.focus(); }, 100);
