@@ -739,7 +739,7 @@ router.post(
           codigo: codigo.toUpperCase(),
           desconto_tipo,
           desconto_valor: parseFloat(desconto_valor || 0),
-          usos_max: (usos_max !== undefined && usos_max !== null && parseInt(usos_max) > 0) ? parseInt(usos_max) : null,
+          usos_max: (usos_max !== undefined && usos_max !== null) ? parseInt(usos_max) : 0,
           validade: validade || null,
           valor_minimo: parseFloat(valor_minimo || 0),
           frete_gratis: !!frete_gratis,
