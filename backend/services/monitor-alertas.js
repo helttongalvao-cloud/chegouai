@@ -59,7 +59,7 @@ async function verificarPedidosTravados() {
     .from('pedidos')
     .select(`
       id, status, total, criado_em, guest_nome,
-      estabelecimentos (nome),
+      estabelecimentos (nome, user_id),
       profiles (nome)
     `)
     .in('status', STATUS_ATIVOS)
@@ -89,12 +89,18 @@ async function verificarPedidosTravados() {
     if (minutosDesdeUltimo < REENVIO_MIN) continue;
 
     alertasEnviados.set(chave, { status: pedido.status, ultimoAlerta: agora });
-    alertasParaEnviar.push({ msg, pedidoId: pedido.id });
+    const lojistaMsgPreparando = (pedido.status === 'preparando' && min >= 30)
+      ? { titulo: '⏱️ Pedido em preparo há ' + min + 'min', corpo: 'Atualize o status do pedido.' }
+      : null;
+    alertasParaEnviar.push({ msg, lojistaMsgPreparando, pedidoId: pedido.id, lojista_user_id: pedido.estabelecimentos?.user_id });
   }
 
-  for (const { msg, pedidoId } of alertasParaEnviar) {
+  for (const { msg, lojistaMsgPreparando, pedidoId, lojista_user_id } of alertasParaEnviar) {
     for (const adminId of admins) {
       await enviarPush(adminId, msg.titulo, msg.corpo, { pedidoId });
+    }
+    if (lojistaMsgPreparando && lojista_user_id) {
+      await enviarPush(lojista_user_id, lojistaMsgPreparando.titulo, lojistaMsgPreparando.corpo, { pedidoId });
     }
   }
 
