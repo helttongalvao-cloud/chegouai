@@ -271,6 +271,25 @@ app.get('/api/geocode', async (req, res) => {
   }
 });
 
+// Reverse geocode proxy — coordinates → city name (evita bloqueio do Nominatim no browser)
+app.get('/api/geocode/reverse', async (req, res) => {
+  const { lat, lon } = req.query;
+  if (!lat || !lon) return res.status(400).json({ error: 'lat e lon obrigatórios' });
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&format=json&accept-language=pt-BR`;
+    const r = await fetch(url, {
+      headers: {
+        'User-Agent': 'ChegouAi/1.0 (helttongalvao@gmail.com)',
+        'Accept-Language': 'pt-BR',
+      },
+    });
+    const data = await r.json();
+    res.json(data);
+  } catch (e) {
+    res.status(502).json({ error: 'Erro ao consultar geocodificação reversa' });
+  }
+});
+
 // =============================================
 // HEALTH CHECK
 // =============================================
