@@ -1,6 +1,6 @@
 {
-  "name": "Chegou Aí — Delivery Guajará-AM",
-  "short_name": "Chegou Aí",
+  "name": "Chegô — Delivery Guajará-AM",
+  "short_name": "Chegô",
   "description": "Delivery rápido em Guajará-AM. Peça comida, mercado e farmácia.",
   "start_url": "/",
   "scope": "/",
@@ -66,7 +66,7 @@
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Tela inicial do Chegou Aí"
+      "label": "Tela inicial do Chegô"
     }
   ],
   "shortcuts": [

@@ -1098,7 +1098,7 @@ router.patch('/pendentes/:id/aprovar', async (req, res, next) => {
     } catch (_) {}
     try {
       const { enviarWhatsApp } = require('../services/whatsapp');
-      if (data.whatsapp) enviarWhatsApp(data.whatsapp, `🎉 Parabéns! Sua loja *${data.nome}* foi aprovada no Chegou Aí!\n\nAcesse o app, faça login e complete seu cadastro.\n\n*chegouaiapp.com.br/app*`);
+      if (data.whatsapp) enviarWhatsApp(data.whatsapp, `🎉 Parabéns! Sua loja *${data.nome}* foi aprovada no Chegô!\n\nAcesse o app, faça login e complete seu cadastro.\n\n*chegouaiapp.com.br/app*`);
     } catch (_) {}
 
     res.json({ ok: true });

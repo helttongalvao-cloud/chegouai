@@ -760,7 +760,7 @@ router.patch(
         pronto:            'Confirme seu endereço de entrega. Toque para ver.',
         coletado:          'O motoboy pegou seu pedido. Toque para acompanhar.',
         saiu_para_entrega: 'Seu motoboy saiu para buscar seu pedido!',
-        entregue:          'Seu pedido chegou! Obrigado por usar o Chegou Aí 😊',
+        entregue:          'Seu pedido chegou! Obrigado por usar o Chegô 😊',
         cancelado:         'Infelizmente seu pedido foi cancelado.',
       };
       if (pedido.cliente_id && tituloStatus[status]) {
@@ -1012,7 +1012,7 @@ router.post(
       // Notificar clientes
       pedidos.forEach((p) => {
         if (p.cliente_id) {
-          enviarPush(p.cliente_id, 'Chegou Aí', '🛵 Motoboy a caminho! Acompanhe no app.', { pedidoId: p.id, status: 'coletado' });
+          enviarPush(p.cliente_id, 'Chegô', '🛵 Motoboy a caminho! Acompanhe no app.', { pedidoId: p.id, status: 'coletado' });
         }
       });
 

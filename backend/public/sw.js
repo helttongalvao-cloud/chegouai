@@ -66,7 +66,7 @@ self.addEventListener('fetch', (e) => {
 // =============================================
 self.addEventListener('push', (e) => {
   let data = {};
-  try { data = e.data ? e.data.json() : {}; } catch (_) { data = { titulo: 'Chegou Aí', corpo: e.data ? e.data.text() : '' }; }
+  try { data = e.data ? e.data.json() : {}; } catch (_) { data = { titulo: 'Chegô', corpo: e.data ? e.data.text() : '' }; }
 
   const dados = data.dados || {};
   const tag = dados.pedidoId ? 'pedido-' + dados.pedidoId : 'chegouai-' + Date.now();
@@ -76,7 +76,7 @@ self.addEventListener('push', (e) => {
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
       cs.forEach((c) => c.postMessage({ type: 'PUSH_BEEP', dados }));
     }).then(() =>
-      self.registration.showNotification(data.titulo || 'Chegou Aí', {
+      self.registration.showNotification(data.titulo || 'Chegô', {
         body: data.corpo || '',
         icon: '/icons/icon-192.png',
         badge: '/icons/icon-192.png',

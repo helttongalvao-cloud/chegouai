@@ -88,7 +88,7 @@ async function criarCobrancaPix({ total, orderId, customerId, split }) {
     value: parseFloat(total.toFixed(2)),
     dueDate,
     externalReference: orderId,
-    description: `Pedido Chegou Aí #${orderId.substring(0, 8)}`,
+    description: `Pedido Chegô #${orderId.substring(0, 8)}`,
     ...(split && split.length > 0 && { split }),
   };
 
@@ -130,7 +130,7 @@ async function criarCobrancaCartao({
     value: parseFloat(total.toFixed(2)),
     dueDate: hoje,
     externalReference: orderId,
-    description: `Pedido Chegou Aí #${orderId.substring(0, 8)}`,
+    description: `Pedido Chegô #${orderId.substring(0, 8)}`,
     installmentCount: parseInt(installments) || 1,
     creditCard,
     creditCardHolderInfo,

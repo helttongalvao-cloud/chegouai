@@ -171,7 +171,7 @@ async function criarCobrancaPix({ total, orderId, customerId, splitRules }) {
     items: [
       {
         amount: toCents(total),
-        description: `Pedido Chegou Aí #${orderId.substring(0, 8)}`,
+        description: `Pedido Chegô #${orderId.substring(0, 8)}`,
         quantity: 1,
         code: orderId.substring(0, 52),
       },
@@ -325,7 +325,7 @@ async function criarCobrancaCartao({
     items: [
       {
         amount: toCents(total),
-        description: `Pedido Chegou Aí #${orderId.substring(0, 8)}`,
+        description: `Pedido Chegô #${orderId.substring(0, 8)}`,
         quantity: 1,
         code: orderId.substring(0, 52),
       },
@@ -408,7 +408,7 @@ async function cadastrarRecebedor({ nome, email, cpf, contaBancaria }) {
   const body = {
     name: nome,
     email,
-    description: 'Parceiro Chegou Aí',
+    description: 'Parceiro Chegô',
     type: 'individual',
     ...(doc && { document: doc, document_type: 'CPF' }),
     default_bank_account: contaBancaria,
@@ -439,7 +439,7 @@ async function atualizarTransferenciaRecebedor(recipientId) {
   return pagarmeRequest('PUT', `/recipients/${recipientId}`, {
     name: atual.name,
     email: atual.email,
-    description: atual.description || 'Parceiro Chegou Aí',
+    description: atual.description || 'Parceiro Chegô',
     type: atual.type || 'individual',
     ...(atual.document && { document: atual.document, document_type: atual.document_type || 'CPF' }),
     transfer_settings: {

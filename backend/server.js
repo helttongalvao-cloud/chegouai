@@ -139,7 +139,7 @@ app.get('/download', (req, res) => {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Baixar Chegou Aí</title>
+<title>Baixar Chegô</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:system-ui,sans-serif;background:#f8f8f8;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
@@ -155,8 +155,8 @@ app.get('/download', (req, res) => {
 </head>
 <body>
 <div class="card">
-  <img class="logo" src="https://chegouaiapp.com.br/icons/icon-192.png" alt="Chegou Aí" onerror="this.style.display='none'">
-  <h1>Chegou Aí</h1>
+  <img class="logo" src="https://chegouaiapp.com.br/icons/icon-192.png" alt="Chegô" onerror="this.style.display='none'">
+  <h1>Chegô</h1>
   <p>Toque no botão abaixo para baixar o app no seu celular Android.</p>
   <a class="btn btn-primary" id="btnDownload" href="${apkUrl}">⬇ Baixar app (.apk)</a>
   <p class="nota">Se o download não iniciar, o botão vai abrir no Chrome automaticamente.</p>
@@ -297,7 +297,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     version: '1.0.0',
-    app: 'Chegou Aí',
+    app: 'Chegô',
     timestamp: new Date().toISOString(),
   });
 });
@@ -334,7 +334,7 @@ const { iniciarMonitorAlertas } = require('./services/monitor-alertas');
 const { iniciarMonitorPagamentos } = require('./services/monitor-pagamentos');
 
 app.listen(PORT, () => {
-  console.log(`\n🛵  Chegou Aí — Backend rodando`);
+  console.log(`\n🛵  Chegô — Backend rodando`);
   console.log(`📍  http://localhost:${PORT}`);
   console.log(`🌍  Ambiente: ${process.env.NODE_ENV || 'development'}\n`);
 

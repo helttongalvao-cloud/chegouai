@@ -1,5 +1,5 @@
 // =============================================
-// SERVICE WORKER — Chegou Aí PWA
+// SERVICE WORKER — Chegô PWA
 // =============================================
 const CACHE_NAME = 'chegouai-v1';
 const STATIC_CACHE = 'chegouai-static-v1';
@@ -122,7 +122,7 @@ function offlineFallback() {
   return new Response(
     `<!DOCTYPE html>
     <html lang="pt-BR">
-    <head><meta charset="UTF-8"><title>Chegou Aí — Offline</title>
+    <head><meta charset="UTF-8"><title>Chegô — Offline</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
       body{background:#0A0A0A;color:#F0F0F0;font-family:sans-serif;
@@ -153,7 +153,7 @@ self.addEventListener('push', (event) => {
   if (!event.data) return;
   const data = event.data.json();
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Chegou Aí', {
+    self.registration.showNotification(data.title || 'Chegô', {
       body: data.body || '',
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-72.png',

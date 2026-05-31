@@ -197,7 +197,7 @@ router.post('/subscribe-fcm', requireAuth, async (req, res, next) => {
 // POST /api/notifications/test — envia push para o próprio usuário logado
 router.post('/test', requireAuth, async (req, res, next) => {
   try {
-    await enviarPush(req.user.id, '🔔 Teste Chegou Aí', 'Notificações estão funcionando!', {});
+    await enviarPush(req.user.id, '🔔 Teste Chegô', 'Notificações estão funcionando!', {});
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
