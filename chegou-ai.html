@@ -3111,20 +3111,20 @@ async function irHome() {
   if(elLista) elLista.style.display = '';
   detectarECarregarCidade(); // Detecta cidade pelo GPS e filtra estabelecimentos
   carregarAvisoHome();
-  // Fallback: verifica a cada 2s se a lista continua vazia e recarrega (até 5 tentativas)
+  // Fallback: verifica a cada 3s se a lista continua vazia e recarrega (até 10 tentativas = 30s)
   if(window._homeVerifTimer) clearInterval(window._homeVerifTimer);
   var _homeVerifTentativas = 0;
   window._homeVerifTimer = setInterval(function() {
     _homeVerifTentativas++;
     var l = document.getElementById('lista-estabelecimentos');
     var telaCerta = document.querySelector('.tela.ativa') && document.querySelector('.tela.ativa').id === 'tela-home';
-    if(!l || !telaCerta || _homeVerifTentativas >= 5) { clearInterval(window._homeVerifTimer); window._homeVerifTimer = null; return; }
-    if(!l.querySelector('.card-est-animado') && !l.querySelector('[data-sem-cobertura]')) {
-      carregarEstabelecimentos('todos');
-    } else {
-      clearInterval(window._homeVerifTimer); window._homeVerifTimer = null;
-    }
-  }, 2000);
+    if(!l || !telaCerta || _homeVerifTentativas >= 10) { clearInterval(window._homeVerifTimer); window._homeVerifTimer = null; return; }
+    var temCards = l.querySelector('.card-est-animado');
+    var temCobertura = l.querySelector('[data-sem-cobertura]');
+    var carregando = l.querySelector('.skeleton');
+    if(temCards || temCobertura) { clearInterval(window._homeVerifTimer); window._homeVerifTimer = null; return; }
+    if(!carregando) carregarEstabelecimentos('todos');
+  }, 3000);
 }
 
 // =============================================
@@ -3310,7 +3310,7 @@ async function carregarEstabelecimentos(cat, _retry) {
     if(!_retry) {
       setTimeout(function() { carregarEstabelecimentos(cat, true); }, 1500);
     } else {
-      lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar. Verifique a conexão.</div>';
+      lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar. Verifique a conexão.<br><button onclick="carregarEstabelecimentos(\'todos\')" style="margin-top:16px;padding:10px 28px;background:#16a34a;color:#fff;border:none;border-radius:24px;font-size:14px;font-weight:700;cursor:pointer;">↻ Tentar novamente</button></div>';
     }
   }
 }
@@ -3342,7 +3342,7 @@ function renderEstabelecimentos(cat) {
   }
 
   if(filtrados.length === 0) {
-    lista.innerHTML = '<div class="vazio"><div class="vazio-icon">🏪</div>Nenhum estabelecimento encontrado</div>';
+    lista.innerHTML = '<div class="vazio"><div class="vazio-icon">🏪</div>Nenhum estabelecimento encontrado<br><button onclick="carregarEstabelecimentos(\'todos\')" style="margin-top:16px;padding:10px 28px;background:#16a34a;color:#fff;border:none;border-radius:24px;font-size:14px;font-weight:700;cursor:pointer;">↻ Recarregar</button></div>';
     return;
   }
   var agora = Date.now();
