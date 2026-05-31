@@ -723,7 +723,7 @@ router.post(
   [
     body('codigo').trim().isLength({ min: 2, max: 50 }).withMessage('Código inválido'),
     body('desconto_tipo').isIn(['percentual', 'fixo']).withMessage('Tipo inválido'),
-    body('desconto_valor').isFloat({ min: 0.01 }).withMessage('Valor inválido'),
+    body('desconto_valor').optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 }).withMessage('Valor inválido'),
     body('usos_max').optional().isInt({ min: 0 }),
     body('validade').optional({ nullable: true, checkFalsy: true }).isISO8601().withMessage('Data inválida'),
   ],
@@ -738,7 +738,7 @@ router.post(
         .insert({
           codigo: codigo.toUpperCase(),
           desconto_tipo,
-          desconto_valor,
+          desconto_valor: parseFloat(desconto_valor || 0),
           usos_max: (usos_max !== undefined && usos_max !== null && parseInt(usos_max) > 0) ? parseInt(usos_max) : null,
           validade: validade || null,
           valor_minimo: parseFloat(valor_minimo || 0),
