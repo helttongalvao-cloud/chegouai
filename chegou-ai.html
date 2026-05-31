@@ -5124,9 +5124,7 @@ function usarLocalizacao() {
     btn.textContent = '📍 Usar minha localização atual';
     btn.style.color = 'var(--texto2)';
     if (err.code === 1) {
-      var instrLoc = isIOS ? 'Configurações → Safari → Localização'
-        : (window.Capacitor ? 'Configurações → Apps → Chegou Aí → Permissões → Localização' : 'Configurações → Chrome → Localização');
-      showToast('📍', 'Localização bloqueada', 'Permita em: ' + instrLoc);
+      showToast('📍', 'Localização bloqueada', 'Para usar sua localização, abra o link no Safari ou Chrome.');
     } else {
       showToast('📍', 'Localização indisponível', 'Verifique o sinal de GPS e tente novamente.');
     }
