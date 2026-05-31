@@ -2604,6 +2604,15 @@ function irTela(id) {
   document.querySelectorAll('.tela').forEach(function(t){ t.classList.remove('ativa'); });
   var proxima = document.getElementById(id);
   proxima.classList.add('ativa');
+  // Se voltando para home sem cards carregados, recarregar lojas
+  if(id === 'tela-home') {
+    setTimeout(function() {
+      var lista = document.getElementById('lista-estabelecimentos');
+      if(lista && !lista.querySelector('.card-est-animado') && !lista.querySelector('[data-sem-cobertura]') && !lista.querySelector('.skeleton')) {
+        carregarEstabelecimentos('todos');
+      }
+    }, 100);
+  }
   // Bottom nav: visível apenas na home do cliente
   var bn = document.getElementById('bottom-nav');
   var cf = document.getElementById('carrinho-float');
@@ -2638,7 +2647,7 @@ setTimeout(function(){
     var lojaIdParam = params.get('loja');
     irTela('tela-home');
     setTimeout(function() { abrirCardapio(lojaIdParam); }, 300);
-  } else if(window.location.pathname !== '/parceiro' && window.location.pathname.match(/^\/[a-z0-9][a-z0-9-]{1,39}$/)) {
+  } else if(window.location.pathname !== '/parceiro' && window.location.pathname !== '/app' && window.location.pathname !== '/landing' && window.location.pathname.match(/^\/[a-z0-9][a-z0-9-]{1,39}$/)) {
     // Slug da loja: /hamburguitos → resolve para UUID e abre cardápio
     var slugPath = window.location.pathname.replace(/^\//, '');
     irTela('tela-home');
