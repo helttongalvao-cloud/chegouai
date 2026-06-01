@@ -4853,8 +4853,10 @@ function irCheckout(_manterScroll) {
   var campoCpf = document.getElementById('campo-cpf-pix');
   if(secaoGuest) secaoGuest.style.display = !authToken ? '' : 'none';
   if(secaoCupom) secaoCupom.style.display = '';
-  // Ocultar campo CPF inicialmente (guests usam campo na seção Identificação; logados veem ao selecionar Pix/Cartão)
   if(campoCpf) campoCpf.style.display = 'none';
+  // CPF do guest sempre visível desde a abertura do checkout
+  var campoGuestCpf = document.getElementById('campo-guest-cpf');
+  if(campoGuestCpf) campoGuestCpf.style.display = !authToken ? 'block' : 'none';
   // Pré-preencher telefone se já logado e verificar frete grátis
   if(authToken && currentUser && currentUser.telefone) {
     var telEl = document.getElementById('checkout-telefone');
