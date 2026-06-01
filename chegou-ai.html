@@ -211,8 +211,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .estabelecimentos { display:flex; flex-direction:column; gap:0; background:#16161a; border-radius:20px; overflow:hidden; border:1px solid rgba(255,255,255,0.06); padding:0 14px; }
 .card-est { background:#18181b; border:1px solid rgba(255,255,255,0.07); border-radius:16px; cursor:pointer; transition:background 0.12s, transform 0.12s; display:flex; flex-direction:row; align-items:center; gap:14px; padding:16px; margin-bottom:12px; overflow:visible; -webkit-tap-highlight-color:transparent; }
 .card-est:active { background:#27272a; transform:scale(0.98); }
-@keyframes cardEntrar { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
-.card-est-animado { animation:cardEntrar 0.32s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes cardEntrar { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+.card-est-animado { animation:cardEntrar 0.3s cubic-bezier(0.22,1,0.36,1) both; }
 .card-est-avatar { width:62px; height:62px; border-radius:16px; flex-shrink:0; overflow:hidden; background:#27272a; display:flex; align-items:center; justify-content:center; border:1.5px solid #3f3f46; }
 .card-est-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
 .card-est-info { flex:1; min-width:0; }
@@ -3384,7 +3384,7 @@ function renderEstabelecimentos(cat) {
         : '<span style="background:#1c1917;color:#a8a29e;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;">Fechado</span>');
     var novoBadge = isNovo ? '<span style="background:linear-gradient(90deg,#f97316,#fb923c);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:4px;">Novo</span>' : '';
     var freteStr = e.taxa_entrega > 0 ? 'Frete R$ ' + parseFloat(e.taxa_entrega).toFixed(2).replace('.',',') : 'Frete grátis';
-    return '<div class="card-est-animado" style="display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid rgba(255,255,255,0.05);animation-delay:' + (idx * 40) + 'ms;cursor:pointer;" onclick="abrirCardapio(\'' + e.id + '\')">' +
+    return '<div class="card-est-animado" style="display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid rgba(255,255,255,0.05);animation-delay:' + (idx * 100) + 'ms;cursor:pointer;" onclick="abrirCardapio(\'' + e.id + '\')">' +
       logoHtml +
       '<div style="flex:1;min-width:0;">' +
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">' +
