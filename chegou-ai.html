@@ -4756,7 +4756,7 @@ function simularFrete(endereco) {
     if(text.includes('centro')) distKm = 0.5;
     else if(text.length > 20) distKm = 2.5;
     else distKm = 1.5;
-    infoTxt = '📍 Distância est.: ~' + distKm.toFixed(1) + ' km (use 📡 para precisão)';
+    infoTxt = '📍 Distância est.: ~' + distKm.toFixed(1) + ' km';
   }
 
   const taxa = calcularTaxaEntrega(distKm);
