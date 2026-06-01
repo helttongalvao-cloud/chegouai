@@ -4993,6 +4993,8 @@ async function confirmarPedido() {
   if(!end) { destacarErro('endereco-entrega'); alert('Informe o endereço de entrega'); return; }
   if(tel.length < 10) { destacarErro('checkout-telefone'); alert('Informe seu telefone para contato'); return; }
 
+  var formaPag = document.querySelector('.opcao-pag.selecionado')?.dataset.tipo || 'pix';
+
   // Validações adicionais para guest
   var guestNome = '';
   var guestCpf = '';
@@ -5000,8 +5002,10 @@ async function confirmarPedido() {
     guestNome = (document.getElementById('checkout-guest-nome')?.value || '').trim();
     if(guestNome.length < 2) { alert('Informe seu nome completo'); return; }
 
-    guestCpf = (document.getElementById('checkout-guest-cpf')?.value || '').replace(/\D/g,'');
-    if(guestCpf.length !== 11) { alert('Informe seu CPF (11 dígitos)'); return; }
+    if(formaPag === 'cartao') {
+      guestCpf = (document.getElementById('checkout-guest-cpf')?.value || '').replace(/\D/g,'');
+      if(guestCpf.length !== 11) { alert('Informe seu CPF (11 dígitos)'); return; }
+    }
 
     if(!clienteLat || !clienteLng) {
       var av = document.getElementById('guest-gps-aviso');
@@ -5027,10 +5031,8 @@ async function confirmarPedido() {
     return;
   }
 
-  var formaPag = document.querySelector('.opcao-pag.selecionado')?.dataset.tipo || 'pix';
-
-  // CPF obrigatório e válido para Pix e cartão
-  if(formaPag === 'pix' || formaPag === 'cartao') {
+  // CPF obrigatório apenas para cartão
+  if(formaPag === 'cartao') {
     var cpfVal = _cpfCheckout();
     if(!validarCPF(cpfVal)) {
       // Guest: destacar campo da seção Identificação
