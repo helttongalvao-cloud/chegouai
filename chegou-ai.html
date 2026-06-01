@@ -3097,8 +3097,10 @@ function cardEstAvatar(e) {
 
 function atualizarSaudacao() {
   var primeiroNome = currentUser && currentUser.nome ? currentUser.nome.split(' ')[0] : '';
+  var hora = new Date().getHours();
+  var saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
   var el = document.getElementById('home-greeting');
-  if(el) el.innerHTML = 'Olá' + (primeiroNome ? ', ' + primeiroNome + '!' : '!') + ' O que vai <span>pedir?</span>';
+  if(el) el.innerHTML = saudacao + (primeiroNome ? ', ' + primeiroNome + '!' : '!') + ' O que vai <span>pedir?</span>';
 }
 
 async function irHome() {
