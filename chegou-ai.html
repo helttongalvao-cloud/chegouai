@@ -249,8 +249,13 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .est-destaque-info p { color:var(--texto2); font-size:13px; }
 .itens-cardapio { padding:0 20px 120px; display:flex; flex-direction:column; gap:12px; }
 .card-item { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:14px; padding:14px; display:flex; align-items:center; gap:14px; }
-.item-emoji { font-size:36px; width:56px; height:56px; background:var(--cinza3); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.item-info { flex:1; }
+.item-img-wrap { position:relative; flex-shrink:0; width:100px; height:100px; }
+.item-img-wrap img { width:100px; height:100px; border-radius:12px; object-fit:cover; display:block; }
+.item-emoji { font-size:42px; width:100px; height:100px; background:linear-gradient(135deg,#0d2b14 0%,#1a4a24 100%); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.item-add-overlay { position:absolute; bottom:6px; right:6px; background:var(--verde); border:none; border-radius:8px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--preto); font-weight:700; transition:transform 0.15s; box-shadow:0 2px 8px rgba(0,0,0,0.4); }
+.item-add-overlay:active { transform:scale(0.9); }
+.item-indisponivel-overlay { position:absolute; bottom:6px; right:6px; font-size:10px; font-weight:700; color:#999; background:rgba(0,0,0,0.7); border-radius:8px; padding:4px 6px; white-space:nowrap; }
+.item-info { flex:1; min-width:0; }
 .item-nome { font-size:15px; font-weight:600; margin-bottom:3px; }
 .item-desc { font-size:13px; color:var(--texto2); margin-bottom:6px; }
 .item-preco { font-size:16px; font-weight:700; color:var(--verde); }
@@ -4455,35 +4460,42 @@ function renderProdutos(produtos) {
 
 function renderCardProduto(item, i) {
   var indisponivel = item.disponivel === false;
-  var opacidade = indisponivel ? 'opacity:0.5;' : '';
+  var op = indisponivel ? 'opacity:0.5;' : '';
   var temPromo = item.preco_promocional && parseFloat(item.preco_promocional) > 0 && parseFloat(item.preco_promocional) < parseFloat(item.preco);
-  var imgWrap, imgInner;
+  var pct = temPromo ? Math.round((1 - parseFloat(item.preco_promocional)/parseFloat(item.preco)) * 100) : 0;
+
+  // Imagem direita — 100x100 com botão + sobreposto
+  var btnOverlay = indisponivel
+    ? '<div class="item-indisponivel-overlay">Indisponível</div>'
+    : '<button class="item-add-overlay" onclick="adicionarItem(' + i + ')">+</button>';
+
+  var imgHtml;
   if(item.imagem_url) {
-    imgInner = '<img src="' + item.imagem_url + '" style="width:56px;height:56px;border-radius:10px;object-fit:cover;cursor:zoom-in;' + opacidade + '" onclick="event.stopPropagation();abrirLightbox(\'' + item.imagem_url.replace(/'/g,'%27') + '\')" onerror="this.style.display=\'none\'">';
+    imgHtml = '<div class="item-img-wrap" style="' + op + '">' +
+      '<img src="' + item.imagem_url + '" onclick="event.stopPropagation();abrirLightbox(\'' + item.imagem_url.replace(/'/g,'%27') + '\')" onerror="this.parentNode.innerHTML=\'<div class=\\\"item-emoji\\\">' + (item.emoji || '🍽️') + '</div>\' + this.parentNode.querySelector(\'.item-add-overlay,.item-indisponivel-overlay\').outerHTML;">' +
+      (temPromo ? '<div class="badge-desconto">-' + pct + '%</div>' : '') +
+      btnOverlay +
+    '</div>';
   } else {
-    imgInner = '<div class="item-emoji" style="' + opacidade + '">' + (item.emoji || '🍽️') + '</div>';
+    imgHtml = '<div class="item-img-wrap" style="' + op + '">' +
+      '<div class="item-emoji">' + (item.emoji || '🍽️') + '</div>' +
+      (temPromo ? '<div class="badge-desconto">-' + pct + '%</div>' : '') +
+      btnOverlay +
+    '</div>';
   }
-  if(temPromo) {
-    var pct = Math.round((1 - parseFloat(item.preco_promocional)/parseFloat(item.preco)) * 100);
-    imgWrap = '<div style="position:relative;flex-shrink:0;">' + imgInner + '<div class="badge-desconto">-' + pct + '%</div></div>';
-  } else {
-    imgWrap = imgInner;
-  }
-  var btnHtml = indisponivel
-    ? '<div style="font-size:11px;font-weight:700;color:#999;background:#f0f0f0;border-radius:20px;padding:6px 10px;white-space:nowrap;">Indisponível</div>'
-    : '<button class="item-add" onclick="adicionarItem(' + i + ')">+</button>';
+
   var precoHtml = temPromo
     ? '<div class="item-preco"><span style="text-decoration:line-through;color:var(--texto2);font-size:12px;margin-right:4px;">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + '</span>R$ ' + parseFloat(item.preco_promocional).toFixed(2).replace('.',',') + '</div>'
     : '<div class="item-preco">R$ ' + parseFloat(item.preco).toFixed(2).replace('.',',') + (item.unidade === 'kg' ? ' / kg' : '') + '</div>';
+
   return '<div class="card-item" data-nome="' + (item.nome || '').toLowerCase() + '">' +
-    imgWrap +
-    '<div class="item-info" style="' + opacidade + '">' +
+    '<div class="item-info" style="' + op + '">' +
       '<div class="item-nome">' + sanitizar(item.nome) + '</div>' +
       '<div class="item-desc">' + sanitizar(item.descricao || '') + '</div>' +
       precoHtml +
       (item.estoque !== null && item.estoque !== undefined ? '<div class="item-estoque">' + item.estoque + ' em estoque</div>' : '') +
     '</div>' +
-    btnHtml +
+    imgHtml +
   '</div>';
 }
 
