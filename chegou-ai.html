@@ -4905,27 +4905,24 @@ function selecionarPag(el, tipo) {
     var extras = document.getElementById('cartao-extras');
     if (extras) extras.style.display = 'none';
   }
-  // CPF: só obrigatório para Cartão
+  // CPF: Pagar.me exige em todos os métodos (Pix e cartão)
   var campoCpf = document.getElementById('campo-cpf-pix');
   var campoGuestCpf = document.getElementById('campo-guest-cpf');
   var cpfInput = document.getElementById('checkout-cpf');
   var isGuest = !authToken;
-  if(tipo === 'cartao') {
-    if(!isGuest) {
-      if(campoCpf) campoCpf.style.display = 'block';
-      if(cpfInput && !cpfInput.value && currentUser && currentUser.cpf) {
-        var cpfPerfil = currentUser.cpf.replace(/\D/g,'');
-        if(cpfPerfil.length === 11) {
-          cpfInput.value = cpfPerfil.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-        }
+  if(!isGuest) {
+    // Usuário logado: mostrar campo CPF sempre
+    if(campoCpf) campoCpf.style.display = 'block';
+    if(cpfInput && !cpfInput.value && currentUser && currentUser.cpf) {
+      var cpfPerfil = currentUser.cpf.replace(/\D/g,'');
+      if(cpfPerfil.length === 11) {
+        cpfInput.value = cpfPerfil.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
       }
-      if(cpfInput) cpfInput.placeholder = 'CPF (obrigatório)';
-    } else {
-      if(campoGuestCpf) campoGuestCpf.style.display = 'block';
     }
+    if(cpfInput) cpfInput.placeholder = 'CPF (obrigatório)';
   } else {
-    if(campoCpf) campoCpf.style.display = 'none';
-    if(campoGuestCpf) campoGuestCpf.style.display = 'none';
+    // Guest: campo CPF na seção Identificação — sempre visível
+    if(campoGuestCpf) campoGuestCpf.style.display = 'block';
   }
 }
 
@@ -5002,10 +4999,8 @@ async function confirmarPedido() {
     guestNome = (document.getElementById('checkout-guest-nome')?.value || '').trim();
     if(guestNome.length < 2) { alert('Informe seu nome completo'); return; }
 
-    if(formaPag === 'cartao') {
-      guestCpf = (document.getElementById('checkout-guest-cpf')?.value || '').replace(/\D/g,'');
-      if(guestCpf.length !== 11) { alert('Informe seu CPF (11 dígitos)'); return; }
-    }
+    guestCpf = (document.getElementById('checkout-guest-cpf')?.value || '').replace(/\D/g,'');
+    if(guestCpf.length !== 11) { alert('Informe seu CPF (11 dígitos)'); return; }
 
     if(!clienteLat || !clienteLng) {
       var av = document.getElementById('guest-gps-aviso');
@@ -5031,8 +5026,8 @@ async function confirmarPedido() {
     return;
   }
 
-  // CPF obrigatório apenas para cartão
-  if(formaPag === 'cartao') {
+  // CPF obrigatório para todos os métodos (exigência Pagar.me)
+  if(formaPag === 'pix' || formaPag === 'cartao') {
     var cpfVal = _cpfCheckout();
     if(!validarCPF(cpfVal)) {
       // Guest: destacar campo da seção Identificação
