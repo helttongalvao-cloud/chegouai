@@ -975,7 +975,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="campo" style="margin:0 0 10px;">
         <input type="text" placeholder="Nome completo *" id="checkout-guest-nome" style="margin:0;" autocomplete="name">
       </div>
-      <div class="campo" style="margin:0 0 10px;">
+      <div class="campo" id="campo-guest-cpf" style="margin:0 0 10px;display:none;">
         <input type="text" id="checkout-guest-cpf" placeholder="CPF *" maxlength="14" inputmode="numeric" oninput="mascaraCPF(this)" style="margin:0;">
       </div>
       <div id="guest-gps-aviso" style="font-size:12px;color:var(--erro);margin-top:4px;display:none;">
@@ -4896,22 +4896,27 @@ function selecionarPag(el, tipo) {
     var extras = document.getElementById('cartao-extras');
     if (extras) extras.style.display = 'none';
   }
-  // CPF: obrigatório para Pix e Cartão (anti-fraude Pagar.me requer CPF)
-  // Campo CPF extra: só para usuários logados (guests já têm CPF na seção "Identificação")
+  // CPF: só obrigatório para Cartão
   var campoCpf = document.getElementById('campo-cpf-pix');
+  var campoGuestCpf = document.getElementById('campo-guest-cpf');
   var cpfInput = document.getElementById('checkout-cpf');
   var isGuest = !authToken;
-  if((tipo === 'pix' || tipo === 'cartao') && !isGuest) {
-    if(campoCpf) campoCpf.style.display = 'block';
-    if(cpfInput && !cpfInput.value && currentUser && currentUser.cpf) {
-      var cpfPerfil = currentUser.cpf.replace(/\D/g,'');
-      if(cpfPerfil.length === 11) {
-        cpfInput.value = cpfPerfil.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  if(tipo === 'cartao') {
+    if(!isGuest) {
+      if(campoCpf) campoCpf.style.display = 'block';
+      if(cpfInput && !cpfInput.value && currentUser && currentUser.cpf) {
+        var cpfPerfil = currentUser.cpf.replace(/\D/g,'');
+        if(cpfPerfil.length === 11) {
+          cpfInput.value = cpfPerfil.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+        }
       }
+      if(cpfInput) cpfInput.placeholder = 'CPF (obrigatório)';
+    } else {
+      if(campoGuestCpf) campoGuestCpf.style.display = 'block';
     }
-    if(cpfInput) cpfInput.placeholder = 'CPF (obrigatório)';
   } else {
     if(campoCpf) campoCpf.style.display = 'none';
+    if(campoGuestCpf) campoGuestCpf.style.display = 'none';
   }
 }
 
