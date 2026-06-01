@@ -4857,6 +4857,27 @@ function irCheckout(_manterScroll) {
   // CPF do guest sempre visível desde a abertura do checkout
   var campoGuestCpf = document.getElementById('campo-guest-cpf');
   if(campoGuestCpf) campoGuestCpf.style.display = !authToken ? 'block' : 'none';
+
+  // Pré-preencher dados do guest salvo no localStorage
+  if(!authToken) {
+    try {
+      var guestSalvo = JSON.parse(localStorage.getItem('chegouai_guest') || 'null');
+      if(guestSalvo) {
+        var nomeEl = document.getElementById('checkout-guest-nome');
+        var telGEl = document.getElementById('checkout-telefone');
+        var cpfGEl = document.getElementById('checkout-guest-cpf');
+        if(nomeEl && !nomeEl.value && guestSalvo.nome) nomeEl.value = guestSalvo.nome;
+        if(telGEl && !telGEl.value && guestSalvo.telefone) {
+          var tg = guestSalvo.telefone.replace(/\D/g,'');
+          telGEl.value = tg.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
+        }
+        if(cpfGEl && !cpfGEl.value && guestSalvo.cpf) {
+          cpfGEl.value = guestSalvo.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+        }
+      }
+    } catch(e) {}
+  }
+
   // Pré-preencher telefone se já logado e verificar frete grátis
   if(authToken && currentUser && currentUser.telefone) {
     var telEl = document.getElementById('checkout-telefone');
@@ -5095,6 +5116,13 @@ async function confirmarPedido() {
 
     pedidoAtualId = pedidoResp.pedidoId;
     localStorage.setItem('chegouai_pedido_id', pedidoAtualId);
+
+    // Salvar dados do guest para pré-preencher no próximo pedido
+    if(isGuest) {
+      var guestData = { nome: guestNome, telefone: tel, cpf: guestCpf };
+      localStorage.setItem('chegouai_guest', JSON.stringify(guestData));
+    }
+
     cupomAplicado = null;
     freteGratis = false; // resetar após pedido criado
     esconderLoadingPagamento();
