@@ -4474,7 +4474,7 @@ function renderCardProduto(item, i) {
   var imgHtml;
   if(item.imagem_url) {
     imgHtml = '<div class="item-img-wrap" style="' + op + '">' +
-      '<img src="' + item.imagem_url + '" onclick="event.stopPropagation();abrirLightbox(\'' + item.imagem_url.replace(/'/g,'%27') + '\')" onerror="this.parentNode.innerHTML=\'<div class=\\\"item-emoji\\\">' + (item.emoji || '🍽️') + '</div>\' + this.parentNode.querySelector(\'.item-add-overlay,.item-indisponivel-overlay\').outerHTML;">' +
+      '<img src="' + item.imagem_url + '" onclick="event.stopPropagation();abrirLightbox(\'' + item.imagem_url.replace(/'/g,'%27') + '\')" onerror="imgCardError(this,\'' + (item.emoji || '🍽️') + '\')">' +
       (temPromo ? '<div class="badge-desconto">-' + pct + '%</div>' : '') +
       btnOverlay +
     '</div>';
@@ -4499,6 +4499,13 @@ function renderCardProduto(item, i) {
     '</div>' +
     imgHtml +
   '</div>';
+}
+
+function imgCardError(img, emoji) {
+  var wrap = img.parentNode;
+  var overlay = wrap.querySelector('.item-add-overlay,.item-indisponivel-overlay');
+  var overlayHTML = overlay ? overlay.outerHTML : '';
+  wrap.innerHTML = '<div class="item-emoji">' + emoji + '</div>' + overlayHTML;
 }
 
 function abrirBuscaCardapio() {
