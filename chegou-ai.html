@@ -319,6 +319,21 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .prog-step.feito .prog-step-label { color:var(--texto2); }
 .prog-connector { flex:1; height:2px; background:var(--cinza3); margin-top:21px; transition:background .3s; }
 .prog-connector.feito { background:var(--verde); }
+.timeline-encomenda { width:100%; margin-bottom:20px; padding:0 4px; }
+.tl-item { display:flex; gap:14px; position:relative; padding-bottom:20px; }
+.tl-item:last-child { padding-bottom:0; }
+.tl-left { display:flex; flex-direction:column; align-items:center; flex-shrink:0; }
+.tl-dot { width:32px; height:32px; border-radius:50%; background:var(--cinza3); border:2px solid var(--cinza4); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; transition:all .3s; }
+.tl-dot.feito { background:var(--verde); border-color:var(--verde); }
+.tl-dot.ativo { background:var(--cinza2); border-color:var(--verde); box-shadow:0 0 0 4px rgba(0,200,83,.15); }
+.tl-dot.pendente { opacity:.4; }
+.tl-line { width:2px; flex:1; background:var(--cinza3); margin:4px 0; min-height:16px; transition:background .3s; }
+.tl-line.feito { background:var(--verde); }
+.tl-right { padding-top:4px; flex:1; }
+.tl-label { font-size:14px; font-weight:700; color:var(--texto); line-height:1.3; }
+.tl-label.pendente { color:var(--texto2); font-weight:500; }
+.tl-hora { font-size:11px; color:var(--verde); margin-top:2px; font-weight:600; }
+.tl-sub { font-size:12px; color:var(--texto2); margin-top:2px; line-height:1.4; }
 /* Status card dinâmico */
 .status-card { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:16px; padding:18px 20px; width:100%; margin-bottom:20px; text-align:left; display:flex; align-items:center; gap:14px; }
 .status-card.coletado { border-color:rgba(0,200,83,.4); background:rgba(0,200,83,.06); }
@@ -1073,6 +1088,9 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="prog-step-label">Entregue</div>
     </div>
   </div>
+
+  <!-- Timeline de rastreio para encomendas (estilo Amazon) -->
+  <div id="timeline-encomenda" style="display:none;width:100%;"></div>
 
   <!-- Código de confirmação de entrega -->
   <div id="box-codigo-entrega" style="display:none;background:#111317;border:1.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 16px;width:100%;margin-bottom:16px;display:none;">
@@ -1995,7 +2013,7 @@ function iniciarRealtimeCliente(pedidoId) {
       var novoStatus = payload.new.status;
       if(!novoStatus || ultimoStatusConhecido[pedidoId] === novoStatus) return;
       ultimoStatusConhecido[pedidoId] = novoStatus;
-      atualizarRastreioPedido(novoStatus);
+      atualizarRastreioPedido(novoStatus, payload.new.historico_status);
       var msgs = {
         'aceito':     { icon:'✅', title:'Pedido aceito!',      msg:'O estabelecimento confirmou seu pedido.' },
         'preparando': { icon:'👨‍🍳', title:'Preparando...',       msg:'Seu pedido está sendo preparado.' },
@@ -9703,7 +9721,8 @@ function iniciarPollingPedidos() {
       if(r && (r.telefone_cliente || r.guest_telefone)) mostrarCodigoEntrega(r.telefone_cliente || r.guest_telefone);
       if(r && r.status && ultimoStatusConhecido[_pid] !== r.status) {
         ultimoStatusConhecido[_pid] = r.status;
-        atualizarRastreioPedido(r.status);
+        if(r.estabelecimentos) estAtual = Object.assign(estAtual || {}, r.estabelecimentos);
+        atualizarRastreioPedido(r.status, r.historico_status);
         if((r.status === 'coletado' || r.status === 'entregue') && _pid) {
           iniciarRealtimeGps(_pid);
         }
@@ -9723,7 +9742,8 @@ function iniciarPollingPedidos() {
         var novoStatus = resp.status;
         if(ultimoStatusConhecido[pedidoAtualId] !== novoStatus) {
           ultimoStatusConhecido[pedidoAtualId] = novoStatus;
-          atualizarRastreioPedido(novoStatus);
+          if(resp.estabelecimentos) estAtual = Object.assign(estAtual || {}, resp.estabelecimentos);
+          atualizarRastreioPedido(novoStatus, resp.historico_status);
           var msgs = {
             'aceito':            { icon: '✅', title: 'Pedido aceito!',     msg: 'O estabelecimento aceitou seu pedido.' },
             'preparando':        { icon: '👨‍🍳', title: 'Preparando...',      msg: 'Seu pedido está sendo preparado.' },
@@ -9793,7 +9813,8 @@ function iniciarPollingPedidos() {
         var novoStatus = resp.status;
         if(ultimoStatusConhecido[pedidoAtualId] !== novoStatus) {
           ultimoStatusConhecido[pedidoAtualId] = novoStatus;
-          atualizarRastreioPedido(novoStatus);
+          if(resp.estabelecimentos) estAtual = Object.assign(estAtual || {}, resp.estabelecimentos);
+          atualizarRastreioPedido(novoStatus, resp.historico_status);
           var msgs = {
             'aceito':              { icon: '✅', title: 'Pedido aceito!',        msg: 'O estabelecimento aceitou seu pedido.' },
             'preparando':          { icon: '👨‍🍳', title: 'Preparando...',         msg: 'Seu pedido está sendo preparado.' },
@@ -9900,7 +9921,71 @@ function mostrarCodigoEntrega(telefone) {
   }
 }
 
-function atualizarRastreioPedido(status) {
+var _historicoStatusAtual = {};
+
+function _renderTimelineEncomenda(status, historico) {
+  var tl = document.getElementById('timeline-encomenda');
+  var stepper = document.querySelector('.prog-stepper');
+  if(!tl) return;
+
+  var isEncomenda = estAtual && estAtual.categoria === 'encomenda';
+  if(!isEncomenda) { tl.style.display = 'none'; if(stepper) stepper.style.display = ''; return; }
+
+  // Esconder stepper horizontal para encomendas
+  if(stepper) stepper.style.display = 'none';
+  tl.style.display = 'block';
+
+  var passos = [
+    { key: 'pendente',          icon: '📋', label: 'Pedido recebido',      sub: 'Aguardando confirmação da loja' },
+    { key: 'aceito',            icon: '✅', label: 'Pedido confirmado',     sub: 'A loja confirmou seu pedido' },
+    { key: 'em_producao',       icon: '🏭', label: 'Em produção',           sub: 'Seu produto está sendo fabricado' },
+    { key: 'separando',         icon: '📦', label: 'Separando',             sub: 'Seu pedido está sendo embalado' },
+    { key: 'saiu_para_entrega', icon: '🛵', label: 'Saiu para entrega',     sub: 'A caminho de você' },
+    { key: 'entregue',          icon: '🏠', label: 'Entregue',              sub: 'Pedido entregue com sucesso!' },
+  ];
+
+  var ordem = passos.map(function(p) { return p.key; });
+  var idxAtual = ordem.indexOf(status);
+  if(idxAtual === -1) idxAtual = 0;
+
+  function fmtHora(iso) {
+    if(!iso) return '';
+    var d = new Date(iso);
+    return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }) + ' · ' +
+           d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  }
+
+  var html = '<div class="timeline-encomenda">';
+  passos.forEach(function(p, i) {
+    var feito = i < idxAtual;
+    var ativo = i === idxAtual;
+    var pendente = i > idxAtual;
+    var dotCls = feito ? 'tl-dot feito' : ativo ? 'tl-dot ativo' : 'tl-dot pendente';
+    var labelCls = pendente ? 'tl-label pendente' : 'tl-label';
+    var lineCls = feito ? 'tl-line feito' : 'tl-line';
+    var hora = (historico && historico[p.key]) ? fmtHora(historico[p.key]) : '';
+    var isLast = i === passos.length - 1;
+    html +=
+      '<div class="tl-item">' +
+        '<div class="tl-left">' +
+          '<div class="' + dotCls + '">' + (feito ? '✓' : p.icon) + '</div>' +
+          (!isLast ? '<div class="' + lineCls + '"></div>' : '') +
+        '</div>' +
+        '<div class="tl-right">' +
+          '<div class="' + labelCls + '">' + p.label + '</div>' +
+          (hora ? '<div class="tl-hora">' + hora + '</div>' : '') +
+          (ativo ? '<div class="tl-sub">' + p.sub + '</div>' : '') +
+        '</div>' +
+      '</div>';
+  });
+  html += '</div>';
+  tl.innerHTML = html;
+}
+
+function atualizarRastreioPedido(status, historico) {
+  if(historico) _historicoStatusAtual = historico;
+  _renderTimelineEncomenda(status, _historicoStatusAtual);
+
   var stepMap = { pendente:0, aceito:1, preparando:1, em_producao:1, separando:1, pronto:2, coletado:3, saiu_para_entrega:3, entregue:3 };
   var step = stepMap[status] !== undefined ? stepMap[status] : 0;
 
@@ -10042,7 +10127,8 @@ async function atualizarStatusManual() {
     var r = await apiCall('/api/orders/' + pedidoAtualId);
     if(r && r.status) {
       ultimoStatusConhecido[pedidoAtualId] = r.status;
-      atualizarRastreioPedido(r.status);
+      if(r.estabelecimentos) estAtual = Object.assign(estAtual || {}, r.estabelecimentos);
+      atualizarRastreioPedido(r.status, r.historico_status);
       if((r.status === 'coletado' || r.status === 'entregue') && r.motoboys && r.motoboys.lat) {
         atualizarMapaCliente(r.motoboys.lat, r.motoboys.lng, r.motoboys.nome);
       }

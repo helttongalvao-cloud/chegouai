@@ -589,7 +589,7 @@ router.get('/:id', optionalAuth, [param('id').isUUID()], async (req, res, next) 
   try {
     const { data: pedido, error } = await supabaseAdmin
       .from('pedidos')
-      .select(`*, estabelecimentos (nome, emoji, whatsapp, user_id), itens_pedido (*)`)
+      .select(`*, estabelecimentos (nome, emoji, whatsapp, user_id, categoria), itens_pedido (*)`)
       .eq('id', req.params.id)
       .single();
 
@@ -697,7 +697,17 @@ router.patch(
 
 
       // Campos extras para o update
-      const updateFields = { status, atualizado_em: new Date().toISOString() };
+      const agora = new Date().toISOString();
+      const updateFields = { status, atualizado_em: agora };
+
+      // Registrar timestamp no histórico de status (para timeline de encomendas)
+      const { data: pedidoAtual } = await supabaseAdmin
+        .from('pedidos').select('historico_status').eq('id', orderId).single();
+      if (pedidoAtual) {
+        const hist = pedidoAtual.historico_status || {};
+        if (!hist[status]) hist[status] = agora;
+        updateFields.historico_status = hist;
+      }
 
       // Gerar código de coleta quando pedido fica pronto
       if (status === 'pronto') {
