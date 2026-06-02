@@ -114,19 +114,25 @@ router.get('/repasses', async (req, res, next) => {
   try {
     const { desde, ate } = req.query;
 
-    let query = supabaseAdmin
+    // Buscar IDs dos pedidos no período para garantir filtro correto
+    let pedidoQuery = supabaseAdmin.from('pedidos').select('id').eq('pagamento_status', 'aprovado');
+    if (desde) pedidoQuery = pedidoQuery.gte('criado_em', desde);
+    if (ate)   pedidoQuery = pedidoQuery.lte('criado_em', ate + 'T23:59:59');
+    const { data: pedidosRange } = await pedidoQuery;
+    const pedidoIds = (pedidosRange || []).map(p => p.id);
+
+    if (pedidoIds.length === 0) return res.json([]);
+
+    const { data, error } = await supabaseAdmin
       .from('repasses')
       .select(`
         *,
         motoboys (id, nome, telefone, chave_pix),
         pedidos!inner (id, total, subtotal, taxa_entrega, criado_em, estabelecimentos(id, nome), motoboys(id, nome, chave_pix))
       `)
+      .in('pedido_id', pedidoIds)
       .order('criado_em', { ascending: false });
 
-    if (desde) query = query.gte('pedidos.criado_em', desde);
-    if (ate) query = query.lte('pedidos.criado_em', ate + 'T23:59:59');
-
-    const { data, error } = await query;
     if (error) throw error;
     res.json(data);
   } catch (err) {

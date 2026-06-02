@@ -7260,7 +7260,8 @@ async function renderAdmin(secao) {
   if(!el) return;
 
   // Ler filtros de data ANTES de destruir o innerHTML com o loading spinner
-  var _repasseDesde = (document.getElementById('repasse-desde') || {}).value || '2026-05-18';
+  var _dataseteDiasAtras = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
+  var _repasseDesde = (document.getElementById('repasse-desde') || {}).value || _dataseteDiasAtras;
   var _repasseAte   = (document.getElementById('repasse-ate')   || {}).value || new Date().toISOString().slice(0,10);
 
   // Parar monitor anterior ao mudar de aba
