@@ -1072,7 +1072,7 @@ router.get('/pendentes', async (req, res, next) => {
   try {
     const { data, error } = await supabaseAdmin
       .from('estabelecimentos')
-      .select('id, nome, categoria, tipo_entrega, whatsapp, cidade, estado, cadastro_data, user_id')
+      .select('id, nome, categoria, whatsapp, tipo_entrega, cidade, estado, cadastro_data, user_id')
       .eq('ativo', false)
       .order('cadastro_data', { ascending: true });
     if (error) throw error;
