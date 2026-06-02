@@ -1,7 +1,7 @@
 {
-  "name": "Chegô — Delivery Guajará-AM",
+  "name": "Chegô",
   "short_name": "Chegô",
-  "description": "Delivery rápido em Guajará-AM. Peça comida, mercado e farmácia.",
+  "description": "Delivery rápido na sua cidade. Peça comida, mercado, farmácia e muito mais.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
