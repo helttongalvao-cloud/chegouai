@@ -388,6 +388,10 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
       const cpfCandidatoCartao = cpfLimpo || (req.user ? req.user.profile.cpf : pedido.guest_cpf) || null;
       const cpfFinal = validarCPFBackend(cpfCandidatoCartao) ? cpfCandidatoCartao : null;
 
+      if (!cpfFinal) {
+        return res.status(400).json({ error: 'CPF inválido ou ausente. Informe um CPF válido para pagar com cartão.' });
+      }
+
       if (req.user && cpfLimpo && validarCPFBackend(cpfLimpo)) {
         supabaseAdmin.from('profiles').update({ cpf: cpfLimpo }).eq('id', req.user.id).then(() => {}).catch(() => {});
       }
