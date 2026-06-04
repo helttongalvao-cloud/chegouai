@@ -121,7 +121,7 @@ router.get('/', async (req, res, next) => {
 
     let query = supabaseAdmin
       .from('estabelecimentos')
-      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, tipo_frete, frete_base, frete_por_km, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp, pausado, criado_em, cidade, estado')
+      .select('id, nome, categoria, emoji, tempo_entrega, taxa_entrega, tipo_frete, frete_base, frete_por_km, aberto, lat, lng, valor_minimo, horarios, foto_url, whatsapp, pausado, criado_em, cidade, estado, cobertura')
       .eq('ativo', true)
       .order('nome');
 
@@ -135,7 +135,8 @@ router.get('/', async (req, res, next) => {
     }
 
     if (cidade) {
-      query = query.ilike('cidade', cidade.trim().slice(0, 100));
+      // Lojas nacionais aparecem em qualquer cidade; locais são filtradas
+      query = query.or(`cobertura.eq.nacional,cidade.ilike.${cidade.trim().slice(0, 100)}`);
     }
 
     const { data, error } = await query;
@@ -509,7 +510,7 @@ router.post(
 
       if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
-      const { nome, descricao, preco, emoji, disponivel, categoria, imagem_url, estoque, unidade } = req.body;
+      const { nome, descricao, preco, emoji, disponivel, categoria, imagem_url, estoque, unidade, prazo_entrega } = req.body;
 
       const produtoData = {
         estabelecimento_id: est.id,
@@ -523,6 +524,7 @@ router.post(
       if (categoria) produtoData.categoria = categoria;
       if (imagem_url) produtoData.imagem_url = imagem_url;
       if (estoque !== undefined) produtoData.estoque = estoque === null ? null : parseInt(estoque);
+      if (prazo_entrega !== undefined) produtoData.prazo_entrega = prazo_entrega || null;
 
       const { data, error } = await supabaseAdmin
         .from('produtos')
@@ -674,8 +676,8 @@ router.put(
       if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
       const campos = {};
-      ['nome', 'descricao', 'preco', 'emoji', 'disponivel', 'categoria', 'imagem_url', 'estoque', 'unidade'].forEach((key) => {
-        if (req.body[key] !== undefined) campos[key] = req.body[key];
+      ['nome', 'descricao', 'preco', 'emoji', 'disponivel', 'categoria', 'imagem_url', 'estoque', 'unidade', 'prazo_entrega'].forEach((key) => {
+        if (req.body[key] !== undefined) campos[key] = req.body[key] || null;
       });
 
       const { data, error } = await supabaseAdmin

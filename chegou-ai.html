@@ -810,8 +810,20 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <input type="hidden" id="busca-produto-input">
     <div id="resultado-busca-produto" style="display:none;margin-bottom:8px;"></div>
 
+    <!-- Switcher de modo: Entrega Rápida vs Lojas & Encomendas -->
+    <div style="display:flex;background:rgba(255,255,255,0.06);border-radius:12px;padding:3px;margin-bottom:16px;gap:3px;">
+      <button id="modo-btn-local" onclick="trocarModoHome('local')"
+        style="flex:1;padding:8px 10px;border-radius:9px;border:none;background:var(--verde);color:#fff;font-size:13px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;">
+        <span>🛵</span><span>Entrega Rápida</span>
+      </button>
+      <button id="modo-btn-nacional" onclick="trocarModoHome('nacional')"
+        style="flex:1;padding:8px 10px;border-radius:9px;border:none;background:transparent;color:rgba(255,255,255,0.45);font-size:13px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;">
+        <span>📦</span><span>Encomendas</span>
+      </button>
+    </div>
+
     <!-- Banners promocionais -->
-    <div style="margin-bottom:4px;">
+    <div id="banners-wrap" style="margin-bottom:4px;">
       <div class="banner-carousel-wrap" id="banner-carousel-wrap">
         <div class="banner-track" id="banner-track">
           <!-- Slide 0 — Frete grátis -->
@@ -856,19 +868,22 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       </div>
     </div>
 
-    <!-- Categorias — scroll horizontal -->
+    <!-- Categorias — scroll horizontal (muda por modo) -->
     <div id="secao-titulo-categorias">
-      <div class="cat-icon-grid">
+      <div class="cat-icon-grid" id="cats-local">
         <div class="cat-icon-item ativo" onclick="filtrarCatIcon(this,'todos')"><span>✨</span><span style="font-size:13px;font-weight:700;">Todos</span></div>
         <div class="cat-icon-item" onclick="filtrarCatIcon(this,'comida')"><span>🍔</span><span style="font-size:13px;font-weight:700;">Comida</span></div>
-        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'loja')"><span>🛍️</span><span style="font-size:13px;font-weight:700;">Lojas</span></div>
-        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'encomenda')"><span>🎨</span><span style="font-size:13px;font-weight:700;">Encomendas</span></div>
         <div class="cat-icon-item" onclick="filtrarCatIcon(this,'farmacia')"><span>💊</span><span style="font-size:13px;font-weight:700;">Farmácias</span></div>
         <div class="cat-icon-item" onclick="filtrarCatIcon(this,'bebida')"><span>🥤</span><span style="font-size:13px;font-weight:700;">Bebidas</span></div>
       </div>
+      <div class="cat-icon-grid" id="cats-nacional" style="display:none;">
+        <div class="cat-icon-item ativo" onclick="filtrarCatIcon(this,'todos')"><span>✨</span><span style="font-size:13px;font-weight:700;">Todos</span></div>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'loja')"><span>🛍️</span><span style="font-size:13px;font-weight:700;">Lojas</span></div>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'encomenda')"><span>🎨</span><span style="font-size:13px;font-weight:700;">Encomendas</span></div>
+      </div>
     </div>
 
-    <div class="secao-titulo" style="margin-bottom:8px;">Perto de você</div>
+    <div class="secao-titulo" id="secao-titulo-stores" style="margin-bottom:8px;">Perto de você</div>
     <!-- Filtros rápidos -->
     <div class="filtros-rapidos-wrap" id="filtros-rapidos">
       <button class="filtro-rapido-btn ativo" onclick="aplicarFiltroRapido(this,'todos')">✨ Todos</button>
@@ -3347,9 +3362,95 @@ async function carregarEstabelecimentos(cat, _retry) {
     if(!_retry) {
       setTimeout(function() { carregarEstabelecimentos(cat, true); }, 1500);
     } else {
-      lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar. Verifique a conexão.<br><button onclick="carregarEstabelecimentos(\'todos\')" style="margin-top:16px;padding:10px 28px;background:#16a34a;color:#fff;border:none;border-radius:24px;font-size:14px;font-weight:700;cursor:pointer;">↻ Tentar novamente</button></div>';
+      lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar. Verifique a conexão.<br><small style="color:#f87171;font-size:11px;">' + (e && e.message ? e.message : 'erro desconhecido') + '</small><br><button onclick="carregarEstabelecimentos(\'todos\')" style="margin-top:16px;padding:10px 28px;background:#16a34a;color:#fff;border:none;border-radius:24px;font-size:14px;font-weight:700;cursor:pointer;">↻ Tentar novamente</button></div>';
     }
   }
+}
+
+var _CATS_NACIONAL = ['loja','encomenda'];
+var _CATS_LOCAL    = ['restaurante','mercado','farmacia','lanche','bebida'];
+var _modoHome = 'local';
+
+function trocarModoHome(modo) {
+  _modoHome = modo;
+  var btnLocal    = document.getElementById('modo-btn-local');
+  var btnNacional = document.getElementById('modo-btn-nacional');
+  var catsLocal   = document.getElementById('cats-local');
+  var catsNac     = document.getElementById('cats-nacional');
+  var titulo      = document.getElementById('secao-titulo-stores');
+  var filtrosWrap = document.getElementById('filtros-rapidos');
+
+  var bannersWrap = document.getElementById('banners-wrap');
+  if (modo === 'local') {
+    btnLocal.style.background = 'var(--verde)';
+    btnLocal.style.color = '#fff';
+    btnNacional.style.background = 'transparent';
+    btnNacional.style.color = 'rgba(255,255,255,0.45)';
+    catsLocal.style.display = '';
+    catsNac.style.display = 'none';
+    titulo.textContent = 'Perto de você';
+    if (filtrosWrap) filtrosWrap.style.display = '';
+    if (bannersWrap) bannersWrap.style.display = '';
+  } else {
+    btnNacional.style.background = 'linear-gradient(135deg,#3730a3,#4f46e5)';
+    btnNacional.style.color = '#fff';
+    btnLocal.style.background = 'transparent';
+    btnLocal.style.color = 'rgba(255,255,255,0.45)';
+    catsLocal.style.display = 'none';
+    catsNac.style.display = '';
+    titulo.textContent = 'Receba em dias ou horas';
+    if (filtrosWrap) filtrosWrap.style.display = 'none';
+    if (bannersWrap) bannersWrap.style.display = 'none';
+  }
+  // Reset categoria e rerender
+  document.querySelectorAll('.cat-icon-item').forEach(function(b){ b.classList.remove('ativo'); });
+  var firstCat = (modo === 'local' ? catsLocal : catsNac).querySelector('.cat-icon-item');
+  if (firstCat) firstCat.classList.add('ativo');
+  filtroRapidoAtual = 'todos';
+  renderEstabelecimentos('todos');
+}
+
+function _cardEst(e, idx) {
+  var isNacional = _CATS_NACIONAL.indexOf(e.categoria) !== -1;
+  var dimStyle  = (!e.aberto || e.pausado) ? 'opacity:0.55;filter:grayscale(0.8);' : '';
+  var isNovo    = e.criado_em && (Date.now() - new Date(e.criado_em).getTime() < 14*24*60*60*1000);
+  var isFav     = favoritosIds.has(e.id);
+  var heartBtn  = currentUser ? '<button onclick="toggleFavorito(\'' + e.id + '\',event)" style="background:none;border:none;font-size:16px;cursor:pointer;padding:6px;line-height:1;flex-shrink:0;opacity:0.7;">' + (isFav ? '❤️' : '🤍') + '</button>' : '';
+  var logoHtml  = e.foto_url
+    ? '<img src="' + e.foto_url + '" loading="lazy" style="width:72px;height:72px;border-radius:16px;object-fit:cover;flex-shrink:0;' + ((!e.aberto || e.pausado) ? 'filter:grayscale(0.7);opacity:0.6;' : '') + '">'
+    : '<div style="width:72px;height:72px;border-radius:16px;background:linear-gradient(135deg,#1e1e28,#2a2a34);border:1.5px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;' + ((!e.aberto || e.pausado) ? 'opacity:0.5;' : '') + '">' + (e.emoji || '🏪') + '</div>';
+  var statusBadge = e.pausado
+    ? '<span style="background:#7f1d1d;color:#fca5a5;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">Pausado</span>'
+    : (e.aberto
+      ? '<span style="background:#14532d;color:#86efac;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">Aberto</span>'
+      : '<span style="background:#1c1917;color:#a8a29e;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;">Fechado</span>');
+  var novoBadge = isNovo ? '<span style="background:linear-gradient(90deg,#f97316,#fb923c);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:4px;">Novo</span>' : '';
+
+  // Linha de info diferente para nacional vs local
+  var infoLinha;
+  if (isNacional) {
+    var prazo = e.tempo_entrega || 'dias ou horas';
+    infoLinha = '<span style="background:rgba(99,102,241,0.15);color:#a5b4fc;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">📦 Encomenda</span>' +
+      '<span style="color:rgba(255,255,255,0.15);">|</span>' +
+      '<span>Receba em ' + prazo + '</span>';
+  } else {
+    var freteStr = e.taxa_entrega > 0 ? 'Frete R$ ' + parseFloat(e.taxa_entrega).toFixed(2).replace('.',',') : 'Frete grátis';
+    infoLinha =
+      (e.avaliacao > 0 ? '<span style="color:#fbbf24;font-weight:700;">★ ' + parseFloat(e.avaliacao).toFixed(1) + '</span><span style="color:rgba(255,255,255,0.15);">|</span>' : '') +
+      '<span>' + (e.tempo_entrega || '30-45 min') + '</span>' +
+      '<span style="color:rgba(255,255,255,0.15);">|</span>' +
+      '<span>' + freteStr + '</span>';
+  }
+
+  return '<div class="card-est-animado" style="display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid rgba(255,255,255,0.05);animation-delay:' + (idx * 100) + 'ms;cursor:pointer;" onclick="abrirCardapio(\'' + e.id + '\')">' +
+    logoHtml +
+    '<div style="flex:1;min-width:0;">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">' + novoBadge + statusBadge + '</div>' +
+      '<div style="font-size:15px;font-weight:700;font-family:\'Plus Jakarta Sans\',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;color:' + ((!e.aberto || e.pausado) ? 'var(--texto2)' : '#fff') + ';">' + sanitizar(e.nome) + '</div>' +
+      '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texto2);">' + infoLinha + '</div>' +
+    '</div>' +
+    heartBtn +
+  '</div>';
 }
 
 function renderEstabelecimentos(cat) {
@@ -3378,53 +3479,25 @@ function renderEstabelecimentos(cat) {
     filtrados = filtrados.slice().sort(function(a,b){ return (b.avaliacao||0)-(a.avaliacao||0); });
   }
 
+  // Filtrar por modo da home
+  if (_modoHome === 'local') {
+    filtrados = filtrados.filter(function(e){ return _CATS_NACIONAL.indexOf(e.categoria) === -1; });
+  } else {
+    filtrados = filtrados.filter(function(e){ return _CATS_NACIONAL.indexOf(e.categoria) !== -1; });
+  }
+
   if(filtrados.length === 0) {
-    lista.innerHTML = '<div class="vazio"><div class="vazio-icon">🏪</div>Nenhum estabelecimento encontrado<br><button onclick="carregarEstabelecimentos(\'todos\')" style="margin-top:16px;padding:10px 28px;background:#16a34a;color:#fff;border:none;border-radius:24px;font-size:14px;font-weight:700;cursor:pointer;">↻ Recarregar</button></div>';
+    var msgVazio = _modoHome === 'nacional'
+      ? '<div class="vazio"><div class="vazio-icon">📦</div>Nenhuma loja ou encomenda disponível</div>'
+      : '<div class="vazio"><div class="vazio-icon">🏪</div>Nenhum estabelecimento encontrado<br><button onclick="carregarEstabelecimentos(\'todos\')" style="margin-top:16px;padding:10px 28px;background:#16a34a;color:#fff;border:none;border-radius:24px;font-size:14px;font-weight:700;cursor:pointer;">↻ Recarregar</button></div>';
+    lista.innerHTML = msgVazio;
     return;
   }
-  var agora = Date.now();
-  var diasNovoMs = 14 * 24 * 60 * 60 * 1000;
-  var cards = filtrados.map(function(e, idx) {
-    var status = e.pausado ? 'Pausado' : (e.aberto ? 'Aberto' : 'Fechado');
-    var dimStyle = (!e.aberto || e.pausado) ? 'opacity:0.55;filter:grayscale(0.8);' : '';
-    var badgeInline = e.pausado
-      ? 'background-color:#451a03;color:#f87171;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:700;'
-      : (e.aberto
-        ? 'background-color:#052e16;color:#4ade80;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:700;'
-        : 'background-color:#451a03;color:#f87171;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:700;');
-    var isNovo = e.criado_em && (agora - new Date(e.criado_em).getTime() < diasNovoMs);
-    var isFav = favoritosIds.has(e.id);
-    var heartBtn = currentUser ? '<button onclick="toggleFavorito(\'' + e.id + '\',event)" style="background:none;border:none;font-size:16px;cursor:pointer;padding:6px;line-height:1;flex-shrink:0;opacity:0.7;">' + (isFav ? '❤️' : '🤍') + '</button>' : '';
-    var logoHtml = e.foto_url
-      ? '<img src="' + e.foto_url + '" loading="lazy" style="width:72px;height:72px;border-radius:16px;object-fit:cover;flex-shrink:0;' + ((!e.aberto || e.pausado) ? 'filter:grayscale(0.7);opacity:0.6;' : '') + '">'
-      : '<div style="width:72px;height:72px;border-radius:16px;background:linear-gradient(135deg,#1e1e28,#2a2a34);border:1.5px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;' + ((!e.aberto || e.pausado) ? 'opacity:0.5;' : '') + '">' + (e.emoji || '🏪') + '</div>';
-    var statusBadge = e.pausado
-      ? '<span style="background:#7f1d1d;color:#fca5a5;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">Pausado</span>'
-      : (e.aberto
-        ? '<span style="background:#14532d;color:#86efac;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">Aberto</span>'
-        : '<span style="background:#1c1917;color:#a8a29e;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;">Fechado</span>');
-    var novoBadge = isNovo ? '<span style="background:linear-gradient(90deg,#f97316,#fb923c);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:4px;">Novo</span>' : '';
-    var freteStr = e.taxa_entrega > 0 ? 'Frete R$ ' + parseFloat(e.taxa_entrega).toFixed(2).replace('.',',') : 'Frete grátis';
-    return '<div class="card-est-animado" style="display:flex;align-items:center;gap:14px;padding:14px 4px;border-bottom:1px solid rgba(255,255,255,0.05);animation-delay:' + (idx * 100) + 'ms;cursor:pointer;" onclick="abrirCardapio(\'' + e.id + '\')">' +
-      logoHtml +
-      '<div style="flex:1;min-width:0;">' +
-        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">' +
-          novoBadge + statusBadge +
-        '</div>' +
-        '<div style="font-size:15px;font-weight:700;font-family:\'Plus Jakarta Sans\',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;color:' + ((!e.aberto || e.pausado) ? 'var(--texto2)' : '#fff') + ';">' + sanitizar(e.nome) + '</div>' +
-        '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texto2);">' +
-          (e.avaliacao > 0 ? '<span style="color:#fbbf24;font-weight:700;">★ ' + parseFloat(e.avaliacao).toFixed(1) + '</span><span style="color:rgba(255,255,255,0.15);">|</span>' : '') +
-          '<span>' + (e.tempo_entrega || '30-45 min') + '</span>' +
-          '<span style="color:rgba(255,255,255,0.15);">|</span>' +
-          '<span>' + freteStr + '</span>' +
-        '</div>' +
-      '</div>' +
-      heartBtn +
-    '</div>';
-  });
 
-  // Prateleira de conveniência — intercalada após o 2º card (só se houver produtos reais)
-  if(produtosDestaque.length > 0 && cards.length >= 2) {
+  var cards = filtrados.map(function(e, idx){ return _cardEst(e, idx); });
+
+  // Prateleira de produtos em destaque (só no modo local, após 2º card)
+  if(_modoHome === 'local' && produtosDestaque.length > 0 && cards.length >= 2) {
     var prateleiraHtml = '<div style="margin:4px 0 20px;">' +
       '<div style="font-size:15px;font-weight:800;color:#fff;font-family:\'Plus Jakarta Sans\',sans-serif;margin-bottom:10px;">🛒 Peça agora</div>' +
       '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">' +
@@ -3445,6 +3518,7 @@ function renderEstabelecimentos(cat) {
     '</div>';
     cards.splice(2, 0, prateleiraHtml);
   }
+
   lista.innerHTML = cards.join('');
 }
 
@@ -6227,6 +6301,18 @@ function abrirModalProduto(idx) {
     : [['principal','Principal'],['entradas','Entradas'],['lanches','Lanches'],['bebidas','Bebidas'],['sobremesas','Sobremesas'],['porcoes','Porções'],['combos','Combos'],['adicionais','Adicionais']];
   catSel.innerHTML = opcoes.map(function(o){ return '<option value="'+o[0]+'">'+o[1]+'</option>'; }).join('');
 
+  // Campos específicos para encomenda/loja
+  var isEncomenda = catAtual === 'encomenda' || catAtual === 'loja';
+  var prazoGrupo   = document.getElementById('prod-prazo-grupo');
+  var estoqueGrupo = document.getElementById('prod-estoque-grupo');
+  if (prazoGrupo)   prazoGrupo.style.display   = isEncomenda ? '' : 'none';
+  if (estoqueGrupo) estoqueGrupo.style.display = isEncomenda ? 'none' : '';
+  // Placeholder da descrição
+  var descEl = document.getElementById('prod-desc');
+  if (descEl) descEl.placeholder = isEncomenda
+    ? 'Descreva o produto: materiais, tamanhos, cores disponíveis, como personalizar...'
+    : 'Ex: Pão, carne 150g, queijo, alface e tomate';
+
   const produtos = estDataCache?.produtos || [];
   
   if(idx !== undefined && produtos[idx]) {
@@ -6238,6 +6324,8 @@ function abrirModalProduto(idx) {
     document.getElementById('prod-disponivel').checked = p.disponivel;
     document.getElementById('prod-estoque').value = p.estoque !== null && p.estoque !== undefined ? p.estoque : '';
     document.getElementById('prod-unidade').value = p.unidade || 'un';
+    var prazoEl = document.getElementById('prod-prazo');
+    if(prazoEl) prazoEl.value = p.prazo_entrega || '';
     var catSel = document.getElementById('prod-categoria');
     if(catSel) catSel.value = p.categoria || 'principal';
     var imgInput = document.getElementById('prod-imagem');
@@ -6261,6 +6349,8 @@ function abrirModalProduto(idx) {
     document.getElementById('prod-preco').value = '';
     document.getElementById('prod-estoque').value = '';
     document.getElementById('prod-unidade').value = 'un';
+    var prazoEl = document.getElementById('prod-prazo');
+    if(prazoEl) prazoEl.value = '';
     document.getElementById('prod-disponivel').checked = true;
     var catSel = document.getElementById('prod-categoria');
     if(catSel) catSel.value = 'principal';
@@ -6352,7 +6442,8 @@ async function salvarProduto() {
     const estoqueRaw = document.getElementById('prod-estoque').value.trim();
     const estoque = estoqueRaw === '' ? null : parseInt(estoqueRaw);
     const unidade = document.getElementById('prod-unidade').value || 'un';
-    const body = { nome, descricao: descricao, preco, emoji: emojiSelecionado, disponivel, categoria, estoque, unidade };
+    const prazoEntrega = (document.getElementById('prod-prazo')?.value || '').trim() || null;
+    const body = { nome, descricao: descricao, preco, emoji: emojiSelecionado, disponivel, categoria, estoque, unidade, prazo_entrega: prazoEntrega };
     if(imagem_url) body.imagem_url = imagem_url;
     if(idx >= 0 && cardapioEst[idx] && cardapioEst[idx].id) {
       await apiCall('/api/establishments/me/products/' + cardapioEst[idx].id, { method: 'PUT', body });
@@ -9098,7 +9189,11 @@ function adminNav(btn, secao) {
         <option value="kg">Por kg (ex: frango, carne, peixe)</option>
       </select>
     </div>
-    <div class="form-grupo">
+    <div class="form-grupo" id="prod-prazo-grupo" style="display:none;">
+      <label>Prazo de produção <span style="color:var(--texto2);font-size:12px;">(ex: 24 horas, 3 a 5 dias)</span></label>
+      <input type="text" id="prod-prazo" placeholder="Ex: 3 a 5 dias úteis" style="width:100%;">
+    </div>
+    <div class="form-grupo" id="prod-estoque-grupo">
       <label>Quantidade em estoque <span style="color:var(--texto2);font-size:12px;">(deixe vazio = ilimitado)</span></label>
       <input type="number" id="prod-estoque" placeholder="Ex: 50" min="0" step="1" style="width:100%;">
     </div>
