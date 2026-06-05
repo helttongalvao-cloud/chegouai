@@ -4855,9 +4855,8 @@ function restaurarCarrinho() {
 }
 
 function atualizarSecaoIndicacao() {
-  var sub = calcularTotalCarrinho();
   var el = document.getElementById('secao-indicacao');
-  if (el) el.style.display = sub >= 18 ? '' : 'none';
+  if (el) el.style.display = '';
 }
 
 function atualizarCarrinho() {
