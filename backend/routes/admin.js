@@ -316,7 +316,7 @@ router.get('/sorteio', async (req, res, next) => {
       .eq('pagamento_status', 'aprovado')
       .gte('criado_em', dataInicio + 'T00:00:00.000Z')
       .lte('criado_em', dataFim + 'T23:59:59.999Z')
-      .gte('total', 25)
+      .gte('total', 20)
       .order('criado_em', { ascending: false });
 
     if (error) throw error;
