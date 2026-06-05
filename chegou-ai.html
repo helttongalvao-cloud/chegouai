@@ -2969,6 +2969,7 @@ function irCadastro() { irTela('tela-cadastro'); }
 function continuarSemConta() {
   irTela('tela-home');
   carregarEstabelecimentos();
+  carregarAvisoHome();
 }
 
 // HOME
@@ -4853,6 +4854,12 @@ function restaurarCarrinho() {
   } catch(e) {}
 }
 
+function atualizarSecaoIndicacao() {
+  var sub = calcularTotalCarrinho();
+  var el = document.getElementById('secao-indicacao');
+  if (el) el.style.display = sub >= 18 ? '' : 'none';
+}
+
 function atualizarCarrinho() {
   salvarCarrinho();
   var total = calcularTotalCarrinho();
@@ -4871,6 +4878,7 @@ function atualizarCarrinho() {
     const el = document.getElementById(id);
     if(el) el.textContent = 'R$ ' + (total+2).toFixed(2).replace('.',',') + ' ~ ' + (total+2.5).toFixed(2).replace('.',',');
   });
+  atualizarSecaoIndicacao();
 }
 
 function voltarCardapio() { irTela('tela-cardapio'); }
@@ -4918,6 +4926,7 @@ function simularFrete(endereco) {
   document.getElementById('linha-conveniencia').style.display = 'none';
   document.getElementById('total-valor').textContent = 'R$ ' + baseTotal.toFixed(2).replace('.',',');
   document.getElementById('taxa-entrega-info').textContent = infoTxt + ' — Frete R$ ' + taxa.toFixed(2).replace('.',',');
+  atualizarSecaoIndicacao();
 }
 
 // CHECKOUT
