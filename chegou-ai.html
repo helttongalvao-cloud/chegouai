@@ -3537,7 +3537,7 @@ function renderEstabelecimentos(cat) {
 
   var cards = filtrados.map(function(e, idx){ return _cardEst(e, idx); });
 
-  // Prateleira de produtos em destaque (só no modo local, após 2º card)
+  // Prateleira de produtos em destaque (só no modo local, após último aberto ou 2º card)
   if(_modoHome === 'local' && produtosDestaque.length > 0 && cards.length >= 2) {
     var prateleiraHtml = '<div style="margin:4px 0 20px;">' +
       '<div style="font-size:15px;font-weight:800;color:#fff;font-family:\'Plus Jakarta Sans\',sans-serif;margin-bottom:10px;">🛒 Peça agora</div>' +
@@ -3557,7 +3557,9 @@ function renderEstabelecimentos(cat) {
       }).join('') +
       '</div>' +
     '</div>';
-    cards.splice(2, 0, prateleiraHtml);
+    var nAbertos = filtrados.filter(function(e){ return e.aberto && !e.pausado; }).length;
+    var insertIdx = Math.max(2, nAbertos);
+    cards.splice(insertIdx, 0, prateleiraHtml);
   }
 
   lista.innerHTML = cards.join('');
