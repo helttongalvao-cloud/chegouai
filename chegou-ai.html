@@ -9055,8 +9055,7 @@ async function renderAdminSorteio(desde, ate) {
   el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando sorteio...</div>';
   try {
     var hoje = new Date().toISOString().slice(0,10);
-    var semanaAtras = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
-    var d = desde || semanaAtras;
+    var d = desde || '2026-06-05';
     var a = ate || hoje;
 
     var dados = await apiCall('/api/admin/sorteio?desde=' + d + '&ate=' + a);
@@ -9094,7 +9093,7 @@ async function renderAdminSorteio(desde, ate) {
     var metaHtml =
       '<div style="background:' + premioBg + ';border-radius:14px;padding:14px 16px;margin-bottom:16px;text-align:center;">' +
         '<div style="font-size:15px;font-weight:700;color:' + premioCor + ';">' + premioTxt + '</div>' +
-        '<div style="font-size:12px;color:' + premioCor + ';opacity:0.7;margin-top:4px;">Pedidos ≥ R$20 aprovados no período</div>' +
+        '<div style="font-size:12px;color:' + premioCor + ';opacity:0.7;margin-top:4px;">Pedidos aprovados no período</div>' +
       '</div>';
 
     var rankingHtml = dados.ranking.length === 0
