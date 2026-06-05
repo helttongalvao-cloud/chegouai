@@ -9103,10 +9103,11 @@ async function renderAdminSorteio(desde, ate) {
             var medalhao = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1) + 'º';
             var tel = r.telefone;
             var telFmt = tel.length === 11 ? '(' + tel.slice(0,2) + ') ' + tel.slice(2,7) + '-' + tel.slice(7) : tel;
+            var nomeTxt = r.nome ? r.nome.split(' ')[0] + ' · ' : '';
             var indTxt = r.indicacoes > 0 ? ' · ' + r.indicacoes + ' indicaç' + (r.indicacoes === 1 ? 'ão' : 'ões') : '';
             return '<div class="tabela-row">' +
-              '<div class="info"><div class="nome">' + medalhao + ' ' + telFmt + '</div>' +
-              '<div class="sub">' + r.tickets + ' ticket' + (r.tickets > 1 ? 's' : '') + indTxt + '</div></div>' +
+              '<div class="info"><div class="nome">' + medalhao + ' ' + nomeTxt + telFmt + '</div>' +
+              '<div class="sub">' + r.tickets + ' chance' + (r.tickets > 1 ? 's' : '') + indTxt + '</div></div>' +
               '</div>';
           }).join('') +
         '</div>';
@@ -9140,14 +9141,17 @@ function realizarSorteio() {
     var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
   }
   var ganhador = pool[Math.floor(Math.random() * pool.length)];
+  var ganhadorData = _sorteioData.ranking.find(function(r){ return r.telefone === ganhador; });
   var tel = ganhador;
   var telFmt = tel.length === 11 ? '(' + tel.slice(0,2) + ') ' + tel.slice(2,7) + '-' + tel.slice(7) : tel;
+  var nomeGanhador = ganhadorData && ganhadorData.nome ? ganhadorData.nome.split(' ').slice(0,2).join(' ') : '';
   var premioVal = _sorteioData.pedidos >= 80 ? 'R$ 100' : 'R$ 50';
   if (el) el.innerHTML =
     '<div style="background:linear-gradient(135deg,rgba(250,204,21,0.15),rgba(245,158,11,0.1));border:2px solid #facc15;border-radius:16px;padding:20px;text-align:center;">' +
       '<div style="font-size:28px;margin-bottom:8px;">🏆</div>' +
       '<div style="font-size:13px;color:#facc15;font-weight:600;margin-bottom:4px;">GANHADOR DO SORTEIO</div>' +
-      '<div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;">' + telFmt + '</div>' +
+      (nomeGanhador ? '<div style="font-size:26px;font-weight:900;color:#fff;margin-bottom:2px;">' + nomeGanhador + '</div>' : '') +
+      '<div style="font-size:18px;font-weight:600;color:#d4d4d8;margin-bottom:8px;">' + telFmt + '</div>' +
       '<div style="font-size:14px;color:#f59e0b;font-weight:600;">Prêmio: ' + premioVal + '</div>' +
     '</div>';
 }

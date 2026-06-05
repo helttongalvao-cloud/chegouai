@@ -312,7 +312,7 @@ router.get('/sorteio', async (req, res, next) => {
 
     const { data, error } = await supabaseAdmin
       .from('pedidos')
-      .select('id, telefone_cliente, indicado_por, total, criado_em, estabelecimentos(nome)')
+      .select('id, telefone_cliente, indicado_por, total, criado_em, guest_nome, profiles(nome)')
       .eq('pagamento_status', 'aprovado')
       .gte('criado_em', dataInicio + 'T00:00:00.000Z')
       .lte('criado_em', dataFim + 'T23:59:59.999Z')
@@ -324,11 +324,15 @@ router.get('/sorteio', async (req, res, next) => {
     // Calcular tickets: 1 por pedido + 1 extra por pessoa única indicada
     const ticketsPorTelefone = {};
     const indicadosPorIndicador = {};
+    const nomePorTelefone = {};
 
     for (const p of data) {
       const tel = (p.telefone_cliente || '').replace(/\D/g, '').slice(-11);
       if (!tel || tel.length < 10) continue;
       ticketsPorTelefone[tel] = (ticketsPorTelefone[tel] || 0) + 1;
+      if (!nomePorTelefone[tel]) {
+        nomePorTelefone[tel] = (p.profiles && p.profiles.nome) || p.guest_nome || null;
+      }
 
       if (p.indicado_por) {
         const indicador = p.indicado_por.replace(/\D/g, '').slice(-11);
@@ -347,6 +351,7 @@ router.get('/sorteio', async (req, res, next) => {
     const ranking = Object.entries(ticketsPorTelefone)
       .map(([telefone, tickets]) => ({
         telefone,
+        nome: nomePorTelefone[telefone] || null,
         tickets,
         indicacoes: indicadosPorIndicador[telefone] ? indicadosPorIndicador[telefone].size : 0,
       }))
