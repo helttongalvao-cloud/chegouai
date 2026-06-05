@@ -302,6 +302,67 @@ router.post('/pedidos/:id/encerrar', [param('id').isUUID()], async (req, res, ne
 });
 
 // =============================================
+// GET /api/admin/sorteio — Dados para o painel do sorteio
+// =============================================
+router.get('/sorteio', async (req, res, next) => {
+  try {
+    const { desde, ate } = req.query;
+    const dataInicio = desde || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const dataFim = ate || new Date().toISOString().slice(0, 10);
+
+    const { data, error } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, telefone_cliente, indicado_por, total, criado_em, estabelecimentos(nome)')
+      .eq('pagamento_status', 'aprovado')
+      .gte('criado_em', dataInicio + 'T00:00:00.000Z')
+      .lte('criado_em', dataFim + 'T23:59:59.999Z')
+      .gte('total', 25)
+      .order('criado_em', { ascending: false });
+
+    if (error) throw error;
+
+    // Calcular tickets: 1 por pedido + 1 extra por pessoa única indicada
+    const ticketsPorTelefone = {};
+    const indicadosPorIndicador = {};
+
+    for (const p of data) {
+      const tel = (p.telefone_cliente || '').replace(/\D/g, '').slice(-11);
+      if (!tel || tel.length < 10) continue;
+      ticketsPorTelefone[tel] = (ticketsPorTelefone[tel] || 0) + 1;
+
+      if (p.indicado_por) {
+        const indicador = p.indicado_por.replace(/\D/g, '').slice(-11);
+        if (indicador && indicador.length >= 10 && indicador !== tel) {
+          if (!indicadosPorIndicador[indicador]) indicadosPorIndicador[indicador] = new Set();
+          indicadosPorIndicador[indicador].add(tel);
+        }
+      }
+    }
+
+    // Adicionar tickets extras para quem indicou
+    for (const [indicador, indicados] of Object.entries(indicadosPorIndicador)) {
+      ticketsPorTelefone[indicador] = (ticketsPorTelefone[indicador] || 0) + indicados.size;
+    }
+
+    const ranking = Object.entries(ticketsPorTelefone)
+      .map(([telefone, tickets]) => ({
+        telefone,
+        tickets,
+        indicacoes: indicadosPorIndicador[telefone] ? indicadosPorIndicador[telefone].size : 0,
+      }))
+      .sort((a, b) => b.tickets - a.tickets);
+
+    res.json({
+      pedidos: data.length,
+      participantes: ranking.length,
+      totalTickets: ranking.reduce((s, r) => s + r.tickets, 0),
+      ranking,
+      periodo: { desde: dataInicio, ate: dataFim },
+    });
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // POST /api/admin/establishments — Cadastrar loja
 // =============================================
 router.post(

@@ -62,7 +62,7 @@ router.post(
     }
 
     const { estabelecimentoId, itens, enderecoEntrega, telefoneCliente, formaPagamento, cupom,
-            guestNome, guestCpf } = req.body;
+            guestNome, guestCpf, indicadoPor } = req.body;
     const clienteId = req.user ? req.user.id : null;
 
     // Validação extra para guest
@@ -290,6 +290,11 @@ router.post(
         pedidoInsert.guest_nome = (guestNome || '').trim();
         if (guestCpf) pedidoInsert.guest_cpf = guestCpf.replace(/\D/g, '');
         pedidoInsert.guest_telefone = telefoneCliente.replace(/\D/g, '').slice(-11);
+      }
+      // Indicação para sorteio (qualquer pedido, logado ou guest)
+      if (indicadoPor) {
+        const telIndicador = String(indicadoPor).replace(/\D/g, '').slice(-11);
+        if (telIndicador.length >= 10) pedidoInsert.indicado_por = telIndicador;
       }
 
       const { data: pedido, error: pedidoErr } = await supabaseAdmin

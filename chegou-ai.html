@@ -1066,6 +1066,12 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <div id="linha-desconto" class="total-linha" style="display:none;color:var(--verde);">
       <span id="desconto-label">Desconto</span><span id="desconto-valor">-R$ 0,00</span>
     </div>
+    <div class="secao-checkout" id="secao-indicacao" style="background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.08));border:1px solid rgba(99,102,241,0.2);border-radius:16px;padding:14px 16px;margin-bottom:4px;">
+      <h4 style="color:#a5b4fc;margin-bottom:8px;">🎟️ Sorteio de R$50</h4>
+      <div style="font-size:12px;color:var(--texto2);margin-bottom:10px;">Seu pedido já concorre. Se alguém te indicou, escreva o número abaixo — essa pessoa ganha tickets extras no sorteio!</div>
+      <input type="tel" id="checkout-indicado-por" placeholder="Número de quem te indicou (opcional)" inputmode="numeric" maxlength="15"
+        style="width:100%;padding:12px;border-radius:10px;border:1.5px solid rgba(99,102,241,0.3);background:rgba(99,102,241,0.05);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;box-sizing:border-box;">
+    </div>
     <button class="btn-principal mt16 btn-pulse" onclick="confirmarPedido()">Confirmar pedido</button>
   </div>
 </div>
@@ -1560,6 +1566,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="nav-btn" onclick="adminNav(this,'lojas')">Estabelecimentos</div>
       <div class="nav-btn" onclick="adminNav(this,'motoboys')">Motoboys</div>
       <div class="nav-btn" onclick="adminNav(this,'cupons')">Cupons</div>
+      <div class="nav-btn" onclick="adminNav(this,'sorteio')" style="color:#facc15;border-color:#facc1540;">🎟️ Sorteio</div>
       <div class="nav-btn" onclick="adminNav(this,'metricas')" style="color:#a78bfa;border-color:#a78bfa40;">📊 Métricas</div>
       <div class="nav-btn" onclick="adminNav(this,'cadastrar')">+ Cadastrar</div>
     </div>
@@ -5186,6 +5193,8 @@ async function confirmarPedido() {
       freteGratis: freteGratis === true,
     };
     if(cupomAplicado) bodyPedido.cupom = cupomAplicado.codigo;
+    var indicadoPor = (document.getElementById('checkout-indicado-por')?.value || '').replace(/\D/g,'').slice(-11);
+    if(indicadoPor.length >= 10) bodyPedido.indicadoPor = indicadoPor;
     if(isGuest) {
       bodyPedido.guestNome = guestNome;
       bodyPedido.guestCpf = guestCpf;
@@ -7360,6 +7369,7 @@ async function renderAdmin(secao) {
 
   if(secao === 'monitor') { await renderAdminMonitor(); return; }
   if(secao === 'cupons') { renderAdminCupons(); return; }
+  if(secao === 'sorteio') { renderAdminSorteio(); return; }
   if(secao === 'metricas') { renderAdminMetricas(); return; }
 
   if (secao !== 'cadastrar') {
@@ -8884,7 +8894,6 @@ async function carregarAvisoHome() {
   if (!bannerEl) return;
   bannerEl.style.display = 'none';
   try {
-    if (!currentUser) return;
     var av = await fetch('/api/aviso').then(function(r){ return r.json(); });
     if (av.aviso) {
       bannerEl.textContent = av.aviso;
@@ -8994,6 +9003,111 @@ async function adminSalvarRecebedor(lojaId) {
     btn.disabled = false; btn.textContent = 'Cadastrar';
     showToast('❌', 'Erro', e.message);
   }
+}
+
+var _sorteioData = null;
+
+async function renderAdminSorteio(desde, ate) {
+  var el = document.getElementById('admin-conteudo');
+  el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando sorteio...</div>';
+  try {
+    var hoje = new Date().toISOString().slice(0,10);
+    var semanaAtras = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
+    var d = desde || semanaAtras;
+    var a = ate || hoje;
+
+    var dados = await apiCall('/api/admin/sorteio?desde=' + d + '&ate=' + a);
+    _sorteioData = dados;
+
+    var filtroHtml =
+      '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:14px 16px;margin-bottom:16px;">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">' +
+        '<div><label style="font-size:11px;color:var(--texto2);">De</label>' +
+          '<input type="date" id="sort-desde" value="' + d + '" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;box-sizing:border-box;margin-top:4px;"></div>' +
+        '<div><label style="font-size:11px;color:var(--texto2);">Até</label>' +
+          '<input type="date" id="sort-ate" value="' + a + '" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:13px;box-sizing:border-box;margin-top:4px;"></div>' +
+        '<button onclick="renderAdminSorteio(document.getElementById(\'sort-desde\').value,document.getElementById(\'sort-ate\').value)" style="padding:10px 16px;border-radius:8px;border:1.5px solid var(--verde);background:transparent;color:var(--verde);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Filtrar</button>' +
+      '</div></div>';
+
+    var statsHtml =
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">' +
+        '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:14px;text-align:center;">' +
+          '<div style="font-size:24px;font-weight:800;color:var(--verde);">' + dados.pedidos + '</div>' +
+          '<div style="font-size:11px;color:var(--texto2);">Pedidos válidos</div>' +
+        '</div>' +
+        '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:14px;text-align:center;">' +
+          '<div style="font-size:24px;font-weight:800;color:#facc15;">' + dados.participantes + '</div>' +
+          '<div style="font-size:11px;color:var(--texto2);">Participantes</div>' +
+        '</div>' +
+        '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:14px;text-align:center;">' +
+          '<div style="font-size:24px;font-weight:800;color:#a78bfa;">' + dados.totalTickets + '</div>' +
+          '<div style="font-size:11px;color:var(--texto2);">Total de tickets</div>' +
+        '</div>' +
+      '</div>';
+
+    var premioTxt = dados.pedidos >= 80 ? '🏆 R$ 100 (meta atingida!)' : '🎟️ R$ 50 (meta: 80 pedidos)';
+    var premioBg = dados.pedidos >= 80 ? 'linear-gradient(135deg,#facc15,#f59e0b)' : 'linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.12))';
+    var premioCor = dados.pedidos >= 80 ? '#000' : '#a5b4fc';
+    var metaHtml =
+      '<div style="background:' + premioBg + ';border-radius:14px;padding:14px 16px;margin-bottom:16px;text-align:center;">' +
+        '<div style="font-size:15px;font-weight:700;color:' + premioCor + ';">' + premioTxt + '</div>' +
+        '<div style="font-size:12px;color:' + premioCor + ';opacity:0.7;margin-top:4px;">Pedidos ≥ R$25 aprovados no período</div>' +
+      '</div>';
+
+    var rankingHtml = dados.ranking.length === 0
+      ? '<div class="vazio"><div class="vazio-icon">🎟️</div>Nenhum pedido válido no período</div>'
+      : '<div class="tabela">' +
+          dados.ranking.map(function(r, i) {
+            var medalhao = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1) + 'º';
+            var tel = r.telefone;
+            var telFmt = tel.length === 11 ? '(' + tel.slice(0,2) + ') ' + tel.slice(2,7) + '-' + tel.slice(7) : tel;
+            var indTxt = r.indicacoes > 0 ? ' · ' + r.indicacoes + ' indicaç' + (r.indicacoes === 1 ? 'ão' : 'ões') : '';
+            return '<div class="tabela-row">' +
+              '<div class="info"><div class="nome">' + medalhao + ' ' + telFmt + '</div>' +
+              '<div class="sub">' + r.tickets + ' ticket' + (r.tickets > 1 ? 's' : '') + indTxt + '</div></div>' +
+              '</div>';
+          }).join('') +
+        '</div>';
+
+    var sortearHtml =
+      '<div style="margin-top:16px;">' +
+        '<button onclick="realizarSorteio()" style="width:100%;padding:16px;border-radius:14px;border:none;background:linear-gradient(135deg,#facc15,#f59e0b);color:#000;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:0.5px;">🎲 Realizar sorteio agora</button>' +
+        '<div id="sorteio-resultado" style="margin-top:12px;"></div>' +
+      '</div>';
+
+    el.innerHTML = '<div class="secao-titulo">🎟️ Sorteio</div>' + filtroHtml + statsHtml + metaHtml + rankingHtml + sortearHtml;
+  } catch(e) {
+    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro: ' + e.message + '</div>';
+  }
+}
+
+function realizarSorteio() {
+  var el = document.getElementById('sorteio-resultado');
+  if (!_sorteioData || !_sorteioData.ranking || _sorteioData.ranking.length === 0) {
+    if (el) el.innerHTML = '<div style="color:var(--erro);text-align:center;padding:12px;">Nenhum participante no período selecionado.</div>';
+    return;
+  }
+  // Montar pool: cada participante aparece N vezes (seus tickets)
+  var pool = [];
+  _sorteioData.ranking.forEach(function(r) {
+    for (var i = 0; i < r.tickets; i++) pool.push(r.telefone);
+  });
+  // Embaralhar e sortear
+  for (var i = pool.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+  }
+  var ganhador = pool[Math.floor(Math.random() * pool.length)];
+  var tel = ganhador;
+  var telFmt = tel.length === 11 ? '(' + tel.slice(0,2) + ') ' + tel.slice(2,7) + '-' + tel.slice(7) : tel;
+  var premioVal = _sorteioData.pedidos >= 80 ? 'R$ 100' : 'R$ 50';
+  if (el) el.innerHTML =
+    '<div style="background:linear-gradient(135deg,rgba(250,204,21,0.15),rgba(245,158,11,0.1));border:2px solid #facc15;border-radius:16px;padding:20px;text-align:center;">' +
+      '<div style="font-size:28px;margin-bottom:8px;">🏆</div>' +
+      '<div style="font-size:13px;color:#facc15;font-weight:600;margin-bottom:4px;">GANHADOR DO SORTEIO</div>' +
+      '<div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;">' + telFmt + '</div>' +
+      '<div style="font-size:14px;color:#f59e0b;font-weight:600;">Prêmio: ' + premioVal + '</div>' +
+    '</div>';
 }
 
 async function renderAdminMetricas() {
