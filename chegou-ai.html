@@ -6077,8 +6077,8 @@ async function renderInfoLoja() {
     : window.location.origin + '/app?loja=' + est.id;
   var msgWhats = 'Oi! Agora você pode pedir no *' + (est.nome || 'nossa loja') + '* pelo app Chegô! Mais fácil, mais rápido.\n\n👉 ' + linkLoja + '\n\n🎁 Primeira compra com frete grátis!\n\nÉ só clicar, escolher e aguardar! 😊';
 
-  var telegramLinkLoja = window._telegramBotUsername && currentUser
-    ? 'https://t.me/' + window._telegramBotUsername + '?start=loja_' + currentUser.id
+  var telegramLinkLoja = window._telegramBotUsername && est.user_id
+    ? 'https://t.me/' + window._telegramBotUsername + '?start=loja_' + est.user_id
     : '';
   var tgLinked = !!est.telegram_chat_id;
 
