@@ -223,17 +223,35 @@ router.post('/telegram-webhook', async (req, res) => {
     const chatId = String(msg.chat?.id || '');
     const text = (msg.text || '').trim();
 
-    // /start <userId>
+    // /start <payload>
     if (text.startsWith('/start') && chatId) {
+      const { enviarTelegramChatId } = require('../services/telegram');
       const parts = text.split(/\s+/);
-      const userId = parts[1] || '';
-      if (userId && userId.length > 10) {
+      const payload = parts[1] || '';
+
+      if (payload.startsWith('loja_')) {
+        // Lojista: /start loja_<userId>
+        const userId = payload.slice(5);
+        if (userId && userId.length > 10) {
+          const { data: est } = await supabaseAdmin
+            .from('estabelecimentos')
+            .select('id, nome')
+            .eq('user_id', userId)
+            .maybeSingle();
+          if (est) {
+            await supabaseAdmin
+              .from('estabelecimentos')
+              .update({ telegram_chat_id: chatId })
+              .eq('id', est.id);
+            await enviarTelegramChatId(chatId, `✅ <b>Telegram vinculado!</b>\n🏪 ${est.nome}\nVocê vai receber alertas de novos pedidos aqui. 🔔`);
+          }
+        }
+      } else if (payload && payload.length > 10) {
+        // Motoboy: /start <userId>
         await supabaseAdmin
           .from('motoboys')
           .update({ telegram_chat_id: chatId })
-          .eq('user_id', userId);
-
-        const { enviarTelegramChatId } = require('../services/telegram');
+          .eq('user_id', payload);
         await enviarTelegramChatId(chatId, '✅ <b>Telegram vinculado!</b>\nVocê vai receber alertas de novas entregas aqui. 🛵');
       }
     }

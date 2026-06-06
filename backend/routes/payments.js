@@ -67,7 +67,7 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
     .update({ pagamento_status: 'aprovado', status: 'aceito', pagarme_order_id: pagarmeOrderId })
     .eq('id', orderId)
     .neq('pagamento_status', 'aprovado')
-    .select('subtotal, taxa_entrega, total, forma_pagamento, guest_nome, endereco_entrega, profiles(nome), estabelecimentos(tipo_entrega, user_id, nome, whatsapp), itens_pedido(quantidade, nome)')
+    .select('subtotal, taxa_entrega, total, forma_pagamento, guest_nome, endereco_entrega, profiles(nome), estabelecimentos(tipo_entrega, user_id, nome, whatsapp, telegram_chat_id, slug), itens_pedido(quantidade, nome)')
     .maybeSingle();
 
   if (updateError) console.error(`[Processar] Erro Supabase:`, updateError.message);
@@ -139,12 +139,22 @@ async function processarPagamentoAprovado(orderId, pagarmeOrderId) {
     );
   }
 
-  // WhatsApp para o lojista (número cadastrado na loja)
+  // WhatsApp + Telegram para o lojista
+  const itensTxt = (pedido.itens_pedido || []).map(i => `${i.quantidade}x ${i.nome}`).join(', ');
   if (lojaInfo?.whatsapp) {
-    const itensTxt = (pedido.itens_pedido || []).map(i => `${i.quantidade}x ${i.nome}`).join(', ');
     enviarWhatsApp(
       lojaInfo.whatsapp,
       `🔔 *Novo pedido!*\n💰 ${valorStr}\n👤 ${clienteNome}\n📦 ${itensTxt || 'Ver no app'}\n🏠 ${pedido.endereco_entrega || ''}`
+    );
+  }
+  if (lojaInfo?.telegram_chat_id) {
+    const linkLoja = lojaInfo.slug
+      ? `https://chegouaiapp.com.br/${lojaInfo.slug}`
+      : 'https://chegouaiapp.com.br/app';
+    const { enviarTelegramChatId } = require('../services/telegram');
+    enviarTelegramChatId(
+      lojaInfo.telegram_chat_id,
+      `🔔 <b>Novo pedido!</b>\n💰 ${valorStr}\n👤 ${clienteNome}\n📦 ${itensTxt || 'Ver no app'}\n🏠 ${pedido.endereco_entrega || ''}\n\n👉 <a href="${linkLoja}">Ver pedido</a>`
     );
   }
 

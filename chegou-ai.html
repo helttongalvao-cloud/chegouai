@@ -6071,7 +6071,23 @@ async function renderInfoLoja() {
     : window.location.origin + '/app?loja=' + est.id;
   var msgWhats = 'Oi! Agora você pode pedir no *' + (est.nome || 'nossa loja') + '* pelo app Chegô! Mais fácil, mais rápido.\n\n👉 ' + linkLoja + '\n\n🎁 Primeira compra com frete grátis!\n\nÉ só clicar, escolher e aguardar! 😊';
 
+  var telegramLinkLoja = window._telegramBotUsername && currentUser
+    ? 'https://t.me/' + window._telegramBotUsername + '?start=loja_' + currentUser.id
+    : '';
+  var tgLinked = !!est.telegram_chat_id;
+
   el.innerHTML =
+    (telegramLinkLoja
+      ? '<div style="margin-bottom:14px;background:#1a1a2e;border:1px solid #2563eb44;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
+        '<div>' +
+          '<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">📲 Alertas no Telegram</div>' +
+          '<div id="telegram-loja-status" style="font-size:12px;color:#94a3b8;">' + (tgLinked ? '✅ Telegram vinculado — você receberá alertas de pedidos' : 'Vincule para receber alertas de novos pedidos') + '</div>' +
+        '</div>' +
+        (tgLinked
+          ? '<button onclick="desvincularTelegramLoja()" style="background:transparent;color:#94a3b8;border:1px solid #94a3b844;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Desvincular</button>'
+          : '<a href="' + telegramLinkLoja + '" target="_blank" rel="noopener" style="background:#2563eb;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">Vincular</a>') +
+        '</div>'
+      : '') +
     '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:16px;padding:16px;margin-bottom:14px;">' +
     '<h4 style="font-size:15px;font-weight:700;margin-bottom:4px;">📲 Mensagem para clientes no WhatsApp</h4>' +
     '<p style="font-size:12px;color:var(--texto2);margin-bottom:10px;">Envie para quem pedir pelo WhatsApp e direcione para o app.</p>' +
@@ -8237,6 +8253,14 @@ async function desvincularTelegramMotoboy() {
   try {
     await apiCall('/api/orders/motoboy/telegram', { method: 'DELETE' });
     renderMotoboy();
+  } catch(e) { showToast('Erro ao desvincular Telegram'); }
+}
+
+async function desvincularTelegramLoja() {
+  if(!confirm('Desvincular Telegram? Você não receberá mais alertas de pedidos.')) return;
+  try {
+    await apiCall('/api/establishments/me/telegram', { method: 'DELETE' });
+    estNav(document.getElementById('est-nav-loja'), 'loja');
   } catch(e) { showToast('Erro ao desvincular Telegram'); }
 }
 

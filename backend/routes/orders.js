@@ -824,7 +824,7 @@ router.patch(
             const clienteTel = pedido.profiles?.telefone || pedido.guest_telefone || '';
             const freteStr = `R$ ${parseFloat(pedido.taxa_entrega || 0).toFixed(2).replace('.', ',')}`;
             const msgWhatsApp = `🛵 *Nova entrega disponível!*\n🏪 ${lojaNome}\n💰 ${valorStr}\n📍 ${enderecoResumido || 'Ver no app'}\n\nAbra o app para aceitar.`;
-            const msgTelegramMoto = `🛵 <b>Nova entrega disponível!</b>\n🏪 ${lojaNome}${lojaEndereco ? ' — ' + lojaEndereco : ''}\n📦 Entregar para: ${clienteNome}${clienteTel ? '\n📞 ' + clienteTel : ''}\n💰 Frete: ${freteStr}\n➡️ <a href="https://chegouaiapp.com.br/app">Abrir app</a>`;
+            const msgTelegramMoto = `🛵 <b>Nova entrega disponível!</b>\n🏪 ${lojaNome}${lojaEndereco ? ' — ' + lojaEndereco : ''}\n📦 Entregar para: ${clienteNome}${clienteTel ? '\n📞 ' + clienteTel : ''}\n💰 Frete: ${freteStr}\n\n👉 <a href="https://chegouaiapp.com.br/motoboy">Ver no painel</a>`;
             motosInfo.forEach((m) => {
               if (m.telefone) enviarWhatsApp(m.telefone, msgWhatsApp);
               if (m.telegram_chat_id) enviarTelegramChatId(m.telegram_chat_id, msgTelegramMoto);

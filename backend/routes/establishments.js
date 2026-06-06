@@ -823,6 +823,19 @@ router.post('/me/upload-image', requireAuth, requireRole('estabelecimento', 'adm
 });
 
 // =============================================
+// DELETE /api/establishments/me/telegram — Desvincular Telegram do lojista
+// =============================================
+router.delete('/me/telegram', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    await supabaseAdmin
+      .from('estabelecimentos')
+      .update({ telegram_chat_id: null })
+      .eq('user_id', req.user.id);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // PATCH /api/establishments/me/pausar — Pausar/retomar loja
 // =============================================
 router.patch('/me/pausar', requireRole('estabelecimento'), async (req, res, next) => {
