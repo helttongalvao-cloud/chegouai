@@ -761,6 +761,15 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       </div>
     </div>
 
+    <button class="btn-principal" onclick="continuarSemConta()" style="font-size:17px;padding:16px;">Fazer pedido sem criar conta →</button>
+    <p style="text-align:center;font-size:12px;color:var(--texto2);margin:4px 0 0;">Rápido, sem cadastro, sem senha</p>
+
+    <div style="display:flex;align-items:center;gap:10px;margin:20px 0;">
+      <div style="flex:1;height:1px;background:var(--cinza3);"></div>
+      <span style="font-size:12px;color:var(--texto2);white-space:nowrap;">ou entre na sua conta</span>
+      <div style="flex:1;height:1px;background:var(--cinza3);"></div>
+    </div>
+
     <div class="campo">
       <label>Telefone (WhatsApp)</label>
       <input type="tel" placeholder="(97) 99999-9999" id="login-usuario" autocomplete="tel" inputmode="numeric" oninput="mascaraTelefone(this)">
@@ -769,15 +778,12 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <label>Senha</label>
       <input type="password" placeholder="••••••••" id="login-senha">
     </div>
-    <button class="btn-principal" onclick="entrar()">Entrar</button>
+    <button class="btn-principal" onclick="entrar()" style="background:transparent;border:1.5px solid var(--cinza3);color:var(--texto);">Entrar</button>
     <div style="text-align:center;margin-top:10px;">
       <span onclick="abrirResetSenha()" style="color:var(--texto2);font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Esqueci minha senha</span>
     </div>
     <div class="link-texto">
       Não tem conta? <span onclick="irCadastro()">Cadastre-se grátis</span>
-    </div>
-    <div style="text-align:center;margin-top:20px;">
-      <span onclick="continuarSemConta()" style="color:#fff;font-size:15px;font-weight:600;cursor:pointer;border-bottom:2px solid rgba(255,255,255,0.35);padding-bottom:2px;">Fazer pedido sem criar conta →</span>
     </div>
   </div>
 </div>
