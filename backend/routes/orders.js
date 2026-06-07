@@ -889,28 +889,18 @@ router.patch(
             .eq('id', repasseExistente.id);
         }
 
-        // Transferir via Pix Pagar.me se pagamento aprovado e motoboy tem chave Pix
+        // Transferir via Pix Pagar.me em background (não bloqueia a resposta)
         if (pedido.pagamento_status === 'aprovado' && valorRepasse > 0) {
-          const { data: motoboy } = await supabaseAdmin
-            .from('motoboys')
-            .select('chave_pix')
-            .eq('id', pedido.motoboy_id)
-            .single();
-
-          if (motoboy?.chave_pix) {
-            try {
-              await criarTransferenciaPix(motoboy.chave_pix, valorRepasse);
-              await supabaseAdmin
-                .from('repasses')
-                .update({ status: 'pago', atualizado_em: new Date().toISOString() })
-                .eq('pedido_id', orderId)
-                .eq('tipo', 'motoboy');
-              console.log(`[Repasse] Transferência Pix R$${valorRepasse} → motoboy ${pedido.motoboy_id} OK`);
-            } catch (transErr) {
-              console.error(`[Repasse] Falha na transferência Pix ao motoboy:`, transErr.message);
-              // repasse permanece 'pendente' para reprocessamento manual
-            }
-          }
+          supabaseAdmin.from('motoboys').select('chave_pix').eq('id', pedido.motoboy_id).single()
+            .then(({ data: motoboy }) => {
+              if (!motoboy?.chave_pix) return;
+              return criarTransferenciaPix(motoboy.chave_pix, valorRepasse)
+                .then(() => supabaseAdmin.from('repasses')
+                  .update({ status: 'pago', atualizado_em: new Date().toISOString() })
+                  .eq('pedido_id', orderId).eq('tipo', 'motoboy'))
+                .then(() => console.log(`[Repasse] Pix R$${valorRepasse} → motoboy ${pedido.motoboy_id} OK`));
+            })
+            .catch(e => console.error(`[Repasse] Falha Pix motoboy:`, e.message));
         }
       }
 
