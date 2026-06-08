@@ -416,7 +416,7 @@ router.put(
     }
 
     const campos = {};
-    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'valor_minimo', 'aberto', 'mp_user_id', 'whatsapp', 'horarios', 'foto_url', 'lat', 'lng', 'slug', 'tipo_frete', 'frete_base', 'frete_por_km'].forEach((key) => {
+    ['nome', 'emoji', 'categoria', 'tempo_entrega', 'taxa_entrega', 'valor_minimo', 'aberto', 'mp_user_id', 'whatsapp', 'horarios', 'foto_url', 'foto_capa_url', 'lat', 'lng', 'slug', 'tipo_frete', 'frete_base', 'frete_por_km'].forEach((key) => {
       if (req.body[key] !== undefined) campos[key] = req.body[key];
     });
 
@@ -528,7 +528,7 @@ router.post(
 
       if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
-      const { nome, descricao, preco, emoji, disponivel, categoria, imagem_url, estoque, unidade, prazo_entrega } = req.body;
+      const { nome, descricao, preco, preco_promocional, emoji, disponivel, categoria, imagem_url, estoque, unidade, prazo_entrega } = req.body;
 
       const produtoData = {
         estabelecimento_id: est.id,
@@ -539,6 +539,7 @@ router.post(
         disponivel: disponivel !== false,
         unidade: unidade || 'un',
       };
+      if (preco_promocional != null && preco_promocional !== '') produtoData.preco_promocional = Math.round(parseFloat(preco_promocional) * 100) / 100;
       if (categoria) produtoData.categoria = categoria;
       if (imagem_url) produtoData.imagem_url = imagem_url;
       if (estoque !== undefined) produtoData.estoque = estoque === null ? null : parseInt(estoque);
@@ -694,8 +695,12 @@ router.put(
       if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
 
       const campos = {};
-      ['nome', 'descricao', 'preco', 'emoji', 'disponivel', 'categoria', 'imagem_url', 'estoque', 'unidade', 'prazo_entrega'].forEach((key) => {
-        if (req.body[key] !== undefined) campos[key] = typeof req.body[key] === 'boolean' ? req.body[key] : (req.body[key] || null);
+      ['nome', 'descricao', 'preco', 'preco_promocional', 'emoji', 'disponivel', 'categoria', 'imagem_url', 'estoque', 'unidade', 'prazo_entrega'].forEach((key) => {
+        if (req.body[key] !== undefined) {
+          if (typeof req.body[key] === 'boolean') campos[key] = req.body[key];
+          else if (req.body[key] === null || req.body[key] === '') campos[key] = null;
+          else campos[key] = req.body[key];
+        }
       });
 
       const { data, error } = await supabaseAdmin

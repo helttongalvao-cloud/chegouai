@@ -299,6 +299,49 @@ router.patch('/cpf', requireAuth, async (req, res, next) => {
 });
 
 // =============================================
+// GET /api/auth/enderecos — Listar endereços salvos
+// =============================================
+router.get('/enderecos', requireAuth, async (req, res, next) => {
+  try {
+    const { data } = await supabaseAdmin.from('profiles').select('enderecos').eq('id', req.user.id).single();
+    res.json(data?.enderecos || []);
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// POST /api/auth/enderecos — Salvar endereço
+// =============================================
+router.post('/enderecos', requireAuth, async (req, res, next) => {
+  try {
+    const { label, endereco } = req.body;
+    if (!label || !endereco) return res.status(400).json({ error: 'label e endereco obrigatórios' });
+
+    const { data: profile } = await supabaseAdmin.from('profiles').select('enderecos').eq('id', req.user.id).single();
+    const lista = Array.isArray(profile?.enderecos) ? profile.enderecos : [];
+
+    // Remover se já existe igual, manter máx 5
+    const filtrada = lista.filter(e => e.label !== label).slice(0, 4);
+    const nova = [{ label: String(label).slice(0, 30), endereco: String(endereco).slice(0, 300) }, ...filtrada];
+
+    await supabaseAdmin.from('profiles').update({ enderecos: nova }).eq('id', req.user.id);
+    res.json(nova);
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// DELETE /api/auth/enderecos/:label — Remover endereço salvo
+// =============================================
+router.delete('/enderecos/:label', requireAuth, async (req, res, next) => {
+  try {
+    const { data: profile } = await supabaseAdmin.from('profiles').select('enderecos').eq('id', req.user.id).single();
+    const lista = Array.isArray(profile?.enderecos) ? profile.enderecos : [];
+    const nova = lista.filter(e => e.label !== req.params.label);
+    await supabaseAdmin.from('profiles').update({ enderecos: nova }).eq('id', req.user.id);
+    res.json(nova);
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // POST /api/auth/reset-senha — Reset de senha pelo telefone
 // =============================================
 router.post('/reset-senha', [

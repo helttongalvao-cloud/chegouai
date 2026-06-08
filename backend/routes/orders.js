@@ -96,7 +96,7 @@ router.post(
       const produtosIds = itens.map((i) => i.produtoId);
       const { data: produtos, error: prodErr } = await supabaseAdmin
         .from('produtos')
-        .select('id, nome, preco, disponivel, estoque')
+        .select('id, nome, preco, preco_promocional, disponivel, estoque')
         .in('id', produtosIds)
         .eq('estabelecimento_id', estabelecimentoId)
         .eq('disponivel', true);
@@ -125,7 +125,9 @@ router.post(
         const compsTotal = Array.isArray(item.complementos)
           ? item.complementos.reduce((s, c) => s + parseFloat(c.preco_adicional || 0), 0)
           : 0;
-        const precoUnit = parseFloat((produto.preco + compsTotal).toFixed(2));
+        const precoBase = (produto.preco_promocional != null && produto.preco_promocional < produto.preco)
+          ? produto.preco_promocional : produto.preco;
+        const precoUnit = parseFloat((precoBase + compsTotal).toFixed(2));
         const itemTotal = parseFloat((precoUnit * item.quantidade).toFixed(2));
         subtotal += itemTotal;
         const itemObj = {

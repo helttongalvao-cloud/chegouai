@@ -1006,11 +1006,14 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <h4>📍 Endereço de entrega</h4>
       <div id="enderecos-salvos" style="display:none;margin-bottom:8px;"></div>
       <div class="campo" style="display:none;">
-        <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value)">
+        <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value);if(authToken&&currentUser){var w=document.getElementById('btn-salvar-endereco-wrap');if(w)w.style.display=this.value.length>5?'block':'none';}">
       </div>
       <div style="display:flex;gap:8px;margin-top:8px;">
         <button id="btn-localizacao" onclick="usarLocalizacao()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📡 Minha localização</button>
         <button onclick="mostrarInputLinkGMaps()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📎 Colar link</button>
+      </div>
+      <div id="btn-salvar-endereco-wrap" style="display:none;margin-top:6px;">
+        <button onclick="salvarEnderecoNaConta()" style="width:100%;padding:8px;border-radius:8px;background:transparent;border:1px solid var(--cinza3);color:var(--texto2);font-size:12px;cursor:pointer;">💾 Salvar este endereço na minha conta</button>
       </div>
       <div id="mapa-picker-wrap" style="display:none;margin-top:10px;">
         <div id="mapa-picker" style="height:220px;border-radius:12px;overflow:hidden;border:1.5px solid var(--cinza3);"></div>
@@ -4438,11 +4441,18 @@ async function abrirCardapio(id, _prodId) {
     document.getElementById('est-nome-cardapio').textContent = estAtual.nome;
     var banner = document.getElementById('est-banner');
     if(banner) {
-      var bgStyle = estAtual.foto_url ? 'background-image:url(' + estAtual.foto_url + ')' : 'background:linear-gradient(135deg,#1a2a1a,#0d1f0d)';
-      var logoHtml = estAtual.foto_url
-        ? '<img src="' + estAtual.foto_url + '" alt="">'
-        : '<div class="banner-emoji-icon">' + (estAtual.emoji || '🏪') + '</div>';
-      banner.innerHTML = '<div class="banner-bg" style="' + bgStyle + '"></div><div class="banner-logo">' + logoHtml + '</div>';
+      if(estAtual.foto_capa_url) {
+        // Banner de capa full-width — sem logo sobreposta
+        banner.style.height = '180px';
+        banner.innerHTML = '<img src="' + estAtual.foto_capa_url + '" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.style.display=\'none\'">';
+      } else {
+        banner.style.height = '150px';
+        var bgStyle = estAtual.foto_url ? 'background-image:url(' + estAtual.foto_url + ')' : 'background:linear-gradient(135deg,#1a2a1a,#0d1f0d)';
+        var logoHtml = estAtual.foto_url
+          ? '<img src="' + estAtual.foto_url + '" alt="">'
+          : '<div class="banner-emoji-icon">' + (estAtual.emoji || '🏪') + '</div>';
+        banner.innerHTML = '<div class="banner-bg" style="' + bgStyle + '"></div><div class="banner-logo">' + logoHtml + '</div>';
+      }
     }
     var metaTxt = (estAtual.aberto ? 'Aberto' : '🔴 Fechado') + ' • ' + (estAtual.tempo_entrega || '30-45 min') + ' • Frete R$2-R$4';
     if(estAtual.valor_minimo && parseFloat(estAtual.valor_minimo) > 0) {
@@ -4501,11 +4511,29 @@ async function abrirCardapio(id, _prodId) {
       }, 300);
     }
 
-    // Carregar endereço salvo
+    // Carregar endereço salvo (localStorage)
     var endSalvo = localStorage.getItem('chegouai_endereco');
     if(endSalvo) {
       var elEnd = document.getElementById('endereco-entrega');
       if(elEnd && !elEnd.value) elEnd.value = endSalvo;
+    }
+
+    // Carregar endereços salvos na conta (usuário logado)
+    if(authToken && currentUser) {
+      try {
+        var enderecosSalvos = await apiCall('/api/auth/enderecos');
+        var elSalvos = document.getElementById('enderecos-salvos');
+        if(elSalvos && enderecosSalvos && enderecosSalvos.length > 0) {
+          elSalvos.style.display = 'block';
+          elSalvos.innerHTML = '<div style="font-size:12px;color:var(--texto2);margin-bottom:6px;">📍 Endereços salvos:</div>' +
+            enderecosSalvos.map(function(e) {
+              return '<button onclick="usarEnderecoSalvo(' + JSON.stringify(e.endereco).replace(/"/g,'&quot;') + ')" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border-radius:10px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:13px;cursor:pointer;margin-bottom:6px;text-align:left;">' +
+                '<span style="font-weight:700;min-width:50px;">' + sanitizar(e.label) + '</span>' +
+                '<span style="color:var(--texto2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + sanitizar(e.endereco) + '</span>' +
+              '</button>';
+            }).join('');
+        }
+      } catch(_) {}
     }
   } catch(e) {
     lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar cardápio</div>';
@@ -4890,6 +4918,23 @@ function atualizarCarrinho() {
 }
 
 function voltarCardapio() { irTela('tela-cardapio'); }
+
+function usarEnderecoSalvo(endereco) {
+  var el = document.getElementById('endereco-entrega');
+  if(el) { el.value = endereco; simularFrete(endereco); }
+}
+
+async function salvarEnderecoNaConta() {
+  var el = document.getElementById('endereco-entrega');
+  var endereco = el ? el.value.trim() : '';
+  if(!endereco || !authToken || !currentUser) return;
+  var label = prompt('Nome para este endereço (ex: Casa, Trabalho):');
+  if(!label || !label.trim()) return;
+  try {
+    await apiCall('/api/auth/enderecos', { method: 'POST', body: { label: label.trim(), endereco } });
+    showToast('✅', 'Endereço salvo!', '"' + label.trim() + '" salvo na sua conta');
+  } catch(e) { showToast('❌', 'Erro', e.message); }
+}
 
 function simularFrete(endereco) {
   var subtotal = calcularTotalCarrinho();
@@ -5930,7 +5975,7 @@ async function renderCardapioEst(manterDestaque) {
   try {
     var produtos = await apiCall('/api/establishments/me/products');
     cardapioEst = produtos.map(function(p) {
-      return { id: p.id, nome: p.nome, desc: p.descricao || '', preco: parseFloat(p.preco), emoji: p.emoji || '🍽️', disponivel: p.disponivel, imagem_url: p.imagem_url || '', categoria: p.categoria || 'principal' };
+      return { id: p.id, nome: p.nome, desc: p.descricao || '', preco: parseFloat(p.preco), preco_promocional: p.preco_promocional ? parseFloat(p.preco_promocional) : null, emoji: p.emoji || '🍽️', disponivel: p.disponivel, imagem_url: p.imagem_url || '', categoria: p.categoria || 'principal' };
     });
   } catch(e) {
     el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar cardápio</div>';
@@ -5939,7 +5984,11 @@ async function renderCardapioEst(manterDestaque) {
   var itensHtml = cardapioEst.map(function(p, i) {
     var op = p.disponivel ? '1' : '0.4';
     var indisponivel = !p.disponivel ? '<div style="font-size:11px;color:var(--erro);margin-top:2px;">⛔ Indisponível</div>' : '';
-    var preco = 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.',',');
+    var temPromoLoja = p.preco_promocional && p.preco_promocional > 0 && p.preco_promocional < p.preco;
+    var pctPromo = temPromoLoja ? Math.round((1 - p.preco_promocional/p.preco)*100) : 0;
+    var preco = temPromoLoja
+      ? '<span style="text-decoration:line-through;color:var(--texto2);font-size:11px;">R$ ' + p.preco.toFixed(2).replace('.',',') + '</span> <span style="color:#ff4444;font-weight:800;">R$ ' + p.preco_promocional.toFixed(2).replace('.',',') + '</span> <span style="background:#ff4444;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;">-' + pctPromo + '%</span>'
+      : 'R$ ' + parseFloat(p.preco).toFixed(2).replace('.',',');
     var thumbHtml = p.imagem_url
       ? '<img src="' + p.imagem_url + '" style="width:48px;height:48px;border-radius:8px;object-fit:cover;opacity:' + op + '" onerror="this.style.display=\'none\'">'
       : '<div class="prod-emoji" style="opacity:' + op + '">' + (p.emoji || '🍽️') + '</div>';
@@ -6109,7 +6158,7 @@ async function renderInfoLoja() {
     '</div>' +
     '<div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:16px;padding:16px;">' +
     '<h4 style="font-size:15px;font-weight:700;margin-bottom:14px;">Configurações da loja</h4>' +
-    '<div class="form-grupo"><label>Foto da loja</label>' +
+    '<div class="form-grupo"><label>Foto do perfil da loja</label>' +
     '<div id="loja-foto-preview" style="' + fotoPreviewStyle + 'position:relative;margin-bottom:8px;">' +
       '<img id="loja-foto-img" src="' + (est.foto_url || '') + '" style="width:100%;max-height:180px;object-fit:contain;background:#1a1a1a;border-radius:10px;">' +
       '<button type="button" onclick="removerFotoLoja()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.65);border:none;border-radius:6px;color:white;padding:4px 8px;cursor:pointer;font-size:12px;">🗑️ Remover</button>' +
@@ -6119,6 +6168,17 @@ async function renderInfoLoja() {
     '</label>' +
     '<input type="file" id="loja-foto-input" accept="image/*" style="display:none" onchange="selecionarFotoLoja(this)">' +
     '<input type="hidden" id="loja-foto-url" value="' + (est.foto_url || '') + '">' +
+    '</div>' +
+    '<div class="form-grupo"><label>Banner/capa da loja <span style="font-size:11px;color:var(--texto2);">— aparece no topo do cardápio</span></label>' +
+    '<div id="loja-capa-preview" style="' + (est.foto_capa_url ? '' : 'display:none;') + 'position:relative;margin-bottom:8px;">' +
+      '<img id="loja-capa-img" src="' + (est.foto_capa_url || '') + '" style="width:100%;max-height:120px;object-fit:cover;background:#1a1a1a;border-radius:10px;">' +
+      '<button type="button" onclick="removerCapaLoja()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.65);border:none;border-radius:6px;color:white;padding:4px 8px;cursor:pointer;font-size:12px;">🗑️ Remover</button>' +
+    '</div>' +
+    '<label for="loja-capa-input" id="loja-capa-label" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;border:1.5px dashed var(--cinza3);background:var(--cinza2);color:var(--texto2);cursor:pointer;font-size:14px;">' +
+      (est.foto_capa_url ? '🖼️ Trocar banner' : '🖼️ Adicionar banner (1200×400px ideal)') +
+    '</label>' +
+    '<input type="file" id="loja-capa-input" accept="image/*" style="display:none" onchange="selecionarCapaLoja(this)">' +
+    '<input type="hidden" id="loja-capa-url" value="' + (est.foto_capa_url || '') + '">' +
     '</div>' +
     '<div class="form-grupo"><label>Nome da loja</label>' +
     '<input type="text" id="loja-nome-input" class="modal-campo" style="margin:0;" autocomplete="off" value="' + (est.nome || '') + '"></div>' +
@@ -6295,6 +6355,53 @@ function removerFotoLoja() {
   document.getElementById('loja-foto-input').value = '';
 }
 
+function selecionarCapaLoja(input) {
+  var file = input.files[0];
+  if(!file) return;
+  var label = document.getElementById('loja-capa-label');
+  if(label) label.textContent = '⏳ Enviando...';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var maxW = 1200, maxH = 400;
+      var w = img.width, h = img.height;
+      if(w > maxW) { h = h * maxW / w; w = maxW; }
+      if(h > maxH) { w = w * maxH / h; h = maxH; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      var base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+      apiCall('/api/establishments/me/upload-image', {
+        method: 'POST', body: { base64, contentType: 'image/jpeg' }
+      }).then(function(resp) {
+        if(resp && resp.url) {
+          document.getElementById('loja-capa-url').value = resp.url;
+          var imgEl = document.getElementById('loja-capa-img');
+          if(imgEl) imgEl.src = resp.url;
+          var prev = document.getElementById('loja-capa-preview');
+          if(prev) prev.style.display = 'block';
+          if(label) label.textContent = '🖼️ Trocar banner';
+        }
+      }).catch(function() {
+        if(label) label.textContent = '🖼️ Adicionar banner';
+        alert('Erro ao enviar banner. Tente novamente.');
+      });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removerCapaLoja() {
+  document.getElementById('loja-capa-url').value = '';
+  var prev = document.getElementById('loja-capa-preview');
+  if(prev) prev.style.display = 'none';
+  var label = document.getElementById('loja-capa-label');
+  if(label) label.textContent = '🖼️ Adicionar banner (1200×400px ideal)';
+  document.getElementById('loja-capa-input').value = '';
+}
+
 function toggleHorario(dia) {
   var ativo = document.getElementById('hor-' + dia + '-ativo').checked;
   var inputs = document.getElementById('hor-' + dia + '-inputs');
@@ -6356,6 +6463,8 @@ async function salvarInfoLoja() {
     if(aberto !== null) body.aberto = aberto;
     var fotoUrl = document.getElementById('loja-foto-url');
     if(fotoUrl) body.foto_url = fotoUrl.value || null;
+    var capaUrl = document.getElementById('loja-capa-url');
+    if(capaUrl) body.foto_capa_url = capaUrl.value || null;
     if(window._lojaLat && window._lojaLng) { body.lat = window._lojaLat; body.lng = window._lojaLng; }
     await apiCall('/api/establishments/me', { method: 'PUT', body });
     var navBtn = document.getElementById('est-nav-cardapio');
@@ -6413,6 +6522,8 @@ function abrirModalProduto(idx) {
     document.getElementById('prod-nome').value = p.nome;
     document.getElementById('prod-desc').value = p.descricao || '';
     document.getElementById('prod-preco').value = p.preco;
+    var promoEl = document.getElementById('prod-preco-promo');
+    if(promoEl) promoEl.value = p.preco_promocional || '';
     document.getElementById('prod-emoji').value = p.emoji || '🍽️';
     document.getElementById('prod-disponivel').checked = p.disponivel;
     document.getElementById('prod-estoque').value = p.estoque !== null && p.estoque !== undefined ? p.estoque : '';
@@ -6440,6 +6551,8 @@ function abrirModalProduto(idx) {
     document.getElementById('prod-nome').value = '';
     document.getElementById('prod-desc').value = '';
     document.getElementById('prod-preco').value = '';
+    var promoEl = document.getElementById('prod-preco-promo');
+    if(promoEl) promoEl.value = '';
     document.getElementById('prod-estoque').value = '';
     document.getElementById('prod-unidade').value = 'un';
     var prazoEl = document.getElementById('prod-prazo');
@@ -6536,7 +6649,9 @@ async function salvarProduto() {
     const estoque = estoqueRaw === '' ? null : parseInt(estoqueRaw);
     const unidade = document.getElementById('prod-unidade').value || 'un';
     const prazoEntrega = (document.getElementById('prod-prazo')?.value || '').trim() || null;
-    const body = { nome, descricao: descricao, preco, emoji: emojiSelecionado, disponivel, categoria, estoque, unidade, prazo_entrega: prazoEntrega };
+    const promoRaw = document.getElementById('prod-preco-promo')?.value.trim();
+    const preco_promocional = promoRaw && parseFloat(promoRaw) > 0 && parseFloat(promoRaw) < preco ? parseFloat(promoRaw) : null;
+    const body = { nome, descricao: descricao, preco, preco_promocional, emoji: emojiSelecionado, disponivel, categoria, estoque, unidade, prazo_entrega: prazoEntrega };
     if(imagem_url) body.imagem_url = imagem_url;
     if(idx >= 0 && cardapioEst[idx] && cardapioEst[idx].id) {
       await apiCall('/api/establishments/me/products/' + cardapioEst[idx].id, { method: 'PUT', body });
@@ -9536,6 +9651,11 @@ function adminNav(btn, secao) {
     <div class="form-grupo">
       <label>Preço (R$) *</label>
       <input type="number" id="prod-preco" placeholder="0,00" step="0.01" min="0">
+    </div>
+    <div class="form-grupo">
+      <label>Preço promocional (R$) <span style="font-size:11px;color:var(--texto2);">— deixe vazio para sem promoção</span></label>
+      <input type="number" id="prod-preco-promo" placeholder="0,00" step="0.01" min="0">
+      <div style="font-size:11px;color:var(--texto2);margin-top:4px;">O cliente verá o preço original riscado e o preço promocional em destaque.</div>
     </div>
     <div class="form-grupo">
       <label>Unidade de venda</label>
