@@ -312,7 +312,7 @@ router.get('/sorteio', async (req, res, next) => {
 
     const { data, error } = await supabaseAdmin
       .from('pedidos')
-      .select('id, telefone_cliente, indicado_por, total, criado_em, guest_nome, profiles(nome)')
+      .select('id, telefone_cliente, indicado_por, total, criado_em, nome_cliente, profiles(nome)')
       .eq('pagamento_status', 'aprovado')
       .gte('criado_em', dataInicio + 'T00:00:00.000Z')
       .lte('criado_em', dataFim + 'T23:59:59.999Z')
@@ -331,7 +331,7 @@ router.get('/sorteio', async (req, res, next) => {
       if (!tel || tel.length < 10) continue;
       ticketsPorTelefone[tel] = (ticketsPorTelefone[tel] || 0) + 1;
       if (!nomePorTelefone[tel]) {
-        nomePorTelefone[tel] = (p.profiles && p.profiles.nome) || p.guest_nome || null;
+        nomePorTelefone[tel] = (p.profiles && p.profiles.nome) || p.nome_cliente || null;
       }
 
       if (p.indicado_por) {
