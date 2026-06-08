@@ -233,6 +233,27 @@ router.post(
         }
       }
 
+      // 4c. Campanha automática do estabelecimento (sem código, auto-aplicada)
+      if (!cupomCodigo) {
+        const { data: campanha } = await supabaseAdmin
+          .from('campanhas_estabelecimento')
+          .select('*').eq('estabelecimento_id', est.id).eq('ativo', true)
+          .order('criado_em', { ascending: false }).limit(1);
+        const c = campanha && campanha[0];
+        if (c) {
+          const minimo = parseFloat(c.valor_minimo || 0);
+          if (subtotal >= minimo) {
+            if (c.tipo === 'percentual') {
+              desconto = parseFloat((subtotal * c.valor / 100).toFixed(2));
+            } else if (c.tipo === 'fixo') {
+              desconto = Math.min(parseFloat(c.valor), subtotal);
+            } else if (c.tipo === 'frete_gratis') {
+              req.body._volteiAtivo = true;
+            }
+          }
+        }
+      }
+
       // 5. Calcular taxa de entrega final
       let taxaFinal = split.taxaEntrega;
       if (est.tipo_frete === 'km') {

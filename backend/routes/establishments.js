@@ -860,6 +860,153 @@ router.get('/me/relatorio/exportar', requireRole('estabelecimento'), async (req,
 });
 
 // =============================================
+// CAMPANHAS DE DESCONTO
+// =============================================
+router.get('/me/campanhas', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+    const { data } = await supabaseAdmin.from('campanhas_estabelecimento')
+      .select('*').eq('estabelecimento_id', est.id).order('criado_em', { ascending: false });
+    res.json(data || []);
+  } catch (err) { next(err); }
+});
+
+router.post('/me/campanhas', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+    const { nome, tipo, valor, valor_minimo } = req.body;
+    if (!nome || !tipo) return res.status(400).json({ error: 'nome e tipo obrigatórios' });
+    if (!['percentual', 'fixo', 'frete_gratis'].includes(tipo)) return res.status(400).json({ error: 'tipo inválido' });
+    const { data, error } = await supabaseAdmin.from('campanhas_estabelecimento').insert({
+      estabelecimento_id: est.id,
+      nome: String(nome).trim().slice(0, 80),
+      tipo,
+      valor: parseFloat(valor) || 0,
+      valor_minimo: parseFloat(valor_minimo) || 0,
+      ativo: true,
+    }).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) { next(err); }
+});
+
+router.put('/me/campanhas/:id', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+    const allowed = ['nome', 'tipo', 'valor', 'valor_minimo', 'ativo'];
+    const updates = {};
+    allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
+    if (updates.valor !== undefined) updates.valor = parseFloat(updates.valor) || 0;
+    if (updates.valor_minimo !== undefined) updates.valor_minimo = parseFloat(updates.valor_minimo) || 0;
+    const { data, error } = await supabaseAdmin.from('campanhas_estabelecimento')
+      .update(updates).eq('id', req.params.id).eq('estabelecimento_id', est.id).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) { next(err); }
+});
+
+router.delete('/me/campanhas/:id', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+    await supabaseAdmin.from('campanhas_estabelecimento').delete().eq('id', req.params.id).eq('estabelecimento_id', est.id);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// GET /api/establishments/:estId/campanha-ativa — campanha ativa (público, para checkout)
+router.get('/:estId/campanha-ativa', async (req, res, next) => {
+  try {
+    const { data } = await supabaseAdmin.from('campanhas_estabelecimento')
+      .select('*').eq('estabelecimento_id', req.params.estId).eq('ativo', true)
+      .order('criado_em', { ascending: false }).limit(1);
+    res.json(data && data[0] ? data[0] : null);
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// GET /api/establishments/me/relatorio/contador — Dados para PDF fiscal mensal
+// =============================================
+router.get('/me/relatorio/contador', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const mes = req.query.mes; // formato YYYY-MM
+    let inicio, fim;
+    if (mes && /^\d{4}-\d{2}$/.test(mes)) {
+      const [ano, m] = mes.split('-').map(Number);
+      inicio = new Date(ano, m - 1, 1).toISOString();
+      fim = new Date(ano, m, 1).toISOString();
+    } else {
+      const now = new Date();
+      inicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      fim = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+    }
+
+    const { data: est } = await supabaseAdmin
+      .from('estabelecimentos')
+      .select('id, nome, whatsapp, cidade, estado, categoria, slug')
+      .eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+
+    const { data: pedidos } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, subtotal, taxa_entrega, total, forma_pagamento, status, criado_em, nome_cliente, telefone_cliente, itens_pedido(nome, quantidade, preco_unitario)')
+      .eq('estabelecimento_id', est.id)
+      .eq('pagamento_status', 'aprovado')
+      .neq('status', 'cancelado')
+      .gte('criado_em', inicio)
+      .lt('criado_em', fim)
+      .order('criado_em', { ascending: true });
+
+    const todos = pedidos || [];
+    const COMISSAO = 0.05;
+    const bruto = todos.reduce((s, p) => s + (p.subtotal || 0), 0);
+    const taxaPlataforma = parseFloat((bruto * COMISSAO).toFixed(2));
+    const liquido = parseFloat((bruto - taxaPlataforma).toFixed(2));
+    const ticketMedio = todos.length ? parseFloat((bruto / todos.length).toFixed(2)) : 0;
+
+    const porFormaPag = {};
+    todos.forEach(p => {
+      const f = p.forma_pagamento || 'outro';
+      if (!porFormaPag[f]) porFormaPag[f] = { count: 0, total: 0 };
+      porFormaPag[f].count++;
+      porFormaPag[f].total = parseFloat((porFormaPag[f].total + (p.subtotal || 0)).toFixed(2));
+    });
+
+    const produtosContagem = {};
+    todos.forEach(p => {
+      (p.itens_pedido || []).forEach(i => {
+        if (!produtosContagem[i.nome]) produtosContagem[i.nome] = { nome: i.nome, qtd: 0, total: 0 };
+        produtosContagem[i.nome].qtd += i.quantidade;
+        produtosContagem[i.nome].total = parseFloat((produtosContagem[i.nome].total + (i.preco_unitario || 0) * i.quantidade).toFixed(2));
+      });
+    });
+    const topProdutos = Object.values(produtosContagem).sort((a, b) => b.qtd - a.qtd).slice(0, 10);
+
+    res.json({
+      estabelecimento: { nome: est.nome, whatsapp: est.whatsapp, cidade: est.cidade, estado: est.estado, categoria: est.categoria },
+      periodo: { mes: mes || new Date(inicio).toISOString().slice(0, 7), inicio, fim },
+      resumo: { total_pedidos: todos.length, bruto: parseFloat(bruto.toFixed(2)), taxa_plataforma: taxaPlataforma, liquido, ticket_medio: ticketMedio },
+      por_forma_pagamento: porFormaPag,
+      top_produtos: topProdutos,
+      pedidos: todos.map(p => ({
+        id: p.id.slice(0, 8).toUpperCase(),
+        data: new Date(p.criado_em).toLocaleString('pt-BR', { timeZone: 'America/Manaus' }),
+        cliente: p.nome_cliente || '—',
+        itens: (p.itens_pedido || []).map(i => `${i.quantidade}x ${i.nome}`).join(', '),
+        forma_pagamento: p.forma_pagamento,
+        subtotal: parseFloat((p.subtotal || 0).toFixed(2)),
+        taxa_entrega: parseFloat((p.taxa_entrega || 0).toFixed(2)),
+        liquido_pedido: parseFloat(((p.subtotal || 0) * (1 - COMISSAO)).toFixed(2)),
+        status: p.status,
+      })),
+    });
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // POST /api/establishments/me/upload-image
 // =============================================
 router.post('/me/upload-image', requireAuth, requireRole('estabelecimento', 'admin'), async (req, res, next) => {

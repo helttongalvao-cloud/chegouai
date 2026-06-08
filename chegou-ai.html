@@ -1002,6 +1002,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="total-linha"><span>Taxa de entrega</span><span style="color:var(--verde)" id="taxa-entrega-valor">R$ 3,00</span></div>
       <div style="font-size:11px;color:var(--texto2);margin-top:-6px;margin-bottom:4px;" id="taxa-entrega-info">📍 Até 1,5 km — R$ 2,00 &nbsp;|&nbsp; Acima de 6 km — R$ 4,00</div>
       <div id="frete-gratis-badge" style="display:none;background:#052e16;color:#4ade80;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;margin-top:4px;margin-bottom:2px;">🎉 Frete grátis no seu 1º pedido!</div>
+      <div id="campanha-badge" style="display:none;background:#052e16;color:#4ade80;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;margin-top:4px;margin-bottom:2px;"></div>
       <button onclick="voltarCardapio()" style="width:100%;margin-top:12px;padding:12px;background:none;border:1.5px dashed var(--cinza3);border-radius:12px;color:var(--texto2);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">＋ Adicionar mais itens</button>
       <div class="total-linha" id="linha-conveniencia" style="display:none;"><span style="color:var(--texto2);">Taxa conveniência cartão (2,99%)</span><span id="conveniencia-valor" style="color:var(--texto2);">R$ 0,00</span></div>
       <div class="total-linha destaque"><span>Total</span><span class="valor" id="total-valor">R$ 0,00</span></div>
@@ -1530,6 +1531,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <div class="nav-btn ativo" id="est-nav-pedidos" onclick="estNav(this,'pedidos')">📋 Pedidos</div>
     <div class="nav-btn" id="est-nav-cardapio" onclick="estNav(this,'cardapio')">🍽️ Cardápio</div>
     <div class="nav-btn" id="est-nav-repasses" onclick="estNav(this,'repasses')">💸 Repasses</div>
+    <div class="nav-btn" id="est-nav-campanhas" onclick="estNav(this,'campanhas')">🎯 Campanhas</div>
     <div class="nav-btn" id="est-nav-relatorio" onclick="estNav(this,'relatorio')">📊 Relatório</div>
     <div class="nav-btn" id="est-nav-loja" onclick="estNav(this,'loja')">⚙️ Minha Loja</div>
   </div>
@@ -1569,6 +1571,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="secao-titulo">💸 Repasses — Motoboys Próprios</div>
       <div id="repasses-conteudo"><div style="text-align:center;padding:40px;color:var(--texto2);">Carregando...</div></div>
     </div>
+    <div id="est-secao-campanhas" style="display:none;"></div>
     <div id="est-secao-relatorio" style="display:none;"></div>
     <div id="est-secao-loja" style="display:none;"></div>
   </div>
@@ -2792,8 +2795,9 @@ setTimeout(function(){
   } else if(params.get('loja') && window.location.pathname === '/app') {
     // Link direto para loja: abre cardápio sem precisar de login
     var lojaIdParam = params.get('loja');
+    var produtoParam = params.get('produto');
     irTela('tela-home');
-    setTimeout(function() { abrirCardapio(lojaIdParam); }, 300);
+    setTimeout(function() { abrirCardapio(lojaIdParam, produtoParam || undefined); }, 300);
   } else if(window.location.pathname !== '/parceiro' && window.location.pathname !== '/app' && window.location.pathname !== '/landing' && window.location.pathname.match(/^\/[a-z0-9][a-z0-9-]{1,39}$/)) {
     var slugPath = window.location.pathname.replace(/^\//, '');
     if(params.get('operador') === '1') {
@@ -2801,9 +2805,10 @@ setTimeout(function(){
       iniciarModoOperador(slugPath);
     } else {
       // Slug da loja: /hamburguitos → resolve para UUID e abre cardápio
+      var produtoParamSlug = params.get('produto');
       irTela('tela-home');
       apiCall('/api/establishments/slug/' + slugPath).then(function(loja) {
-        if(loja && loja.id) setTimeout(function() { abrirCardapio(loja.id); }, 300);
+        if(loja && loja.id) setTimeout(function() { abrirCardapio(loja.id, produtoParamSlug || undefined); }, 300);
       }).catch(function() {});
     }
   } else if(authToken && currentUser) {
@@ -4732,15 +4737,22 @@ async function abrirCardapio(id, _prodId) {
     renderProdutos(produtosCache);
     if(_prodId) {
       setTimeout(function() {
-        var el = document.querySelector('#lista-itens .card-produto[data-id="' + _prodId + '"]');
-        if(el) {
-          el.scrollIntoView({ behavior:'smooth', block:'center' });
-          el.style.transition = 'box-shadow 0.4s';
-          el.style.boxShadow = '0 0 0 3px var(--verde)';
-          setTimeout(function() { el.style.boxShadow = ''; }, 2000);
+        var idxProd = produtosCache.findIndex(function(p){ return p.id === _prodId; });
+        if(idxProd !== -1) {
+          adicionarItem(idxProd); // abre modal do produto direto
+        } else {
+          var el = document.querySelector('#lista-itens .card-produto[data-id="' + _prodId + '"]');
+          if(el) { el.scrollIntoView({ behavior:'smooth', block:'center' }); el.style.boxShadow = '0 0 0 3px var(--verde)'; setTimeout(function(){ el.style.boxShadow=''; },2000); }
         }
-      }, 300);
+      }, 400);
     }
+
+    // Carregar campanha ativa do estabelecimento
+    window.campanhaAtiva = null;
+    try {
+      var camp = await apiCall('/api/establishments/' + id + '/campanha-ativa');
+      window.campanhaAtiva = camp;
+    } catch(_) {}
 
     // Carregar endereço salvo (localStorage)
     var endSalvo = localStorage.getItem('chegouai_endereco');
@@ -5277,6 +5289,20 @@ async function irCheckout(_manterScroll) {
 
   irTela('tela-checkout');
   if(!_manterScroll) window.scrollTo(0, 0);
+
+  // Mostrar campanha ativa do estabelecimento
+  var campBadge = document.getElementById('campanha-badge');
+  if(campBadge) {
+    if(window.campanhaAtiva) {
+      var c = window.campanhaAtiva;
+      var minCond = c.valor_minimo > 0 ? ' em pedidos acima de R$ ' + parseFloat(c.valor_minimo).toFixed(2).replace('.',',') : '';
+      var descStr = c.tipo === 'frete_gratis' ? '🚚 Frete grátis' + minCond : (c.tipo === 'percentual' ? '🎉 ' + c.valor + '% de desconto' + minCond : '🎉 R$ ' + parseFloat(c.valor).toFixed(2).replace('.',',') + ' de desconto' + minCond);
+      campBadge.textContent = descStr + ' — aplicado automaticamente!';
+      campBadge.style.display = 'block';
+    } else {
+      campBadge.style.display = 'none';
+    }
+  }
 
   // Mostrar campo nome e CPF, esconder cupom para guest
   var secaoGuest = document.getElementById('secao-guest-nome');
@@ -5928,6 +5954,7 @@ async function estNav(btn, secao) {
       '<div class="secao-titulo">💸 Repasses — Motoboys Próprios</div>' +
       '<div id="repasses-conteudo"><div style="text-align:center;padding:40px;color:var(--texto2);">Carregando...</div></div>' +
     '</div>' +
+    '<div id="est-secao-campanhas" style="display:none;"></div>' +
     '<div id="est-secao-relatorio" style="display:none;"></div>' +
     '<div id="est-secao-loja" style="display:none;"></div>';
 
@@ -5938,12 +5965,14 @@ async function estNav(btn, secao) {
   document.getElementById('est-secao-pedidos').style.display = secao === 'pedidos' ? 'block' : 'none';
   document.getElementById('est-secao-cardapio').style.display = secao === 'cardapio' ? 'block' : 'none';
   document.getElementById('est-secao-repasses').style.display = secao === 'repasses' ? 'block' : 'none';
+  document.getElementById('est-secao-campanhas').style.display = secao === 'campanhas' ? 'block' : 'none';
   document.getElementById('est-secao-relatorio').style.display = secao === 'relatorio' ? 'block' : 'none';
   document.getElementById('est-secao-loja').style.display = secao === 'loja' ? 'block' : 'none';
 
   if(secao === 'pedidos') renderEstabelecimento();
   if(secao === 'cardapio') renderCardapioEst();
   if(secao === 'repasses') renderRepasses();
+  if(secao === 'campanhas') renderCampanhas();
   if(secao === 'relatorio') renderRelatorio();
   if(secao === 'loja') renderInfoLoja();
 }
@@ -6226,6 +6255,7 @@ async function renderCardapioEst(manterDestaque) {
       '</div>' +
       '<div class="prod-acoes">' +
         btnFoto +
+        '<button class="btn-editar" onclick="compartilharLinkProduto(\'' + p.id + '\', \'' + sanitizar(p.nome).replace(/'/g,"\\'") + '\')" title="Compartilhar link direto">🔗 Link</button>' +
         '<button class="btn-editar" onclick="gerenciarComplementos(\'' + p.id + '\', \'' + sanitizar(p.nome).replace(/'/g,"\\'") + '\')">🔧 Complementos</button>' +
         '<button class="btn-editar" onclick="toggleDisponivel(\'' + p.id + '\',' + (!p.disponivel) + ',this)" style="background:' + (p.disponivel ? '#FF525215' : '#00C85315') + ';color:' + (p.disponivel ? 'var(--erro)' : 'var(--verde)') + ';">' + (p.disponivel ? '⏸ Pausar' : '▶ Disponível') + '</button>' +
         '<button class="btn-deletar" onclick="deletarProduto(\'' + p.id + '\')">🗑️ Remover</button>' +
@@ -6297,7 +6327,10 @@ async function renderRelatorio(periodo) {
         '<button onclick="renderRelatorio(\'30d\')" style="' + btnStyle('30d') + '">30 dias</button>' +
         '<button onclick="renderRelatorio(\'90d\')" style="' + btnStyle('90d') + '">90 dias</button>' +
       '</div>' +
-      '<a href="/api/establishments/me/relatorio/exportar?periodo=' + periodo + '" download style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);text-decoration:none;font-size:14px;font-weight:600;margin-bottom:20px;">📥 Exportar para Excel (.csv)</a>' +
+      '<div style="display:flex;gap:8px;margin-bottom:20px;">' +
+        '<a href="/api/establishments/me/relatorio/exportar?periodo=' + periodo + '" download style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);text-decoration:none;font-size:13px;font-weight:600;">📥 Excel (.csv)</a>' +
+        '<button onclick="abrirRelatorioContador()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">🧾 Relatório Contador</button>' +
+      '</div>' +
       '<div class="stats-grid" style="grid-template-columns:1fr 1fr;margin-bottom:20px;">' +
         '<div class="stat-card"><div class="stat-valor">' + data.total_pedidos + '</div><div class="stat-label">Pedidos recebidos</div></div>' +
         '<div class="stat-card"><div class="stat-valor">' + data.pedidos_entregues + '</div><div class="stat-label">Entregues</div></div>' +
@@ -6311,6 +6344,240 @@ async function renderRelatorio(periodo) {
   } catch(e) {
     el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar relatório</div>';
   }
+}
+
+function abrirRelatorioContador() {
+  var agora = new Date();
+  var mesAtual = agora.getFullYear() + '-' + String(agora.getMonth() + 1).padStart(2, '0');
+  var mesAnterior = agora.getMonth() === 0
+    ? (agora.getFullYear() - 1) + '-12'
+    : agora.getFullYear() + '-' + String(agora.getMonth()).padStart(2, '0');
+  var modal = document.createElement('div');
+  modal.id = 'modal-contador';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML =
+    '<div style="background:var(--fundo2);border-radius:20px;padding:24px;width:100%;max-width:360px;">' +
+      '<div style="font-weight:700;font-size:17px;margin-bottom:16px;">🧾 Relatório para Contador</div>' +
+      '<div style="font-size:13px;color:var(--texto2);margin-bottom:14px;">Selecione o mês do relatório:</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:16px;">' +
+        '<button onclick="gerarRelatorioContador(\'' + mesAnterior + '\',this.closest(\'#modal-contador\'))" style="flex:1;padding:12px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">' + mesAnterior.split('-').reverse().join('/') + '</button>' +
+        '<button onclick="gerarRelatorioContador(\'' + mesAtual + '\',this.closest(\'#modal-contador\'))" style="flex:1;padding:12px;border-radius:12px;background:var(--verde);border:none;color:#000;font-size:13px;font-weight:600;cursor:pointer;">' + mesAtual.split('-').reverse().join('/') + '</button>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<input type="month" id="contador-mes-custom" value="' + mesAtual + '" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;">' +
+        '<button onclick="gerarRelatorioContador(document.getElementById(\'contador-mes-custom\').value,this.closest(\'#modal-contador\'))" style="padding:10px 14px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">Gerar</button>' +
+      '</div>' +
+      '<button onclick="this.closest(\'#modal-contador\').remove()" style="width:100%;padding:12px;margin-top:12px;border-radius:12px;border:none;background:none;color:var(--texto2);font-size:13px;cursor:pointer;">Cancelar</button>' +
+    '</div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e) { if(e.target === modal) modal.remove(); });
+}
+
+async function gerarRelatorioContador(mes, modalEl) {
+  if(!mes) { showToast('⚠️','Selecione o mês',''); return; }
+  if(modalEl) modalEl.remove();
+  showToast('⏳','Gerando relatório...','Aguarde um instante');
+  try {
+    var data = await apiCall('/api/establishments/me/relatorio/contador?mes=' + mes);
+    var est = data.estabelecimento || {};
+    var resumo = data.resumo || {};
+    var pedidos = data.pedidos || [];
+    var topProd = data.top_produtos || [];
+    var porPag = data.por_forma_pagamento || {};
+    var mesLabel = new Date(mes + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    var geradoEm = new Date().toLocaleString('pt-BR', { timeZone: 'America/Manaus' });
+
+    var linhasPedidos = pedidos.map(function(p) {
+      return '<tr>' +
+        '<td>' + p.data + '</td>' +
+        '<td style="font-family:monospace;">' + p.id + '</td>' +
+        '<td>' + (p.cliente || '—') + '</td>' +
+        '<td>' + p.itens + '</td>' +
+        '<td style="text-align:center;">' + (p.forma_pagamento || '—') + '</td>' +
+        '<td style="text-align:right;">R$ ' + p.subtotal.toFixed(2).replace('.',',') + '</td>' +
+        '<td style="text-align:right;">R$ ' + p.taxa_entrega.toFixed(2).replace('.',',') + '</td>' +
+        '<td style="text-align:right;color:#166534;">R$ ' + p.liquido_pedido.toFixed(2).replace('.',',') + '</td>' +
+      '</tr>';
+    }).join('');
+
+    var linhasPag = Object.entries(porPag).map(function(e) {
+      var f = e[0]; var v = e[1];
+      return '<tr><td>' + f + '</td><td style="text-align:center;">' + v.count + '</td><td style="text-align:right;">R$ ' + v.total.toFixed(2).replace('.',',') + '</td></tr>';
+    }).join('');
+
+    var linhasTop = topProd.map(function(p, i) {
+      return '<tr><td>' + (i+1) + 'º</td><td>' + p.nome + '</td><td style="text-align:center;">' + p.qtd + '</td><td style="text-align:right;">R$ ' + (p.total||0).toFixed(2).replace('.',',') + '</td></tr>';
+    }).join('');
+
+    var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+      '<title>Relatório Fiscal — ' + est.nome + ' — ' + mesLabel + '</title>' +
+      '<style>' +
+        'body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:0;padding:20px;}' +
+        'h1{font-size:18px;margin:0 0 4px;}' +
+        'h2{font-size:13px;font-weight:700;margin:20px 0 8px;border-bottom:2px solid #000;padding-bottom:4px;}' +
+        '.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;border-bottom:2px solid #000;padding-bottom:12px;}' +
+        '.resumo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}' +
+        '.resumo-card{border:1px solid #ccc;border-radius:6px;padding:10px;text-align:center;}' +
+        '.resumo-card .val{font-size:16px;font-weight:700;}' +
+        '.resumo-card .lbl{font-size:10px;color:#555;margin-top:2px;}' +
+        'table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:10px;}' +
+        'th{background:#111;color:#fff;padding:6px 8px;text-align:left;}' +
+        'td{padding:5px 8px;border-bottom:1px solid #eee;}' +
+        'tr:nth-child(even){background:#f9f9f9;}' +
+        '.destaque{background:#dcfce7!important;font-weight:700;}' +
+        '.footer{margin-top:30px;border-top:1px solid #ccc;padding-top:10px;font-size:9px;color:#777;display:flex;justify-content:space-between;}' +
+        '@media print{body{padding:10px;}button{display:none;}}' +
+      '</style></head><body>' +
+      '<div style="text-align:right;margin-bottom:10px;"><button onclick="window.print()" style="padding:8px 16px;background:#111;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">🖨️ Imprimir / Salvar PDF</button></div>' +
+      '<div class="header">' +
+        '<div><h1>' + est.nome + '</h1>' +
+          '<div style="color:#555;font-size:10px;">' + (est.cidade || '') + (est.estado ? ' — ' + est.estado : '') + '</div>' +
+          (est.whatsapp ? '<div style="color:#555;font-size:10px;">WhatsApp: ' + est.whatsapp + '</div>' : '') +
+        '</div>' +
+        '<div style="text-align:right;">' +
+          '<div style="font-weight:700;font-size:14px;">RELATÓRIO FISCAL</div>' +
+          '<div style="color:#555;font-size:11px;">Período: ' + mesLabel.toUpperCase() + '</div>' +
+          '<div style="color:#555;font-size:10px;">Gerado em: ' + geradoEm + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<h2>RESUMO DO MÊS</h2>' +
+      '<div class="resumo-grid">' +
+        '<div class="resumo-card"><div class="val">' + resumo.total_pedidos + '</div><div class="lbl">Pedidos</div></div>' +
+        '<div class="resumo-card"><div class="val">R$ ' + (resumo.bruto||0).toFixed(2).replace('.',',') + '</div><div class="lbl">Faturamento Bruto</div></div>' +
+        '<div class="resumo-card"><div class="val" style="color:#dc2626;">R$ ' + (resumo.taxa_plataforma||0).toFixed(2).replace('.',',') + '</div><div class="lbl">Taxa Plataforma (5%)</div></div>' +
+        '<div class="resumo-card destaque"><div class="val" style="color:#166534;">R$ ' + (resumo.liquido||0).toFixed(2).replace('.',',') + '</div><div class="lbl">Valor Líquido Recebido</div></div>' +
+        '<div class="resumo-card"><div class="val">R$ ' + (resumo.ticket_medio||0).toFixed(2).replace('.',',') + '</div><div class="lbl">Ticket Médio</div></div>' +
+      '</div>' +
+      (linhasPag ? '<h2>FORMAS DE PAGAMENTO</h2><table><thead><tr><th>Forma</th><th>Qtd.</th><th>Total</th></tr></thead><tbody>' + linhasPag + '</tbody></table>' : '') +
+      (linhasTop ? '<h2>PRODUTOS MAIS VENDIDOS</h2><table><thead><tr><th>#</th><th>Produto</th><th>Qtd.</th><th>Total</th></tr></thead><tbody>' + linhasTop + '</tbody></table>' : '') +
+      (linhasPedidos ? '<h2>DETALHAMENTO DE PEDIDOS</h2><table><thead><tr><th>Data/Hora</th><th>Pedido</th><th>Cliente</th><th>Itens</th><th>Pagamento</th><th>Subtotal</th><th>Frete</th><th>Líquido</th></tr></thead><tbody>' + linhasPedidos + '</tbody></table>' : '<p style="color:#777;">Nenhum pedido no período.</p>') +
+      '<div class="footer"><span>Chegô — Plataforma de Delivery</span><span>Este documento não tem valor fiscal — serve como controle interno e auxiliar de declaração.</span></div>' +
+      '</body></html>';
+
+    var win = window.open('', '_blank');
+    if(!win) { showToast('⚠️','Pop-up bloqueado','Permita pop-ups no navegador para gerar o PDF.'); return; }
+    win.document.write(html);
+    win.document.close();
+    setTimeout(function(){ win.print(); }, 600);
+  } catch(e) {
+    showToast('❌','Erro ao gerar relatório', e.message || '');
+  }
+}
+
+async function renderCampanhas() {
+  var el = document.getElementById('est-secao-campanhas');
+  if(!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--texto2);">Carregando...</div>';
+  try {
+    var lista = await apiCall('/api/establishments/me/campanhas') || [];
+    var tipLabels = { percentual: '% desconto', fixo: 'R$ fixo', frete_gratis: 'Frete grátis' };
+    var itensHtml = lista.length ? lista.map(function(c) {
+      var desc = c.tipo === 'frete_gratis' ? 'Frete grátis' : (c.tipo === 'percentual' ? c.valor + '% off' : 'R$ ' + parseFloat(c.valor).toFixed(2).replace('.',',') + ' off');
+      var cond = c.valor_minimo > 0 ? ' — Pedidos acima de R$ ' + parseFloat(c.valor_minimo).toFixed(2).replace('.',',') : ' — Todo pedido';
+      return '<div style="background:var(--cinza2);border:1.5px solid ' + (c.ativo ? 'var(--verde)' : 'var(--cinza3)') + ';border-radius:14px;padding:14px 16px;margin-bottom:10px;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">' +
+          '<div style="font-weight:700;font-size:15px;">' + sanitizar(c.nome) + '</div>' +
+          '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:' + (c.ativo ? 'var(--verde)' : 'var(--texto2)') + ';">' +
+            '<input type="checkbox" ' + (c.ativo ? 'checked' : '') + ' onchange="toggleCampanha(\'' + c.id + '\',this.checked)" style="accent-color:var(--verde);width:16px;height:16px;">' +
+            (c.ativo ? 'Ativa' : 'Pausada') +
+          '</label>' +
+        '</div>' +
+        '<div style="font-size:13px;color:var(--verde);font-weight:600;">' + desc + cond + '</div>' +
+        '<div style="font-size:11px;color:var(--texto2);margin-top:4px;">Tipo: ' + (tipLabels[c.tipo]||c.tipo) + ' | Sem código — aplica automaticamente no pedido</div>' +
+        '<button onclick="excluirCampanha(\'' + c.id + '\')" style="margin-top:10px;background:none;border:none;color:var(--erro);font-size:12px;font-weight:600;cursor:pointer;padding:0;">🗑️ Remover campanha</button>' +
+      '</div>';
+    }).join('') : '<div style="text-align:center;padding:30px 20px;color:var(--texto2);font-size:14px;">Nenhuma campanha criada ainda.<br><span style="font-size:12px;">Campanhas são aplicadas automaticamente no pedido, sem código.</span></div>';
+
+    el.innerHTML =
+      '<div style="background:var(--cinza2);border-radius:14px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--texto2);line-height:1.5;">' +
+        '🎯 <strong style="color:var(--texto);">Campanhas automáticas</strong> são descontos que o cliente recebe sem precisar digitar código. Você configura uma vez e o sistema aplica sozinho.' +
+      '</div>' +
+      itensHtml +
+      '<button onclick="abrirModalCampanha()" style="width:100%;padding:14px;border-radius:14px;background:var(--verde);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">+ Nova campanha</button>';
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--erro);">Erro ao carregar campanhas</div>';
+  }
+}
+
+function abrirModalCampanha() {
+  var modal = document.createElement('div');
+  modal.id = 'modal-campanha';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+  modal.innerHTML =
+    '<div style="background:var(--fundo2);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:500px;">' +
+      '<div style="font-weight:700;font-size:17px;margin-bottom:16px;">🎯 Nova Campanha</div>' +
+      '<div style="margin-bottom:12px;">' +
+        '<label style="font-size:13px;color:var(--texto2);">Nome da campanha</label>' +
+        '<input id="camp-nome" type="text" placeholder="Ex: Happy hour, Promoção noturna..." maxlength="80" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;">' +
+      '</div>' +
+      '<div style="margin-bottom:12px;">' +
+        '<label style="font-size:13px;color:var(--texto2);">Tipo de desconto</label>' +
+        '<select id="camp-tipo" onchange="atualizarCampTipo()" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;margin-top:6px;">' +
+          '<option value="percentual">Desconto percentual (ex: 10% off)</option>' +
+          '<option value="fixo">Desconto fixo (ex: R$ 5,00 off)</option>' +
+          '<option value="frete_gratis">Frete grátis</option>' +
+        '</select>' +
+      '</div>' +
+      '<div id="camp-valor-wrap" style="margin-bottom:12px;">' +
+        '<label id="camp-valor-label" style="font-size:13px;color:var(--texto2);">Valor do desconto (%)</label>' +
+        '<input id="camp-valor" type="number" min="0" max="100" placeholder="10" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;">' +
+      '</div>' +
+      '<div style="margin-bottom:20px;">' +
+        '<label style="font-size:13px;color:var(--texto2);">Pedido mínimo (R$) — deixe 0 para qualquer valor</label>' +
+        '<input id="camp-minimo" type="number" min="0" placeholder="0" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;">' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button onclick="this.closest(\'#modal-campanha\').remove()" style="flex:1;padding:14px;border-radius:14px;background:var(--cinza3);border:none;color:var(--texto);font-size:14px;cursor:pointer;">Cancelar</button>' +
+        '<button onclick="salvarCampanha()" style="flex:1;padding:14px;border-radius:14px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">Criar campanha</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+}
+
+function atualizarCampTipo() {
+  var tipo = document.getElementById('camp-tipo').value;
+  var wrap = document.getElementById('camp-valor-wrap');
+  var lbl = document.getElementById('camp-valor-label');
+  if(tipo === 'frete_gratis') {
+    wrap.style.display = 'none';
+  } else {
+    wrap.style.display = 'block';
+    lbl.textContent = tipo === 'percentual' ? 'Valor do desconto (%)' : 'Valor do desconto (R$)';
+  }
+}
+
+async function salvarCampanha() {
+  var nome = (document.getElementById('camp-nome')||{}).value.trim();
+  var tipo = (document.getElementById('camp-tipo')||{}).value;
+  var valor = parseFloat((document.getElementById('camp-valor')||{}).value) || 0;
+  var minimo = parseFloat((document.getElementById('camp-minimo')||{}).value) || 0;
+  if(!nome) { showToast('⚠️','Nome obrigatório',''); return; }
+  if(tipo !== 'frete_gratis' && valor <= 0) { showToast('⚠️','Valor inválido','Informe o valor do desconto'); return; }
+  try {
+    await apiCall('/api/establishments/me/campanhas', { method: 'POST', body: { nome, tipo, valor, valor_minimo: minimo } });
+    var modal = document.getElementById('modal-campanha');
+    if(modal) modal.remove();
+    showToast('✅','Campanha criada!','Já está ativa e sendo aplicada nos pedidos');
+    renderCampanhas();
+  } catch(e) { showToast('❌','Erro',e.message); }
+}
+
+async function toggleCampanha(id, ativo) {
+  try {
+    await apiCall('/api/establishments/me/campanhas/' + id, { method: 'PUT', body: { ativo } });
+    showToast(ativo ? '✅' : '⏸', ativo ? 'Campanha ativada' : 'Campanha pausada', '');
+    renderCampanhas();
+  } catch(e) { showToast('❌','Erro',e.message); }
+}
+
+async function excluirCampanha(id) {
+  if(!confirm('Remover esta campanha?')) return;
+  try {
+    await apiCall('/api/establishments/me/campanhas/' + id, { method: 'DELETE' });
+    showToast('🗑️','Removida','Campanha excluída com sucesso');
+    renderCampanhas();
+  } catch(e) { showToast('❌','Erro',e.message); }
 }
 
 async function renderInfoLoja() {
@@ -6884,6 +7151,21 @@ async function salvarProduto() {
 }
 
 function editarProduto(idx) { abrirModalProduto(idx); }
+
+function compartilharLinkProduto(prodId, nomeProduto) {
+  var slug = estDataCache && estDataCache.estabelecimento && estDataCache.estabelecimento.slug;
+  var base = window.location.origin;
+  var link = slug ? base + '/' + slug + '?produto=' + prodId : base + '/app?loja=' + (estDataCache.estabelecimento.id) + '&produto=' + prodId;
+  if(navigator.share) {
+    navigator.share({ title: nomeProduto, text: 'Confira: ' + nomeProduto, url: link }).catch(function() {});
+  } else if(navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(function() {
+      showToast('🔗','Link copiado!','Cole no WhatsApp para compartilhar o produto');
+    }).catch(function() { prompt('Copie o link:', link); });
+  } else {
+    prompt('Copie o link:', link);
+  }
+}
 
 async function deletarProduto(id) {
   if(confirm('Tem certeza que deseja remover este produto definitivamente?')) {
