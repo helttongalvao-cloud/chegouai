@@ -1006,7 +1006,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <h4>📍 Endereço de entrega</h4>
       <div id="enderecos-salvos" style="display:none;margin-bottom:8px;"></div>
       <div class="campo" style="display:none;">
-        <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value);if(authToken&&currentUser){var w=document.getElementById('btn-salvar-endereco-wrap');if(w)w.style.display=this.value.length>5?'block':'none';}">
+        <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value)">
       </div>
       <div style="display:flex;gap:8px;margin-top:8px;">
         <button id="btn-localizacao" onclick="usarLocalizacao()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📡 Minha localização</button>
@@ -4527,9 +4527,12 @@ async function abrirCardapio(id, _prodId) {
           elSalvos.style.display = 'block';
           elSalvos.innerHTML = '<div style="font-size:12px;color:var(--texto2);margin-bottom:6px;">📍 Endereços salvos:</div>' +
             enderecosSalvos.map(function(e) {
-              return '<button onclick="usarEnderecoSalvo(' + JSON.stringify(e.endereco).replace(/"/g,'&quot;') + ')" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border-radius:10px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:13px;cursor:pointer;margin-bottom:6px;text-align:left;">' +
-                '<span style="font-weight:700;min-width:50px;">' + sanitizar(e.label) + '</span>' +
-                '<span style="color:var(--texto2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + sanitizar(e.endereco) + '</span>' +
+              var latLng = e.endereco;
+              var label = e.label;
+              return '<button onclick="usarEnderecoSalvo(\'' + latLng.replace(/'/g,"\\'") + '\',\'' + label.replace(/'/g,"\\'") + '\')" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border-radius:10px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:13px;cursor:pointer;margin-bottom:6px;text-align:left;">' +
+                '<span style="font-size:16px;">📍</span>' +
+                '<span style="font-weight:700;min-width:50px;">' + sanitizar(label) + '</span>' +
+                '<span style="color:var(--verde);font-size:11px;">GPS salvo</span>' +
               '</button>';
             }).join('');
         }
@@ -4919,20 +4922,39 @@ function atualizarCarrinho() {
 
 function voltarCardapio() { irTela('tela-cardapio'); }
 
-function usarEnderecoSalvo(endereco) {
+function mostrarBtnSalvarEndereco() {
+  if(!authToken || !currentUser) return;
+  var w = document.getElementById('btn-salvar-endereco-wrap');
+  if(w) w.style.display = 'block';
+}
+
+function usarEnderecoSalvo(latLng, label) {
   var el = document.getElementById('endereco-entrega');
-  if(el) { el.value = endereco; simularFrete(endereco); }
+  if(!el) return;
+  var m = latLng.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
+  if(m) {
+    clienteLat = parseFloat(m[1]);
+    clienteLng = parseFloat(m[2]);
+    localizacaoConfirmada = true;
+    el.dataset.latLng = latLng;
+    el.value = '📍 ' + label + ' — GPS confirmado';
+    el.readOnly = true;
+    el.style.color = 'var(--verde)';
+    simularFrete(latLng);
+  }
 }
 
 async function salvarEnderecoNaConta() {
   var el = document.getElementById('endereco-entrega');
-  var endereco = el ? el.value.trim() : '';
-  if(!endereco || !authToken || !currentUser) return;
+  var latLng = el ? el.dataset.latLng : '';
+  if(!latLng || !authToken || !currentUser) return;
   var label = prompt('Nome para este endereço (ex: Casa, Trabalho):');
   if(!label || !label.trim()) return;
   try {
-    await apiCall('/api/auth/enderecos', { method: 'POST', body: { label: label.trim(), endereco } });
+    await apiCall('/api/auth/enderecos', { method: 'POST', body: { label: label.trim(), endereco: latLng } });
     showToast('✅', 'Endereço salvo!', '"' + label.trim() + '" salvo na sua conta');
+    var w = document.getElementById('btn-salvar-endereco-wrap');
+    if(w) w.style.display = 'none';
   } catch(e) { showToast('❌', 'Erro', e.message); }
 }
 
@@ -5369,6 +5391,7 @@ function usarLocalizacao() {
     var av = document.getElementById('guest-gps-aviso');
     if(av) av.style.display = 'none';
     simularFrete(endInput ? endInput.dataset.latLng : '');
+    mostrarBtnSalvarEndereco();
   }
   function _onGPSErro(err) {
     btn.textContent = '📍 Usar minha localização atual';
@@ -5440,6 +5463,7 @@ function confirmarMapaVisualizacao() {
   localizacaoConfirmada = true;
   var botoesEl = document.getElementById('mapa-botoes-confirma');
   if(botoesEl) botoesEl.innerHTML = '<div style="text-align:center;padding:10px;color:var(--verde);font-weight:700;font-size:14px;">✅ Localização confirmada</div>';
+  mostrarBtnSalvarEndereco();
 }
 
 function ativarDragMapa() {
@@ -5682,6 +5706,7 @@ function confirmarLocalizacaoMapa() {
     btn.style.border = '1.5px solid var(--verde)';
     btn.disabled = true;
   }
+  mostrarBtnSalvarEndereco();
 }
 
 // CACHE DO ESTABELECIMENTO
