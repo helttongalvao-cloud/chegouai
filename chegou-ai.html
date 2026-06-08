@@ -1012,8 +1012,31 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <button id="btn-localizacao" onclick="usarLocalizacao()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📡 Minha localização</button>
         <button onclick="mostrarInputLinkGMaps()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📎 Colar link</button>
       </div>
-      <div id="btn-salvar-endereco-wrap" style="display:none;margin-top:6px;">
-        <button onclick="salvarEnderecoNaConta()" style="width:100%;padding:8px;border-radius:8px;background:transparent;border:1px solid var(--cinza3);color:var(--texto2);font-size:12px;cursor:pointer;">💾 Salvar este endereço na minha conta</button>
+      <div id="btn-salvar-endereco-wrap" style="display:none;margin-top:10px;">
+        <div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:12px;padding:12px;">
+          <!-- Passo 1: pergunta -->
+          <div id="salvar-end-passo1">
+            <div style="font-size:13px;font-weight:600;margin-bottom:10px;">💾 Deseja salvar este endereço?</div>
+            <div style="display:flex;gap:8px;">
+              <button onclick="mostrarLabelsEndereco()" style="flex:1;padding:10px;border-radius:10px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">Sim</button>
+              <button onclick="document.getElementById('btn-salvar-endereco-wrap').style.display='none'" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:14px;cursor:pointer;">Não</button>
+            </div>
+          </div>
+          <!-- Passo 2: escolher label -->
+          <div id="salvar-end-passo2" style="display:none;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Este endereço é:</div>
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+              <button onclick="salvarEnderecoComLabel('Casa')" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;cursor:pointer;">🏠 Casa</button>
+              <button onclick="salvarEnderecoComLabel('Trabalho')" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;cursor:pointer;">💼 Trabalho</button>
+              <button onclick="mostrarCampoOutro()" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;cursor:pointer;">📍 Outro</button>
+            </div>
+            <!-- Passo 3: campo "Outro" -->
+            <div id="salvar-end-outro" style="display:none;margin-top:4px;">
+              <input id="salvar-end-outro-input" type="text" placeholder="Ex: Casa da mãe, Escritório..." maxlength="30" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:14px;box-sizing:border-box;margin-bottom:8px;">
+              <button onclick="salvarEnderecoOutro()" style="width:100%;padding:10px;border-radius:10px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">Salvar</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="mapa-picker-wrap" style="display:none;margin-top:10px;">
         <div id="mapa-picker" style="height:220px;border-radius:12px;overflow:hidden;border:1.5px solid var(--cinza3);"></div>
@@ -4944,15 +4967,29 @@ function usarEnderecoSalvo(latLng, label) {
   }
 }
 
-async function salvarEnderecoNaConta() {
+function mostrarLabelsEndereco() {
+  document.getElementById('salvar-end-passo1').style.display = 'none';
+  document.getElementById('salvar-end-passo2').style.display = 'block';
+}
+
+function mostrarCampoOutro() {
+  document.getElementById('salvar-end-outro').style.display = 'block';
+  setTimeout(function(){ var i = document.getElementById('salvar-end-outro-input'); if(i) i.focus(); }, 100);
+}
+
+async function salvarEnderecoOutro() {
+  var label = (document.getElementById('salvar-end-outro-input') || {}).value.trim();
+  if(!label) { showToast('⚠️', 'Digite um nome', ''); return; }
+  await salvarEnderecoComLabel(label);
+}
+
+async function salvarEnderecoComLabel(label) {
   var el = document.getElementById('endereco-entrega');
   var latLng = el ? el.dataset.latLng : '';
   if(!latLng || !authToken || !currentUser) return;
-  var label = prompt('Nome para este endereço (ex: Casa, Trabalho):');
-  if(!label || !label.trim()) return;
   try {
-    await apiCall('/api/auth/enderecos', { method: 'POST', body: { label: label.trim(), endereco: latLng } });
-    showToast('✅', 'Endereço salvo!', '"' + label.trim() + '" salvo na sua conta');
+    await apiCall('/api/auth/enderecos', { method: 'POST', body: { label, endereco: latLng } });
+    showToast('✅', 'Salvo como "' + label + '"!', 'Disponível nas próximas compras');
     var w = document.getElementById('btn-salvar-endereco-wrap');
     if(w) w.style.display = 'none';
   } catch(e) { showToast('❌', 'Erro', e.message); }
