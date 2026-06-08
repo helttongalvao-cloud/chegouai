@@ -9864,7 +9864,8 @@ async function renderAdminSorteio(desde, ate) {
 
     var sortearHtml =
       '<div style="margin-top:16px;">' +
-        '<button onclick="realizarSorteio()" style="width:100%;padding:16px;border-radius:14px;border:none;background:linear-gradient(135deg,#facc15,#f59e0b);color:#000;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:0.5px;">🎲 Realizar sorteio agora</button>' +
+        '<button onclick="testarAnimacaoSorteio()" style="width:100%;padding:14px;border-radius:14px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;">▶ Testar animação (sem revelar ganhador)</button>' +
+        '<button onclick="iniciarSorteioReal()" style="width:100%;padding:16px;border-radius:14px;border:none;background:linear-gradient(135deg,#facc15,#f59e0b);color:#000;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:0.5px;">🎲 Realizar sorteio ao vivo</button>' +
         '<div id="sorteio-resultado" style="margin-top:12px;"></div>' +
       '</div>';
 
@@ -9874,20 +9875,63 @@ async function renderAdminSorteio(desde, ate) {
   }
 }
 
-function realizarSorteio() {
+function _nomesParaAnimacao() {
+  var nomes = (_sorteioData.ranking || []).map(function(r){ return r.nome ? r.nome.split(' ')[0] : r.telefone.slice(-4); });
+  if(nomes.length < 3) { while(nomes.length < 6) nomes = nomes.concat(nomes); }
+  return nomes;
+}
+
+function _rodarAnimacao(nomes, duracao, aoTerminar) {
   var el = document.getElementById('sorteio-resultado');
-  if (!_sorteioData || !_sorteioData.ranking || _sorteioData.ranking.length === 0) {
-    if (el) el.innerHTML = '<div style="color:var(--erro);text-align:center;padding:12px;">Nenhum participante no período selecionado.</div>';
+  if(el) el.innerHTML =
+    '<div id="sorteio-animacao" style="background:linear-gradient(135deg,rgba(250,204,21,0.08),rgba(245,158,11,0.06));border:2px solid #facc1560;border-radius:16px;padding:24px;text-align:center;">' +
+      '<div style="font-size:13px;color:#facc15;font-weight:700;margin-bottom:16px;letter-spacing:1px;">🎲 SORTEANDO...</div>' +
+      '<div id="sorteio-nome-rolagem" style="font-size:30px;font-weight:900;color:#fff;height:44px;transition:opacity 0.08s;">...</div>' +
+      '<div style="margin-top:16px;"><div style="height:6px;background:var(--cinza3);border-radius:3px;overflow:hidden;">' +
+        '<div id="sorteio-barra" style="height:100%;background:linear-gradient(90deg,#facc15,#f59e0b);border-radius:3px;width:0%;transition:width 0.08s;"></div>' +
+      '</div></div>' +
+    '</div>';
+
+  var inicio = Date.now();
+  var intervalo = setInterval(function() {
+    var decorrido = Date.now() - inicio;
+    var progresso = Math.min(decorrido / duracao, 1);
+    var barra = document.getElementById('sorteio-barra');
+    if(barra) barra.style.width = (progresso * 100) + '%';
+    var nomeEl = document.getElementById('sorteio-nome-rolagem');
+    if(nomeEl) {
+      var idx = Math.floor(Math.random() * nomes.length);
+      nomeEl.style.opacity = '0.2';
+      setTimeout(function(){ if(nomeEl){ nomeEl.textContent = nomes[idx]; nomeEl.style.opacity = '1'; } }, 60);
+    }
+    if(progresso >= 1) { clearInterval(intervalo); aoTerminar(); }
+  }, 80);
+}
+
+function testarAnimacaoSorteio() {
+  if(!_sorteioData || !_sorteioData.ranking || _sorteioData.ranking.length === 0) {
+    showToast('⚠️','Sem participantes','Carregue os dados do sorteio primeiro.');
     return;
   }
+  var nomes = _nomesParaAnimacao();
+  _rodarAnimacao(nomes, 4500, function() {
+    var anim = document.getElementById('sorteio-animacao');
+    if(anim) anim.innerHTML =
+      '<div style="font-size:13px;color:var(--texto2);padding:16px;text-align:center;">✅ Animação funcionando corretamente.<br><span style="font-size:12px;">O ganhador real só será revelado ao clicar em "Realizar sorteio ao vivo".</span></div>';
+  });
+}
 
-  // Montar pool com tickets ponderados
+function iniciarSorteioReal() {
+  if(!_sorteioData || !_sorteioData.ranking || _sorteioData.ranking.length === 0) {
+    showToast('⚠️','Sem participantes','Verifique o filtro de datas.');
+    return;
+  }
+  // Sortear o ganhador ANTES da animação — resultado fixo, não muda
   var pool = [];
   _sorteioData.ranking.forEach(function(r) {
-    for (var i = 0; i < r.tickets; i++) pool.push(r);
+    for(var i = 0; i < r.tickets; i++) pool.push(r);
   });
-  // Fisher-Yates shuffle
-  for (var i = pool.length - 1; i > 0; i--) {
+  for(var i = pool.length - 1; i > 0; i--) {
     var j = Math.floor(Math.random() * (i + 1));
     var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
   }
@@ -9897,49 +9941,17 @@ function realizarSorteio() {
   var nomeGanhador = ganhadorData.nome ? ganhadorData.nome.split(' ').slice(0,2).join(' ') : telFmt;
   var premioVal = _sorteioData.pedidos >= 80 ? 'R$ 100,00' : 'R$ 50,00';
 
-  // Animação: nomes aleatórios piscando por 4 segundos antes do reveal
-  var nomes = _sorteioData.ranking.map(function(r){ return r.nome ? r.nome.split(' ')[0] : r.telefone.slice(-4); });
-  if(nomes.length < 3) { while(nomes.length < 6) nomes = nomes.concat(nomes); }
-
-  if(el) el.innerHTML =
-    '<div id="sorteio-animacao" style="background:linear-gradient(135deg,rgba(250,204,21,0.08),rgba(245,158,11,0.06));border:2px solid #facc1560;border-radius:16px;padding:24px;text-align:center;">' +
-      '<div style="font-size:13px;color:#facc15;font-weight:700;margin-bottom:16px;letter-spacing:1px;">🎲 SORTEANDO...</div>' +
-      '<div id="sorteio-nome-rolagem" style="font-size:30px;font-weight:900;color:#fff;height:44px;overflow:hidden;transition:opacity 0.1s;">...</div>' +
-      '<div style="margin-top:16px;"><div style="height:6px;background:var(--cinza3);border-radius:3px;overflow:hidden;">' +
-        '<div id="sorteio-barra" style="height:100%;background:linear-gradient(90deg,#facc15,#f59e0b);border-radius:3px;width:0%;transition:width 0.1s;"></div>' +
-      '</div></div>' +
-    '</div>';
-
-  var inicio = Date.now();
-  var duracao = 4500; // 4.5 segundos de animação
-  var intervalo = setInterval(function() {
-    var decorrido = Date.now() - inicio;
-    var progresso = Math.min(decorrido / duracao, 1);
-    var barra = document.getElementById('sorteio-barra');
-    if(barra) barra.style.width = (progresso * 100) + '%';
-
-    var nomeEl = document.getElementById('sorteio-nome-rolagem');
-    if(nomeEl) {
-      var idx = Math.floor(Math.random() * nomes.length);
-      nomeEl.style.opacity = '0.3';
-      setTimeout(function(){ if(nomeEl){ nomeEl.textContent = nomes[idx]; nomeEl.style.opacity = '1'; }}, 60);
-    }
-
-    if(progresso >= 1) {
-      clearInterval(intervalo);
-      // Reveal final — tela cheia dramática
-      var anim = document.getElementById('sorteio-animacao');
-      if(anim) anim.innerHTML =
-        '<div style="font-size:44px;margin-bottom:8px;animation:pulse 0.5s ease-in-out 3;">🏆</div>' +
-        '<div style="font-size:11px;color:#facc15;font-weight:700;letter-spacing:2px;margin-bottom:10px;">GANHADOR DO SORTEIO</div>' +
-        '<div style="font-size:32px;font-weight:900;color:#fff;margin-bottom:6px;">' + nomeGanhador + '</div>' +
-        '<div style="font-size:16px;color:#d4d4d8;margin-bottom:14px;">' + telFmt + '</div>' +
-        '<div style="background:#facc15;color:#000;font-size:18px;font-weight:800;padding:10px 24px;border-radius:12px;display:inline-block;margin-bottom:16px;">💰 ' + premioVal + '</div>' +
-        '<div style="font-size:11px;color:#71717a;margin-bottom:16px;">' + ganhadorData.tickets + ' ticket' + (ganhadorData.tickets > 1 ? 's' : '') + ' · ' + _sorteioData.participantes + ' participantes · ' + _sorteioData.totalTickets + ' tickets no total</div>' +
-        '<button onclick="abrirTelaCheiaGanhador(\'' + nomeGanhador.replace(/'/g,"\\'") + '\',\'' + telFmt + '\',\'' + premioVal + '\')" style="width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">📺 Tela cheia para o ao vivo</button>' +
-        '<button onclick="realizarSorteio()" style="width:100%;padding:10px;border-radius:12px;background:none;border:1.5px solid var(--cinza3);color:var(--texto2);font-size:13px;cursor:pointer;">↩ Sortear novamente</button>';
-    }
-  }, 80);
+  var nomes = _nomesParaAnimacao();
+  _rodarAnimacao(nomes, 5000, function() {
+    var anim = document.getElementById('sorteio-animacao');
+    if(anim) anim.innerHTML =
+      '<div style="font-size:44px;margin-bottom:8px;">🏆</div>' +
+      '<div style="font-size:11px;color:#facc15;font-weight:700;letter-spacing:2px;margin-bottom:10px;">GANHADOR DO SORTEIO</div>' +
+      '<div style="font-size:32px;font-weight:900;color:#fff;margin-bottom:6px;">' + nomeGanhador + '</div>' +
+      '<div style="font-size:16px;color:#d4d4d8;margin-bottom:14px;">' + telFmt + '</div>' +
+      '<div style="background:#facc15;color:#000;font-size:18px;font-weight:800;padding:10px 24px;border-radius:12px;display:inline-block;margin-bottom:16px;">💰 ' + premioVal + '</div>' +
+      '<div style="font-size:11px;color:#71717a;margin-bottom:16px;">' + ganhadorData.tickets + ' ticket' + (ganhadorData.tickets > 1 ? 's' : '') + ' · ' + _sorteioData.participantes + ' participantes · ' + _sorteioData.totalTickets + ' tickets no total</div>';
+  });
 }
 
 function abrirTelaCheiaGanhador(nome, tel, premio) {
