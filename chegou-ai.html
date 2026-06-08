@@ -8227,6 +8227,23 @@ function inicializarMapaMotoboy(endereco, est) {
 // =========================================================
 var faseEntrega = localStorage.getItem('motoboy_fase') || null;
 var pedidoAtivoMotoboy = JSON.parse(localStorage.getItem('motoboy_pedido_ativo') || 'null');
+var fasesSecundarias = JSON.parse(localStorage.getItem('motoboy_fases_sec') || '{}');
+
+function atualizarFaseSecundaria(pedidoId, fase) {
+  if(fase === null) { delete fasesSecundarias[pedidoId]; }
+  else { fasesSecundarias[pedidoId] = fase; }
+  localStorage.setItem('motoboy_fases_sec', JSON.stringify(fasesSecundarias));
+}
+
+function chegouNaLojaSecundario(pedidoId) {
+  atualizarFaseSecundaria(pedidoId, 'na_loja');
+  renderMotoboy();
+}
+
+function coletouSecundario(pedidoId) {
+  atualizarFaseSecundaria(pedidoId, 'indo_cliente');
+  renderMotoboy();
+}
 
 function salvarFaseMotoboy(fase, pedido) {
   faseEntrega = fase;
@@ -8357,26 +8374,70 @@ async function renderMotoboy() {
       html += renderFaseEntrega(ativa, faseEntrega || 'indo_loja');
     }
 
-    // Renderizar entregas secundárias (card simplificado)
+    // Renderizar entregas secundárias com fases
     ativas.slice(1).forEach(function(p) {
       var ganho = 'R$ ' + parseFloat(p.taxa_entrega || 4).toFixed(2).replace('.',',');
-      var nomeLoja = p.estabelecimentos ? p.estabelecimentos.nome : '—';
+      var nomeLoja = sanitizar(p.estabelecimentos ? p.estabelecimentos.nome : '—');
       var nomeCliente = sanitizar(p.nome_cliente || p.telefone_cliente || 'Visitante');
       var codigo = codigoPedido(p.id);
+      var fase = fasesSecundarias[p.id] || 'indo_loja';
+      var endLoja = sanitizar(p.estabelecimentos ? (p.estabelecimentos.endereco || nomeLoja) : nomeLoja);
+      var endCliente = sanitizar(p.endereco_entrega || '—');
+      var codigoColeta = p.codigo_coleta || '—';
+      var telAtivo = (p.telefone_cliente || '').replace(/\D/g,'');
+
+      var progressoHtml =
+        '<div style="display:flex;align-items:center;gap:0;margin-bottom:14px;padding:0 4px;">' +
+          '<div style="flex:1;text-align:center;">' +
+            '<div style="width:24px;height:24px;border-radius:50%;margin:0 auto 3px;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--verde);color:#000;">1</div>' +
+            '<div style="font-size:10px;color:' + (fase !== 'indo_loja' ? 'var(--verde)' : 'var(--texto)') + ';font-weight:600;">Buscar</div>' +
+          '</div>' +
+          '<div style="flex:1;height:2px;background:' + (fase !== 'indo_loja' ? 'var(--verde)' : 'var(--cinza3)') + ';margin-bottom:14px;"></div>' +
+          '<div style="flex:1;text-align:center;">' +
+            '<div style="width:24px;height:24px;border-radius:50%;margin:0 auto 3px;display:flex;align-items:center;justify-content:center;font-size:12px;' + (fase === 'na_loja' || fase === 'indo_cliente' ? 'background:var(--verde);color:#000;' : 'background:var(--cinza3);color:var(--texto2);') + '">2</div>' +
+            '<div style="font-size:10px;color:' + (fase === 'na_loja' || fase === 'indo_cliente' ? 'var(--verde)' : 'var(--texto2)') + ';font-weight:600;">Na loja</div>' +
+          '</div>' +
+          '<div style="flex:1;height:2px;background:' + (fase === 'indo_cliente' ? 'var(--verde)' : 'var(--cinza3)') + ';margin-bottom:14px;"></div>' +
+          '<div style="flex:1;text-align:center;">' +
+            '<div style="width:24px;height:24px;border-radius:50%;margin:0 auto 3px;display:flex;align-items:center;justify-content:center;font-size:12px;' + (fase === 'indo_cliente' ? 'background:var(--verde);color:#000;' : 'background:var(--cinza3);color:var(--texto2);') + '">3</div>' +
+            '<div style="font-size:10px;color:' + (fase === 'indo_cliente' ? 'var(--verde)' : 'var(--texto2)') + ';font-weight:600;">Entregar</div>' +
+          '</div>' +
+        '</div>';
+
+      var conteudo = '';
+      if(fase === 'indo_loja') {
+        conteudo =
+          '<div style="background:var(--cinza2);border-radius:12px;padding:12px;margin-bottom:10px;">' +
+            '<div style="font-size:12px;color:var(--texto2);margin-bottom:4px;">Indo buscar em:</div>' +
+            '<div style="font-size:14px;font-weight:700;">🏪 ' + nomeLoja + '</div>' +
+            '<div style="font-size:12px;color:var(--texto2);">' + endLoja + '</div>' +
+          '</div>' +
+          '<button class="btn-acao" style="width:100%;background:var(--cinza3);color:var(--texto);" onclick="chegouNaLojaSecundario(\'' + p.id + '\')">🏪 Cheguei na loja</button>';
+      } else if(fase === 'na_loja') {
+        conteudo =
+          '<div style="background:var(--cinza2);border:2px solid var(--verde);border-radius:14px;padding:16px;text-align:center;margin-bottom:10px;">' +
+            '<div style="font-size:12px;color:var(--texto2);margin-bottom:4px;">Fale este código ao lojista</div>' +
+            '<div style="font-size:48px;font-weight:900;letter-spacing:8px;color:var(--verde);font-family:monospace;">' + codigoColeta + '</div>' +
+          '</div>' +
+          '<button class="btn-acao" style="width:100%;background:var(--verde);color:#000;" onclick="coletouSecundario(\'' + p.id + '\')">✅ Coletei o pedido</button>';
+      } else {
+        conteudo =
+          '<div style="background:var(--cinza2);border-radius:12px;padding:12px;margin-bottom:10px;">' +
+            '<div style="font-size:12px;color:var(--texto2);margin-bottom:4px;">Entregando para:</div>' +
+            '<div style="font-size:14px;font-weight:700;">👤 ' + nomeCliente + '</div>' +
+            '<div style="font-size:12px;color:var(--texto2);">📍 ' + endCliente + '</div>' +
+          '</div>' +
+          (telAtivo.length >= 4 ? '<div style="background:rgba(0,200,83,0.1);border:2px solid var(--verde);border-radius:12px;padding:12px;text-align:center;margin-bottom:10px;"><div style="font-size:11px;color:var(--texto2);margin-bottom:2px;">Peça este código ao cliente</div><div style="font-size:40px;font-weight:900;letter-spacing:8px;color:var(--verde);font-family:monospace;">' + telAtivo.slice(-4) + '</div></div>' : '') +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span style="font-size:12px;color:var(--texto2);">Ganho: <b style="color:var(--verde);">' + ganho + '</b></span></div>' +
+          '<button class="btn-acao" style="width:100%;background:var(--verde);color:#000;" onclick="confirmarEntregaReal(\'' + p.id + '\',this)">✅ Confirmar entrega</button>';
+      }
+
       html += '<div class="entrega-card" style="border-color:var(--verde);margin-bottom:12px;">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
-          '<span style="font-size:13px;font-weight:700;">🛵 Em andamento</span>' +
-          '<span style="font-size:15px;font-weight:900;color:var(--verde);font-family:monospace;">#' + codigo + '</span>' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
+          '<span style="font-size:13px;font-weight:700;">🛵 2ª entrega</span>' +
+          '<span style="font-size:14px;font-weight:900;color:var(--verde);font-family:monospace;">#' + codigo + '</span>' +
         '</div>' +
-        '<div style="background:var(--cinza2);border-radius:12px;padding:12px;margin-bottom:10px;">' +
-          '<div style="font-size:14px;font-weight:700;margin-bottom:4px;">🏪 ' + sanitizar(nomeLoja) + '</div>' +
-          '<div style="font-size:12px;color:var(--texto2);">👤 ' + nomeCliente + '</div>' +
-          '<div style="font-size:12px;color:var(--texto2);">📍 ' + sanitizar(p.endereco_entrega || '—') + '</div>' +
-        '</div>' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
-          '<span style="font-size:12px;color:var(--texto2);">Seu ganho: <b style="color:var(--verde);">' + ganho + '</b></span>' +
-        '</div>' +
-        '<button class="btn-acao" style="width:100%;background:var(--verde);color:#000;" onclick="confirmarEntregaReal(\'' + p.id + '\',this)">✅ Confirmar entrega</button>' +
+        progressoHtml + conteudo +
       '</div>';
     });
 
@@ -8574,6 +8635,7 @@ function confirmarEntregaReal(pedidoId) {
       modal.classList.remove('aberto');
       pararRastreio();
       salvarFaseMotoboy(null, null);
+      atualizarFaseSecundaria(pedidoId, null);
       esconderChatFab();
       renderMotoboy();
     } catch(e) {
