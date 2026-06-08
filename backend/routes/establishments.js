@@ -677,7 +677,7 @@ router.put(
 
       const campos = {};
       ['nome', 'descricao', 'preco', 'emoji', 'disponivel', 'categoria', 'imagem_url', 'estoque', 'unidade', 'prazo_entrega'].forEach((key) => {
-        if (req.body[key] !== undefined) campos[key] = req.body[key] || null;
+        if (req.body[key] !== undefined) campos[key] = typeof req.body[key] === 'boolean' ? req.body[key] : (req.body[key] || null);
       });
 
       const { data, error } = await supabaseAdmin

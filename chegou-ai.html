@@ -4598,7 +4598,7 @@ function renderProdutos(produtos) {
 }
 
 function renderCardProduto(item, i) {
-  var indisponivel = item.disponivel === false;
+  var indisponivel = item.disponivel !== true;
   var op = indisponivel ? 'opacity:0.5;' : '';
   var temPromo = item.preco_promocional && parseFloat(item.preco_promocional) > 0 && parseFloat(item.preco_promocional) < parseFloat(item.preco);
   var pct = temPromo ? Math.round((1 - parseFloat(item.preco_promocional)/parseFloat(item.preco)) * 100) : 0;
@@ -4669,7 +4669,7 @@ function filtrarProdutos(termo) {
 
 function adicionarItem(idx) {
   const item = produtosCache[idx];
-  if(!item || item.disponivel === false) return;
+  if(!item || item.disponivel !== true) return;
   if(estAtual && !estAtual.aberto) { showToast('🔴', 'Loja fechada', 'Você pode explorar o cardápio, mas pedidos só quando aberta.'); return; }
   var grupos = (item.grupos_complementos || []).filter(function(g){ return g.complementos && g.complementos.some(function(c){ return c.disponivel !== false; }); });
   if(grupos.length > 0) {
