@@ -948,6 +948,10 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     Pedidos
   </button>
+  <button class="bottom-nav-btn" id="nav-perfil" onclick="navPerfil()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Perfil
+  </button>
 </div>
 
 <!-- CARDÁPIO -->
@@ -1012,32 +1016,6 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <button id="btn-localizacao" onclick="usarLocalizacao()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📡 Minha localização</button>
         <button onclick="mostrarInputLinkGMaps()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📎 Colar link</button>
       </div>
-      <div id="btn-salvar-endereco-wrap" style="display:none;margin-top:10px;">
-        <div style="background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:12px;padding:12px;">
-          <!-- Passo 1: pergunta -->
-          <div id="salvar-end-passo1">
-            <div style="font-size:13px;font-weight:600;margin-bottom:10px;">💾 Deseja salvar este endereço?</div>
-            <div style="display:flex;gap:8px;">
-              <button onclick="mostrarLabelsEndereco()" style="flex:1;padding:10px;border-radius:10px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">Sim</button>
-              <button onclick="document.getElementById('btn-salvar-endereco-wrap').style.display='none'" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:14px;cursor:pointer;">Não</button>
-            </div>
-          </div>
-          <!-- Passo 2: escolher label -->
-          <div id="salvar-end-passo2" style="display:none;">
-            <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Este endereço é:</div>
-            <div style="display:flex;gap:6px;margin-bottom:8px;">
-              <button onclick="salvarEnderecoComLabel('Casa')" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;cursor:pointer;">🏠 Casa</button>
-              <button onclick="salvarEnderecoComLabel('Trabalho')" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;cursor:pointer;">💼 Trabalho</button>
-              <button onclick="mostrarCampoOutro()" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;cursor:pointer;">📍 Outro</button>
-            </div>
-            <!-- Passo 3: campo "Outro" -->
-            <div id="salvar-end-outro" style="display:none;margin-top:4px;">
-              <input id="salvar-end-outro-input" type="text" placeholder="Ex: Casa da mãe, Escritório..." maxlength="30" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:14px;box-sizing:border-box;margin-bottom:8px;">
-              <button onclick="salvarEnderecoOutro()" style="width:100%;padding:10px;border-radius:10px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">Salvar</button>
-            </div>
-          </div>
-        </div>
-      </div>
       <div id="mapa-picker-wrap" style="display:none;margin-top:10px;">
         <div id="mapa-picker" style="height:220px;border-radius:12px;overflow:hidden;border:1.5px solid var(--cinza3);"></div>
         <div class="mapa-instrucao" style="font-size:12px;color:var(--texto2);margin-top:6px;text-align:center;">📌 Arraste o mapa até o <strong style="color:var(--texto);">portão da sua casa</strong> e confirme</div>
@@ -1057,10 +1035,9 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
           <button onclick="confirmarLinkGMaps(this)" style="width:100%;padding:12px;margin-top:8px;background:var(--verde);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:700;cursor:pointer;">📍 Confirmar localização</button>
         </div>
       </div>
-      <label style="display:flex;align-items:center;margin-top:8px;font-size:14px;color:var(--texto);cursor:pointer;">
-        <input type="checkbox" id="salvar-endereco" checked style="margin-right:8px;accent-color:var(--verde);">
-        Salvar este endereço para a próxima
-      </label>
+      <div id="endereco-dica-perfil" style="display:none;margin-top:8px;font-size:12px;color:var(--texto2);text-align:center;">
+        💡 Salve seus endereços em <strong style="color:var(--verde);cursor:pointer;" onclick="navPerfil()">Meu Perfil</strong>
+      </div>
     </div>
     <div class="secao-checkout" id="secao-guest-nome" style="display:none;">
       <h4>👤 Identificação (obrigatório)</h4>
@@ -1466,6 +1443,67 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
     </div>
   </div>
   <div id="pedidos-lista" style="flex:1;overflow-y:auto;padding:16px 16px 90px;"></div>
+</div>
+
+<!-- PERFIL -->
+<div class="tela" id="tela-perfil">
+  <div class="header">
+    <button onclick="navInicio()" style="background:none;border:none;color:var(--verde);font-size:15px;font-weight:600;cursor:pointer;padding:0;display:flex;align-items:center;gap:4px;">← Voltar</button>
+    <span class="header-titulo">Meu Perfil</span>
+  </div>
+  <!-- Usuário logado -->
+  <div id="perfil-logado" style="display:none;padding:16px 16px 90px;">
+    <div id="perfil-user-info" style="background:var(--cinza2);border-radius:16px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:14px;">
+      <div style="width:52px;height:52px;border-radius:50%;background:var(--verde);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#000;" id="perfil-avatar-letra">?</div>
+      <div>
+        <div id="perfil-nome" style="font-weight:700;font-size:16px;"></div>
+        <div id="perfil-tel" style="font-size:13px;color:var(--texto2);margin-top:2px;"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-weight:700;font-size:15px;">📍 Meus endereços</div>
+      <button onclick="perfilAdicionarEndereco()" style="background:none;border:none;color:var(--verde);font-size:13px;font-weight:700;cursor:pointer;">+ Adicionar</button>
+    </div>
+    <div id="perfil-enderecos-lista" style="margin-bottom:12px;"></div>
+    <!-- Área de adicionar novo endereço -->
+    <div id="perfil-add-end-wrap" style="display:none;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:14px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Novo endereço</div>
+      <button id="perfil-btn-gps" onclick="perfilUsarGPS()" style="width:100%;padding:12px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:8px;">📡 Usar minha localização</button>
+      <div id="perfil-label-wrap" style="display:none;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Este endereço é:</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <button onclick="perfilSalvarLabel('Casa')" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;cursor:pointer;">🏠 Casa</button>
+          <button onclick="perfilSalvarLabel('Trabalho')" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;cursor:pointer;">💼 Trabalho</button>
+          <button onclick="perfilMostrarOutro()" style="flex:1;padding:10px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;cursor:pointer;">📍 Outro</button>
+        </div>
+        <div id="perfil-outro-wrap" style="display:none;margin-top:4px;">
+          <input id="perfil-outro-input" type="text" placeholder="Ex: Casa da mãe, Escritório..." maxlength="30" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza1);color:var(--texto);font-size:14px;box-sizing:border-box;margin-bottom:8px;">
+          <button onclick="perfilSalvarOutro()" style="width:100%;padding:10px;border-radius:10px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">Salvar</button>
+        </div>
+      </div>
+      <button onclick="document.getElementById('perfil-add-end-wrap').style.display='none'" style="width:100%;padding:8px;background:none;border:none;color:var(--texto2);font-size:13px;cursor:pointer;margin-top:4px;">Cancelar</button>
+    </div>
+    <button onclick="irLogin()" style="width:100%;padding:14px;border-radius:14px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--erro);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;">Sair da conta</button>
+  </div>
+  <!-- Guest -->
+  <div id="perfil-guest" style="display:none;padding:16px 16px 90px;">
+    <div style="background:var(--cinza2);border-radius:16px;padding:16px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:40px;margin-bottom:8px;">👤</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Você não está logado</div>
+      <div style="font-size:13px;color:var(--texto2);margin-bottom:14px;">Crie uma conta para salvar endereços e acompanhar pedidos facilmente.</div>
+      <button onclick="irLogin()" style="width:100%;padding:12px;border-radius:12px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">Criar conta / Entrar</button>
+    </div>
+    <div style="margin-bottom:8px;font-weight:700;font-size:15px;">📍 Meus endereços</div>
+    <p style="font-size:13px;color:var(--texto2);margin-bottom:10px;">Digite seu telefone para ver seus endereços salvos:</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input id="perfil-guest-tel" type="tel" placeholder="(00) 00000-0000" maxlength="15"
+        style="flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:15px;"
+        oninput="mascaraTelefone(this)"
+        onkeydown="if(event.key==='Enter')perfilCarregarGuest()">
+      <button onclick="perfilCarregarGuest()" style="padding:12px 16px;border-radius:10px;background:var(--verde);color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer;">Ver</button>
+    </div>
+    <div id="perfil-guest-enderecos"></div>
+  </div>
 </div>
 
 <!-- ESTABELECIMENTO -->
@@ -3652,6 +3690,176 @@ function navPedidos() {
   }
 }
 
+async function navPerfil() {
+  document.querySelectorAll('.bottom-nav-btn').forEach(function(b){ b.classList.remove('ativo'); });
+  document.getElementById('nav-perfil').classList.add('ativo');
+  irTela('tela-perfil');
+  window.scrollTo(0, 0);
+  if(authToken && currentUser) {
+    document.getElementById('perfil-logado').style.display = 'block';
+    document.getElementById('perfil-guest').style.display = 'none';
+    var nome = currentUser.nome || currentUser.email || 'Usuário';
+    document.getElementById('perfil-nome').textContent = nome;
+    document.getElementById('perfil-avatar-letra').textContent = nome[0].toUpperCase();
+    var tel = currentUser.telefone || '';
+    document.getElementById('perfil-tel').textContent = tel ? tel.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3') : '';
+    await perfilCarregarEnderecos();
+  } else {
+    document.getElementById('perfil-logado').style.display = 'none';
+    document.getElementById('perfil-guest').style.display = 'block';
+    document.getElementById('perfil-add-end-wrap').style.display = 'none';
+    var guestSalvo = JSON.parse(localStorage.getItem('chegouai_guest') || 'null');
+    if(guestSalvo && guestSalvo.telefone) {
+      var telEl = document.getElementById('perfil-guest-tel');
+      var t = guestSalvo.telefone.replace(/\D/g,'');
+      if(telEl) telEl.value = t.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
+      perfilRenderEnderecoGuest();
+    }
+  }
+}
+
+async function perfilCarregarEnderecos() {
+  var el = document.getElementById('perfil-enderecos-lista');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--texto2);font-size:13px;padding:8px 0;">Carregando...</div>';
+  try {
+    var lista = await apiCall('/api/auth/enderecos') || [];
+    if(!lista.length) {
+      el.innerHTML = '<div style="color:var(--texto2);font-size:13px;padding:8px 0;">Nenhum endereço salvo ainda.</div>';
+      return;
+    }
+    el.innerHTML = lista.map(function(e) {
+      return '<div style="display:flex;align-items:center;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:12px;padding:12px 14px;margin-bottom:8px;gap:10px;">' +
+        '<div style="flex:1;">' +
+          '<div style="font-weight:700;font-size:14px;">' + sanitizar(e.label) + '</div>' +
+          '<div style="font-size:11px;color:var(--verde);margin-top:2px;">GPS confirmado</div>' +
+        '</div>' +
+        '<button onclick="perfilExcluirEndereco(\'' + e.label.replace(/'/g,"\\'") + '\')" style="background:none;border:none;color:var(--erro);font-size:18px;cursor:pointer;padding:4px;flex-shrink:0;" title="Remover">×</button>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--erro);font-size:13px;padding:8px 0;">Erro ao carregar endereços</div>';
+  }
+}
+
+function perfilAdicionarEndereco() {
+  var wrap = document.getElementById('perfil-add-end-wrap');
+  if(wrap) {
+    wrap.style.display = 'block';
+    document.getElementById('perfil-label-wrap').style.display = 'none';
+    document.getElementById('perfil-outro-wrap').style.display = 'none';
+    var btn = document.getElementById('perfil-btn-gps');
+    if(btn) { btn.textContent = '📡 Usar minha localização'; btn.disabled = false; btn.style.color = 'var(--texto)'; }
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+var _perfilLatLng = null;
+
+function perfilUsarGPS() {
+  var btn = document.getElementById('perfil-btn-gps');
+  if(!navigator.geolocation) { showToast('❌','GPS indisponível','Seu dispositivo não suporta localização.'); return; }
+  if(btn) { btn.textContent = '⏳ Localizando...'; btn.disabled = true; }
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    var lat = pos.coords.latitude;
+    var lng = pos.coords.longitude;
+    _perfilLatLng = 'Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6);
+    if(btn) { btn.textContent = '✅ GPS confirmado'; btn.style.color = 'var(--verde)'; }
+    document.getElementById('perfil-label-wrap').style.display = 'block';
+  }, function() {
+    if(btn) { btn.textContent = '📡 Usar minha localização'; btn.disabled = false; }
+    showToast('📍','GPS indisponível','Verifique as permissões de localização.');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+function perfilMostrarOutro() {
+  document.getElementById('perfil-outro-wrap').style.display = 'block';
+  setTimeout(function(){ var i = document.getElementById('perfil-outro-input'); if(i) i.focus(); }, 100);
+}
+
+async function perfilSalvarLabel(label) {
+  if(!_perfilLatLng) { showToast('⚠️','GPS não confirmado','Use o botão de localização primeiro.'); return; }
+  try {
+    await apiCall('/api/auth/enderecos', { method: 'POST', body: { label: label, endereco: _perfilLatLng } });
+    showToast('✅', 'Salvo!', '"' + label + '" adicionado aos seus endereços');
+    _perfilLatLng = null;
+    document.getElementById('perfil-add-end-wrap').style.display = 'none';
+    await perfilCarregarEnderecos();
+  } catch(e) { showToast('❌','Erro',e.message); }
+}
+
+async function perfilSalvarOutro() {
+  var label = (document.getElementById('perfil-outro-input') || {}).value.trim();
+  if(!label) { showToast('⚠️','Nome vazio','Digite um nome para este endereço.'); return; }
+  await perfilSalvarLabel(label);
+}
+
+async function perfilExcluirEndereco(label) {
+  if(!confirm('Remover o endereço "' + label + '"?')) return;
+  try {
+    await apiCall('/api/auth/enderecos/' + encodeURIComponent(label), { method: 'DELETE' });
+    showToast('🗑️','Removido','Endereço excluído com sucesso');
+    await perfilCarregarEnderecos();
+  } catch(e) { showToast('❌','Erro',e.message); }
+}
+
+function perfilCarregarGuest() {
+  var input = document.getElementById('perfil-guest-tel');
+  if(!input) return;
+  var tel = input.value.replace(/\D/g,'');
+  if(tel.length < 10) { showToast('⚠️','Telefone inválido','Digite o número com DDD'); return; }
+  perfilRenderEnderecoGuest();
+}
+
+function perfilRenderEnderecoGuest() {
+  var el = document.getElementById('perfil-guest-enderecos');
+  if(!el) return;
+  var lista = JSON.parse(localStorage.getItem('chegouai_enderecos_labeled') || '[]');
+  if(!lista.length) {
+    el.innerHTML = '<div style="color:var(--texto2);font-size:13px;padding:8px 0;">Nenhum endereço salvo ainda.</div>' +
+      '<button onclick="perfilAdicionarEnderecoGuest()" style="width:100%;padding:12px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;">+ Adicionar endereço via GPS</button>';
+    return;
+  }
+  el.innerHTML = lista.map(function(e) {
+    return '<div style="display:flex;align-items:center;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:12px;padding:12px 14px;margin-bottom:8px;gap:10px;">' +
+      '<div style="flex:1;">' +
+        '<div style="font-weight:700;font-size:14px;">' + sanitizar(e.label) + '</div>' +
+        '<div style="font-size:11px;color:var(--verde);margin-top:2px;">GPS confirmado</div>' +
+      '</div>' +
+      '<button onclick="perfilExcluirEnderecoGuest(\'' + e.label.replace(/'/g,"\\'") + '\')" style="background:none;border:none;color:var(--erro);font-size:18px;cursor:pointer;padding:4px;flex-shrink:0;" title="Remover">×</button>' +
+    '</div>';
+  }).join('') +
+  '<button onclick="perfilAdicionarEnderecoGuest()" style="width:100%;padding:12px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;">+ Adicionar endereço via GPS</button>';
+}
+
+function perfilExcluirEnderecoGuest(label) {
+  if(!confirm('Remover o endereço "' + label + '"?')) return;
+  var lista = JSON.parse(localStorage.getItem('chegouai_enderecos_labeled') || '[]');
+  lista = lista.filter(function(e){ return e.label !== label; });
+  localStorage.setItem('chegouai_enderecos_labeled', JSON.stringify(lista));
+  showToast('🗑️','Removido','Endereço excluído');
+  perfilRenderEnderecoGuest();
+}
+
+function perfilAdicionarEnderecoGuest() {
+  if(!navigator.geolocation) { showToast('❌','GPS indisponível','Seu dispositivo não suporta localização.'); return; }
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    var latLng = 'Lat: ' + pos.coords.latitude.toFixed(6) + ', Lng: ' + pos.coords.longitude.toFixed(6);
+    var label = prompt('Como quer chamar este endereço?\nEx: Casa, Trabalho, Casa da mãe...');
+    if(!label || !label.trim()) return;
+    label = label.trim();
+    var lista = JSON.parse(localStorage.getItem('chegouai_enderecos_labeled') || '[]');
+    lista = lista.filter(function(e){ return e.label !== label; });
+    lista.unshift({ label: label, endereco: latLng });
+    if(lista.length > 5) lista = lista.slice(0,5);
+    localStorage.setItem('chegouai_enderecos_labeled', JSON.stringify(lista));
+    showToast('✅','Salvo!','"' + label + '" adicionado aos seus endereços');
+    perfilRenderEnderecoGuest();
+  }, function() {
+    showToast('📍','GPS indisponível','Verifique as permissões de localização.');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
 function _renderPedidosLista(pedidos, el) {
   if(!pedidos || pedidos.length === 0) {
     el.innerHTML = '<div style="text-align:center;padding:48px 20px;"><div style="font-size:48px;margin-bottom:16px;">📋</div><div style="font-weight:700;font-size:17px;margin-bottom:8px;">Nenhum pedido encontrado</div><div style="color:var(--texto2);font-size:14px;">Seus pedidos aparecerão aqui após a compra.</div></div>';
@@ -4541,26 +4749,6 @@ async function abrirCardapio(id, _prodId) {
       if(elEnd && !elEnd.value) elEnd.value = endSalvo;
     }
 
-    // Carregar endereços salvos na conta (usuário logado)
-    if(authToken && currentUser) {
-      try {
-        var enderecosSalvos = await apiCall('/api/auth/enderecos');
-        var elSalvos = document.getElementById('enderecos-salvos');
-        if(elSalvos && enderecosSalvos && enderecosSalvos.length > 0) {
-          elSalvos.style.display = 'block';
-          elSalvos.innerHTML = '<div style="font-size:12px;color:var(--texto2);margin-bottom:6px;">📍 Endereços salvos:</div>' +
-            enderecosSalvos.map(function(e) {
-              var latLng = e.endereco;
-              var label = e.label;
-              return '<button onclick="usarEnderecoSalvo(\'' + latLng.replace(/'/g,"\\'") + '\',\'' + label.replace(/'/g,"\\'") + '\')" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border-radius:10px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:13px;cursor:pointer;margin-bottom:6px;text-align:left;">' +
-                '<span style="font-size:16px;">📍</span>' +
-                '<span style="font-weight:700;min-width:50px;">' + sanitizar(label) + '</span>' +
-                '<span style="color:var(--verde);font-size:11px;">GPS salvo</span>' +
-              '</button>';
-            }).join('');
-        }
-      } catch(_) {}
-    }
   } catch(e) {
     lista.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar cardápio</div>';
   }
@@ -4945,12 +5133,6 @@ function atualizarCarrinho() {
 
 function voltarCardapio() { irTela('tela-cardapio'); }
 
-function mostrarBtnSalvarEndereco() {
-  if(!authToken || !currentUser) return;
-  var w = document.getElementById('btn-salvar-endereco-wrap');
-  if(w) w.style.display = 'block';
-}
-
 function usarEnderecoSalvo(latLng, label) {
   var el = document.getElementById('endereco-entrega');
   if(!el) return;
@@ -4965,34 +5147,6 @@ function usarEnderecoSalvo(latLng, label) {
     el.style.color = 'var(--verde)';
     simularFrete(latLng);
   }
-}
-
-function mostrarLabelsEndereco() {
-  document.getElementById('salvar-end-passo1').style.display = 'none';
-  document.getElementById('salvar-end-passo2').style.display = 'block';
-}
-
-function mostrarCampoOutro() {
-  document.getElementById('salvar-end-outro').style.display = 'block';
-  setTimeout(function(){ var i = document.getElementById('salvar-end-outro-input'); if(i) i.focus(); }, 100);
-}
-
-async function salvarEnderecoOutro() {
-  var label = (document.getElementById('salvar-end-outro-input') || {}).value.trim();
-  if(!label) { showToast('⚠️', 'Digite um nome', ''); return; }
-  await salvarEnderecoComLabel(label);
-}
-
-async function salvarEnderecoComLabel(label) {
-  var el = document.getElementById('endereco-entrega');
-  var latLng = el ? el.dataset.latLng : '';
-  if(!latLng || !authToken || !currentUser) return;
-  try {
-    await apiCall('/api/auth/enderecos', { method: 'POST', body: { label, endereco: latLng } });
-    showToast('✅', 'Salvo como "' + label + '"!', 'Disponível nas próximas compras');
-    var w = document.getElementById('btn-salvar-endereco-wrap');
-    if(w) w.style.display = 'none';
-  } catch(e) { showToast('❌', 'Erro', e.message); }
 }
 
 function simularFrete(endereco) {
@@ -5042,7 +5196,7 @@ function simularFrete(endereco) {
 }
 
 // CHECKOUT
-function irCheckout(_manterScroll) {
+async function irCheckout(_manterScroll) {
   var subtotal = calcularTotalCarrinho();
   document.getElementById('subtotal-valor').textContent = 'R$ ' + subtotal.toFixed(2).replace('.',',');
   
@@ -5074,9 +5228,33 @@ function irCheckout(_manterScroll) {
     '</div>';
   }).join('');
 
-  // Mostrar endereços salvos
+  // Carregar endereços salvos (logado = API, guest = localStorage)
   var endSalvoEl = document.getElementById('enderecos-salvos');
-  if(endSalvoEl) endSalvoEl.style.display = 'none';
+  if(endSalvoEl) {
+    endSalvoEl.style.display = 'none';
+    endSalvoEl.innerHTML = '';
+    var endsList = [];
+    if(authToken && currentUser) {
+      try { endsList = await apiCall('/api/auth/enderecos') || []; } catch(_) {}
+    } else {
+      endsList = JSON.parse(localStorage.getItem('chegouai_enderecos_labeled') || '[]');
+    }
+    if(endsList.length > 0) {
+      endSalvoEl.style.display = 'block';
+      endSalvoEl.innerHTML = '<div style="font-size:12px;color:var(--texto2);margin-bottom:6px;">📍 Endereços salvos:</div>' +
+        endsList.map(function(e) {
+          var latLng = e.endereco;
+          var label = e.label;
+          return '<button onclick="usarEnderecoSalvo(\'' + latLng.replace(/'/g,"\\'") + '\',\'' + label.replace(/'/g,"\\'") + '\')" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border-radius:10px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:13px;cursor:pointer;margin-bottom:6px;text-align:left;">' +
+            '<span style="font-size:16px;">📍</span>' +
+            '<span style="font-weight:700;min-width:50px;">' + sanitizar(label) + '</span>' +
+            '<span style="color:var(--verde);font-size:11px;">GPS salvo</span>' +
+          '</button>';
+        }).join('');
+    }
+    var dicaEl = document.getElementById('endereco-dica-perfil');
+    if(dicaEl) dicaEl.style.display = endsList.length === 0 ? 'block' : 'none';
+  }
   
   // Resetar mapa picker e link ao abrir checkout
   if(mapPicker) { mapPicker.remove(); mapPicker = null; pinPicker = null; }
@@ -5245,17 +5423,6 @@ async function aplicarCupom() {
   }
 }
 
-function usarEnderecoSalvo(end) {
-  var endInput = document.getElementById('endereco-entrega');
-  if(endInput) { endInput.value = end; simularFrete(end); }
-  // Se for coordenada, restaurar o mapa no ponto salvo
-  var m = end.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
-  if(m) {
-    clienteLat = parseFloat(m[1]); clienteLng = parseFloat(m[2]);
-    mostrarMapaPicker(clienteLat, clienteLng);
-  }
-}
-
 async function confirmarPedido() {
   if(estAtual && !estAtual.aberto) { showToast('🔴', 'Loja fechada', 'Esta loja não está aceitando pedidos no momento.'); return; }
   var endEl = document.getElementById('endereco-entrega');
@@ -5359,16 +5526,6 @@ async function confirmarPedido() {
     // 1. Criar pedido no backend
     var pedidoResp = await apiCall('/api/orders', { method: 'POST', body: bodyPedido });
 
-    // Salvar o endereço (array de até 3)
-    var salvarInput = document.getElementById('salvar-endereco');
-    var endValido = end && !/localiza[çc][aã]o/i.test(end.replace(/Lat:\s*[-\d.]+/i,''));
-    if(salvarInput && salvarInput.checked && endValido) {
-      var endsSalvos = JSON.parse(localStorage.getItem('chegouai_enderecos') || '[]');
-      endsSalvos = [end].concat(endsSalvos.filter(function(e){ return e !== end; })).slice(0,3);
-      localStorage.setItem('chegouai_enderecos', JSON.stringify(endsSalvos));
-      localStorage.setItem('chegouai_endereco', end); // compatibilidade
-    }
-
     pedidoAtualId = pedidoResp.pedidoId;
     localStorage.setItem('chegouai_pedido_id', pedidoAtualId);
 
@@ -5428,7 +5585,6 @@ function usarLocalizacao() {
     var av = document.getElementById('guest-gps-aviso');
     if(av) av.style.display = 'none';
     simularFrete(endInput ? endInput.dataset.latLng : '');
-    mostrarBtnSalvarEndereco();
   }
   function _onGPSErro(err) {
     btn.textContent = '📍 Usar minha localização atual';
@@ -5500,7 +5656,6 @@ function confirmarMapaVisualizacao() {
   localizacaoConfirmada = true;
   var botoesEl = document.getElementById('mapa-botoes-confirma');
   if(botoesEl) botoesEl.innerHTML = '<div style="text-align:center;padding:10px;color:var(--verde);font-weight:700;font-size:14px;">✅ Localização confirmada</div>';
-  mostrarBtnSalvarEndereco();
 }
 
 function ativarDragMapa() {
@@ -5743,7 +5898,6 @@ function confirmarLocalizacaoMapa() {
     btn.style.border = '1.5px solid var(--verde)';
     btn.disabled = true;
   }
-  mostrarBtnSalvarEndereco();
 }
 
 // CACHE DO ESTABELECIMENTO
