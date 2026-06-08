@@ -448,13 +448,13 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
         .is('motoboy_id', null)
         .order('criado_em', { ascending: true }),
 
-      // Entrega ativa deste motoboy (coletado)
+      // Entregas ativas deste motoboy (coletado) — pode ter múltiplas
       motoboy ? supabaseAdmin
         .from('pedidos')
         .select(selectPedido)
         .eq('status', 'coletado')
         .eq('motoboy_id', motoboy.id)
-        .maybeSingle() : Promise.resolve({ data: null }),
+        .order('criado_em', { ascending: true }) : Promise.resolve({ data: [] }),
 
       // Histórico de entregas do motoboy (últimos 30 dias)
       motoboy ? supabaseAdmin
@@ -476,7 +476,7 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
     // Resolver nomes dos clientes via lookup direto (inclui historico)
     const todosOsPedidos = [
       ...(dispRes.data || []),
-      ...(ativaRes.data ? [ativaRes.data] : []),
+      ...(ativaRes.data || []),
       ...historicoRaw,
     ];
     const clienteIds = [...new Set(todosOsPedidos.map(p => p.cliente_id).filter(Boolean))];
@@ -489,7 +489,8 @@ router.get('/available', requireRole('motoboy'), async (req, res, next) => {
 
     res.json({
       disponiveis: (dispRes.data || []).map(resolverNome),
-      ativa: ativaRes.data ? resolverNome(ativaRes.data) : null,
+      ativas: (ativaRes.data || []).map(resolverNome),
+      ativa: (ativaRes.data || [])[0] ? resolverNome((ativaRes.data || [])[0]) : null,
       disponivel: motoboy ? motoboy.disponivel : null,
       telegram_chat_id: motoboyTelegramChatId,
       stats: {
@@ -999,11 +1000,6 @@ router.post(
 
       if (!pedidos || pedidos.length !== pedidoIds.length) {
         return res.status(400).json({ error: 'Um ou mais pedidos não estão prontos ou já foram atribuídos' });
-      }
-
-      const lojas = [...new Set(pedidos.map((p) => p.estabelecimento_id))];
-      if (lojas.length > 1) {
-        return res.status(400).json({ error: 'Só é possível aceitar pedidos da mesma loja por vez' });
       }
 
       // Atribuir todos de uma vez

@@ -8277,7 +8277,8 @@ async function renderMotoboy() {
   try {
     var data = await apiCall('/api/orders/available');
     var disponiveis = data.disponiveis || [];
-    var ativa = data.ativa || null;
+    var ativas = data.ativas || [];
+    var ativa = ativas[0] || null;
     var stats = data.stats || {};
     var historico = data.historico || [];
 
@@ -8351,16 +8352,40 @@ async function renderMotoboy() {
 
     var html = '';
 
+    // Renderizar entrega primária (com fase completa)
     if(ativa) {
       html += renderFaseEntrega(ativa, faseEntrega || 'indo_loja');
     }
 
-    if(disponiveis.length === 0 && !ativa) {
+    // Renderizar entregas secundárias (card simplificado)
+    ativas.slice(1).forEach(function(p) {
+      var ganho = 'R$ ' + parseFloat(p.taxa_entrega || 4).toFixed(2).replace('.',',');
+      var nomeLoja = p.estabelecimentos ? p.estabelecimentos.nome : '—';
+      var nomeCliente = sanitizar(p.nome_cliente || p.telefone_cliente || 'Visitante');
+      var codigo = codigoPedido(p.id);
+      html += '<div class="entrega-card" style="border-color:var(--verde);margin-bottom:12px;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+          '<span style="font-size:13px;font-weight:700;">🛵 Em andamento</span>' +
+          '<span style="font-size:15px;font-weight:900;color:var(--verde);font-family:monospace;">#' + codigo + '</span>' +
+        '</div>' +
+        '<div style="background:var(--cinza2);border-radius:12px;padding:12px;margin-bottom:10px;">' +
+          '<div style="font-size:14px;font-weight:700;margin-bottom:4px;">🏪 ' + sanitizar(nomeLoja) + '</div>' +
+          '<div style="font-size:12px;color:var(--texto2);">👤 ' + nomeCliente + '</div>' +
+          '<div style="font-size:12px;color:var(--texto2);">📍 ' + sanitizar(p.endereco_entrega || '—') + '</div>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+          '<span style="font-size:12px;color:var(--texto2);">Seu ganho: <b style="color:var(--verde);">' + ganho + '</b></span>' +
+        '</div>' +
+        '<button class="btn-acao" style="width:100%;background:var(--verde);color:#000;" onclick="confirmarEntregaReal(\'' + p.id + '\',this)">✅ Confirmar entrega</button>' +
+      '</div>';
+    });
+
+    if(ativas.length === 0 && disponiveis.length === 0) {
       el.innerHTML = '<div class="vazio"><div class="vazio-icon">🛵</div>Nenhuma entrega disponível no momento</div>';
       return;
     }
 
-    if(disponiveis.length > 0 && !ativa) {
+    if(disponiveis.length > 0) {
       html += disponiveis.map(function(p) {
         var ganho = 'R$ ' + parseFloat(p.taxa_entrega || 4).toFixed(2).replace('.',',');
         var nomeLoja = p.estabelecimentos ? p.estabelecimentos.nome : '—';
