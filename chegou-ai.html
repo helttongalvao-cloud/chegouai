@@ -1599,6 +1599,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="nav-btn" onclick="adminNav(this,'repasses')">Repasses</div>
       <div class="nav-btn" onclick="adminNav(this,'lojas')">Estabelecimentos</div>
       <div class="nav-btn" onclick="adminNav(this,'motoboys')">Motoboys</div>
+      <div class="nav-btn" onclick="adminNav(this,'mapa')" style="color:#22d3ee;border-color:#22d3ee40;">🗺️ Mapa</div>
       <div class="nav-btn" onclick="adminNav(this,'cupons')">Cupons</div>
       <div class="nav-btn" onclick="adminNav(this,'sorteio')" style="color:#facc15;border-color:#facc1540;">🎟️ Sorteio</div>
       <div class="nav-btn" onclick="adminNav(this,'metricas')" style="color:#a78bfa;border-color:#a78bfa40;">📊 Métricas</div>
@@ -2730,12 +2731,17 @@ setTimeout(function(){
     irTela('tela-home');
     setTimeout(function() { abrirCardapio(lojaIdParam); }, 300);
   } else if(window.location.pathname !== '/parceiro' && window.location.pathname !== '/app' && window.location.pathname !== '/landing' && window.location.pathname.match(/^\/[a-z0-9][a-z0-9-]{1,39}$/)) {
-    // Slug da loja: /hamburguitos → resolve para UUID e abre cardápio
     var slugPath = window.location.pathname.replace(/^\//, '');
-    irTela('tela-home');
-    apiCall('/api/establishments/slug/' + slugPath).then(function(loja) {
-      if(loja && loja.id) setTimeout(function() { abrirCardapio(loja.id); }, 300);
-    }).catch(function() {});
+    if(params.get('operador') === '1') {
+      // Modo operador: funcionário faz login com PIN
+      iniciarModoOperador(slugPath);
+    } else {
+      // Slug da loja: /hamburguitos → resolve para UUID e abre cardápio
+      irTela('tela-home');
+      apiCall('/api/establishments/slug/' + slugPath).then(function(loja) {
+        if(loja && loja.id) setTimeout(function() { abrirCardapio(loja.id); }, 300);
+      }).catch(function() {});
+    }
   } else if(authToken && currentUser) {
     // DOMContentLoaded handler já chama entrarComo; só agir se ainda na splash
     var _telaInicio = document.querySelector('.tela.ativa');
@@ -6021,11 +6027,12 @@ async function renderRelatorio(periodo) {
       : '';
 
     el.innerHTML =
-      '<div style="display:flex;gap:8px;margin-bottom:20px;">' +
+      '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
         '<button onclick="renderRelatorio(\'7d\')" style="' + btnStyle('7d') + '">7 dias</button>' +
         '<button onclick="renderRelatorio(\'30d\')" style="' + btnStyle('30d') + '">30 dias</button>' +
         '<button onclick="renderRelatorio(\'90d\')" style="' + btnStyle('90d') + '">90 dias</button>' +
       '</div>' +
+      '<a href="/api/establishments/me/relatorio/exportar?periodo=' + periodo + '" download style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);text-decoration:none;font-size:14px;font-weight:600;margin-bottom:20px;">📥 Exportar para Excel (.csv)</a>' +
       '<div class="stats-grid" style="grid-template-columns:1fr 1fr;margin-bottom:20px;">' +
         '<div class="stat-card"><div class="stat-valor">' + data.total_pedidos + '</div><div class="stat-label">Pedidos recebidos</div></div>' +
         '<div class="stat-card"><div class="stat-valor">' + data.pedidos_entregues + '</div><div class="stat-label">Entregues</div></div>' +
@@ -6179,6 +6186,23 @@ async function renderInfoLoja() {
     '<label style="font-size:13px;font-weight:600;color:var(--texto2);display:block;margin-bottom:8px;">QR Code — Pedido na Mesa</label>' +
     '<p style="font-size:12px;color:var(--texto2);margin:0 0 10px;">Clientes escaneiam e pedem direto pelo celular, sem login.</p>' +
     '<button onclick="mostrarQRCodeMesa(\'' + est.id + '\')" style="width:100%;padding:12px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;">🔲 Ver QR Code da Loja</button>' +
+    '</div>' +
+    '<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--cinza3);">' +
+    '<label style="font-size:13px;font-weight:600;color:var(--texto2);display:block;margin-bottom:4px;">👥 Acesso para funcionário</label>' +
+    '<p style="font-size:12px;color:var(--texto2);margin:0 0 10px;">Defina um PIN de 4 dígitos. O funcionário acessa o painel de pedidos sem precisar de senha ou conta.</p>' +
+    (est.pin_operador
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(0,200,100,0.08);border:1px solid rgba(0,200,100,0.25);margin-bottom:10px;">' +
+        '<span style="font-size:20px;font-weight:900;font-family:monospace;letter-spacing:4px;color:var(--verde);">' + est.pin_operador + '</span>' +
+        '<span style="font-size:12px;color:var(--texto2);margin-left:4px;">PIN ativo</span>' +
+        '</div>'
+      : '<div style="font-size:12px;color:var(--texto2);margin-bottom:10px;">Nenhum PIN configurado</div>'
+    ) +
+    '<div style="display:flex;gap:8px;">' +
+    '<input id="input-pin-operador" type="tel" inputmode="numeric" maxlength="4" placeholder="0000" value="' + (est.pin_operador || '') + '" style="width:90px;padding:10px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:18px;font-weight:700;text-align:center;letter-spacing:4px;font-family:monospace;">' +
+    '<button onclick="salvarPinOperador()" style="flex:1;padding:10px;border-radius:10px;background:var(--verde);border:none;color:#000;font-weight:700;cursor:pointer;font-size:14px;">Salvar PIN</button>' +
+    (est.pin_operador ? '<button onclick="removerPinOperador()" style="padding:10px 14px;border-radius:10px;background:var(--cinza3);border:none;color:var(--texto);cursor:pointer;font-size:13px;">Remover</button>' : '') +
+    '</div>' +
+    (est.slug ? '<div style="margin-top:10px;font-size:12px;color:var(--texto2);">Link do funcionário: <b>chegouaiapp.com.br/' + est.slug + '?operador=1</b></div>' : '') +
     '</div>' +
     '<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--cinza3);">' +
     '<label style="font-size:13px;font-weight:600;color:var(--texto2);display:block;margin-bottom:8px;">Tipo de entrega</label>' +
@@ -7428,6 +7452,7 @@ async function renderAdmin(secao) {
   if(adminMonitorTimer) { clearInterval(adminMonitorTimer); adminMonitorTimer = null; }
 
   if(secao === 'monitor') { await renderAdminMonitor(); return; }
+  if(secao === 'mapa') { renderAdminMapa(); return; }
   if(secao === 'cupons') { renderAdminCupons(); return; }
   if(secao === 'sorteio') { renderAdminSorteio(); return; }
   if(secao === 'metricas') { renderAdminMetricas(); return; }
@@ -9346,9 +9371,67 @@ function _metricCard(titulo, valor, sub, cor) {
   '</div>';
 }
 
+var adminMapaTimer = null;
+
+async function renderAdminMapa() {
+  var el = document.getElementById('admin-conteudo');
+  if(!el) return;
+  if(adminMapaTimer) { clearInterval(adminMapaTimer); adminMapaTimer = null; }
+
+  el.innerHTML =
+    '<div style="padding:4px 0 16px;">' +
+      '<div style="font-size:16px;font-weight:700;margin-bottom:4px;">🗺️ Motoboys em campo</div>' +
+      '<div id="admin-mapa-lista" style="margin-bottom:16px;"></div>' +
+      '<div id="admin-mapa-container" style="width:100%;height:400px;border-radius:16px;background:var(--cinza3);overflow:hidden;"></div>' +
+    '</div>';
+
+  async function atualizarMapa() {
+    try {
+      var motoboys = await apiCall('/api/admin/motoboys/localizacoes');
+      var lista = document.getElementById('admin-mapa-lista');
+      var container = document.getElementById('admin-mapa-container');
+      if(!lista || !container) return;
+
+      var comGps = (motoboys || []).filter(function(m){ return m.lat && m.lng; });
+      var semGps = (motoboys || []).filter(function(m){ return !m.lat || !m.lng; });
+
+      lista.innerHTML = comGps.length === 0
+        ? '<div style="color:var(--texto2);font-size:13px;">Nenhum motoboy com GPS ativo no momento.</div>'
+        : comGps.map(function(m) {
+            var min = m.atualizado_em ? Math.round((Date.now() - new Date(m.atualizado_em).getTime()) / 60000) : null;
+            var recente = min !== null && min < 5;
+            return '<div style="display:inline-flex;align-items:center;gap:6px;background:var(--cinza2);border-radius:20px;padding:6px 12px;margin:0 6px 6px 0;font-size:13px;">' +
+              '<span style="width:8px;height:8px;border-radius:50%;background:' + (recente ? 'var(--verde)' : '#888') + ';display:inline-block;"></span>' +
+              '<b>' + sanitizar(m.nome) + '</b>' +
+              (min !== null ? '<span style="color:var(--texto2);">' + (min < 1 ? 'agora' : min + 'min atrás') + '</span>' : '') +
+            '</div>';
+          }).join('') + (semGps.length ? '<div style="font-size:11px;color:var(--texto2);margin-top:4px;">' + semGps.length + ' sem GPS ativo</div>' : '');
+
+      // Montar mapa via iframe OpenStreetMap com marcadores
+      if(comGps.length > 0) {
+        var primeiro = comGps[0];
+        var markers = comGps.map(function(m){ return m.lat + ',' + m.lng + ',blue,' + encodeURIComponent(m.nome); }).join('|');
+        var src = 'https://www.openstreetmap.org/export/embed.html?bbox=' +
+          (primeiro.lng - 0.05) + '%2C' + (primeiro.lat - 0.05) + '%2C' +
+          (primeiro.lng + 0.05) + '%2C' + (primeiro.lat + 0.05) +
+          '&layer=mapnik&marker=' + primeiro.lat + '%2C' + primeiro.lng;
+        container.innerHTML = '<iframe src="' + src + '" style="width:100%;height:400px;border:none;border-radius:16px;"></iframe>';
+      } else {
+        container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--texto2);font-size:13px;">Nenhuma localização disponível</div>';
+      }
+    } catch(e) {
+      console.error('[AdminMapa]', e);
+    }
+  }
+
+  await atualizarMapa();
+  adminMapaTimer = setInterval(atualizarMapa, 15000);
+}
+
 function adminNav(btn, secao) {
   document.querySelectorAll('#tela-admin .nav-btn').forEach(function(b){ b.classList.remove('ativo'); });
   btn.classList.add('ativo');
+  if(adminMapaTimer && secao !== 'mapa') { clearInterval(adminMapaTimer); adminMapaTimer = null; }
   renderAdmin(secao);
 }
 
@@ -11028,6 +11111,28 @@ function mostrarQRCodeMesa(lojaId) {
 }
 
 // ============================================================
+// ============================================================
+// PIN DO OPERADOR
+// ============================================================
+async function salvarPinOperador() {
+  var pin = (document.getElementById('input-pin-operador') || {}).value || '';
+  if(!/^\d{4}$/.test(pin)) { showToast('⚠️', 'PIN inválido', 'Digite exatamente 4 dígitos'); return; }
+  try {
+    await apiCall('/api/establishments/me/pin-operador', { method: 'PUT', body: { pin } });
+    showToast('✅', 'PIN salvo!', 'Funcionário pode acessar com o PIN ' + pin);
+    renderInfoLoja();
+  } catch(e) { showToast('❌', 'Erro', e.message); }
+}
+
+async function removerPinOperador() {
+  try {
+    await apiCall('/api/establishments/me/pin-operador', { method: 'PUT', body: { pin: null } });
+    showToast('🗑️', 'PIN removido', 'Acesso de funcionário desativado');
+    renderInfoLoja();
+  } catch(e) { showToast('❌', 'Erro', e.message); }
+}
+
+// ============================================================
 // TIPO DE ENTREGA — toggle nas configurações
 // ============================================================
 function copiarLinkMotoboy(estId) {
@@ -11746,6 +11851,111 @@ var _mpEstId = '';
 var _mpPedidos = [];
 var _mpCodigoAtual = '';
 var _mpAcaoAtual = null; // { pedidoId, tipo: 'coletar'|'entregar', digitos: 3|4 }
+// ============================================================
+// MODO OPERADOR — funcionário acessa painel de pedidos via PIN
+// ============================================================
+var _operadorSlug = null, _operadorEstId = null, _operadorNome = '', _operadorPolling = null;
+
+async function iniciarModoOperador(slug) {
+  _operadorSlug = slug;
+  var el = document.getElementById('tela-splash') || document.body;
+  // Mostrar tela de login com PIN
+  document.querySelectorAll('.tela').forEach(function(t){ t.classList.remove('ativa'); });
+  var div = document.createElement('div');
+  div.id = 'tela-operador-login';
+  div.style.cssText = 'position:fixed;inset:0;background:var(--preto);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;z-index:9999;';
+  div.innerHTML =
+    '<div style="font-size:48px;margin-bottom:12px;">🏪</div>' +
+    '<div style="font-size:22px;font-weight:800;margin-bottom:4px;">Acesso Operador</div>' +
+    '<div style="font-size:14px;color:var(--texto2);margin-bottom:32px;">Digite o PIN fornecido pelo dono da loja</div>' +
+    '<input id="operador-pin-input" type="tel" inputmode="numeric" maxlength="4" placeholder="0000" style="width:140px;padding:16px;border-radius:14px;border:2px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:32px;font-weight:900;text-align:center;letter-spacing:8px;font-family:monospace;margin-bottom:16px;">' +
+    '<button onclick="loginOperador()" style="width:100%;max-width:280px;padding:16px;border-radius:14px;background:var(--verde);border:none;color:#000;font-size:16px;font-weight:700;cursor:pointer;">Entrar</button>' +
+    '<div id="operador-login-erro" style="color:#ff4444;font-size:13px;margin-top:12px;min-height:18px;"></div>';
+  document.body.appendChild(div);
+  setTimeout(function(){ var i = document.getElementById('operador-pin-input'); if(i) i.focus(); }, 100);
+}
+
+async function loginOperador() {
+  var pin = (document.getElementById('operador-pin-input') || {}).value || '';
+  var erro = document.getElementById('operador-login-erro');
+  if(!/^\d{4}$/.test(pin)) { if(erro) erro.textContent = 'Digite 4 dígitos'; return; }
+  try {
+    var r = await apiCall('/api/establishments/' + _operadorSlug + '/operador-login', { method: 'POST', body: { pin } });
+    _operadorEstId = r.estabelecimentoId;
+    _operadorNome = r.nome;
+    var loginDiv = document.getElementById('tela-operador-login');
+    if(loginDiv) loginDiv.remove();
+    renderModoOperador();
+  } catch(e) {
+    if(erro) erro.textContent = e.message || 'PIN incorreto';
+  }
+}
+
+function renderModoOperador() {
+  document.querySelectorAll('.tela').forEach(function(t){ t.classList.remove('ativa'); });
+  var div = document.getElementById('tela-operador') || document.createElement('div');
+  div.id = 'tela-operador';
+  div.style.cssText = 'position:fixed;inset:0;background:var(--preto);display:flex;flex-direction:column;overflow-y:auto;';
+  div.innerHTML =
+    '<div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--cinza3);">' +
+      '<div><div style="font-size:16px;font-weight:800;">🏪 ' + sanitizar(_operadorNome) + '</div>' +
+      '<div style="font-size:12px;color:var(--texto2);">Modo operador</div></div>' +
+      '<button onclick="atualizarOperador()" style="padding:8px 14px;border-radius:8px;background:var(--cinza3);border:none;color:var(--texto);font-size:13px;cursor:pointer;">🔄 Atualizar</button>' +
+    '</div>' +
+    '<div id="operador-pedidos" style="padding:16px;flex:1;"><div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando...</div></div>';
+  if(!document.getElementById('tela-operador')) document.body.appendChild(div);
+  atualizarOperador();
+  if(_operadorPolling) clearInterval(_operadorPolling);
+  _operadorPolling = setInterval(atualizarOperador, 20000);
+}
+
+async function atualizarOperador() {
+  var el = document.getElementById('operador-pedidos');
+  if(!el) return;
+  try {
+    var pedidos = await apiCall('/api/establishments/' + _operadorEstId + '/pedidos-operador');
+    var abertos = (pedidos || []).filter(function(p){ return ['pendente','aceito','preparando','pronto'].indexOf(p.status) !== -1; });
+    if(abertos.length === 0) {
+      el.innerHTML = '<div class="vazio"><div class="vazio-icon">✅</div>Nenhum pedido em aberto</div>';
+      return;
+    }
+    el.innerHTML = abertos.map(function(p) {
+      var corStatus = {pendente:'#ffb400',aceito:'#22d3ee',preparando:'#a78bfa',pronto:'var(--verde)'};
+      var itens = (p.itens_pedido || []).map(function(i){ return i.quantidade + 'x ' + i.nome; }).join(', ');
+      return '<div style="background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--cinza3);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+          '<span style="font-weight:700;font-size:15px;">#' + codigoPedido(p.id) + ' — ' + sanitizar(p.nome_cliente || 'Visitante') + '</span>' +
+          '<span style="background:' + (corStatus[p.status]||'var(--cinza3)') + ';color:#000;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;">' + p.status.toUpperCase() + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px;color:var(--texto2);margin-bottom:10px;">' + sanitizar(itens) + '</div>' +
+        (p.status === 'pendente' ?
+          '<button onclick="operadorAceitar(\'' + p.id + '\',this)" style="width:100%;padding:12px;border-radius:10px;background:var(--verde);border:none;color:#000;font-weight:700;cursor:pointer;font-size:14px;">✅ Aceitar pedido</button>' :
+          p.status === 'aceito' || p.status === 'preparando' ?
+          '<button onclick="operadorPronto(\'' + p.id + '\',this)" style="width:100%;padding:12px;border-radius:10px;background:#a78bfa;border:none;color:#000;font-weight:700;cursor:pointer;font-size:14px;">🍽️ Marcar como pronto</button>' : ''
+        ) +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro ao carregar pedidos</div>';
+  }
+}
+
+async function operadorAceitar(pedidoId, btn) {
+  if(btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+  try {
+    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'aceito' } });
+    atualizarOperador();
+  } catch(e) { showToast('❌','Erro',e.message); if(btn){ btn.disabled=false; btn.textContent='✅ Aceitar pedido'; } }
+}
+
+async function operadorPronto(pedidoId, btn) {
+  if(btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+  try {
+    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'pronto' } });
+    atualizarOperador();
+  } catch(e) { showToast('❌','Erro',e.message); if(btn){ btn.disabled=false; btn.textContent='🍽️ Marcar como pronto'; } }
+}
+
 var _mpPolling = null;
 
 async function iniciarModoMotoboyProprio(estId) {

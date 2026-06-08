@@ -465,6 +465,20 @@ router.post(
 );
 
 // =============================================
+// GET /api/admin/motoboys/localizacoes — GPS em tempo real de todos os motoboys
+// =============================================
+router.get('/motoboys/localizacoes', async (req, res, next) => {
+  try {
+    const { data } = await supabaseAdmin
+      .from('motoboys')
+      .select('id, nome, disponivel, ativo, lat, lng, atualizado_em')
+      .eq('ativo', true)
+      .not('lat', 'is', null);
+    res.json(data || []);
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // POST /api/admin/motoboys — Cadastrar motoboy
 // =============================================
 router.post(

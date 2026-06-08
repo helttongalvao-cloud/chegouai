@@ -188,6 +188,24 @@ router.get('/slug/:slug', async (req, res, next) => {
 });
 
 // =============================================
+// GET /api/establishments/:estId/pedidos-operador — Pedidos abertos (modo operador)
+// =============================================
+router.get('/:estId/pedidos-operador', [param('estId').isUUID()], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: 'ID inválido' });
+  try {
+    const { data } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, status, total, criado_em, nome_cliente, telefone_cliente, itens_pedido(nome, quantidade)')
+      .eq('estabelecimento_id', req.params.estId)
+      .eq('pagamento_status', 'aprovado')
+      .in('status', ['pendente', 'aceito', 'preparando', 'pronto'])
+      .order('criado_em', { ascending: true });
+    res.json(data || []);
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // GET /api/establishments/:id — Detalhes + cardápio
 // =============================================
 router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
@@ -793,6 +811,50 @@ router.get('/me/relatorio', requireRole('estabelecimento'), async (req, res, nex
 });
 
 // =============================================
+// GET /api/establishments/me/relatorio/exportar — Exportar CSV
+// =============================================
+router.get('/me/relatorio/exportar', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const periodo = req.query.periodo || '7d';
+    const formato = req.query.formato || 'csv'; // csv ou txt
+    const dias = periodo === '90d' ? 90 : periodo === '30d' ? 30 : 7;
+    const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: est } = await supabaseAdmin
+      .from('estabelecimentos').select('id, nome').eq('user_id', req.user.id).single();
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+
+    const { data: pedidos } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, subtotal, taxa_entrega, total, forma_pagamento, status, criado_em, nome_cliente, telefone_cliente, endereco_entrega, itens_pedido(nome, quantidade, preco_unitario)')
+      .eq('estabelecimento_id', est.id)
+      .eq('pagamento_status', 'aprovado')
+      .neq('status', 'cancelado')
+      .gte('criado_em', desde)
+      .order('criado_em', { ascending: false });
+
+    const COMISSAO = 0.05;
+    const rows = (pedidos || []).map(p => {
+      const itens = (p.itens_pedido || []).map(i => `${i.quantidade}x ${i.nome}`).join(' | ');
+      const liquido = parseFloat(((p.subtotal || 0) * (1 - COMISSAO)).toFixed(2));
+      const data = new Date(p.criado_em).toLocaleString('pt-BR', { timeZone: 'America/Manaus' });
+      return [data, p.id.slice(0,8), p.nome_cliente || '', p.telefone_cliente || '', itens,
+              p.forma_pagamento, (p.subtotal || 0).toFixed(2), (p.taxa_entrega || 0).toFixed(2),
+              liquido.toFixed(2), p.status];
+    });
+
+    const header = ['Data/Hora','Pedido','Cliente','Telefone','Itens','Pagamento','Subtotal (R$)','Frete (R$)','Líquido (R$)','Status'];
+    const csvLines = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'));
+    const csv = '\uFEFF' + csvLines.join('\r\n'); // BOM para Excel reconhecer UTF-8
+
+    const nomeArquivo = `relatorio_${est.nome.replace(/\s+/g, '_')}_${periodo}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${nomeArquivo}"`);
+    res.send(csv);
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // POST /api/establishments/me/upload-image
 // =============================================
 router.post('/me/upload-image', requireAuth, requireRole('estabelecimento', 'admin'), async (req, res, next) => {
@@ -820,6 +882,46 @@ router.post('/me/upload-image', requireAuth, requireRole('estabelecimento', 'adm
   } catch (err) {
     next(err);
   }
+});
+
+// =============================================
+// PUT /api/establishments/me/pin-operador — Definir ou remover PIN do operador
+// =============================================
+router.put('/me/pin-operador', requireRole('estabelecimento'), async (req, res, next) => {
+  try {
+    const { pin } = req.body;
+    if (pin !== null && pin !== undefined && !/^\d{4}$/.test(String(pin))) {
+      return res.status(400).json({ error: 'PIN deve ter exatamente 4 dígitos' });
+    }
+    await supabaseAdmin
+      .from('estabelecimentos')
+      .update({ pin_operador: pin ? String(pin) : null })
+      .eq('user_id', req.user.id);
+    res.json({ ok: true, pin: pin ? String(pin) : null });
+  } catch (err) { next(err); }
+});
+
+// =============================================
+// POST /api/establishments/:slug/operador-login — Validar PIN do operador
+// =============================================
+router.post('/:slug/operador-login', async (req, res, next) => {
+  try {
+    const { pin } = req.body;
+    if (!pin) return res.status(400).json({ error: 'PIN obrigatório' });
+
+    const { data: est } = await supabaseAdmin
+      .from('estabelecimentos')
+      .select('id, nome, emoji, pin_operador')
+      .eq('slug', req.params.slug)
+      .eq('ativo', true)
+      .maybeSingle();
+
+    if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
+    if (!est.pin_operador) return res.status(403).json({ error: 'Acesso de operador não configurado' });
+    if (est.pin_operador !== String(pin)) return res.status(401).json({ error: 'PIN incorreto' });
+
+    res.json({ ok: true, estabelecimentoId: est.id, nome: est.nome, emoji: est.emoji });
+  } catch (err) { next(err); }
 });
 
 // =============================================
