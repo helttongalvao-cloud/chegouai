@@ -508,33 +508,47 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .loja-card:active { transform:scale(.97); }
 .loja-card-foto { width:100%; aspect-ratio:1/1; object-fit:cover; background:var(--cinza3); display:block; }
 .loja-card-foto-placeholder { width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; font-size:48px; background:var(--cinza3); }
-.loja-card-body { padding:10px 10px 12px; }
-.loja-card-nome { font-size:13px; font-weight:700; margin-bottom:4px; line-height:1.3; }
-.loja-card-preco { font-size:15px; font-weight:800; color:var(--verde); }
-.loja-card-preco-de { font-size:11px; color:var(--texto2); text-decoration:line-through; margin-right:4px; }
-.loja-card-add { position:absolute; bottom:10px; right:10px; width:30px; height:30px; border-radius:50%; background:var(--verde); border:none; color:#000; font-size:20px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; }
+.loja-card-body { padding:10px 10px 14px; }
+.loja-card-nome { font-size:12px; font-weight:600; margin-bottom:6px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.loja-card-preco { font-size:16px; font-weight:800; color:var(--verde); display:block; }
+.loja-card-preco-de { font-size:11px; color:var(--texto2); text-decoration:line-through; display:block; margin-top:1px; }
+.loja-card-add { position:absolute; bottom:10px; right:10px; width:32px; height:32px; border-radius:50%; background:var(--verde); border:none; color:#000; font-size:22px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; box-shadow:0 2px 8px rgba(0,200,83,.4); }
 .loja-card-indisponivel { opacity:.45; pointer-events:none; }
-.loja-card-badge { position:absolute; top:8px; left:8px; background:#ef4444; color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+.loja-card-badge { position:absolute; top:8px; left:8px; background:#ef4444; color:#fff; font-size:11px; font-weight:800; padding:3px 7px; border-radius:6px; letter-spacing:.3px; }
+
+/* Galeria de fotos no modal */
+.loja-galeria-wrap { position:relative; }
+.loja-galeria-scroll { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; }
+.loja-galeria-scroll::-webkit-scrollbar { display:none; }
+.loja-galeria-slide { min-width:100%; scroll-snap-align:start; }
+.loja-galeria-slide img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; }
+.loja-galeria-counter { position:absolute; bottom:10px; right:12px; background:rgba(0,0,0,.55); color:#fff; font-size:12px; font-weight:600; padding:3px 9px; border-radius:20px; backdrop-filter:blur(4px); }
+.loja-galeria-dots { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); display:flex; gap:5px; }
+.loja-galeria-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.5); transition:background .2s; }
+.loja-galeria-dot.ativo { background:#fff; width:18px; border-radius:3px; }
 
 /* Modal e-commerce produto */
 .modal-loja-produto { background:var(--cinza1); border-radius:24px 24px 0 0; max-height:92vh; overflow-y:auto; }
 .modal-loja-foto { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; }
 .modal-loja-foto-placeholder { width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; font-size:80px; background:var(--cinza2); }
-.modal-loja-body { padding:20px 20px 100px; }
-.modal-loja-nome { font-size:22px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; margin-bottom:6px; }
+.modal-loja-body { padding:20px 20px 110px; }
+.modal-loja-nome { font-size:20px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; margin-bottom:4px; line-height:1.3; }
 .modal-loja-desc { font-size:14px; color:var(--texto2); line-height:1.6; margin-bottom:16px; }
-.modal-loja-preco-wrap { display:flex; align-items:baseline; gap:8px; margin-bottom:20px; }
-.modal-loja-preco { font-size:28px; font-weight:800; color:var(--verde); }
-.modal-loja-preco-de { font-size:16px; color:var(--texto2); text-decoration:line-through; }
-.modal-loja-secao { font-size:13px; font-weight:700; color:var(--texto2); margin-bottom:10px; text-transform:uppercase; letter-spacing:.5px; }
+.modal-loja-preco-wrap { margin-bottom:20px; }
+.modal-loja-preco { font-size:30px; font-weight:800; color:var(--verde); }
+.modal-loja-preco-de { font-size:14px; color:var(--texto2); text-decoration:line-through; margin-right:8px; }
+.modal-loja-desconto-badge { display:inline-block; background:#ef444420; color:#ef4444; font-size:13px; font-weight:800; padding:2px 8px; border-radius:6px; margin-left:8px; vertical-align:middle; }
+.modal-loja-secao { font-size:12px; font-weight:700; color:var(--texto2); margin-bottom:10px; text-transform:uppercase; letter-spacing:.8px; }
 .modal-loja-vars { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
-.modal-loja-var { padding:8px 16px; border-radius:10px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto); font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; font-family:'DM Sans',sans-serif; }
-.modal-loja-var.ativo { border-color:var(--verde); background:rgba(0,200,83,.1); color:var(--verde); }
+.modal-loja-var { padding:8px 18px; border-radius:8px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto); font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; font-family:'DM Sans',sans-serif; }
+.modal-loja-var.ativo { border-color:var(--verde); background:rgba(0,200,83,.12); color:var(--verde); }
+.modal-loja-var-cor { width:32px; height:32px; border-radius:50%; border:2.5px solid var(--cinza3); cursor:pointer; transition:all .15s; padding:0; }
+.modal-loja-var-cor.ativo { border-color:var(--verde); box-shadow:0 0 0 2px var(--verde); }
 .modal-loja-rodape { position:fixed; bottom:0; left:0; right:0; background:var(--preto); border-top:1px solid var(--cinza3); padding:14px 20px 32px; display:flex; align-items:center; gap:12px; }
-.modal-loja-qtd { display:flex; align-items:center; gap:12px; background:var(--cinza2); border-radius:12px; padding:8px 14px; }
+.modal-loja-qtd { display:flex; align-items:center; gap:14px; background:var(--cinza2); border-radius:12px; padding:10px 16px; }
 .modal-loja-qtd button { background:none; border:none; color:var(--texto); font-size:22px; font-weight:700; cursor:pointer; line-height:1; padding:0; }
 .modal-loja-qtd span { font-size:16px; font-weight:700; min-width:20px; text-align:center; }
-.modal-loja-add-btn { flex:1; padding:14px; border-radius:14px; background:var(--verde); color:#000; font-size:15px; font-weight:800; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; }
+.modal-loja-add-btn { flex:1; padding:15px; border-radius:14px; background:var(--verde); color:#000; font-size:15px; font-weight:800; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; letter-spacing:-.2px; }
 /* ===== FIM E-COMMERCE ===== */
 
 .btn-editar { background:var(--cinza3); border:none; border-radius:7px; padding:5px 8px; color:var(--texto); font-size:11px; cursor:pointer; font-family:'DM Sans',sans-serif; white-space:nowrap; }
@@ -5027,14 +5041,21 @@ function renderLojaEcommerce(produtos) {
           ? '<img class="loja-card-foto" src="' + p.imagem_url + '" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
             '<div class="loja-card-foto-placeholder" style="display:none">' + (p.emoji || '📦') + '</div>'
           : '<div class="loja-card-foto-placeholder">' + (p.emoji || '📦') + '</div>';
+        var precoBase = parseFloat(p.preco);
         var precoPromo = p.preco_promocional ? parseFloat(p.preco_promocional) : null;
-        var precoFmt = 'R$' + parseFloat(p.preco).toFixed(2).replace('.', ',');
-        var precoHtml = precoPromo
-          ? '<span class="loja-card-preco-de">' + precoFmt + '</span><span class="loja-card-preco">R$' + precoPromo.toFixed(2).replace('.', ',') + '</span>'
-          : '<span class="loja-card-preco">' + precoFmt + '</span>';
+        var precoHtml, badgeHtml;
+        if (precoPromo) {
+          var pct = Math.round((1 - precoPromo / precoBase) * 100);
+          badgeHtml = '<div class="loja-card-badge">-' + pct + '%</div>';
+          precoHtml = '<span class="loja-card-preco">R$' + precoPromo.toFixed(2).replace('.', ',') + '</span>' +
+            '<span class="loja-card-preco-de">R$' + precoBase.toFixed(2).replace('.', ',') + '</span>';
+        } else {
+          badgeHtml = '';
+          precoHtml = '<span class="loja-card-preco">R$' + precoBase.toFixed(2).replace('.', ',') + '</span>';
+        }
         var indisponivel = !p.disponivel;
         return '<div class="loja-card' + (indisponivel ? ' loja-card-indisponivel' : '') + '" onclick="abrirModalLojaProduto(' + JSON.stringify(p).replace(/"/g, '&quot;') + ')">' +
-          (precoPromo ? '<div class="loja-card-badge">OFERTA</div>' : '') +
+          badgeHtml +
           fotoHtml +
           '<div class="loja-card-body">' +
             '<div class="loja-card-nome">' + sanitizar(p.nome) + '</div>' +
@@ -5088,38 +5109,75 @@ function abrirModalLojaProduto(prod) {
   _lojaModalQtd = 1;
   _lojaModalVariacao = null;
 
-  var preco = prod.preco_promocional ? parseFloat(prod.preco_promocional) : parseFloat(prod.preco);
+  var precoBase = parseFloat(prod.preco);
+  var precoPromo = prod.preco_promocional ? parseFloat(prod.preco_promocional) : null;
+  var preco = precoPromo || precoBase;
   var precoFmt = 'R$' + preco.toFixed(2).replace('.', ',');
-  var precoDeFmt = prod.preco_promocional ? 'R$' + parseFloat(prod.preco).toFixed(2).replace('.', ',') : null;
 
-  var fotoHtml = prod.imagem_url
-    ? '<img class="modal-loja-foto" src="' + prod.imagem_url + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
-      '<div class="modal-loja-foto-placeholder" style="display:none">' + (prod.emoji || '📦') + '</div>'
-    : '<div class="modal-loja-foto-placeholder">' + (prod.emoji || '📦') + '</div>';
+  // Galeria de fotos
+  var galeria = [];
+  try { galeria = JSON.parse(prod.galeria || '[]'); } catch(_) {}
+  if (prod.imagem_url && !galeria.includes(prod.imagem_url)) galeria.unshift(prod.imagem_url);
+  var galeriaHtml;
+  if (galeria.length === 0) {
+    galeriaHtml = '<div class="modal-loja-foto-placeholder">' + (prod.emoji || '📦') + '</div>';
+  } else if (galeria.length === 1) {
+    galeriaHtml = '<div class="loja-galeria-wrap">' +
+      '<img class="modal-loja-foto" src="' + galeria[0] + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+      '<div class="modal-loja-foto-placeholder" style="display:none">' + (prod.emoji || '📦') + '</div>' +
+    '</div>';
+  } else {
+    var slidesHtml = galeria.map(function(url) {
+      return '<div class="loja-galeria-slide"><img src="' + url + '" loading="lazy"></div>';
+    }).join('');
+    var dotsHtml = galeria.map(function(_, i) {
+      return '<div class="loja-galeria-dot' + (i === 0 ? ' ativo' : '') + '"></div>';
+    }).join('');
+    galeriaHtml = '<div class="loja-galeria-wrap">' +
+      '<div class="loja-galeria-scroll" id="loja-galeria-scroll" onscroll="_lojaGaleriaScroll(this,' + galeria.length + ')">' + slidesHtml + '</div>' +
+      '<div class="loja-galeria-dots" id="loja-galeria-dots">' + dotsHtml + '</div>' +
+      '<div class="loja-galeria-counter" id="loja-galeria-counter">1/' + galeria.length + '</div>' +
+    '</div>';
+  }
 
-  // Variações (se existir campo variacoes no produto)
+  // Preço com badge de desconto
+  var precoWrapHtml;
+  if (precoPromo) {
+    var pct = Math.round((1 - precoPromo / precoBase) * 100);
+    precoWrapHtml = '<div class="modal-loja-preco-wrap">' +
+      '<span class="modal-loja-preco" id="loja-prod-preco-display">' + precoFmt + '</span>' +
+      '<span class="modal-loja-desconto-badge">-' + pct + '%</span>' +
+      '<br><span class="modal-loja-preco-de">R$' + precoBase.toFixed(2).replace('.', ',') + '</span>' +
+    '</div>';
+  } else {
+    precoWrapHtml = '<div class="modal-loja-preco-wrap">' +
+      '<span class="modal-loja-preco" id="loja-prod-preco-display">' + precoFmt + '</span>' +
+    '</div>';
+  }
+
+  // Variações
   var vars = [];
   try { vars = JSON.parse(prod.variacoes || '[]'); } catch(_) {}
   var varsHtml = '';
   if (vars.length > 0) {
+    var btnsHtml = vars.map(function(v) {
+      var isHex = /^#[0-9A-Fa-f]{3,6}$/.test(v.trim());
+      if (isHex) {
+        return '<button class="modal-loja-var-cor" style="background:' + v.trim() + '" title="' + v.trim() + '" onclick="_lojaSelectVar(\'' + v.trim() + '\', this)"></button>';
+      }
+      return '<button class="modal-loja-var" onclick="_lojaSelectVar(\'' + sanitizar(v) + '\', this)">' + sanitizar(v) + '</button>';
+    }).join('');
     varsHtml = '<div class="modal-loja-secao">Variações</div>' +
-      '<div class="modal-loja-vars" id="loja-vars-wrap">' +
-      vars.map(function(v) {
-        return '<button class="modal-loja-var" onclick="_lojaSelectVar(\'' + sanitizar(v) + '\', this)">' + sanitizar(v) + '</button>';
-      }).join('') +
-      '</div>';
+      '<div class="modal-loja-vars" id="loja-vars-wrap">' + btnsHtml + '</div>';
   }
 
   var html =
     '<div class="modal-loja-produto" id="modal-loja-prod-inner">' +
-      fotoHtml +
+      galeriaHtml +
       '<div class="modal-loja-body">' +
         '<div class="modal-loja-nome">' + sanitizar(prod.nome) + '</div>' +
         (prod.descricao ? '<div class="modal-loja-desc">' + sanitizar(prod.descricao) + '</div>' : '') +
-        '<div class="modal-loja-preco-wrap">' +
-          (precoDeFmt ? '<span class="modal-loja-preco-de">' + precoDeFmt + '</span>' : '') +
-          '<span class="modal-loja-preco" id="loja-prod-preco-display">' + precoFmt + '</span>' +
-        '</div>' +
+        precoWrapHtml +
         varsHtml +
       '</div>' +
       '<div class="modal-loja-rodape">' +
@@ -5150,6 +5208,14 @@ function abrirModalLojaProduto(prod) {
 function _fecharModalLoja() {
   var el = document.getElementById('modal-loja-produto');
   if (el) el.classList.remove('aberto');
+}
+
+function _lojaGaleriaScroll(el, total) {
+  var idx = Math.round(el.scrollLeft / el.offsetWidth);
+  var counter = document.getElementById('loja-galeria-counter');
+  if (counter) counter.textContent = (idx + 1) + '/' + total;
+  var dots = document.querySelectorAll('#loja-galeria-dots .loja-galeria-dot');
+  dots.forEach(function(d, i) { d.classList.toggle('ativo', i === idx); });
 }
 
 function _lojaSelectVar(variacao, btn) {
