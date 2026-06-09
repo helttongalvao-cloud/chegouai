@@ -138,14 +138,15 @@ router.post('/login', authSlowDown, validateLogin, async (req, res, next) => {
   const telLimpo = (telefone || '').replace(/\D/g, '');
 
   try {
-    // Buscar e-mail interno pelo telefone
-    const { data: profileEmail, error: profileLookupErr } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email')
-      .eq('telefone', telLimpo)
-      .maybeSingle();
+    // Buscar e-mail interno pelo telefone (tenta também com prefixo 55 para dados antigos)
+    let profileEmail = null;
+    for (const tel of [telLimpo, `55${telLimpo}`]) {
+      const { data } = await supabaseAdmin
+        .from('profiles').select('id, email').eq('telefone', tel).maybeSingle();
+      if (data) { profileEmail = data; break; }
+    }
 
-    console.log('[Auth/login] profileLookup:', { tel: telLimpo, email: profileEmail?.email || null, err: profileLookupErr?.message || null });
+    console.log('[Auth/login] profileLookup:', { tel: telLimpo, email: profileEmail?.email || null });
 
     let emailLogin = profileEmail?.email || null;
 
@@ -416,8 +417,9 @@ router.post('/cadastro-parceiro', async (req, res, next) => {
     return res.status(400).json({ error: 'Preencha todos os campos obrigatórios' });
   }
   if ((senha || '').length < 6) return res.status(400).json({ error: 'Senha deve ter pelo menos 6 caracteres' });
-  const telLimpo = (whatsapp || '').replace(/\D/g, '');
-  if (telLimpo.length < 10) return res.status(400).json({ error: 'WhatsApp inválido (com DDD)' });
+  let telLimpo = (whatsapp || '').replace(/\D/g, '');
+  if (telLimpo.length > 11 && telLimpo.startsWith('55')) telLimpo = telLimpo.slice(2);
+  if (telLimpo.length < 10 || telLimpo.length > 11) return res.status(400).json({ error: 'WhatsApp inválido (DDD + número, sem código do país)' });
 
   try {
     // Validar token
