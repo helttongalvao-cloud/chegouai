@@ -489,6 +489,54 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .card-produto .prod-desc { font-size:11px; color:var(--texto2); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .card-produto .prod-preco { font-size:13px; font-weight:700; color:var(--verde); margin-top:3px; }
 .card-produto .prod-acoes { display:flex; flex-direction:row; flex-wrap:wrap; gap:4px; justify-content:flex-end; flex-shrink:0; max-width:96px; }
+
+/* ===== E-COMMERCE LAYOUT (loja / encomenda) ===== */
+.loja-topo { padding:12px 16px 0; }
+.loja-busca-row { display:flex; align-items:center; gap:8px; background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:12px; padding:10px 14px; margin-bottom:10px; }
+.loja-busca-row input { flex:1; background:transparent; border:none; outline:none; color:var(--texto); font-size:14px; font-family:'DM Sans',sans-serif; }
+.loja-busca-row input::placeholder { color:var(--texto2); }
+.loja-sort-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+.loja-sort-row::-webkit-scrollbar { display:none; }
+.loja-sort-btn { flex-shrink:0; padding:6px 14px; border-radius:20px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto2); font-size:12px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all .2s; white-space:nowrap; }
+.loja-sort-btn.ativo { background:var(--verde); border-color:var(--verde); color:#000; }
+.loja-cats { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:0 0 10px; }
+.loja-cats::-webkit-scrollbar { display:none; }
+.loja-cat-chip { flex-shrink:0; padding:6px 16px; border-radius:20px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto2); font-size:12px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all .2s; }
+.loja-cat-chip.ativo { background:var(--verde); border-color:var(--verde); color:#000; }
+.loja-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 16px 100px; }
+.loja-card { background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:16px; overflow:hidden; cursor:pointer; position:relative; transition:transform .15s; active:transform:scale(.97); }
+.loja-card:active { transform:scale(.97); }
+.loja-card-foto { width:100%; aspect-ratio:1/1; object-fit:cover; background:var(--cinza3); display:block; }
+.loja-card-foto-placeholder { width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; font-size:48px; background:var(--cinza3); }
+.loja-card-body { padding:10px 10px 12px; }
+.loja-card-nome { font-size:13px; font-weight:700; margin-bottom:4px; line-height:1.3; }
+.loja-card-preco { font-size:15px; font-weight:800; color:var(--verde); }
+.loja-card-preco-de { font-size:11px; color:var(--texto2); text-decoration:line-through; margin-right:4px; }
+.loja-card-add { position:absolute; bottom:10px; right:10px; width:30px; height:30px; border-radius:50%; background:var(--verde); border:none; color:#000; font-size:20px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; }
+.loja-card-indisponivel { opacity:.45; pointer-events:none; }
+.loja-card-badge { position:absolute; top:8px; left:8px; background:#ef4444; color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+
+/* Modal e-commerce produto */
+.modal-loja-produto { background:var(--cinza1); border-radius:24px 24px 0 0; max-height:92vh; overflow-y:auto; }
+.modal-loja-foto { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; }
+.modal-loja-foto-placeholder { width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; font-size:80px; background:var(--cinza2); }
+.modal-loja-body { padding:20px 20px 100px; }
+.modal-loja-nome { font-size:22px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; margin-bottom:6px; }
+.modal-loja-desc { font-size:14px; color:var(--texto2); line-height:1.6; margin-bottom:16px; }
+.modal-loja-preco-wrap { display:flex; align-items:baseline; gap:8px; margin-bottom:20px; }
+.modal-loja-preco { font-size:28px; font-weight:800; color:var(--verde); }
+.modal-loja-preco-de { font-size:16px; color:var(--texto2); text-decoration:line-through; }
+.modal-loja-secao { font-size:13px; font-weight:700; color:var(--texto2); margin-bottom:10px; text-transform:uppercase; letter-spacing:.5px; }
+.modal-loja-vars { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+.modal-loja-var { padding:8px 16px; border-radius:10px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto); font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; font-family:'DM Sans',sans-serif; }
+.modal-loja-var.ativo { border-color:var(--verde); background:rgba(0,200,83,.1); color:var(--verde); }
+.modal-loja-rodape { position:fixed; bottom:0; left:0; right:0; background:var(--preto); border-top:1px solid var(--cinza3); padding:14px 20px 32px; display:flex; align-items:center; gap:12px; }
+.modal-loja-qtd { display:flex; align-items:center; gap:12px; background:var(--cinza2); border-radius:12px; padding:8px 14px; }
+.modal-loja-qtd button { background:none; border:none; color:var(--texto); font-size:22px; font-weight:700; cursor:pointer; line-height:1; padding:0; }
+.modal-loja-qtd span { font-size:16px; font-weight:700; min-width:20px; text-align:center; }
+.modal-loja-add-btn { flex:1; padding:14px; border-radius:14px; background:var(--verde); color:#000; font-size:15px; font-weight:800; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; }
+/* ===== FIM E-COMMERCE ===== */
+
 .btn-editar { background:var(--cinza3); border:none; border-radius:7px; padding:5px 8px; color:var(--texto); font-size:11px; cursor:pointer; font-family:'DM Sans',sans-serif; white-space:nowrap; }
 .btn-deletar { background:#FF525215; border:none; border-radius:7px; padding:5px 8px; color:var(--erro); font-size:11px; cursor:pointer; font-family:'DM Sans',sans-serif; white-space:nowrap; }
 .disponivel-toggle { display:flex; align-items:center; gap:8px; }
@@ -4734,15 +4782,22 @@ async function abrirCardapio(id, _prodId) {
 
     // Salvar todos os produtos (disponíveis e indisponíveis — indisponíveis aparecem bloqueados)
     produtosCache = estAtual.produtos || [];
-    renderProdutos(produtosCache);
+
+    // Detectar modo e-commerce (loja / encomenda)
+    var isLoja = estAtual.categoria === 'loja' || estAtual.categoria === 'encomenda';
+    if (isLoja) {
+      _lojaCatAtiva = 'todos'; _lojaOrdemAtiva = 'padrao'; _lojaQueryAtiva = '';
+      renderLojaEcommerce(produtosCache);
+    } else {
+      renderProdutos(produtosCache);
+    }
+
     if(_prodId) {
       setTimeout(function() {
         var idxProd = produtosCache.findIndex(function(p){ return p.id === _prodId; });
         if(idxProd !== -1) {
-          adicionarItem(idxProd); // abre modal do produto direto
-        } else {
-          var el = document.querySelector('#lista-itens .card-produto[data-id="' + _prodId + '"]');
-          if(el) { el.scrollIntoView({ behavior:'smooth', block:'center' }); el.style.boxShadow = '0 0 0 3px var(--verde)'; setTimeout(function(){ el.style.boxShadow=''; },2000); }
+          if (isLoja) abrirModalLojaProduto(produtosCache[idxProd]);
+          else adicionarItem(idxProd);
         }
       }, 400);
     }
@@ -4926,6 +4981,215 @@ function filtrarProdutos(termo) {
   var filtrado = produtosCache.filter(function(p) { return p.nome.toLowerCase().includes(t) || (p.descricao || '').toLowerCase().includes(t); });
   renderProdutos(filtrado);
 }
+
+// ============================================================
+// E-COMMERCE LAYOUT — loja / encomenda
+// ============================================================
+var _lojaCatAtiva = 'todos';
+var _lojaOrdemAtiva = 'padrao';
+var _lojaQueryAtiva = '';
+
+function renderLojaEcommerce(produtos) {
+  var lista = document.getElementById('lista-itens');
+
+  // Coletar categorias únicas
+  var cats = ['todos'];
+  produtos.forEach(function(p) {
+    var c = (p.categoria || 'outros').toLowerCase().trim();
+    if (!cats.includes(c)) cats.push(c);
+  });
+
+  // Filtrar
+  var filtrados = produtos.filter(function(p) {
+    var passaCat = _lojaCatAtiva === 'todos' || (p.categoria || 'outros').toLowerCase().trim() === _lojaCatAtiva;
+    var passaBusca = !_lojaQueryAtiva || p.nome.toLowerCase().includes(_lojaQueryAtiva) || (p.descricao || '').toLowerCase().includes(_lojaQueryAtiva);
+    return passaCat && passaBusca;
+  });
+
+  // Ordenar
+  if (_lojaOrdemAtiva === 'menor_preco') {
+    filtrados.sort(function(a, b) { return parseFloat(a.preco) - parseFloat(b.preco); });
+  } else if (_lojaOrdemAtiva === 'maior_preco') {
+    filtrados.sort(function(a, b) { return parseFloat(b.preco) - parseFloat(a.preco); });
+  } else if (_lojaOrdemAtiva === 'novidades') {
+    filtrados.sort(function(a, b) { return new Date(b.criado_em || 0) - new Date(a.criado_em || 0); });
+  }
+
+  var chipsHtml = cats.map(function(c) {
+    var label = c === 'todos' ? 'Todos' : (c.charAt(0).toUpperCase() + c.slice(1));
+    return '<div class="loja-cat-chip' + (c === _lojaCatAtiva ? ' ativo' : '') + '" onclick="_lojaFiltrarCat(\'' + c + '\')">' + label + '</div>';
+  }).join('');
+
+  var cardsHtml = filtrados.length === 0
+    ? '<div style="grid-column:1/-1;padding:40px 0;text-align:center;color:var(--texto2);font-size:14px;">Nenhum produto encontrado</div>'
+    : filtrados.map(function(p) {
+        var fotoHtml = p.imagem_url
+          ? '<img class="loja-card-foto" src="' + p.imagem_url + '" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+            '<div class="loja-card-foto-placeholder" style="display:none">' + (p.emoji || '📦') + '</div>'
+          : '<div class="loja-card-foto-placeholder">' + (p.emoji || '📦') + '</div>';
+        var precoPromo = p.preco_promocional ? parseFloat(p.preco_promocional) : null;
+        var precoFmt = 'R$' + parseFloat(p.preco).toFixed(2).replace('.', ',');
+        var precoHtml = precoPromo
+          ? '<span class="loja-card-preco-de">' + precoFmt + '</span><span class="loja-card-preco">R$' + precoPromo.toFixed(2).replace('.', ',') + '</span>'
+          : '<span class="loja-card-preco">' + precoFmt + '</span>';
+        var indisponivel = !p.disponivel;
+        return '<div class="loja-card' + (indisponivel ? ' loja-card-indisponivel' : '') + '" onclick="abrirModalLojaProduto(' + JSON.stringify(p).replace(/"/g, '&quot;') + ')">' +
+          (precoPromo ? '<div class="loja-card-badge">OFERTA</div>' : '') +
+          fotoHtml +
+          '<div class="loja-card-body">' +
+            '<div class="loja-card-nome">' + sanitizar(p.nome) + '</div>' +
+            '<div>' + precoHtml + '</div>' +
+          '</div>' +
+          (!indisponivel ? '<button class="loja-card-add" onclick="event.stopPropagation();_lojaAdicionarRapido(\'' + p.id + '\')">+</button>' : '') +
+        '</div>';
+      }).join('');
+
+  lista.innerHTML =
+    '<div class="loja-topo">' +
+      '<div class="loja-busca-row">' +
+        '<span style="font-size:16px;color:var(--texto2);">🔍</span>' +
+        '<input type="text" placeholder="Buscar produto..." value="' + _lojaQueryAtiva + '" oninput="_lojaBuscar(this.value)">' +
+      '</div>' +
+      '<div class="loja-sort-row">' +
+        '<button class="loja-sort-btn' + (_lojaOrdemAtiva === 'padrao' ? ' ativo' : '') + '" onclick="_lojaOrdenar(\'padrao\')">Padrão</button>' +
+        '<button class="loja-sort-btn' + (_lojaOrdemAtiva === 'menor_preco' ? ' ativo' : '') + '" onclick="_lojaOrdenar(\'menor_preco\')">Menor preço</button>' +
+        '<button class="loja-sort-btn' + (_lojaOrdemAtiva === 'maior_preco' ? ' ativo' : '') + '" onclick="_lojaOrdenar(\'maior_preco\')">Maior preço</button>' +
+        '<button class="loja-sort-btn' + (_lojaOrdemAtiva === 'novidades' ? ' ativo' : '') + '" onclick="_lojaOrdenar(\'novidades\')">Novidades</button>' +
+      '</div>' +
+      (cats.length > 1 ? '<div class="loja-cats">' + chipsHtml + '</div>' : '') +
+    '</div>' +
+    '<div class="loja-grid">' + cardsHtml + '</div>';
+}
+
+function _lojaFiltrarCat(cat) { _lojaCatAtiva = cat; renderLojaEcommerce(produtosCache); }
+function _lojaBuscar(q) { _lojaQueryAtiva = q.toLowerCase().trim(); renderLojaEcommerce(produtosCache); }
+function _lojaOrdenar(tipo) { _lojaOrdemAtiva = tipo; renderLojaEcommerce(produtosCache); }
+
+function _lojaAdicionarRapido(prodId) {
+  var prod = produtosCache.find(function(p) { return p.id === prodId; });
+  if (!prod) return;
+  var preco = prod.preco_promocional ? parseFloat(prod.preco_promocional) : parseFloat(prod.preco);
+  var idx = carrinho.findIndex(function(i) { return i.id === prod.id && !i.variacaoLabel; });
+  if (idx !== -1) {
+    carrinho[idx].qtd++;
+  } else {
+    carrinho.push({ id: prod.id, nome: prod.nome, preco: preco, qtd: 1, emoji: prod.emoji || '📦' });
+  }
+  atualizarCarrinho();
+  showToast('🛍️', 'Adicionado!', prod.nome + ' no carrinho.');
+}
+
+var _lojaModalQtd = 1;
+var _lojaModalProd = null;
+var _lojaModalVariacao = null;
+
+function abrirModalLojaProduto(prod) {
+  _lojaModalProd = prod;
+  _lojaModalQtd = 1;
+  _lojaModalVariacao = null;
+
+  var preco = prod.preco_promocional ? parseFloat(prod.preco_promocional) : parseFloat(prod.preco);
+  var precoFmt = 'R$' + preco.toFixed(2).replace('.', ',');
+  var precoDeFmt = prod.preco_promocional ? 'R$' + parseFloat(prod.preco).toFixed(2).replace('.', ',') : null;
+
+  var fotoHtml = prod.imagem_url
+    ? '<img class="modal-loja-foto" src="' + prod.imagem_url + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+      '<div class="modal-loja-foto-placeholder" style="display:none">' + (prod.emoji || '📦') + '</div>'
+    : '<div class="modal-loja-foto-placeholder">' + (prod.emoji || '📦') + '</div>';
+
+  // Variações (se existir campo variacoes no produto)
+  var vars = [];
+  try { vars = JSON.parse(prod.variacoes || '[]'); } catch(_) {}
+  var varsHtml = '';
+  if (vars.length > 0) {
+    varsHtml = '<div class="modal-loja-secao">Variações</div>' +
+      '<div class="modal-loja-vars" id="loja-vars-wrap">' +
+      vars.map(function(v) {
+        return '<button class="modal-loja-var" onclick="_lojaSelectVar(\'' + sanitizar(v) + '\', this)">' + sanitizar(v) + '</button>';
+      }).join('') +
+      '</div>';
+  }
+
+  var html =
+    '<div class="modal-loja-produto" id="modal-loja-prod-inner">' +
+      fotoHtml +
+      '<div class="modal-loja-body">' +
+        '<div class="modal-loja-nome">' + sanitizar(prod.nome) + '</div>' +
+        (prod.descricao ? '<div class="modal-loja-desc">' + sanitizar(prod.descricao) + '</div>' : '') +
+        '<div class="modal-loja-preco-wrap">' +
+          (precoDeFmt ? '<span class="modal-loja-preco-de">' + precoDeFmt + '</span>' : '') +
+          '<span class="modal-loja-preco" id="loja-prod-preco-display">' + precoFmt + '</span>' +
+        '</div>' +
+        varsHtml +
+      '</div>' +
+      '<div class="modal-loja-rodape">' +
+        '<div class="modal-loja-qtd">' +
+          '<button onclick="_lojaModalAjustarQtd(-1)">−</button>' +
+          '<span id="loja-modal-qtd-display">1</span>' +
+          '<button onclick="_lojaModalAjustarQtd(1)">+</button>' +
+        '</div>' +
+        '<button class="modal-loja-add-btn" onclick="_lojaModalConfirmar()" id="loja-modal-add-btn">' +
+          'Adicionar ao carrinho • ' + precoFmt +
+        '</button>' +
+      '</div>' +
+    '</div>';
+
+  // Usar o modal genérico existente (overlay bottom-sheet)
+  var el = document.getElementById('modal-loja-produto');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'modal-loja-produto';
+    el.className = 'modal-overlay';
+    el.addEventListener('click', function(e){ if(e.target === el) _fecharModalLoja(); });
+    document.body.appendChild(el);
+  }
+  el.innerHTML = '<div class="modal-box" style="padding:0;overflow:hidden;border-radius:24px 24px 0 0;">' + html + '</div>';
+  el.classList.add('aberto');
+}
+
+function _fecharModalLoja() {
+  var el = document.getElementById('modal-loja-produto');
+  if (el) el.classList.remove('aberto');
+}
+
+function _lojaSelectVar(variacao, btn) {
+  _lojaModalVariacao = variacao;
+  document.querySelectorAll('.modal-loja-var').forEach(function(b) { b.classList.remove('ativo'); });
+  btn.classList.add('ativo');
+}
+
+function _lojaModalAjustarQtd(delta) {
+  _lojaModalQtd = Math.max(1, _lojaModalQtd + delta);
+  var el = document.getElementById('loja-modal-qtd-display');
+  if (el) el.textContent = _lojaModalQtd;
+  _lojaModalAtualizarBtnPreco();
+}
+
+function _lojaModalAtualizarBtnPreco() {
+  var prod = _lojaModalProd;
+  if (!prod) return;
+  var preco = prod.preco_promocional ? parseFloat(prod.preco_promocional) : parseFloat(prod.preco);
+  var total = (preco * _lojaModalQtd).toFixed(2).replace('.', ',');
+  var btn = document.getElementById('loja-modal-add-btn');
+  if (btn) btn.textContent = 'Adicionar ao carrinho • R$' + total;
+}
+
+function _lojaModalConfirmar() {
+  var prod = _lojaModalProd;
+  if (!prod) return;
+  var preco = prod.preco_promocional ? parseFloat(prod.preco_promocional) : parseFloat(prod.preco);
+  var label = _lojaModalVariacao || null;
+  var idx = carrinho.findIndex(function(i) { return i.id === prod.id && i.variacaoLabel === label; });
+  if (idx !== -1) {
+    carrinho[idx].qtd += _lojaModalQtd;
+  } else {
+    carrinho.push({ id: prod.id, nome: prod.nome + (label ? ' (' + label + ')' : ''), preco: preco, qtd: _lojaModalQtd, emoji: prod.emoji || '📦', variacaoLabel: label });
+  }
+  atualizarCarrinho();
+  _fecharModalLoja();
+  showToast('🛍️', 'Adicionado!', (_lojaModalQtd > 1 ? _lojaModalQtd + 'x ' : '') + prod.nome + ' no carrinho.');
+}
+// ============================================================
 
 function adicionarItem(idx) {
   const item = produtosCache[idx];
