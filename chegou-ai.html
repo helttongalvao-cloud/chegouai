@@ -900,7 +900,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       </button>
       <button id="modo-btn-nacional" onclick="trocarModoHome('nacional')"
         style="flex:1;padding:8px 10px;border-radius:9px;border:none;background:transparent;color:rgba(255,255,255,0.45);font-size:13px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;">
-        <span>📦</span><span>Encomendas</span>
+        <span>🛍️</span><span>Lojas</span>
       </button>
     </div>
 
@@ -3589,7 +3589,7 @@ function _cardEst(e, idx) {
     : (e.aberto
       ? '<span style="background:#14532d;color:#86efac;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;">Aberto</span>'
       : '<span style="background:#1c1917;color:#a8a29e;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;">Fechado</span>');
-  var novoBadge = isNovo ? '<span style="background:linear-gradient(90deg,#f97316,#fb923c);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:4px;">Novo</span>' : '';
+  var novoBadge = '';
 
   // Linha de info diferente para nacional vs local
   var infoLinha;
