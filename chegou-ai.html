@@ -8275,7 +8275,7 @@ async function renderAdmin(secao) {
       if(pendentes && pendentes.length > 0) {
         pendentesHtml =
           '<div style="margin-bottom:16px;">' +
-          '<div class="secao-titulo" style="color:#fb923c;">⏳ Aguardando aprovação (' + pendentes.length + ')</div>' +
+          '<div class="secao-titulo" style="color:#fb923c;">⏳ Aguardando aprovação (' + pendentes.length + ') <button onclick="renderAdmin(\'lojas\')" style="font-size:11px;padding:3px 8px;border-radius:6px;border:none;background:var(--cinza3);color:var(--texto);cursor:pointer;margin-left:8px;">🔄 Atualizar</button></div>' +
           '<div class="tabela">' +
           pendentes.map(function(p) {
             var tipoLabel = { lanche:'Lanchonete', restaurante:'Restaurante', mercado:'Mercado', farmacia:'Farmácia', loja:'Loja', encomenda:'Encomendas', bebida:'Bebidas' }[p.categoria] || p.categoria;
@@ -8295,7 +8295,10 @@ async function renderAdmin(secao) {
           }).join('') +
           '</div></div>';
       }
-    } catch(_) {}
+    } catch(errPendentes) {
+      console.error('[admin/pendentes]', errPendentes);
+      pendentesHtml = '<div style="margin-bottom:12px;padding:10px 14px;background:rgba(239,68,68,0.1);border-radius:10px;font-size:13px;color:#ef4444;">⚠️ Erro ao carregar pendentes: ' + (errPendentes.message||'desconhecido') + ' <button onclick="renderAdmin(\'lojas\')" style="margin-left:8px;font-size:11px;padding:3px 8px;border-radius:6px;border:none;background:var(--cinza3);color:var(--texto);cursor:pointer;">🔄 Tentar novamente</button></div>';
+    }
     el.innerHTML =
       '<div class="secao-titulo">Estabelecimentos parceiros</div>' +
       '<div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;">' +
