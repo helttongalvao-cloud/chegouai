@@ -242,7 +242,23 @@ router.post(
         const c = campanha && campanha[0];
         if (c) {
           const minimo = parseFloat(c.valor_minimo || 0);
-          if (subtotal >= minimo) {
+          if (c.tipo === 'combo') {
+            const qtdMinima = Math.max(2, parseInt(c.valor) || 2);
+            const comboPreco = parseFloat(c.combo_preco || 0);
+            if (comboPreco > 0) {
+              let economia = 0;
+              for (const item of itensPedido) {
+                const qty = parseFloat(item.quantidade);
+                if (qty >= qtdMinima) {
+                  const grupos = Math.floor(qty / qtdMinima);
+                  const semCombo = grupos * qtdMinima * item.preco_unitario;
+                  const comCombo = grupos * comboPreco;
+                  if (semCombo > comCombo) economia += semCombo - comCombo;
+                }
+              }
+              desconto = parseFloat(economia.toFixed(2));
+            }
+          } else if (subtotal >= minimo) {
             if (c.tipo === 'percentual') {
               desconto = parseFloat((subtotal * c.valor / 100).toFixed(2));
             } else if (c.tipo === 'fixo') {

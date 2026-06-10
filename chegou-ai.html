@@ -5619,8 +5619,21 @@ async function irCheckout(_manterScroll) {
   if(campBadge) {
     if(window.campanhaAtiva) {
       var c = window.campanhaAtiva;
-      var minCond = c.valor_minimo > 0 ? ' em pedidos acima de R$ ' + parseFloat(c.valor_minimo).toFixed(2).replace('.',',') : '';
-      var descStr = c.tipo === 'frete_gratis' ? '🚚 Frete grátis' + minCond : (c.tipo === 'percentual' ? '🎉 ' + c.valor + '% de desconto' + minCond : '🎉 R$ ' + parseFloat(c.valor).toFixed(2).replace('.',',') + ' de desconto' + minCond);
+      var descStr;
+      if(c.tipo === 'frete_gratis') {
+        var minCond = c.valor_minimo > 0 ? ' em pedidos acima de R$ ' + parseFloat(c.valor_minimo).toFixed(2).replace('.',',') : '';
+        descStr = '🚚 Frete grátis' + minCond;
+      } else if(c.tipo === 'percentual') {
+        var minCond = c.valor_minimo > 0 ? ' em pedidos acima de R$ ' + parseFloat(c.valor_minimo).toFixed(2).replace('.',',') : '';
+        descStr = '🎉 ' + c.valor + '% de desconto' + minCond;
+      } else if(c.tipo === 'fixo') {
+        var minCond = c.valor_minimo > 0 ? ' em pedidos acima de R$ ' + parseFloat(c.valor_minimo).toFixed(2).replace('.',',') : '';
+        descStr = '🎉 R$ ' + parseFloat(c.valor).toFixed(2).replace('.',',') + ' de desconto' + minCond;
+      } else if(c.tipo === 'combo') {
+        descStr = '📦 Leve ' + parseInt(c.valor) + ' do mesmo item por R$ ' + parseFloat(c.combo_preco).toFixed(2).replace('.',',');
+      } else {
+        descStr = '🎯 ' + c.nome;
+      }
       campBadge.textContent = descStr + ' — aplicado automaticamente!';
       campBadge.style.display = 'block';
     } else {
@@ -6794,27 +6807,42 @@ async function renderCampanhas() {
   el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--texto2);">Carregando...</div>';
   try {
     var lista = await apiCall('/api/establishments/me/campanhas') || [];
-    var tipLabels = { percentual: '% desconto', fixo: 'R$ fixo', frete_gratis: 'Frete grátis' };
     var itensHtml = lista.length ? lista.map(function(c) {
-      var desc = c.tipo === 'frete_gratis' ? 'Frete grátis' : (c.tipo === 'percentual' ? c.valor + '% off' : 'R$ ' + parseFloat(c.valor).toFixed(2).replace('.',',') + ' off');
-      var cond = c.valor_minimo > 0 ? ' — Pedidos acima de R$ ' + parseFloat(c.valor_minimo).toFixed(2).replace('.',',') : ' — Todo pedido';
+      var desc, icone, cond;
+      if(c.tipo === 'frete_gratis') {
+        icone = '🚚'; desc = 'Frete grátis';
+        cond = c.valor_minimo > 0 ? 'Pedidos acima de R$ ' + parseFloat(c.valor_minimo).toFixed(2).replace('.',',') : 'Todo pedido';
+      } else if(c.tipo === 'percentual') {
+        icone = '🎉'; desc = c.valor + '% de desconto';
+        cond = c.valor_minimo > 0 ? 'Pedidos acima de R$ ' + parseFloat(c.valor_minimo).toFixed(2).replace('.',',') : 'Todo pedido';
+      } else if(c.tipo === 'fixo') {
+        icone = '🎉'; desc = 'R$ ' + parseFloat(c.valor).toFixed(2).replace('.',',') + ' de desconto';
+        cond = c.valor_minimo > 0 ? 'Pedidos acima de R$ ' + parseFloat(c.valor_minimo).toFixed(2).replace('.',',') : 'Todo pedido';
+      } else if(c.tipo === 'combo') {
+        icone = '📦'; desc = 'Leve ' + parseInt(c.valor) + ' itens iguais por R$ ' + parseFloat(c.combo_preco).toFixed(2).replace('.',',');
+        cond = 'Aplicado por produto — ex: 3x X + 3x Y = cada grupo com desconto';
+      } else {
+        icone = '🎯'; desc = c.tipo; cond = '';
+      }
       return '<div style="background:var(--cinza2);border:1.5px solid ' + (c.ativo ? 'var(--verde)' : 'var(--cinza3)') + ';border-radius:14px;padding:14px 16px;margin-bottom:10px;">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">' +
-          '<div style="font-weight:700;font-size:15px;">' + sanitizar(c.nome) + '</div>' +
+          '<div style="font-weight:700;font-size:15px;">' + icone + ' ' + sanitizar(c.nome) + '</div>' +
           '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:' + (c.ativo ? 'var(--verde)' : 'var(--texto2)') + ';">' +
             '<input type="checkbox" ' + (c.ativo ? 'checked' : '') + ' onchange="toggleCampanha(\'' + c.id + '\',this.checked)" style="accent-color:var(--verde);width:16px;height:16px;">' +
             (c.ativo ? 'Ativa' : 'Pausada') +
           '</label>' +
         '</div>' +
-        '<div style="font-size:13px;color:var(--verde);font-weight:600;">' + desc + cond + '</div>' +
-        '<div style="font-size:11px;color:var(--texto2);margin-top:4px;">Tipo: ' + (tipLabels[c.tipo]||c.tipo) + ' | Sem código — aplica automaticamente no pedido</div>' +
+        '<div style="font-size:14px;color:var(--verde);font-weight:700;margin-bottom:4px;">' + desc + '</div>' +
+        '<div style="font-size:12px;color:var(--texto2);">📋 ' + cond + '</div>' +
+        '<div style="font-size:11px;color:var(--texto2);margin-top:6px;opacity:.7;">Sem código — o sistema aplica automaticamente no pedido</div>' +
         '<button onclick="excluirCampanha(\'' + c.id + '\')" style="margin-top:10px;background:none;border:none;color:var(--erro);font-size:12px;font-weight:600;cursor:pointer;padding:0;">🗑️ Remover campanha</button>' +
       '</div>';
-    }).join('') : '<div style="text-align:center;padding:30px 20px;color:var(--texto2);font-size:14px;">Nenhuma campanha criada ainda.<br><span style="font-size:12px;">Campanhas são aplicadas automaticamente no pedido, sem código.</span></div>';
+    }).join('') : '<div style="text-align:center;padding:30px 20px;color:var(--texto2);font-size:14px;">Nenhuma campanha criada ainda.<br><span style="font-size:12px;margin-top:6px;display:block;">Campanhas são aplicadas automaticamente no pedido, sem código.</span></div>';
 
     el.innerHTML =
-      '<div style="background:var(--cinza2);border-radius:14px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--texto2);line-height:1.5;">' +
-        '🎯 <strong style="color:var(--texto);">Campanhas automáticas</strong> são descontos que o cliente recebe sem precisar digitar código. Você configura uma vez e o sistema aplica sozinho.' +
+      '<div style="background:rgba(0,200,83,0.06);border:1px solid rgba(0,200,83,0.2);border-radius:14px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--texto2);line-height:1.6;">' +
+        '🎯 <strong style="color:var(--texto);">Campanhas automáticas</strong> são promoções que o cliente recebe sem precisar digitar código.<br>' +
+        '<strong style="color:var(--verde);">Tipos disponíveis:</strong> desconto %, valor fixo, frete grátis e <strong>combo</strong> (leve X por preço especial).' +
       '</div>' +
       itensHtml +
       '<button onclick="abrirModalCampanha()" style="width:100%;padding:14px;border-radius:14px;background:var(--verde);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">+ Nova campanha</button>';
@@ -6828,58 +6856,101 @@ function abrirModalCampanha() {
   modal.id = 'modal-campanha';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
   modal.innerHTML =
-    '<div style="background:var(--fundo2);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:500px;">' +
-      '<div style="font-weight:700;font-size:17px;margin-bottom:16px;">🎯 Nova Campanha</div>' +
+    '<div style="background:var(--cinza1);border-radius:20px 20px 0 0;padding:24px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));width:100%;max-width:500px;overflow-y:auto;max-height:90vh;">' +
+      '<div style="font-weight:700;font-size:17px;margin-bottom:4px;">🎯 Nova Campanha</div>' +
+      '<div style="font-size:12px;color:var(--texto2);margin-bottom:16px;">Aplicada automaticamente — sem precisar de código</div>' +
       '<div style="margin-bottom:12px;">' +
         '<label style="font-size:13px;color:var(--texto2);">Nome da campanha</label>' +
-        '<input id="camp-nome" type="text" placeholder="Ex: Happy hour, Promoção noturna..." maxlength="80" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;">' +
+        '<input id="camp-nome" type="text" placeholder="Ex: Combo 3 por R$30, Happy hour..." maxlength="80" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;font-family:\'DM Sans\',sans-serif;">' +
       '</div>' +
       '<div style="margin-bottom:12px;">' +
-        '<label style="font-size:13px;color:var(--texto2);">Tipo de desconto</label>' +
-        '<select id="camp-tipo" onchange="atualizarCampTipo()" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;margin-top:6px;">' +
-          '<option value="percentual">Desconto percentual (ex: 10% off)</option>' +
-          '<option value="fixo">Desconto fixo (ex: R$ 5,00 off)</option>' +
-          '<option value="frete_gratis">Frete grátis</option>' +
+        '<label style="font-size:13px;color:var(--texto2);">Tipo de promoção</label>' +
+        '<select id="camp-tipo" onchange="atualizarCampTipo()" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;margin-top:6px;font-family:\'DM Sans\',sans-serif;">' +
+          '<option value="combo">📦 Combo — leve X por preço fixo (ex: 3 por R$30)</option>' +
+          '<option value="percentual">🎉 Desconto percentual (ex: 10% off)</option>' +
+          '<option value="fixo">🎉 Desconto fixo em reais (ex: R$ 5,00 off)</option>' +
+          '<option value="frete_gratis">🚚 Frete grátis</option>' +
         '</select>' +
       '</div>' +
-      '<div id="camp-valor-wrap" style="margin-bottom:12px;">' +
+
+      /* Campos do COMBO */
+      '<div id="camp-combo-wrap" style="background:rgba(0,200,83,0.06);border:1px solid rgba(0,200,83,0.2);border-radius:12px;padding:14px;margin-bottom:12px;">' +
+        '<div style="font-size:12px;color:var(--verde);font-weight:700;margin-bottom:10px;">📦 Como funciona: o cliente leva X unidades do mesmo item e paga o preço do combo, sem precisar de código.</div>' +
+        '<label style="font-size:13px;color:var(--texto2);">Quantidade mínima do mesmo item</label>' +
+        '<input id="camp-combo-qtd" type="number" min="2" max="99" placeholder="3" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;margin-bottom:10px;font-family:\'DM Sans\',sans-serif;">' +
+        '<label style="font-size:13px;color:var(--texto2);">Preço total do combo (R$)</label>' +
+        '<input id="camp-combo-preco" type="number" min="0.01" step="0.01" placeholder="30.00" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;font-family:\'DM Sans\',sans-serif;">' +
+        '<div id="camp-combo-preview" style="margin-top:10px;font-size:12px;color:var(--texto2);"></div>' +
+      '</div>' +
+
+      /* Campos de percentual/fixo */
+      '<div id="camp-valor-wrap" style="display:none;margin-bottom:12px;">' +
         '<label id="camp-valor-label" style="font-size:13px;color:var(--texto2);">Valor do desconto (%)</label>' +
-        '<input id="camp-valor" type="number" min="0" max="100" placeholder="10" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;">' +
+        '<input id="camp-valor" type="number" min="0" max="100" placeholder="10" oninput="atualizarCampTipo()" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;font-family:\'DM Sans\',sans-serif;">' +
       '</div>' +
-      '<div style="margin-bottom:20px;">' +
+
+      /* Pedido mínimo (não aparece para combo) */
+      '<div id="camp-minimo-wrap" style="display:none;margin-bottom:20px;">' +
         '<label style="font-size:13px;color:var(--texto2);">Pedido mínimo (R$) — deixe 0 para qualquer valor</label>' +
-        '<input id="camp-minimo" type="number" min="0" placeholder="0" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;">' +
+        '<input id="camp-minimo" type="number" min="0" placeholder="0" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;font-family:\'DM Sans\',sans-serif;">' +
       '</div>' +
-      '<div style="display:flex;gap:8px;">' +
-        '<button onclick="this.closest(\'#modal-campanha\').remove()" style="flex:1;padding:14px;border-radius:14px;background:var(--cinza3);border:none;color:var(--texto);font-size:14px;cursor:pointer;">Cancelar</button>' +
-        '<button onclick="salvarCampanha()" style="flex:1;padding:14px;border-radius:14px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;">Criar campanha</button>' +
+
+      '<div style="display:flex;gap:8px;margin-top:4px;">' +
+        '<button onclick="document.getElementById(\'modal-campanha\').remove()" style="flex:1;padding:14px;border-radius:14px;background:var(--cinza3);border:none;color:var(--texto);font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Cancelar</button>' +
+        '<button onclick="salvarCampanha()" style="flex:1;padding:14px;border-radius:14px;background:var(--verde);border:none;color:#000;font-size:14px;font-weight:700;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Criar campanha</button>' +
       '</div>' +
     '</div>';
   document.body.appendChild(modal);
   modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  // Atualizar campos combo ao digitar
+  modal.querySelector('#camp-combo-qtd').addEventListener('input', _atualizarPreviewCombo);
+  modal.querySelector('#camp-combo-preco').addEventListener('input', _atualizarPreviewCombo);
+}
+
+function _atualizarPreviewCombo() {
+  var qtd = parseInt(document.getElementById('camp-combo-qtd').value) || 0;
+  var preco = parseFloat(document.getElementById('camp-combo-preco').value) || 0;
+  var el = document.getElementById('camp-combo-preview');
+  if(!el) return;
+  if(qtd >= 2 && preco > 0) {
+    el.textContent = '✅ Exemplo: cliente pede ' + qtd + ' do mesmo item → paga R$ ' + preco.toFixed(2).replace('.',',') + ' por esse grupo';
+    el.style.color = 'var(--verde)';
+  } else {
+    el.textContent = '';
+  }
 }
 
 function atualizarCampTipo() {
   var tipo = document.getElementById('camp-tipo').value;
-  var wrap = document.getElementById('camp-valor-wrap');
+  document.getElementById('camp-combo-wrap').style.display = tipo === 'combo' ? 'block' : 'none';
+  document.getElementById('camp-valor-wrap').style.display = (tipo === 'percentual' || tipo === 'fixo') ? 'block' : 'none';
+  document.getElementById('camp-minimo-wrap').style.display = tipo !== 'combo' ? 'block' : 'none';
   var lbl = document.getElementById('camp-valor-label');
-  if(tipo === 'frete_gratis') {
-    wrap.style.display = 'none';
-  } else {
-    wrap.style.display = 'block';
-    lbl.textContent = tipo === 'percentual' ? 'Valor do desconto (%)' : 'Valor do desconto (R$)';
-  }
+  if(lbl) lbl.textContent = tipo === 'percentual' ? 'Valor do desconto (%)' : 'Valor do desconto (R$)';
 }
 
 async function salvarCampanha() {
   var nome = (document.getElementById('camp-nome')||{}).value.trim();
   var tipo = (document.getElementById('camp-tipo')||{}).value;
-  var valor = parseFloat((document.getElementById('camp-valor')||{}).value) || 0;
-  var minimo = parseFloat((document.getElementById('camp-minimo')||{}).value) || 0;
   if(!nome) { showToast('⚠️','Nome obrigatório',''); return; }
-  if(tipo !== 'frete_gratis' && valor <= 0) { showToast('⚠️','Valor inválido','Informe o valor do desconto'); return; }
+  var body = { nome, tipo };
+  if(tipo === 'combo') {
+    var qtd = parseInt((document.getElementById('camp-combo-qtd')||{}).value) || 0;
+    var comboPreco = parseFloat((document.getElementById('camp-combo-preco')||{}).value) || 0;
+    if(qtd < 2) { showToast('⚠️','Quantidade inválida','Informe pelo menos 2 itens no combo'); return; }
+    if(comboPreco <= 0) { showToast('⚠️','Preço inválido','Informe o preço total do combo'); return; }
+    body.valor = qtd;
+    body.combo_preco = comboPreco;
+    body.valor_minimo = 0;
+  } else {
+    var valor = parseFloat((document.getElementById('camp-valor')||{}).value) || 0;
+    var minimo = parseFloat((document.getElementById('camp-minimo')||{}).value) || 0;
+    if(tipo !== 'frete_gratis' && valor <= 0) { showToast('⚠️','Valor inválido','Informe o valor do desconto'); return; }
+    body.valor = valor;
+    body.valor_minimo = minimo;
+  }
   try {
-    await apiCall('/api/establishments/me/campanhas', { method: 'POST', body: { nome, tipo, valor, valor_minimo: minimo } });
+    await apiCall('/api/establishments/me/campanhas', { method: 'POST', body });
     var modal = document.getElementById('modal-campanha');
     if(modal) modal.remove();
     showToast('✅','Campanha criada!','Já está ativa e sendo aplicada nos pedidos');

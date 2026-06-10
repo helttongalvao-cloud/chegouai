@@ -876,15 +876,19 @@ router.post('/me/campanhas', requireRole('estabelecimento'), async (req, res, ne
   try {
     const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
     if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
-    const { nome, tipo, valor, valor_minimo } = req.body;
+    const { nome, tipo, valor, valor_minimo, combo_preco } = req.body;
     if (!nome || !tipo) return res.status(400).json({ error: 'nome e tipo obrigatórios' });
-    if (!['percentual', 'fixo', 'frete_gratis'].includes(tipo)) return res.status(400).json({ error: 'tipo inválido' });
+    if (!['percentual', 'fixo', 'frete_gratis', 'combo'].includes(tipo)) return res.status(400).json({ error: 'tipo inválido' });
+    if (tipo === 'combo' && (!(parseInt(valor) >= 2) || !(parseFloat(combo_preco) > 0))) {
+      return res.status(400).json({ error: 'Combo: informe quantidade mínima (≥2) e preço do combo' });
+    }
     const { data, error } = await supabaseAdmin.from('campanhas_estabelecimento').insert({
       estabelecimento_id: est.id,
       nome: String(nome).trim().slice(0, 80),
       tipo,
       valor: parseFloat(valor) || 0,
       valor_minimo: parseFloat(valor_minimo) || 0,
+      combo_preco: parseFloat(combo_preco) || 0,
       ativo: true,
     }).select().single();
     if (error) throw error;
@@ -896,11 +900,12 @@ router.put('/me/campanhas/:id', requireRole('estabelecimento'), async (req, res,
   try {
     const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
     if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
-    const allowed = ['nome', 'tipo', 'valor', 'valor_minimo', 'ativo'];
+    const allowed = ['nome', 'tipo', 'valor', 'valor_minimo', 'combo_preco', 'ativo'];
     const updates = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
     if (updates.valor !== undefined) updates.valor = parseFloat(updates.valor) || 0;
     if (updates.valor_minimo !== undefined) updates.valor_minimo = parseFloat(updates.valor_minimo) || 0;
+    if (updates.combo_preco !== undefined) updates.combo_preco = parseFloat(updates.combo_preco) || 0;
     const { data, error } = await supabaseAdmin.from('campanhas_estabelecimento')
       .update(updates).eq('id', req.params.id).eq('estabelecimento_id', est.id).select().single();
     if (error) throw error;
