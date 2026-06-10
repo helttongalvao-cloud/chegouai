@@ -2082,8 +2082,19 @@ function pararRealtime() {
   }
 }
 
+var _lojistaPollingInterval = null;
+function _iniciarPollingLojista() {
+  if(_lojistaPollingInterval) clearInterval(_lojistaPollingInterval);
+  _lojistaPollingInterval = setInterval(function() {
+    if(window._lojistaEstId && document.getElementById('est-secao-pedidos') && document.getElementById('est-secao-pedidos').style.display !== 'none') {
+      renderEstabelecimento();
+    }
+  }, 30000); // fallback a cada 30s se realtime cair
+}
+
 function iniciarRealtimeLojista(estId) {
   if(!supabaseClient || !estId) return;
+  _iniciarPollingLojista();
   pararRealtime();
   supabaseClient.realtime.setAuth(authToken);
   realtimeChannel = supabaseClient
@@ -9697,9 +9708,17 @@ function confirmarEntregaReal(pedidoId) {
       salvarFaseMotoboy(null, null);
       atualizarFaseSecundaria(pedidoId, null);
       esconderChatFab();
-      renderMotoboy();
+      // Tela de sucesso — motoboy vê claramente que a entrega foi registrada
+      var el = document.getElementById('entregas-motoboy');
+      if(el) el.innerHTML =
+        '<div style="text-align:center;padding:48px 24px;">' +
+          '<div style="font-size:72px;margin-bottom:16px;animation:bounce .6s ease;">✅</div>' +
+          '<div style="font-size:22px;font-weight:800;color:var(--verde);margin-bottom:8px;">Entrega confirmada!</div>' +
+          '<div style="font-size:14px;color:var(--texto2);margin-bottom:32px;">O cliente e a loja foram notificados.</div>' +
+          '<button onclick="renderMotoboy()" style="padding:14px 32px;border-radius:14px;background:var(--verde);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Ver próximas entregas</button>' +
+        '</div>';
     } catch(e) {
-      showToast('❌', 'Erro', e.message || 'Tente novamente');
+      showToast('❌', 'Erro ao confirmar', e.message || 'Verifique sua conexão e tente novamente');
       novo.disabled = false;
       novo.textContent = '✅ Sim, entregue!';
     }
