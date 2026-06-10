@@ -5957,22 +5957,32 @@ function usarLocalizacao() {
   function _onGPS(pos) {
     clienteLat = pos.coords.latitude;
     clienteLng = pos.coords.longitude;
-    // Salvar coordenadas GPS diretamente — sem abrir mapa (evita arraste acidental)
-    localizacaoConfirmada = true;
-    var endInput = document.getElementById('endereco-entrega');
-    if(endInput) {
-      endInput.dataset.latLng = 'Lat: ' + clienteLat.toFixed(6) + ', Lng: ' + clienteLng.toFixed(6);
-      endInput.value = '📍 Localização GPS confirmada';
-      endInput.readOnly = true;
-      endInput.style.color = 'var(--verde)';
-    }
-    btn.textContent = '✅ Localização confirmada';
-    btn.style.borderColor = 'var(--verde)';
-    btn.style.color = 'var(--verde)';
-    btn.style.background = 'rgba(0,200,83,0.12)';
+    var acc = Math.round(pos.coords.accuracy || 999);
     var av = document.getElementById('guest-gps-aviso');
     if(av) av.style.display = 'none';
-    simularFrete(endInput ? endInput.dataset.latLng : '');
+    if(acc > 50) {
+      // GPS impreciso — abrir mapa para o cliente ajustar o pin
+      btn.textContent = '⚠️ GPS impreciso (±' + acc + 'm) — ajuste no mapa';
+      btn.style.color = '#fb923c';
+      btn.style.borderColor = '#fb923c';
+      mostrarMapaVisualizacao(clienteLat, clienteLng, acc);
+      document.getElementById('mapa-picker-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      // GPS preciso — salvar diretamente
+      localizacaoConfirmada = true;
+      var endInput = document.getElementById('endereco-entrega');
+      if(endInput) {
+        endInput.dataset.latLng = 'Lat: ' + clienteLat.toFixed(6) + ', Lng: ' + clienteLng.toFixed(6);
+        endInput.value = '📍 Localização GPS confirmada';
+        endInput.readOnly = true;
+        endInput.style.color = 'var(--verde)';
+      }
+      btn.textContent = '✅ GPS confirmado (±' + acc + 'm)';
+      btn.style.borderColor = 'var(--verde)';
+      btn.style.color = 'var(--verde)';
+      btn.style.background = 'rgba(0,200,83,0.12)';
+      simularFrete(endInput ? endInput.dataset.latLng : '');
+    }
   }
   function _onGPSErro(err) {
     btn.textContent = '📍 Usar minha localização atual';
@@ -9704,10 +9714,15 @@ function confirmarEntregaReal(pedidoId) {
     try {
       await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'entregue' } });
       modal.classList.remove('aberto');
-      pararRastreio();
-      salvarFaseMotoboy(null, null);
-      atualizarFaseSecundaria(pedidoId, null);
-      esconderChatFab();
+      var ehPrimaria = pedidoAtivoMotoboy && pedidoAtivoMotoboy.id === pedidoId;
+      if(ehPrimaria) {
+        pararRastreio();
+        salvarFaseMotoboy(null, null);
+        esconderChatFab();
+      } else {
+        // 2ª entrega: só limpa a fase secundária, mantém primária intacta
+        atualizarFaseSecundaria(pedidoId, null);
+      }
       // Tela de sucesso — motoboy vê claramente que a entrega foi registrada
       var el = document.getElementById('entregas-motoboy');
       if(el) el.innerHTML =
