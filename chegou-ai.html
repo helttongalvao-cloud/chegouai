@@ -1075,7 +1075,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <h4>📍 Endereço de entrega</h4>
       <div id="enderecos-salvos" style="display:none;margin-bottom:8px;"></div>
       <div class="campo" style="display:none;">
-        <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value)">
+        <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value);_verificarEndTexto(this)">
+        <div id="aviso-end-texto" style="display:none;margin-top:6px;background:rgba(250,204,21,.1);border:1px solid #facc1560;border-radius:10px;padding:8px 12px;font-size:12px;color:#facc15;line-height:1.5;">⚠️ Endereço de texto pode ser impreciso. Use <strong>📡 Minha localização</strong> para o motoboy chegar no lugar exato.</div>
       </div>
       <div style="display:flex;gap:8px;margin-top:8px;">
         <button id="btn-localizacao" onclick="usarLocalizacao()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📡 Minha localização</button>
@@ -5934,7 +5935,16 @@ async function confirmarPedido() {
 var mapPicker = null;
 var pinPicker = null;
 
+function _verificarEndTexto(input) {
+  var aviso = document.getElementById('aviso-end-texto');
+  if(!aviso) return;
+  // Mostrar aviso só se digitou algo e o campo não está em modo GPS (readOnly)
+  aviso.style.display = (!input.readOnly && input.value.trim().length > 5) ? 'block' : 'none';
+}
+
 function usarLocalizacao() {
+  var aviso = document.getElementById('aviso-end-texto');
+  if(aviso) aviso.style.display = 'none';
   const btn = document.getElementById('btn-localizacao');
   if(!navigator.geolocation) {
     alert('Seu navegador não suporta geolocalização');
@@ -9608,9 +9618,15 @@ function renderFaseEntrega(pedido, fase) {
     var endCliente = pedido.endereco_entrega || '—';
     var coordC = endCliente.match(/Lat:\s*([-\d.]+)[,\s]+Lng:\s*([-\d.]+)/i);
     var _cidadeEst = (pedido.estabelecimentos && (pedido.estabelecimentos.cidade || pedido.estabelecimentos.estado)) ? (pedido.estabelecimentos.cidade || '') + (pedido.estabelecimentos.estado ? ', ' + pedido.estabelecimentos.estado : '') + ', Brasil' : 'Brasil';
-    var navUrl = coordC
+    var navMaps = coordC
       ? 'https://www.google.com/maps/dir/?api=1&destination=' + coordC[1] + ',' + coordC[2] + '&travelmode=driving'
       : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(endCliente + ', ' + _cidadeEst);
+    var navWaze = coordC
+      ? 'https://waze.com/ul?ll=' + coordC[1] + ',' + coordC[2] + '&navigate=yes'
+      : 'https://waze.com/ul?q=' + encodeURIComponent(endCliente + ', ' + _cidadeEst) + '&navigate=yes';
+    var locBadge = coordC
+      ? '<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(0,200,83,.15);border:1px solid var(--verde);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--verde);margin-top:4px;">✅ GPS exato</div>'
+      : '<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(250,204,21,.12);border:1px solid #facc15;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#facc15;margin-top:4px;">⚠️ Endereço de texto — ligue para confirmar</div>';
     // Ativar FAB do chat ao entrar no indo_cliente
     setTimeout(function() { mostrarChatFab(pedido.id, 'motoboy'); }, 100);
     conteudo =
@@ -9618,8 +9634,12 @@ function renderFaseEntrega(pedido, fase) {
         '<div style="font-size:12px;color:var(--texto2);margin-bottom:4px;">Entregando para:</div>' +
         '<div style="font-size:15px;font-weight:700;">👤 ' + sanitizar(nomeCliente) + '</div>' +
         '<div style="font-size:12px;color:var(--texto2);margin-top:2px;">📍 ' + (coordC ? 'Localização GPS confirmada' : sanitizar(endCliente)) + '</div>' +
+        locBadge +
         '<div id="mapa-entrega-ativa" style="width:100%;height:180px;border-radius:12px;background:var(--cinza3);margin-top:12px;margin-bottom:4px;"></div>' +
-        '<a href="' + navUrl + '" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:var(--verde);color:#000;font-size:15px;font-weight:800;text-decoration:none;">🗺️ Navegar no Google Maps</a>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">' +
+          '<a href="' + navMaps + '" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:13px;border-radius:12px;background:var(--verde);color:#000;font-size:14px;font-weight:800;text-decoration:none;">🗺️ Maps</a>' +
+          '<a href="' + navWaze + '" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:13px;border-radius:12px;background:#33ccff;color:#000;font-size:14px;font-weight:800;text-decoration:none;">🚗 Waze</a>' +
+        '</div>' +
         '<div style="margin-top:8px;display:flex;align-items:center;gap:8px;">' +
           '<a href="tel:' + pedido.telefone_cliente + '" style="flex:1;padding:8px;border-radius:8px;background:var(--cinza3);color:var(--texto);text-decoration:none;text-align:center;font-size:13px;font-weight:600;">📞 Ligar</a>' +
           '<button onclick="abrirChat(\'' + pedido.id + '\',\'motoboy\')" style="flex:1;padding:8px;border-radius:8px;background:var(--cinza3);color:var(--texto);border:none;font-size:13px;font-weight:600;cursor:pointer;">💬 Chat</button>' +
