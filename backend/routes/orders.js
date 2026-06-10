@@ -780,7 +780,7 @@ router.patch(
         updateQuery = updateQuery.eq('estabelecimento_id', est.id);
       }
 
-      // Para motoboy, restringir ao próprio pedido
+      // Para motoboy, restringir ao próprio pedido (plataforma ou próprio da loja)
       if (perfil === 'motoboy') {
         const { data: moto } = await supabaseAdmin
           .from('motoboys')
@@ -788,7 +788,8 @@ router.patch(
           .eq('user_id', req.user.id)
           .single();
         if (!moto) return res.status(403).json({ error: 'Motoboy não encontrado' });
-        updateQuery = updateQuery.eq('motoboy_id', moto.id);
+        // Aceita se for motoboy da plataforma (motoboy_id) OU motoboy próprio da loja (motoboy_proprio_id)
+        updateQuery = updateQuery.or(`motoboy_id.eq.${moto.id},motoboy_proprio_id.eq.${moto.id}`);
       }
 
       const { data: pedido, error } = await updateQuery.select().single();

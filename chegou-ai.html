@@ -1075,8 +1075,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <h4>📍 Endereço de entrega</h4>
       <div id="enderecos-salvos" style="display:none;margin-bottom:8px;"></div>
       <div class="campo" style="display:none;">
-        <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value);_verificarEndTexto(this)">
-        <div id="aviso-end-texto" style="display:none;margin-top:6px;background:rgba(250,204,21,.1);border:1px solid #facc1560;border-radius:10px;padding:8px 12px;font-size:12px;color:#facc15;line-height:1.5;">⚠️ Endereço de texto pode ser impreciso. Use <strong>📡 Minha localização</strong> para o motoboy chegar no lugar exato.</div>
+        <input type="text" placeholder="Rua, Número, Bairro, Ponto de referência" id="endereco-entrega" style="margin:0;" oninput="simularFrete(this.value)">
       </div>
       <div style="display:flex;gap:8px;margin-top:8px;">
         <button id="btn-localizacao" onclick="usarLocalizacao()" style="flex:1;padding:10px;background:var(--cinza3);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:13px;font-weight:600;cursor:pointer;">📡 Minha localização</button>
@@ -5935,16 +5934,7 @@ async function confirmarPedido() {
 var mapPicker = null;
 var pinPicker = null;
 
-function _verificarEndTexto(input) {
-  var aviso = document.getElementById('aviso-end-texto');
-  if(!aviso) return;
-  // Mostrar aviso só se digitou algo e o campo não está em modo GPS (readOnly)
-  aviso.style.display = (!input.readOnly && input.value.trim().length > 5) ? 'block' : 'none';
-}
-
 function usarLocalizacao() {
-  var aviso = document.getElementById('aviso-end-texto');
-  if(aviso) aviso.style.display = 'none';
   const btn = document.getElementById('btn-localizacao');
   if(!navigator.geolocation) {
     alert('Seu navegador não suporta geolocalização');
