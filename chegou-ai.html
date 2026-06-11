@@ -5717,6 +5717,15 @@ async function irCheckout(_manterScroll) {
   irTela('tela-checkout');
   if(!_manterScroll) window.scrollTo(0, 0);
 
+  // Linguagem e-commerce para lojas
+  var ehLoja = estAtual && estAtual.categoria === 'loja';
+  var elCheckoutTitle = document.querySelector('#tela-checkout .header h3');
+  var elCheckoutBtn = document.querySelector('#tela-checkout .btn-principal');
+  if(elCheckoutTitle) elCheckoutTitle.textContent = ehLoja ? 'Meu Carrinho' : 'Meu Pedido';
+  if(elCheckoutBtn) elCheckoutBtn.textContent = ehLoja ? 'Finalizar compra' : 'Confirmar pedido';
+  var elResumoTitle = document.querySelector('#tela-checkout .secao-checkout h4');
+  if(elResumoTitle) elResumoTitle.textContent = ehLoja ? '🛍️ Resumo do carrinho' : '🧾 Resumo do pedido';
+
   // Mostrar campanha ativa do estabelecimento
   var campBadge = document.getElementById('campanha-badge');
   if(campBadge) {
@@ -6016,7 +6025,7 @@ async function confirmarPedido() {
     cupomAplicado = null;
     alert(e.message || 'Erro ao criar pedido. Tente novamente.');
   } finally {
-    if(btn) { btn.disabled = false; btn.textContent = 'Confirmar pedido'; }
+    if(btn) { btn.disabled = false; btn.textContent = (estAtual && estAtual.categoria === 'loja') ? 'Finalizar compra' : 'Confirmar pedido'; }
   }
 }
 
