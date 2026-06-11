@@ -7584,6 +7584,10 @@ function abrirModalProduto(idx) {
   var estoqueGrupo = document.getElementById('prod-estoque-grupo');
   if (prazoGrupo)   prazoGrupo.style.display   = isEncomenda ? '' : 'none';
   if (estoqueGrupo) estoqueGrupo.style.display = isEncomenda ? 'none' : '';
+  var varGrupo  = document.getElementById('prod-variacoes-grupo');
+  var galGrupo  = document.getElementById('prod-galeria-grupo');
+  if (varGrupo)  varGrupo.style.display  = isEncomenda ? '' : 'none';
+  if (galGrupo)  galGrupo.style.display  = isEncomenda ? '' : 'none';
   // Placeholder da descrição
   var descEl = document.getElementById('prod-desc');
   if (descEl) descEl.placeholder = isEncomenda
@@ -7618,6 +7622,12 @@ function abrirModalProduto(idx) {
     } else if(preview) {
       preview.style.display = 'none';
     }
+    // Variações
+    var varsArr = []; try { varsArr = JSON.parse(p.variacoes || '[]'); } catch(_) {}
+    _admRenderVarChips(varsArr);
+    // Galeria
+    var galArr = []; try { galArr = JSON.parse(p.galeria || '[]'); } catch(_) {}
+    _admRenderGaleriaThumbs(galArr);
     emojiSelecionado = p.emoji || '🍽️';
     document.querySelectorAll('.emoji-op').forEach(function(e) {
       e.classList.toggle('selecionado', e.textContent === emojiSelecionado);
@@ -7640,6 +7650,8 @@ function abrirModalProduto(idx) {
     var preview = document.getElementById('prod-foto-preview');
     if(preview) preview.style.display = 'none';
     document.getElementById('prod-foto-label').textContent = '📷 Escolher foto do celular ou computador';
+    _admRenderVarChips([]);
+    _admRenderGaleriaThumbs([]);
     emojiSelecionado = '📦';
     document.querySelectorAll('.emoji-op').forEach(function(e,i){ e.classList.toggle('selecionado', i===0); });
   }
@@ -7648,6 +7660,103 @@ function abrirModalProduto(idx) {
 
 function fecharModalProduto() {
   document.getElementById('modal-produto').classList.remove('aberto');
+}
+
+var _corMap = {'preto':'#1a1a1a','branco':'#f5f5f5','cinza':'#9ca3af','prata':'#c0c0c0','vermelho':'#ef4444','azul':'#3b82f6','azul-claro':'#60a5fa','verde':'#22c55e','amarelo':'#eab308','rosa':'#ec4899','roxo':'#a855f7','laranja':'#f97316','marrom':'#92400e','bege':'#d4b896','off-white':'#f0ede8','creme':'#fdf6e3','dourado':'#d97706','transparente':'rgba(0,0,0,0)'};
+
+function _admRenderVarChips(arr) {
+  var hiddenEl = document.getElementById('prod-variacoes');
+  if (hiddenEl) hiddenEl.value = JSON.stringify(arr);
+  var container = document.getElementById('prod-var-chips');
+  if (!container) return;
+  container.innerHTML = arr.map(function(v, i) {
+    var cor = _corMap[v.toLowerCase()] || (/^#/.test(v) ? v : null);
+    var chipStyle = cor
+      ? 'display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;background:var(--cinza2);border:1.5px solid var(--cinza3);font-size:12px;font-weight:600;cursor:default;'
+      : 'display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:var(--cinza2);border:1.5px solid var(--cinza3);font-size:12px;font-weight:600;cursor:default;';
+    var colorDot = cor ? '<span style="width:16px;height:16px;border-radius:50%;background:' + cor + ';border:1px solid rgba(255,255,255,.2);flex-shrink:0;display:inline-block;"></span>' : '';
+    return '<span style="' + chipStyle + '">' + colorDot + sanitizar(v) +
+      '<button type="button" onclick="_admRemoveVar(' + i + ')" style="background:none;border:none;color:var(--texto2);cursor:pointer;font-size:14px;line-height:1;padding:0 0 0 2px;">✕</button></span>';
+  }).join('');
+}
+
+function _admGetVars() {
+  try { return JSON.parse(document.getElementById('prod-variacoes')?.value || '[]'); } catch(_) { return []; }
+}
+
+function _admAddVar() {
+  var inp = document.getElementById('prod-var-input');
+  if (!inp) return;
+  var val = inp.value.trim();
+  if (!val) return;
+  var arr = _admGetVars();
+  if (!arr.includes(val)) arr.push(val);
+  _admRenderVarChips(arr);
+  inp.value = '';
+  inp.focus();
+}
+
+function _admRemoveVar(idx) {
+  var arr = _admGetVars();
+  arr.splice(idx, 1);
+  _admRenderVarChips(arr);
+}
+
+function _admGetGaleria() {
+  try { return JSON.parse(document.getElementById('prod-galeria')?.value || '[]'); } catch(_) { return []; }
+}
+
+function _admRenderGaleriaThumbs(arr) {
+  var hiddenEl = document.getElementById('prod-galeria');
+  if (hiddenEl) hiddenEl.value = JSON.stringify(arr);
+  var container = document.getElementById('prod-galeria-thumbs');
+  if (!container) return;
+  container.innerHTML = arr.map(function(url, i) {
+    return '<div style="position:relative;width:72px;height:72px;">' +
+      '<img src="' + url + '" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1.5px solid var(--cinza3);">' +
+      '<button type="button" onclick="_admRemoveGaleria(' + i + ')" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#ef4444;border:none;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>' +
+    '</div>';
+  }).join('');
+}
+
+function _admRemoveGaleria(idx) {
+  var arr = _admGetGaleria();
+  arr.splice(idx, 1);
+  _admRenderGaleriaThumbs(arr);
+}
+
+async function _admGaleriaUpload(input) {
+  var files = Array.from(input.files);
+  if (!files.length) return;
+  var lbl = document.getElementById('prod-galeria-label');
+  if (lbl) { lbl.textContent = '⏳ Enviando ' + files.length + ' foto(s)...'; }
+  var arr = _admGetGaleria();
+  for (var i = 0; i < files.length && arr.length < 8; i++) {
+    var file = files[i];
+    try {
+      var url = await new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var img = new Image();
+          img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var max = 1200, ratio = Math.min(max/img.width, max/img.height, 1);
+            canvas.width = Math.round(img.width*ratio); canvas.height = Math.round(img.height*ratio);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            var base64 = canvas.toDataURL('image/jpeg', 0.88).split(',')[1];
+            apiCall('/api/orders/upload-arte', { method:'POST', body:{ base64, contentType:'image/jpeg' } })
+              .then(function(r){ resolve(r.url); }).catch(reject);
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+      arr.push(url);
+    } catch(_) {}
+  }
+  _admRenderGaleriaThumbs(arr);
+  if (lbl) lbl.textContent = '🖼️ Adicionar fotos à galeria';
+  input.value = '';
 }
 
 function removerFotoProduto() {
@@ -7726,7 +7835,11 @@ async function salvarProduto() {
     const prazoEntrega = (document.getElementById('prod-prazo')?.value || '').trim() || null;
     const promoRaw = document.getElementById('prod-preco-promo')?.value.trim();
     const preco_promocional = promoRaw && parseFloat(promoRaw) > 0 && parseFloat(promoRaw) < preco ? parseFloat(promoRaw) : null;
-    const body = { nome, descricao: descricao, preco, preco_promocional, emoji: emojiSelecionado, disponivel, categoria, estoque, unidade, prazo_entrega: prazoEntrega };
+    var variacoesRaw = document.getElementById('prod-variacoes')?.value || '[]';
+    var galeriaRaw = document.getElementById('prod-galeria')?.value || '[]';
+    var variacoes = []; try { variacoes = JSON.parse(variacoesRaw); } catch(_) {}
+    var galeria = []; try { galeria = JSON.parse(galeriaRaw); } catch(_) {}
+    const body = { nome, descricao: descricao, preco, preco_promocional, emoji: emojiSelecionado, disponivel, categoria, estoque, unidade, prazo_entrega: prazoEntrega, variacoes, galeria };
     if(imagem_url) body.imagem_url = imagem_url;
     if(idx >= 0 && cardapioEst[idx] && cardapioEst[idx].id) {
       await apiCall('/api/establishments/me/products/' + cardapioEst[idx].id, { method: 'PUT', body });
@@ -10880,6 +10993,30 @@ function adminNav(btn, secao) {
       <input type="file" id="prod-foto-input" accept="image/*" style="display:none" onchange="selecionarFotoProduto(this)">
       <input type="hidden" id="prod-imagem">
     </div>
+    <!-- VARIAÇÕES (loja/encomenda) -->
+    <div class="form-grupo" id="prod-variacoes-grupo" style="display:none;">
+      <label>Cores / Tamanhos / Variações</label>
+      <div style="font-size:11px;color:var(--texto2);margin-bottom:8px;">Ex: Azul, Rosa, Preto, P, M, G, 38, 39... — o cliente escolhe antes de comprar.</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input type="text" id="prod-var-input" placeholder="Ex: Azul ou M ou 38" style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:13px;font-family:'DM Sans',sans-serif;" onkeydown="if(event.key==='Enter'){event.preventDefault();_admAddVar();}">
+        <button type="button" onclick="_admAddVar()" style="padding:10px 16px;border-radius:10px;background:var(--verde);border:none;color:#000;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Add</button>
+      </div>
+      <div id="prod-var-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:24px;"></div>
+      <input type="hidden" id="prod-variacoes" value="[]">
+    </div>
+
+    <!-- GALERIA DE FOTOS (loja/encomenda) -->
+    <div class="form-grupo" id="prod-galeria-grupo" style="display:none;">
+      <label>Galeria de fotos adicionais <span style="font-size:11px;color:var(--texto2);">(até 8 fotos além da principal)</span></label>
+      <div style="font-size:11px;color:var(--texto2);margin-bottom:8px;">O cliente desliza as fotos na tela do produto.</div>
+      <label id="prod-galeria-label" for="prod-galeria-input" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border-radius:10px;border:1.5px dashed var(--cinza3);background:var(--cinza2);color:var(--texto2);cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;">
+        🖼️ Adicionar fotos à galeria
+      </label>
+      <input type="file" id="prod-galeria-input" accept="image/*" multiple style="display:none" onchange="_admGaleriaUpload(this)">
+      <div id="prod-galeria-thumbs" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
+      <input type="hidden" id="prod-galeria" value="[]">
+    </div>
+
     <div class="form-grupo">
       <label>Ícone do produto</label>
       <div class="emoji-grid" id="emoji-grid">
