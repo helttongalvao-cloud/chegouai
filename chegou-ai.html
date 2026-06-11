@@ -490,66 +490,90 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .card-produto .prod-preco { font-size:13px; font-weight:700; color:var(--verde); margin-top:3px; }
 .card-produto .prod-acoes { display:flex; flex-direction:row; flex-wrap:wrap; gap:4px; justify-content:flex-end; flex-shrink:0; max-width:96px; }
 
-/* ===== E-COMMERCE LAYOUT (loja / encomenda) ===== */
-.loja-topo { padding:12px 16px 0; }
-.loja-busca-row { display:flex; align-items:center; gap:8px; background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:12px; padding:10px 14px; margin-bottom:10px; }
-.loja-busca-row input { flex:1; background:transparent; border:none; outline:none; color:var(--texto); font-size:14px; font-family:'DM Sans',sans-serif; }
-.loja-busca-row input::placeholder { color:var(--texto2); }
-.loja-sort-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
-.loja-sort-row::-webkit-scrollbar { display:none; }
-.loja-sort-btn { flex-shrink:0; padding:6px 14px; border-radius:20px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto2); font-size:12px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all .2s; white-space:nowrap; }
-.loja-sort-btn.ativo { background:var(--verde); border-color:var(--verde); color:#000; }
-.loja-cats { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:0 0 10px; }
-.loja-cats::-webkit-scrollbar { display:none; }
-.loja-cat-chip { flex-shrink:0; padding:6px 16px; border-radius:20px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto2); font-size:12px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all .2s; }
-.loja-cat-chip.ativo { background:var(--verde); border-color:var(--verde); color:#000; }
-.loja-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 12px 100px; }
-.loja-card { background:var(--cinza2); border-radius:12px; overflow:hidden; cursor:pointer; position:relative; transition:transform .12s; }
-.loja-card:active { transform:scale(.97); }
-.loja-card-foto { width:100%; aspect-ratio:3/4; object-fit:cover; background:var(--cinza3); display:block; }
-.loja-card-foto-placeholder { width:100%; aspect-ratio:3/4; display:flex; align-items:center; justify-content:center; font-size:52px; background:var(--cinza3); }
-.loja-card-body { padding:8px 10px 40px; }
-.loja-card-nome { font-size:12px; font-weight:500; margin-bottom:5px; line-height:1.3; color:var(--texto2); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.loja-card-preco { font-size:17px; font-weight:800; color:#ef4444; display:block; }
-.loja-card-preco-de { font-size:11px; color:var(--texto2); text-decoration:line-through; display:inline; margin-right:4px; }
-.loja-card-add { position:absolute; bottom:8px; right:8px; width:30px; height:30px; border-radius:50%; background:var(--verde); border:none; color:#000; font-size:20px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; box-shadow:0 2px 8px rgba(0,200,83,.4); }
-.loja-card-indisponivel { opacity:.45; pointer-events:none; }
-.loja-card-badge { position:absolute; top:0; left:0; background:#ef4444; color:#fff; font-size:11px; font-weight:800; padding:4px 8px; border-radius:0 0 8px 0; letter-spacing:.3px; }
-
-/* Galeria de fotos no modal */
-.loja-galeria-wrap { position:relative; }
-.loja-galeria-scroll { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; }
-.loja-galeria-scroll::-webkit-scrollbar { display:none; }
-.loja-galeria-slide { min-width:100%; scroll-snap-align:start; }
-.loja-galeria-slide img { width:100%; aspect-ratio:3/4; object-fit:cover; display:block; }
-.loja-galeria-counter { position:absolute; bottom:10px; right:12px; background:rgba(0,0,0,.55); color:#fff; font-size:12px; font-weight:600; padding:3px 9px; border-radius:20px; backdrop-filter:blur(4px); }
-.loja-galeria-dots { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); display:flex; gap:5px; }
-.loja-galeria-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.5); transition:background .2s; }
-.loja-galeria-dot.ativo { background:#fff; width:18px; border-radius:3px; }
-
-/* Modal e-commerce produto */
-.modal-loja-produto { background:var(--cinza1); border-radius:24px 24px 0 0; max-height:92vh; overflow-y:auto; }
-.modal-loja-foto { width:100%; aspect-ratio:3/4; object-fit:cover; display:block; }
-.modal-loja-foto-placeholder { width:100%; aspect-ratio:3/4; display:flex; align-items:center; justify-content:center; font-size:80px; background:var(--cinza2); }
-.modal-loja-body { padding:20px 20px 110px; }
-.modal-loja-nome { font-size:20px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; margin-bottom:4px; line-height:1.3; }
-.modal-loja-desc { font-size:14px; color:var(--texto2); line-height:1.6; margin-bottom:16px; }
-.modal-loja-preco-wrap { margin-bottom:20px; }
-.modal-loja-preco { font-size:30px; font-weight:800; color:var(--verde); }
-.modal-loja-preco-de { font-size:14px; color:var(--texto2); text-decoration:line-through; margin-right:8px; }
-.modal-loja-desconto-badge { display:inline-block; background:#ef444420; color:#ef4444; font-size:13px; font-weight:800; padding:2px 8px; border-radius:6px; margin-left:8px; vertical-align:middle; }
-.modal-loja-secao { font-size:12px; font-weight:700; color:var(--texto2); margin-bottom:10px; text-transform:uppercase; letter-spacing:.8px; }
-.modal-loja-vars { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
-.modal-loja-var { padding:8px 18px; border-radius:8px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto); font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; font-family:'DM Sans',sans-serif; }
-.modal-loja-var.ativo { border-color:var(--verde); background:rgba(0,200,83,.12); color:var(--verde); }
-.modal-loja-var-cor { width:32px; height:32px; border-radius:50%; border:2.5px solid var(--cinza3); cursor:pointer; transition:all .15s; padding:0; }
-.modal-loja-var-cor.ativo { border-color:var(--verde); box-shadow:0 0 0 2px var(--verde); }
-.modal-loja-rodape { position:fixed; bottom:0; left:0; right:0; background:var(--preto); border-top:1px solid var(--cinza3); padding:14px 20px 32px; display:flex; align-items:center; gap:12px; }
-.modal-loja-qtd { display:flex; align-items:center; gap:14px; background:var(--cinza2); border-radius:12px; padding:10px 16px; }
-.modal-loja-qtd button { background:none; border:none; color:var(--texto); font-size:22px; font-weight:700; cursor:pointer; line-height:1; padding:0; }
-.modal-loja-qtd span { font-size:16px; font-weight:700; min-width:20px; text-align:center; }
-.modal-loja-add-btn { flex:1; padding:15px; border-radius:14px; background:var(--verde); color:#000; font-size:15px; font-weight:800; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; letter-spacing:-.2px; }
-/* ===== FIM E-COMMERCE ===== */
+/* ===== E-COMMERCE LAYOUT (loja) ===== */
+/* — store header — */
+.ecom-header { background:var(--cinza2); }
+.ecom-banner { width:100%; height:140px; background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%); position:relative; overflow:hidden; }
+.ecom-banner-img { width:100%; height:140px; object-fit:cover; display:block; }
+.ecom-banner-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,.65) 0%,transparent 55%); }
+.ecom-loja-info { display:flex; align-items:center; gap:12px; padding:12px 14px 8px; }
+.ecom-loja-logo { width:52px; height:52px; border-radius:12px; object-fit:cover; border:2px solid var(--verde); flex-shrink:0; background:var(--cinza3); display:flex; align-items:center; justify-content:center; font-size:26px; }
+.ecom-loja-nome { font-size:17px; font-weight:800; margin:0 0 2px; }
+.ecom-loja-meta { font-size:12px; color:var(--texto2); }
+.ecom-search-row { display:flex; align-items:center; gap:8px; background:var(--cinza2); border:1.5px solid var(--cinza3); border-radius:12px; padding:9px 14px; margin:0 12px 10px; }
+.ecom-search-row input { flex:1; background:transparent; border:none; outline:none; color:var(--texto); font-size:14px; font-family:'DM Sans',sans-serif; }
+.ecom-search-row input::placeholder { color:var(--texto2); }
+.ecom-cats-scroll { display:flex; gap:14px; overflow-x:auto; scrollbar-width:none; padding:0 12px 10px; }
+.ecom-cats-scroll::-webkit-scrollbar { display:none; }
+.ecom-cat-item { flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; }
+.ecom-cat-icon { width:52px; height:52px; border-radius:50%; background:var(--cinza2); border:2px solid var(--cinza3); display:flex; align-items:center; justify-content:center; font-size:22px; transition:all .2s; }
+.ecom-cat-item.ativo .ecom-cat-icon { border-color:var(--verde); background:rgba(0,200,83,.12); }
+.ecom-cat-nome { font-size:10px; font-weight:600; color:var(--texto2); white-space:nowrap; max-width:56px; text-align:center; overflow:hidden; text-overflow:ellipsis; }
+.ecom-cat-item.ativo .ecom-cat-nome { color:var(--verde); }
+.ecom-sort-row { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:0 12px 10px; }
+.ecom-sort-row::-webkit-scrollbar { display:none; }
+.ecom-sort-btn { flex-shrink:0; padding:5px 14px; border-radius:20px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto2); font-size:11px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; white-space:nowrap; }
+.ecom-sort-btn.ativo { background:var(--verde); border-color:var(--verde); color:#000; }
+.ecom-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 8px 120px; }
+.ecom-card { background:var(--cinza2); border-radius:10px; overflow:hidden; cursor:pointer; position:relative; transition:transform .12s; }
+.ecom-card:active { transform:scale(.96); }
+.ecom-card-img-wrap { position:relative; }
+.ecom-card-img { width:100%; aspect-ratio:3/4; object-fit:cover; display:block; background:var(--cinza3); }
+.ecom-card-placeholder { width:100%; aspect-ratio:3/4; display:flex; align-items:center; justify-content:center; font-size:52px; background:var(--cinza3); }
+.ecom-card-badge { position:absolute; top:0; left:0; background:#ef4444; color:#fff; font-size:10px; font-weight:900; padding:4px 7px; border-radius:0 0 7px 0; letter-spacing:.2px; }
+.ecom-card-tag-mv { position:absolute; bottom:0; left:0; right:0; background:rgba(239,68,68,.85); color:#fff; font-size:10px; font-weight:800; text-align:center; padding:3px 0; letter-spacing:.3px; backdrop-filter:blur(2px); }
+.ecom-card-info { padding:7px 9px 36px; }
+.ecom-card-nome { font-size:11.5px; font-weight:400; color:var(--texto2); line-height:1.35; margin-bottom:5px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.ecom-card-preco-novo { font-size:16px; font-weight:900; color:#ef4444; }
+.ecom-card-preco-normal { font-size:16px; font-weight:900; color:var(--verde); }
+.ecom-card-preco-linha { display:flex; align-items:center; gap:5px; margin-top:2px; }
+.ecom-card-preco-de { font-size:10px; color:var(--texto2); text-decoration:line-through; }
+.ecom-card-pct { font-size:10px; color:#ef4444; font-weight:700; }
+.ecom-card-vendidos { font-size:10px; color:var(--texto2); margin-top:3px; }
+.ecom-card-add { position:absolute; bottom:7px; right:7px; width:27px; height:27px; border-radius:50%; background:var(--verde); border:none; color:#000; font-size:17px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,200,83,.4); }
+.ecom-card-indisponivel { opacity:.4; pointer-events:none; }
+#tela-ecom-produto { position:fixed; inset:0; z-index:500; background:var(--preto); overflow-y:auto; transform:translateX(100%); transition:transform .28s cubic-bezier(.4,0,.2,1); }
+#tela-ecom-produto.ativo { transform:translateX(0); }
+.ecom-prod-topbar { position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:rgba(10,10,10,.75); backdrop-filter:blur(10px); }
+.ecom-prod-topbar-btn { width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.12); border:none; color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.ecom-prod-galeria { position:relative; background:var(--cinza2); }
+.ecom-prod-slides { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; }
+.ecom-prod-slides::-webkit-scrollbar { display:none; }
+.ecom-prod-slide { min-width:100%; scroll-snap-align:start; }
+.ecom-prod-slide img { width:100%; aspect-ratio:3/4; object-fit:cover; display:block; }
+.ecom-prod-slide-placeholder { width:100%; aspect-ratio:3/4; display:flex; align-items:center; justify-content:center; font-size:100px; background:var(--cinza2); }
+.ecom-prod-counter { position:absolute; bottom:12px; right:12px; background:rgba(0,0,0,.6); color:#fff; font-size:12px; font-weight:600; padding:3px 10px; border-radius:20px; backdrop-filter:blur(4px); }
+.ecom-prod-dots { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:5px; }
+.ecom-prod-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.35); transition:all .2s; }
+.ecom-prod-dot.ativo { background:#fff; width:18px; border-radius:3px; }
+.ecom-prod-body { padding:16px 16px 130px; }
+.ecom-prod-nome { font-size:16px; font-weight:500; color:var(--texto2); line-height:1.45; margin-bottom:8px; }
+.ecom-prod-rating { display:flex; align-items:center; gap:6px; margin-bottom:14px; }
+.ecom-prod-stars { color:#f59e0b; font-size:14px; letter-spacing:1px; }
+.ecom-prod-rating-txt { font-size:12px; color:var(--texto2); }
+.ecom-prod-preco-bloco { background:rgba(239,68,68,.07); border:1px solid rgba(239,68,68,.18); border-radius:12px; padding:14px 16px; margin-bottom:18px; }
+.ecom-prod-preco-row { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.ecom-prod-preco-novo { font-size:30px; font-weight:900; color:#ef4444; font-family:'Plus Jakarta Sans',sans-serif; }
+.ecom-prod-preco-normal { font-size:30px; font-weight:900; color:var(--verde); font-family:'Plus Jakarta Sans',sans-serif; }
+.ecom-prod-badge-pct { background:#ef4444; color:#fff; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px; align-self:center; }
+.ecom-prod-preco-de { font-size:13px; color:var(--texto2); text-decoration:line-through; margin-top:4px; }
+.ecom-prod-economia { font-size:12px; color:#ef4444; font-weight:600; margin-top:2px; }
+.ecom-prod-secao { font-size:11px; font-weight:700; color:var(--texto2); text-transform:uppercase; letter-spacing:.9px; margin-bottom:10px; }
+.ecom-vars-cor { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px; }
+.ecom-var-cor { width:36px; height:36px; border-radius:50%; border:2.5px solid transparent; cursor:pointer; padding:0; transition:all .15s; outline:none; }
+.ecom-var-cor.ativo { border-color:var(--verde); box-shadow:0 0 0 3px rgba(0,200,83,.35); }
+.ecom-vars-tam { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+.ecom-var-tam { padding:8px 16px; border-radius:6px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto); font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; font-family:'DM Sans',sans-serif; min-width:44px; text-align:center; }
+.ecom-var-tam.ativo { border-color:var(--verde); background:rgba(0,200,83,.12); color:var(--verde); }
+.ecom-prod-desc-titulo { font-size:14px; font-weight:700; color:var(--texto); margin-bottom:6px; border-top:1px solid var(--cinza3); padding-top:16px; }
+.ecom-prod-desc { font-size:13px; color:var(--texto2); line-height:1.75; }
+.ecom-prod-rodape { position:fixed; bottom:0; left:0; right:0; background:var(--preto); border-top:1px solid var(--cinza3); padding:12px 16px 28px; display:flex; align-items:center; gap:10px; z-index:20; }
+.ecom-prod-qtd { display:flex; align-items:center; gap:12px; background:var(--cinza2); border-radius:10px; padding:11px 14px; }
+.ecom-prod-qtd button { background:none; border:none; color:var(--texto); font-size:22px; font-weight:700; cursor:pointer; padding:0; line-height:1; }
+.ecom-prod-qtd span { font-size:16px; font-weight:700; min-width:18px; text-align:center; }
+.ecom-add-btn { flex:1; padding:14px; border-radius:10px; background:#ef4444; color:#fff; font-size:13px; font-weight:900; border:none; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; letter-spacing:.6px; text-transform:uppercase; transition:opacity .15s; }
+.ecom-add-btn:disabled { opacity:.4; cursor:default; }
+.ecom-add-btn.verde { background:var(--verde); color:#000; }
 
 .btn-editar { background:var(--cinza3); border:none; border-radius:7px; padding:5px 8px; color:var(--texto); font-size:11px; cursor:pointer; font-family:'DM Sans',sans-serif; white-space:nowrap; }
 .btn-deletar { background:#FF525215; border:none; border-radius:7px; padding:5px 8px; color:var(--erro); font-size:11px; cursor:pointer; font-family:'DM Sans',sans-serif; white-space:nowrap; }
@@ -1052,6 +1076,8 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 </div>
 
 <!-- CHECKOUT -->
+<div id="tela-ecom-produto"></div>
+
 <div class="tela" id="tela-checkout">
   <div class="header">
     <button onclick="voltarCardapio()" style="background:none;border:none;color:var(--verde);font-size:15px;font-weight:600;cursor:pointer;padding:8px 4px;display:flex;align-items:center;gap:6px;font-family:'Plus Jakarta Sans',sans-serif;">← Voltar</button>
@@ -5016,16 +5042,25 @@ function filtrarProdutos(termo) {
 }
 
 // ============================================================
-// E-COMMERCE LAYOUT — loja / encomenda
+// E-COMMERCE LAYOUT — loja
 // ============================================================
-var _lojaCatAtiva = 'todos';
-var _lojaOrdemAtiva = 'padrao';
-var _lojaQueryAtiva = '';
+var _ecomCatAtiva = 'todos';
+var _ecomOrdemAtiva = 'padrao';
+var _ecomQueryAtiva = '';
+var _ecomProdAtual = null;
+var _ecomVariacaoSel = null;
+var _ecomQtd = 1;
+
+// mapa de ícone por categoria
+function _ecomCatIcon(cat) {
+  var m = { 'roupas':'👗','vestuario':'👗','vestuário':'👗','calcados':'👟','calçados':'👟','tenis':'👟','tênis':'👟','eletronicos':'📱','eletrônicos':'📱','celular':'📱','beleza':'💄','cosmetico':'💄','cosmético':'💄','casa':'🏠','movel':'🛋️','móvel':'🛋️','acessorios':'💍','acessórios':'💍','bolsa':'👜','esporte':'⚽','fitness':'💪','brinquedo':'🧸','livro':'📚','alimento':'🍫','todos':'🛍️' };
+  return m[(cat||'').toLowerCase()] || '📦';
+}
 
 function renderLojaEcommerce(produtos) {
   var lista = document.getElementById('lista-itens');
 
-  // Coletar categorias únicas
+  // Categorias únicas
   var cats = ['todos'];
   produtos.forEach(function(p) {
     var c = (p.categoria || 'outros').toLowerCase().trim();
@@ -5034,253 +5069,289 @@ function renderLojaEcommerce(produtos) {
 
   // Filtrar
   var filtrados = produtos.filter(function(p) {
-    var passaCat = _lojaCatAtiva === 'todos' || (p.categoria || 'outros').toLowerCase().trim() === _lojaCatAtiva;
-    var passaBusca = !_lojaQueryAtiva || p.nome.toLowerCase().includes(_lojaQueryAtiva) || (p.descricao || '').toLowerCase().includes(_lojaQueryAtiva);
+    var passaCat = _ecomCatAtiva === 'todos' || (p.categoria || 'outros').toLowerCase().trim() === _ecomCatAtiva;
+    var passaBusca = !_ecomQueryAtiva || p.nome.toLowerCase().includes(_ecomQueryAtiva) || (p.descricao || '').toLowerCase().includes(_ecomQueryAtiva);
     return passaCat && passaBusca;
   });
 
   // Ordenar
-  if (_lojaOrdemAtiva === 'menor_preco') {
-    filtrados.sort(function(a, b) { return parseFloat(a.preco) - parseFloat(b.preco); });
-  } else if (_lojaOrdemAtiva === 'maior_preco') {
-    filtrados.sort(function(a, b) { return parseFloat(b.preco) - parseFloat(a.preco); });
-  } else if (_lojaOrdemAtiva === 'novidades') {
-    filtrados.sort(function(a, b) { return new Date(b.criado_em || 0) - new Date(a.criado_em || 0); });
-  }
+  if (_ecomOrdemAtiva === 'menor') filtrados.sort(function(a,b){ return parseFloat(a.preco)-parseFloat(b.preco); });
+  else if (_ecomOrdemAtiva === 'maior') filtrados.sort(function(a,b){ return parseFloat(b.preco)-parseFloat(a.preco); });
+  else if (_ecomOrdemAtiva === 'novidades') filtrados.sort(function(a,b){ return new Date(b.criado_em||0)-new Date(a.criado_em||0); });
 
-  var chipsHtml = cats.map(function(c) {
-    var label = c === 'todos' ? 'Todos' : (c.charAt(0).toUpperCase() + c.slice(1));
-    return '<div class="loja-cat-chip' + (c === _lojaCatAtiva ? ' ativo' : '') + '" onclick="_lojaFiltrarCat(\'' + c + '\')">' + label + '</div>';
+  // Banner + info loja
+  var logoHtml = estAtual && estAtual.imagem_url
+    ? '<img src="' + estAtual.imagem_url + '" class="ecom-loja-logo" onerror="this.style.display=\'none\'">'
+    : '<div class="ecom-loja-logo">' + (estAtual && estAtual.emoji ? estAtual.emoji : '🛍️') + '</div>';
+  var bannerHtml = estAtual && estAtual.imagem_url
+    ? '<div class="ecom-banner"><img class="ecom-banner-img" src="' + estAtual.imagem_url + '"><div class="ecom-banner-overlay"></div></div>'
+    : '<div class="ecom-banner"><div class="ecom-banner-overlay"></div></div>';
+  var aberto = estAtual && estAtual.aberto !== false;
+  var metaHtml = (aberto ? '<span style="color:var(--verde);font-weight:700;">● Aberta</span>' : '<span style="color:var(--erro);font-weight:700;">● Fechada</span>') + (estAtual && estAtual.tempo_entrega ? ' · ' + estAtual.tempo_entrega : '');
+
+  // Categorias com ícone circular
+  var catsHtml = cats.map(function(c) {
+    var label = c === 'todos' ? 'Tudo' : (c.charAt(0).toUpperCase() + c.slice(1));
+    var ativo = c === _ecomCatAtiva ? ' ativo' : '';
+    return '<div class="ecom-cat-item' + ativo + '" onclick="_ecomFiltrarCat(\'' + c + '\')">' +
+      '<div class="ecom-cat-icon">' + _ecomCatIcon(c) + '</div>' +
+      '<div class="ecom-cat-nome">' + sanitizar(label) + '</div>' +
+    '</div>';
   }).join('');
 
+  // Ordenação
+  var ordens = [['padrao','Relevância'],['menor','Menor preço'],['maior','Maior preço'],['novidades','Novidades']];
+  var sortHtml = ordens.map(function(o) {
+    return '<button class="ecom-sort-btn' + (o[0]===_ecomOrdemAtiva?' ativo':'') + '" onclick="_ecomOrdenar(\'' + o[0] + '\')">' + o[1] + '</button>';
+  }).join('');
+
+  // Cards
   var cardsHtml = filtrados.length === 0
-    ? '<div style="grid-column:1/-1;padding:40px 0;text-align:center;color:var(--texto2);font-size:14px;">Nenhum produto encontrado</div>'
+    ? '<div style="grid-column:1/-1;padding:48px 0;text-align:center;color:var(--texto2);font-size:14px;">Nenhum produto encontrado</div>'
     : filtrados.map(function(p) {
-        var fotoHtml = p.imagem_url
-          ? '<img class="loja-card-foto" src="' + p.imagem_url + '" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
-            '<div class="loja-card-foto-placeholder" style="display:none">' + (p.emoji || '📦') + '</div>'
-          : '<div class="loja-card-foto-placeholder">' + (p.emoji || '📦') + '</div>';
         var precoBase = parseFloat(p.preco);
         var precoPromo = p.preco_promocional ? parseFloat(p.preco_promocional) : null;
-        var precoHtml, badgeHtml;
+        var imgHtml = p.imagem_url
+          ? '<img class="ecom-card-img" src="' + p.imagem_url + '" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+            '<div class="ecom-card-placeholder" style="display:none">' + (p.emoji || '📦') + '</div>'
+          : '<div class="ecom-card-placeholder">' + (p.emoji || '📦') + '</div>';
+        var badgeHtml = '';
+        var precoHtml = '';
         if (precoPromo) {
           var pct = Math.round((1 - precoPromo / precoBase) * 100);
-          badgeHtml = '<div class="loja-card-badge">-' + pct + '%</div>';
-          precoHtml = '<span class="loja-card-preco">R$' + precoPromo.toFixed(2).replace('.', ',') + '</span>' +
-            '<div style="margin-top:2px;"><span class="loja-card-preco-de">R$' + precoBase.toFixed(2).replace('.', ',') + '</span>' +
-            '<span style="font-size:10px;color:#ef4444;font-weight:700;">-' + pct + '%</span></div>';
+          badgeHtml = '<div class="ecom-card-badge">-' + pct + '%</div>';
+          precoHtml = '<div class="ecom-card-preco-novo">R$' + precoPromo.toFixed(2).replace('.',',') + '</div>' +
+            '<div class="ecom-card-preco-linha">' +
+              '<span class="ecom-card-preco-de">R$' + precoBase.toFixed(2).replace('.',',') + '</span>' +
+              '<span class="ecom-card-pct">-' + pct + '%</span>' +
+            '</div>';
         } else {
-          badgeHtml = '';
-          precoHtml = '<span class="loja-card-preco" style="color:var(--verde);">R$' + precoBase.toFixed(2).replace('.', ',') + '</span>';
+          precoHtml = '<div class="ecom-card-preco-normal">R$' + precoBase.toFixed(2).replace('.',',') + '</div>';
         }
+        var mvTag = p.mais_vendido ? '<div class="ecom-card-tag-mv">🔥 MAIS VENDIDO</div>' : '';
+        var vendidosHtml = p.vendidos ? '<div class="ecom-card-vendidos">' + p.vendidos + ' vendidos</div>' : '';
         var indisponivel = !p.disponivel;
-        return '<div class="loja-card' + (indisponivel ? ' loja-card-indisponivel' : '') + '" onclick="abrirModalLojaProduto(' + JSON.stringify(p).replace(/"/g, '&quot;') + ')">' +
-          badgeHtml +
-          fotoHtml +
-          '<div class="loja-card-body">' +
-            '<div class="loja-card-nome">' + sanitizar(p.nome) + '</div>' +
-            precoHtml +
+        return '<div class="ecom-card' + (indisponivel?' ecom-card-indisponivel':'') + '" onclick="abrirProdutoEcom(' + JSON.stringify(p).replace(/"/g,'&quot;') + ')">' +
+          '<div class="ecom-card-img-wrap">' + imgHtml + badgeHtml + mvTag + '</div>' +
+          '<div class="ecom-card-info">' +
+            '<div class="ecom-card-nome">' + sanitizar(p.nome) + '</div>' +
+            precoHtml + vendidosHtml +
           '</div>' +
-          (!indisponivel ? '<button class="loja-card-add" onclick="event.stopPropagation();_lojaAdicionarRapido(\'' + p.id + '\')">+</button>' : '') +
+          (!indisponivel ? '<button class="ecom-card-add" onclick="event.stopPropagation();_ecomAdicionarRapido(\'' + p.id + '\')" title="Adicionar ao carrinho">+</button>' : '') +
         '</div>';
       }).join('');
 
   lista.innerHTML =
-    '<div class="loja-topo">' +
-      '<div class="loja-busca-row">' +
-        '<span style="font-size:16px;color:var(--texto2);">🔍</span>' +
-        '<input type="text" placeholder="Buscar produto..." value="' + _lojaQueryAtiva + '" oninput="_lojaBuscar(this.value)">' +
-      '</div>' +
-      '<div class="loja-sort-row">' +
-        '<button class="loja-sort-btn' + (_lojaOrdemAtiva === 'padrao' ? ' ativo' : '') + '" onclick="_lojaOrdenar(\'padrao\')">Padrão</button>' +
-        '<button class="loja-sort-btn' + (_lojaOrdemAtiva === 'menor_preco' ? ' ativo' : '') + '" onclick="_lojaOrdenar(\'menor_preco\')">Menor preço</button>' +
-        '<button class="loja-sort-btn' + (_lojaOrdemAtiva === 'maior_preco' ? ' ativo' : '') + '" onclick="_lojaOrdenar(\'maior_preco\')">Maior preço</button>' +
-        '<button class="loja-sort-btn' + (_lojaOrdemAtiva === 'novidades' ? ' ativo' : '') + '" onclick="_lojaOrdenar(\'novidades\')">Novidades</button>' +
-      '</div>' +
-      (cats.length > 1 ? '<div class="loja-cats">' + chipsHtml + '</div>' : '') +
+    bannerHtml +
+    '<div class="ecom-header">' +
+      '<div class="ecom-loja-info">' + logoHtml + '<div><div class="ecom-loja-nome">' + sanitizar(estAtual && estAtual.nome || '') + '</div><div class="ecom-loja-meta">' + metaHtml + '</div></div></div>' +
+      '<div class="ecom-search-row"><span style="font-size:15px;color:var(--texto2);">🔍</span><input type="text" placeholder="Buscar no catálogo..." value="' + _ecomQueryAtiva + '" oninput="_ecomBuscar(this.value)"></div>' +
+      (cats.length > 1 ? '<div class="ecom-cats-scroll">' + catsHtml + '</div>' : '') +
+      '<div class="ecom-sort-row">' + sortHtml + '</div>' +
     '</div>' +
-    '<div class="loja-grid">' + cardsHtml + '</div>';
+    '<div class="ecom-grid">' + cardsHtml + '</div>';
 }
 
-function _lojaFiltrarCat(cat) { _lojaCatAtiva = cat; renderLojaEcommerce(produtosCache); }
-function _lojaBuscar(q) { _lojaQueryAtiva = q.toLowerCase().trim(); renderLojaEcommerce(produtosCache); }
-function _lojaOrdenar(tipo) { _lojaOrdemAtiva = tipo; renderLojaEcommerce(produtosCache); }
+function _ecomFiltrarCat(cat) { _ecomCatAtiva = cat; renderLojaEcommerce(produtosCache); }
+function _ecomBuscar(q) { _ecomQueryAtiva = q.toLowerCase().trim(); renderLojaEcommerce(produtosCache); }
+function _ecomOrdenar(tipo) { _ecomOrdemAtiva = tipo; renderLojaEcommerce(produtosCache); }
 
-function _lojaAdicionarRapido(prodId) {
-  var prod = produtosCache.find(function(p) { return p.id === prodId; });
+function _ecomAdicionarRapido(prodId) {
+  if(estAtual && !estAtual.aberto) { showToast('🔴','Loja fechada','Pedidos só quando a loja estiver aberta.'); return; }
+  var prod = produtosCache.find(function(p){ return p.id === prodId; });
   if (!prod) return;
   var preco = prod.preco_promocional ? parseFloat(prod.preco_promocional) : parseFloat(prod.preco);
-  var idx = carrinho.findIndex(function(i) { return i.id === prod.id && !i.variacaoLabel; });
-  if (idx !== -1) {
-    carrinho[idx].qtd++;
-  } else {
-    carrinho.push({ id: prod.id, nome: prod.nome, preco: preco, qtd: 1, emoji: prod.emoji || '📦' });
-  }
+  var idx = carrinho.findIndex(function(i){ return i.id === prod.id && !i.variacaoLabel; });
+  if (idx !== -1) carrinho[idx].qtd++;
+  else carrinho.push({ id:prod.id, nome:prod.nome, preco:preco, qtd:1, emoji:prod.emoji||'📦', variacaoLabel:null });
   atualizarCarrinho();
-  showToast('🛍️', 'Adicionado!', prod.nome + ' no carrinho.');
+  showToast('🛍️','Adicionado!', prod.nome + ' no carrinho.');
 }
 
-var _lojaModalQtd = 1;
-var _lojaModalProd = null;
-var _lojaModalVariacao = null;
+function abrirProdutoEcom(prod) {
+  _ecomProdAtual = prod;
+  _ecomVariacaoSel = null;
+  _ecomQtd = 1;
 
-function abrirModalLojaProduto(prod) {
-  _lojaModalProd = prod;
-  _lojaModalQtd = 1;
-  _lojaModalVariacao = null;
-
-  var precoBase = parseFloat(prod.preco);
-  var precoPromo = prod.preco_promocional ? parseFloat(prod.preco_promocional) : null;
-  var preco = precoPromo || precoBase;
-  var precoFmt = 'R$' + preco.toFixed(2).replace('.', ',');
-
-  // Galeria de fotos
   var galeria = [];
   try { galeria = JSON.parse(prod.galeria || '[]'); } catch(_) {}
   if (prod.imagem_url && !galeria.includes(prod.imagem_url)) galeria.unshift(prod.imagem_url);
-  var galeriaHtml;
-  if (galeria.length === 0) {
-    galeriaHtml = '<div class="modal-loja-foto-placeholder">' + (prod.emoji || '📦') + '</div>';
-  } else if (galeria.length === 1) {
-    galeriaHtml = '<div class="loja-galeria-wrap">' +
-      '<img class="modal-loja-foto" src="' + galeria[0] + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
-      '<div class="modal-loja-foto-placeholder" style="display:none">' + (prod.emoji || '📦') + '</div>' +
-    '</div>';
-  } else {
-    var slidesHtml = galeria.map(function(url) {
-      return '<div class="loja-galeria-slide"><img src="' + url + '" loading="lazy"></div>';
-    }).join('');
-    var dotsHtml = galeria.map(function(_, i) {
-      return '<div class="loja-galeria-dot' + (i === 0 ? ' ativo' : '') + '"></div>';
-    }).join('');
-    galeriaHtml = '<div class="loja-galeria-wrap">' +
-      '<div class="loja-galeria-scroll" id="loja-galeria-scroll" onscroll="_lojaGaleriaScroll(this,' + galeria.length + ')">' + slidesHtml + '</div>' +
-      '<div class="loja-galeria-dots" id="loja-galeria-dots">' + dotsHtml + '</div>' +
-      '<div class="loja-galeria-counter" id="loja-galeria-counter">1/' + galeria.length + '</div>' +
-    '</div>';
-  }
+  if (!galeria.length) galeria = [];
 
-  // Preço com badge de desconto
-  var precoWrapHtml;
+  var total = galeria.length;
+  var slidesHtml = total > 0
+    ? galeria.map(function(url) {
+        return '<div class="ecom-prod-slide"><img src="' + url + '" loading="lazy" onerror="this.outerHTML=\'<div class=\\\"ecom-prod-slide-placeholder\\\">📦</div>\'"></div>';
+      }).join('')
+    : '<div class="ecom-prod-slide"><div class="ecom-prod-slide-placeholder">' + (prod.emoji || '📦') + '</div></div>';
+
+  var counterHtml = total > 1 ? '<div class="ecom-prod-counter" id="ecom-counter">1/' + total + '</div>' : '';
+  var dotsHtml = total > 1
+    ? '<div class="ecom-prod-dots" id="ecom-dots">' + galeria.map(function(_,i){ return '<div class="ecom-prod-dot' + (i===0?' ativo':'') + '"></div>'; }).join('') + '</div>'
+    : '';
+
+  var precoBase = parseFloat(prod.preco);
+  var precoPromo = prod.preco_promocional ? parseFloat(prod.preco_promocional) : null;
+  var precoFmt = 'R$' + (precoPromo || precoBase).toFixed(2).replace('.',',');
+  var precoHtml;
   if (precoPromo) {
-    var pct = Math.round((1 - precoPromo / precoBase) * 100);
-    var economia = (precoBase - precoPromo).toFixed(2).replace('.', ',');
-    precoWrapHtml = '<div class="modal-loja-preco-wrap">' +
-      '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">' +
-        '<span class="modal-loja-preco" id="loja-prod-preco-display" style="color:#ef4444;">' + precoFmt + '</span>' +
-        '<span class="modal-loja-desconto-badge">-' + pct + '%</span>' +
+    var pct = Math.round((1-precoPromo/precoBase)*100);
+    var eco = (precoBase-precoPromo).toFixed(2).replace('.',',');
+    precoHtml = '<div class="ecom-prod-preco-bloco">' +
+      '<div class="ecom-prod-preco-row">' +
+        '<span class="ecom-prod-preco-novo" id="ecom-preco-display">' + precoFmt + '</span>' +
+        '<span class="ecom-prod-badge-pct">-' + pct + '%</span>' +
       '</div>' +
-      '<div style="margin-top:4px;">' +
-        '<span class="modal-loja-preco-de">R$' + precoBase.toFixed(2).replace('.', ',') + '</span>' +
-        '<span style="font-size:12px;color:#ef4444;font-weight:600;margin-left:6px;">Economize R$' + economia + '</span>' +
-      '</div>' +
+      '<div class="ecom-prod-preco-de">De: R$' + precoBase.toFixed(2).replace('.',',') + '</div>' +
+      '<div class="ecom-prod-economia">Economize R$' + eco + '</div>' +
     '</div>';
   } else {
-    precoWrapHtml = '<div class="modal-loja-preco-wrap">' +
-      '<span class="modal-loja-preco" id="loja-prod-preco-display">' + precoFmt + '</span>' +
+    precoHtml = '<div class="ecom-prod-preco-bloco" style="background:rgba(0,200,83,.07);border-color:rgba(0,200,83,.2);">' +
+      '<div class="ecom-prod-preco-row"><span class="ecom-prod-preco-normal" id="ecom-preco-display">' + precoFmt + '</span></div>' +
     '</div>';
   }
 
-  // Variações
+  // Variações — separar cores de tamanhos heuristicamente
   var vars = [];
   try { vars = JSON.parse(prod.variacoes || '[]'); } catch(_) {}
-  var varsHtml = '';
-  if (vars.length > 0) {
-    var btnsHtml = vars.map(function(v) {
-      var isHex = /^#[0-9A-Fa-f]{3,6}$/.test(v.trim());
-      if (isHex) {
-        return '<button class="modal-loja-var-cor" style="background:' + v.trim() + '" title="' + v.trim() + '" onclick="_lojaSelectVar(\'' + v.trim() + '\', this)"></button>';
-      }
-      return '<button class="modal-loja-var" onclick="_lojaSelectVar(\'' + sanitizar(v) + '\', this)">' + sanitizar(v) + '</button>';
-    }).join('');
-    varsHtml = '<div class="modal-loja-secao">Variações</div>' +
-      '<div class="modal-loja-vars" id="loja-vars-wrap">' + btnsHtml + '</div>';
-  }
+  var sizes = ['PP','P','M','G','GG','XG','XXG','XS','S','L','XL','XXL','36','37','38','39','40','41','42','43','44','45'];
+  var coresRaw = [], tamanhosRaw = [], outrasVars = [];
+  vars.forEach(function(v) {
+    var s = (v || '').trim();
+    if (/^#[0-9A-Fa-f]{3,6}$/.test(s)) coresRaw.push(s);
+    else if (sizes.includes(s.toUpperCase())) tamanhosRaw.push(s);
+    else outrasVars.push(s);
+  });
+  // Cores sem hex — palavras de cor conhecidas
+  outrasVars.forEach(function(v) {
+    var corNames = ['preto','branco','cinza','vermelho','azul','verde','amarelo','rosa','roxo','laranja','marrom','bege','off-white','creme'];
+    if (corNames.some(function(c){ return v.toLowerCase().includes(c); })) coresRaw.push(v);
+    else tamanhosRaw.push(v);
+  });
+  var corMap = {'preto':'#1a1a1a','branco':'#f5f5f5','cinza':'#9ca3af','vermelho':'#ef4444','azul':'#3b82f6','verde':'#22c55e','amarelo':'#eab308','rosa':'#ec4899','roxo':'#a855f7','laranja':'#f97316','marrom':'#92400e','bege':'#d4b896','off-white':'#f0ede8','creme':'#fdf6e3'};
+  var coresHtml = coresRaw.length ? '<div class="ecom-prod-secao">Cor</div>' +
+    '<div class="ecom-vars-cor" id="ecom-vars-cor">' +
+    coresRaw.map(function(c) {
+      var hex = /^#/.test(c) ? c : (corMap[c.toLowerCase()] || '#888');
+      return '<button class="ecom-var-cor" style="background:' + hex + '" title="' + sanitizar(c) + '" onclick="_ecomSelVar(this,\'' + sanitizar(c) + '\',\'cor\')"></button>';
+    }).join('') + '</div>' : '';
+  var tamHtml = tamanhosRaw.length ? '<div class="ecom-prod-secao">Tamanho</div>' +
+    '<div class="ecom-vars-tam" id="ecom-vars-tam">' +
+    tamanhosRaw.map(function(t) {
+      return '<button class="ecom-var-tam" onclick="_ecomSelVar(this,\'' + sanitizar(t) + '\',\'tam\')">' + sanitizar(t) + '</button>';
+    }).join('') + '</div>' : '';
 
-  var html =
-    '<div class="modal-loja-produto" id="modal-loja-prod-inner">' +
-      galeriaHtml +
-      '<div class="modal-loja-body">' +
-        '<div class="modal-loja-nome">' + sanitizar(prod.nome) + '</div>' +
-        (prod.descricao ? '<div class="modal-loja-desc">' + sanitizar(prod.descricao) + '</div>' : '') +
-        precoWrapHtml +
-        varsHtml +
+  var ratingHtml = prod.avaliacoes_media
+    ? '<div class="ecom-prod-rating">' +
+        '<span class="ecom-prod-stars">★★★★★</span>' +
+        '<span class="ecom-prod-rating-txt">' + parseFloat(prod.avaliacoes_media).toFixed(1) + (prod.total_avaliacoes ? ' (' + prod.total_avaliacoes + ' avaliações)' : '') + '</span>' +
+      '</div>'
+    : '';
+
+  var descHtml = prod.descricao
+    ? '<div class="ecom-prod-desc-titulo">Descrição</div><div class="ecom-prod-desc">' + sanitizar(prod.descricao) + '</div>'
+    : '';
+
+  var addBtnClass = 'ecom-add-btn' + (precoPromo ? '' : ' verde');
+  var el = document.getElementById('tela-ecom-produto');
+  el.innerHTML =
+    '<div class="ecom-prod-topbar">' +
+      '<button class="ecom-prod-topbar-btn" onclick="fecharProdutoEcom()">←</button>' +
+      '<span style="font-size:13px;font-weight:600;color:#fff;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + sanitizar(prod.nome) + '</span>' +
+      '<button class="ecom-prod-topbar-btn" onclick="_ecomToggleFavorito(\'' + prod.id + '\')" id="ecom-heart-btn" title="Favoritar" style="font-size:20px;">' + (_ecomIsFavorito(prod.id) ? '❤️' : '🤍') + '</button>' +
+    '</div>' +
+    '<div class="ecom-prod-galeria">' +
+      '<div class="ecom-prod-slides" id="ecom-slides" onscroll="_ecomGaleriaScroll(this,' + total + ')">' + slidesHtml + '</div>' +
+      counterHtml + dotsHtml +
+    '</div>' +
+    '<div class="ecom-prod-body">' +
+      '<h2 class="ecom-prod-nome">' + sanitizar(prod.nome) + '</h2>' +
+      ratingHtml +
+      precoHtml +
+      coresHtml + tamHtml +
+      descHtml +
+    '</div>' +
+    '<div class="ecom-prod-rodape">' +
+      '<div class="ecom-prod-qtd">' +
+        '<button onclick="_ecomAjustarQtd(-1)">−</button>' +
+        '<span id="ecom-qtd-display">1</span>' +
+        '<button onclick="_ecomAjustarQtd(1)">+</button>' +
       '</div>' +
-      '<div class="modal-loja-rodape">' +
-        '<div class="modal-loja-qtd">' +
-          '<button onclick="_lojaModalAjustarQtd(-1)">−</button>' +
-          '<span id="loja-modal-qtd-display">1</span>' +
-          '<button onclick="_lojaModalAjustarQtd(1)">+</button>' +
-        '</div>' +
-        '<button class="modal-loja-add-btn" onclick="_lojaModalConfirmar()" id="loja-modal-add-btn">' +
-          'Adicionar ao carrinho • ' + precoFmt +
-        '</button>' +
-      '</div>' +
+      '<button class="' + addBtnClass + '" id="ecom-btn-add" onclick="_ecomConfirmarAdd()">' +
+        'ADICIONAR AO CARRINHO' +
+      '</button>' +
     '</div>';
 
-  // Usar o modal genérico existente (overlay bottom-sheet)
-  var el = document.getElementById('modal-loja-produto');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'modal-loja-produto';
-    el.className = 'modal-overlay';
-    el.addEventListener('click', function(e){ if(e.target === el) _fecharModalLoja(); });
-    document.body.appendChild(el);
-  }
-  el.innerHTML = '<div class="modal-box" style="padding:0;overflow:hidden;border-radius:24px 24px 0 0;">' + html + '</div>';
-  el.classList.add('aberto');
+  el.classList.add('ativo');
+  el.scrollTop = 0;
 }
 
-function _fecharModalLoja() {
-  var el = document.getElementById('modal-loja-produto');
-  if (el) el.classList.remove('aberto');
+function fecharProdutoEcom() {
+  document.getElementById('tela-ecom-produto').classList.remove('ativo');
+  _ecomProdAtual = null;
 }
 
-function _lojaGaleriaScroll(el, total) {
+function _ecomGaleriaScroll(el, total) {
+  if (total <= 1) return;
   var idx = Math.round(el.scrollLeft / el.offsetWidth);
-  var counter = document.getElementById('loja-galeria-counter');
-  if (counter) counter.textContent = (idx + 1) + '/' + total;
-  var dots = document.querySelectorAll('#loja-galeria-dots .loja-galeria-dot');
-  dots.forEach(function(d, i) { d.classList.toggle('ativo', i === idx); });
+  var counter = document.getElementById('ecom-counter');
+  if (counter) counter.textContent = (idx+1) + '/' + total;
+  var dots = document.querySelectorAll('#ecom-dots .ecom-prod-dot');
+  dots.forEach(function(d,i){ d.classList.toggle('ativo', i===idx); });
 }
 
-function _lojaSelectVar(variacao, btn) {
-  _lojaModalVariacao = variacao;
-  document.querySelectorAll('.modal-loja-var').forEach(function(b) { b.classList.remove('ativo'); });
+function _ecomSelVar(btn, valor, tipo) {
+  var grupo = tipo === 'cor' ? document.getElementById('ecom-vars-cor') : document.getElementById('ecom-vars-tam');
+  if (grupo) grupo.querySelectorAll('button').forEach(function(b){ b.classList.remove('ativo'); });
   btn.classList.add('ativo');
+  _ecomVariacaoSel = valor;
 }
 
-function _lojaModalAjustarQtd(delta) {
-  _lojaModalQtd = Math.max(1, _lojaModalQtd + delta);
-  var el = document.getElementById('loja-modal-qtd-display');
-  if (el) el.textContent = _lojaModalQtd;
-  _lojaModalAtualizarBtnPreco();
-}
-
-function _lojaModalAtualizarBtnPreco() {
-  var prod = _lojaModalProd;
-  if (!prod) return;
-  var preco = prod.preco_promocional ? parseFloat(prod.preco_promocional) : parseFloat(prod.preco);
-  var total = (preco * _lojaModalQtd).toFixed(2).replace('.', ',');
-  var btn = document.getElementById('loja-modal-add-btn');
-  if (btn) btn.textContent = 'Adicionar ao carrinho • R$' + total;
-}
-
-function _lojaModalConfirmar() {
-  var prod = _lojaModalProd;
-  if (!prod) return;
-  var preco = prod.preco_promocional ? parseFloat(prod.preco_promocional) : parseFloat(prod.preco);
-  var label = _lojaModalVariacao || null;
-  var idx = carrinho.findIndex(function(i) { return i.id === prod.id && i.variacaoLabel === label; });
-  if (idx !== -1) {
-    carrinho[idx].qtd += _lojaModalQtd;
-  } else {
-    carrinho.push({ id: prod.id, nome: prod.nome + (label ? ' (' + label + ')' : ''), preco: preco, qtd: _lojaModalQtd, emoji: prod.emoji || '📦', variacaoLabel: label });
+function _ecomAjustarQtd(delta) {
+  _ecomQtd = Math.max(1, _ecomQtd + delta);
+  var el = document.getElementById('ecom-qtd-display');
+  if (el) el.textContent = _ecomQtd;
+  var btn = document.getElementById('ecom-btn-add');
+  if (btn) {
+    var prod = _ecomProdAtual;
+    var preco = prod.preco_promocional ? parseFloat(prod.preco_promocional) : parseFloat(prod.preco);
+    btn.textContent = _ecomQtd > 1
+      ? 'ADICIONAR ' + _ecomQtd + 'x — R$' + (preco * _ecomQtd).toFixed(2).replace('.',',')
+      : 'ADICIONAR AO CARRINHO';
   }
-  atualizarCarrinho();
-  _fecharModalLoja();
-  showToast('🛍️', 'Adicionado!', (_lojaModalQtd > 1 ? _lojaModalQtd + 'x ' : '') + prod.nome + ' no carrinho.');
 }
+
+function _ecomConfirmarAdd() {
+  if(estAtual && !estAtual.aberto) { showToast('🔴','Loja fechada','Pedidos só quando a loja estiver aberta.'); return; }
+  var prod = _ecomProdAtual;
+  if (!prod) return;
+  var preco = prod.preco_promocional ? parseFloat(prod.preco_promocional) : parseFloat(prod.preco);
+  var label = _ecomVariacaoSel || null;
+  var idx = carrinho.findIndex(function(i){ return i.id === prod.id && i.variacaoLabel === label; });
+  if (idx !== -1) carrinho[idx].qtd += _ecomQtd;
+  else carrinho.push({ id:prod.id, nome:prod.nome + (label?' ('+label+')':''), preco:preco, qtd:_ecomQtd, emoji:prod.emoji||'📦', variacaoLabel:label });
+  atualizarCarrinho();
+  fecharProdutoEcom();
+  showToast('🛍️','Adicionado ao carrinho!', (_ecomQtd>1?_ecomQtd+'x ':'')+prod.nome);
+}
+
+// Favoritos (localStorage)
+function _ecomIsFavorito(prodId) {
+  var favs = JSON.parse(localStorage.getItem('ecom_favoritos') || '[]');
+  return favs.includes(prodId);
+}
+function _ecomToggleFavorito(prodId) {
+  var favs = JSON.parse(localStorage.getItem('ecom_favoritos') || '[]');
+  var idx = favs.indexOf(prodId);
+  if (idx === -1) favs.push(prodId); else favs.splice(idx, 1);
+  localStorage.setItem('ecom_favoritos', JSON.stringify(favs));
+  var btn = document.getElementById('ecom-heart-btn');
+  if (btn) btn.textContent = _ecomIsFavorito(prodId) ? '❤️' : '🤍';
+  showToast(_ecomIsFavorito(prodId)?'❤️':'🤍', _ecomIsFavorito(prodId)?'Favoritado!':'Removido dos favoritos', '');
+}
+
+// Compatibilidade: mantém abrirModalLojaProduto apontando para a nova função
+function abrirModalLojaProduto(prod) { abrirProdutoEcom(prod); }
 // ============================================================
 
 function adicionarItem(idx) {
