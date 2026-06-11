@@ -4844,10 +4844,23 @@ async function abrirCardapio(id, _prodId) {
 
     // Detectar modo e-commerce (loja / encomenda)
     var isLoja = estAtual.categoria === 'loja' || estAtual.categoria === 'encomenda';
+    // Para lojas: ocultar header de delivery e mostrar layout e-commerce puro
+    var elEstBanner = document.getElementById('est-banner');
+    var elCardapioHeader = document.querySelector('#tela-cardapio .cardapio-header');
+    var elStickyTop = document.getElementById('cardapio-sticky-top');
+    var elAvaliacaoBar = document.getElementById('cardapio-avaliacao');
     if (isLoja) {
-      _lojaCatAtiva = 'todos'; _lojaOrdemAtiva = 'padrao'; _lojaQueryAtiva = '';
+      if(elEstBanner) elEstBanner.style.display = 'none';
+      if(elCardapioHeader) elCardapioHeader.style.display = 'none';
+      if(elStickyTop) elStickyTop.style.display = 'none';
+      if(elAvaliacaoBar) elAvaliacaoBar.style.display = 'none';
+      _ecomCatAtiva = 'todos'; _ecomOrdemAtiva = 'padrao'; _ecomQueryAtiva = '';
       renderLojaEcommerce(produtosCache);
     } else {
+      if(elEstBanner) elEstBanner.style.display = '';
+      if(elCardapioHeader) elCardapioHeader.style.display = '';
+      if(elStickyTop) elStickyTop.style.display = '';
+      if(elAvaliacaoBar) elAvaliacaoBar.style.display = '';
       renderProdutos(produtosCache);
     }
 
@@ -5142,7 +5155,10 @@ function renderLojaEcommerce(produtos) {
       }).join('');
 
   lista.innerHTML =
-    bannerHtml +
+    '<div style="position:relative;">' +
+      bannerHtml +
+      '<button onclick="irHome()" style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,.55);border:none;color:#fff;font-size:14px;font-weight:700;padding:7px 14px;border-radius:20px;cursor:pointer;backdrop-filter:blur(6px);font-family:\'DM Sans\',sans-serif;z-index:5;">← Voltar</button>' +
+    '</div>' +
     '<div class="ecom-header">' +
       '<div class="ecom-loja-info">' + logoHtml + '<div><div class="ecom-loja-nome">' + sanitizar(estAtual && estAtual.nome || '') + '</div><div class="ecom-loja-meta">' + metaHtml + '</div></div></div>' +
       '<div class="ecom-search-row"><span style="font-size:15px;color:var(--texto2);">🔍</span><input type="text" placeholder="Buscar no catálogo..." value="' + _ecomQueryAtiva + '" oninput="_ecomBuscar(this.value)"></div>' +
