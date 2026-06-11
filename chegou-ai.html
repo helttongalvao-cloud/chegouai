@@ -5176,6 +5176,8 @@ function _ecomAdicionarRapido(prodId) {
   if(estAtual && !estAtual.aberto) { showToast('🔴','Loja fechada','Pedidos só quando a loja estiver aberta.'); return; }
   var prod = produtosCache.find(function(p){ return p.id === prodId; });
   if (!prod) return;
+  // Encomenda: abrir tela do produto para preencher personalização
+  if(estAtual && estAtual.categoria === 'encomenda') { abrirProdutoEcom(prod); return; }
   var preco = prod.preco_promocional ? parseFloat(prod.preco_promocional) : parseFloat(prod.preco);
   var idx = carrinho.findIndex(function(i){ return i.id === prod.id && !i.variacaoLabel; });
   if (idx !== -1) carrinho[idx].qtd++;
@@ -5268,8 +5270,24 @@ function abrirProdutoEcom(prod) {
     ? '<div class="ecom-prod-desc-titulo">Descrição</div><div class="ecom-prod-desc">' + sanitizar(prod.descricao) + '</div>'
     : '';
 
+  // Campos de personalização para encomendas (Sublimarte etc.)
+  var isEncomenda = estAtual && estAtual.categoria === 'encomenda';
+  var arteHtml = isEncomenda
+    ? '<div class="ecom-prod-secao" style="margin-top:8px;">Personalização</div>' +
+      '<div style="margin-bottom:12px;">' +
+        '<textarea id="ecom-arte-desc" placeholder="Descreva o que você quer: nomes, frase, cores, estilo..." rows="3" maxlength="400" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:\'DM Sans\',sans-serif;resize:none;box-sizing:border-box;"></textarea>' +
+      '</div>' +
+      '<div style="margin-bottom:18px;">' +
+        '<div style="font-size:12px;color:var(--texto2);margin-bottom:6px;">📎 Imagem de referência (opcional)</div>' +
+        '<input type="file" id="ecom-arte-input" accept="image/*" style="display:none" onchange="_ecomArteUpload(this)">' +
+        '<div id="ecom-arte-preview" style="display:none;margin-bottom:8px;border-radius:10px;overflow:hidden;max-height:150px;"><img id="ecom-arte-img" src="" style="width:100%;object-fit:cover;cursor:zoom-in;" onclick="abrirLightbox(this.src)"></div>' +
+        '<button onclick="document.getElementById(\'ecom-arte-input\').click()" id="ecom-arte-btn" style="width:100%;padding:11px;border-radius:10px;border:1.5px dashed var(--cinza3);background:transparent;color:var(--texto2);font-size:13px;cursor:pointer;font-family:\'DM Sans\',sans-serif;">📷 Escolher imagem de referência</button>' +
+      '</div>'
+    : '';
+
   var addBtnClass = 'ecom-add-btn' + (precoPromo ? '' : ' verde');
   var el = document.getElementById('tela-ecom-produto');
+  window._ecomArteUrl = '';
   el.innerHTML =
     '<div class="ecom-prod-topbar">' +
       '<button class="ecom-prod-topbar-btn" onclick="fecharProdutoEcom()">←</button>' +
@@ -5286,6 +5304,7 @@ function abrirProdutoEcom(prod) {
       precoHtml +
       coresHtml + tamHtml +
       descHtml +
+      arteHtml +
     '</div>' +
     '<div class="ecom-prod-rodape">' +
       '<div class="ecom-prod-qtd">' +
@@ -5341,14 +5360,54 @@ function _ecomConfirmarAdd() {
   if(estAtual && !estAtual.aberto) { showToast('🔴','Loja fechada','Pedidos só quando a loja estiver aberta.'); return; }
   var prod = _ecomProdAtual;
   if (!prod) return;
+  // Validar personalização para encomendas
+  var isEncomenda = estAtual && estAtual.categoria === 'encomenda';
+  var arteDesc = '';
+  var arteUrl = window._ecomArteUrl || '';
+  if (isEncomenda) {
+    var descEl = document.getElementById('ecom-arte-desc');
+    arteDesc = descEl ? descEl.value.trim() : '';
+    if (!arteDesc && !arteUrl) { showToast('⚠️','Arte obrigatória','Descreva ou envie uma imagem da arte que deseja.'); return; }
+  }
+  var obs = arteDesc;
+  if (arteUrl) obs = (arteDesc ? arteDesc + ' | ' : '') + '🖼️ ' + arteUrl;
+
   var preco = prod.preco_promocional ? parseFloat(prod.preco_promocional) : parseFloat(prod.preco);
   var label = _ecomVariacaoSel || null;
-  var idx = carrinho.findIndex(function(i){ return i.id === prod.id && i.variacaoLabel === label; });
-  if (idx !== -1) carrinho[idx].qtd += _ecomQtd;
-  else carrinho.push({ id:prod.id, nome:prod.nome + (label?' ('+label+')':''), preco:preco, qtd:_ecomQtd, emoji:prod.emoji||'📦', variacaoLabel:label });
+  var idx = carrinho.findIndex(function(i){ return i.id === prod.id && i.variacaoLabel === label && !i.observacao; });
+  if (idx !== -1 && !obs) carrinho[idx].qtd += _ecomQtd;
+  else carrinho.push({ id:prod.id, nome:prod.nome + (label?' ('+label+')':''), preco:preco, qtd:_ecomQtd, emoji:prod.emoji||'📦', variacaoLabel:label, observacao:obs||'', arte_url:arteUrl });
   atualizarCarrinho();
   fecharProdutoEcom();
   showToast('🛍️','Adicionado ao carrinho!', (_ecomQtd>1?_ecomQtd+'x ':'')+prod.nome);
+}
+
+async function _ecomArteUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var btn = document.getElementById('ecom-arte-btn');
+  btn.textContent = '⏳ Enviando...'; btn.disabled = true;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var max = 1200, ratio = Math.min(max/img.width, max/img.height, 1);
+      canvas.width = Math.round(img.width*ratio); canvas.height = Math.round(img.height*ratio);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      var base64 = canvas.toDataURL('image/jpeg', 0.88).split(',')[1];
+      apiCall('/api/orders/upload-arte', { method:'POST', body:{ base64, contentType:'image/jpeg' } })
+        .then(function(resp) {
+          window._ecomArteUrl = resp.url;
+          document.getElementById('ecom-arte-img').src = resp.url;
+          document.getElementById('ecom-arte-preview').style.display = 'block';
+          btn.textContent = '✅ Imagem enviada — trocar'; btn.disabled = false;
+        })
+        .catch(function() { btn.textContent = '❌ Erro — tente novamente'; btn.disabled = false; });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 // Favoritos (localStorage)
