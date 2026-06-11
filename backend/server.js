@@ -18,6 +18,7 @@ const featuresRoutes = require('./routes/features');
 const notificationsRoutes = require('./routes/notifications');
 const mesaRoutes = require('./routes/mesa');
 const motoboyProprioRoutes = require('./routes/motoboyProprio');
+const candidaturasRoutes = require('./routes/candidaturas');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -61,6 +62,7 @@ app.use(helmet({
         'https://router.project-osrm.org',
       ],
       frameSrc: ["'none'"],
+      upgradeInsecureRequests: null,
     },
   },
   crossOriginEmbedderPolicy: false,
@@ -221,6 +223,7 @@ app.use('/api/features', featuresRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/mesa', mesaRoutes);
 app.use('/api/motoboy-proprio', motoboyProprioRoutes);
+app.use('/api/candidaturas', candidaturasRoutes);
 
 // =============================================
 // CONFIG PÚBLICA — Expõe chaves seguras ao frontend

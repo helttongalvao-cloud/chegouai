@@ -97,6 +97,36 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 #lightbox-img { max-width:100vw; max-height:100vh; object-fit:contain; touch-action:pinch-zoom; user-select:none; }
 #lightbox-close { position:absolute; bottom:40px; left:50%; transform:translateX(-50%); padding:12px 32px; background:rgba(255,255,255,0.15); border:none; border-radius:999px; color:#fff; font-size:15px; font-weight:600; cursor:pointer; letter-spacing:0.3px; backdrop-filter:blur(8px); }
 
+/* ===== CANDIDATURA MOTOBOY ===== */
+#tela-candidatura { background:var(--preto); min-height:100vh; }
+.cand-header { padding:20px 20px 0; display:flex; align-items:center; gap:10px; }
+.cand-titulo { font-size:20px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; }
+.cand-sub { font-size:14px; color:var(--texto2); margin-top:2px; }
+.cand-prog { display:flex; gap:6px; padding:16px 20px 0; }
+.cand-prog-item { flex:1; height:4px; border-radius:4px; background:var(--cinza3); transition:background .3s; }
+.cand-prog-item.ativo { background:var(--verde); }
+.cand-prog-item.feito { background:var(--verde); opacity:.5; }
+.cand-step { display:none; padding:20px 20px 120px; animation:fadeIn .25s; }
+.cand-step.ativo { display:block; }
+.cand-step-titulo { font-size:20px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; margin-bottom:4px; }
+.cand-step-sub { font-size:13px; color:var(--texto2); margin-bottom:20px; line-height:1.5; }
+.cand-campo { margin-bottom:14px; }
+.cand-campo label { font-size:12px; font-weight:700; color:var(--texto2); display:block; margin-bottom:5px; text-transform:uppercase; letter-spacing:.5px; }
+.cand-campo input, .cand-campo select, .cand-campo textarea { width:100%; padding:13px 14px; border-radius:12px; border:1.5px solid var(--cinza3); background:var(--cinza2); color:var(--texto); font-size:15px; font-family:'DM Sans',sans-serif; box-sizing:border-box; }
+.cand-campo textarea { resize:none; }
+.cand-opcoes { display:flex; flex-direction:column; gap:10px; }
+.cand-opcao { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:12px; border:1.5px solid var(--cinza3); background:var(--cinza2); cursor:pointer; transition:all .15s; }
+.cand-opcao.selecionado { border-color:var(--verde); background:rgba(0,200,83,.1); }
+.cand-opcao input[type=radio], .cand-opcao input[type=checkbox] { accent-color:var(--verde); width:18px; height:18px; flex-shrink:0; }
+.cand-opcao-label { font-size:14px; font-weight:600; }
+.cand-nav { position:fixed; bottom:0; left:0; right:0; padding:14px 20px 32px; background:var(--preto); border-top:1px solid var(--cinza3); display:flex; gap:10px; z-index:50; }
+.cand-doc-item { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:12px; border:1.5px solid var(--cinza3); background:var(--cinza2); margin-bottom:10px; cursor:pointer; transition:all .15s; }
+.cand-doc-item.ok { border-color:var(--verde); background:rgba(0,200,83,.07); }
+.cand-doc-icone { font-size:24px; flex-shrink:0; }
+.cand-doc-info { flex:1; }
+.cand-doc-nome { font-size:14px; font-weight:700; }
+.cand-doc-status { font-size:12px; color:var(--texto2); margin-top:2px; }
+.cand-score-badge { display:inline-block; padding:8px 20px; border-radius:20px; font-size:18px; font-weight:900; margin-bottom:8px; }
 /* ===== PARCEIRO — AUTO-CADASTRO ===== */
 #tela-parceiro { background:var(--preto); }
 .parceiro-header { padding:24px 20px 0; display:flex; align-items:center; gap:12px; }
@@ -1302,6 +1332,152 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   </div>
 </div>
 
+<!-- CANDIDATURA MOTOBOY — público via ?candidatura=motoboy -->
+<div id="tela-candidatura" style="display:none;">
+  <div class="cand-header">
+    <span style="font-size:28px;">🛵</span>
+    <div><div class="cand-titulo">Seja um parceiro Chegô</div><div class="cand-sub">Preencha o formulário — leva menos de 5 minutos</div></div>
+  </div>
+  <div class="cand-prog" id="cand-prog">
+    <div class="cand-prog-item ativo"></div>
+    <div class="cand-prog-item"></div>
+    <div class="cand-prog-item"></div>
+  </div>
+
+  <!-- STEP 1: Dados pessoais -->
+  <div class="cand-step ativo" id="cand-step-1">
+    <div class="cand-step-titulo">Seus dados</div>
+    <div class="cand-step-sub">Precisamos conhecer você antes de prosseguir.</div>
+    <div class="cand-campo"><label>Nome completo *</label><input type="text" id="cand-nome" placeholder="Seu nome completo"></div>
+    <div class="cand-campo"><label>CPF *</label><input type="tel" id="cand-cpf" placeholder="000.000.000-00" oninput="mascaraCPF(this)"></div>
+    <div class="cand-campo"><label>Data de nascimento *</label><input type="date" id="cand-nasc"></div>
+    <div class="cand-campo"><label>E-mail</label><input type="email" id="cand-email" placeholder="seu@email.com"></div>
+    <div class="cand-campo"><label>WhatsApp *</label><input type="tel" id="cand-wpp" placeholder="(97) 99999-9999" oninput="mascaraTelefone(this)"></div>
+    <div class="cand-campo"><label>Cidade onde vai operar *</label><input type="text" id="cand-cidade" placeholder="Ex: Guajará"></div>
+    <div class="cand-campo"><label>Tipo de veículo *</label>
+      <select id="cand-veiculo">
+        <option value="">Selecione...</option>
+        <option value="moto">🏍️ Moto</option>
+        <option value="bicicleta">🚲 Bicicleta</option>
+        <option value="carro">🚗 Carro</option>
+      </select>
+    </div>
+    <div class="cand-campo"><label>Placa do veículo</label><input type="text" id="cand-placa" placeholder="Ex: ABC-1234" style="text-transform:uppercase;"></div>
+    <div class="cand-campo"><label>Chave Pix *</label><input type="text" id="cand-pix" placeholder="CPF, e-mail, telefone ou chave aleatória"></div>
+    <div class="cand-campo"><label>Banco</label><input type="text" id="cand-banco" placeholder="Ex: Nubank, Caixa, Bradesco..."></div>
+  </div>
+
+  <!-- STEP 2: Triagem -->
+  <div class="cand-step" id="cand-step-2">
+    <div class="cand-step-titulo">Sobre você</div>
+    <div class="cand-step-sub">Seja honesto — queremos entender seu perfil para fazer um bom match.</div>
+
+    <div class="cand-campo"><label>Você tem disponibilidade para trabalhar à noite? *</label>
+      <div class="cand-opcoes">
+        <label class="cand-opcao" id="cand-noite-sim"><input type="radio" name="cand-noite" value="sim" onchange="_candSel(this,'noite')"> <span class="cand-opcao-label">✅ Sim, consigo trabalhar à noite</span></label>
+        <label class="cand-opcao" id="cand-noite-nao"><input type="radio" name="cand-noite" value="nao" onchange="_candSel(this,'noite')"> <span class="cand-opcao-label">❌ Não tenho disponibilidade noturna</span></label>
+      </div>
+    </div>
+
+    <div class="cand-campo"><label>Quantas horas por dia pretende trabalhar? *</label>
+      <div class="cand-opcoes">
+        <label class="cand-opcao"><input type="radio" name="cand-horas" value="2-4h" onchange="_candSel(this,'horas')"> <span class="cand-opcao-label">2 a 4 horas</span></label>
+        <label class="cand-opcao"><input type="radio" name="cand-horas" value="4-6h" onchange="_candSel(this,'horas')"> <span class="cand-opcao-label">4 a 6 horas</span></label>
+        <label class="cand-opcao"><input type="radio" name="cand-horas" value="6-8h" onchange="_candSel(this,'horas')"> <span class="cand-opcao-label">6 a 8 horas</span></label>
+        <label class="cand-opcao"><input type="radio" name="cand-horas" value="mais_8h" onchange="_candSel(this,'horas')"> <span class="cand-opcao-label">Mais de 8 horas</span></label>
+      </div>
+    </div>
+
+    <div class="cand-campo"><label>Já trabalhou com delivery antes? *</label>
+      <div class="cand-opcoes">
+        <label class="cand-opcao" id="cand-exp-sim"><input type="radio" name="cand-exp" value="sim" onchange="_candSel(this,'exp');document.getElementById('cand-exp-detalhe').style.display='block'"> <span class="cand-opcao-label">✅ Sim</span></label>
+        <label class="cand-opcao" id="cand-exp-nao"><input type="radio" name="cand-exp" value="nao" onchange="_candSel(this,'exp');document.getElementById('cand-exp-detalhe').style.display='none'"> <span class="cand-opcao-label">❌ Não</span></label>
+      </div>
+      <div id="cand-exp-detalhe" style="display:none;margin-top:10px;">
+        <input type="text" id="cand-exp-texto" placeholder="Qual plataforma e por quanto tempo?">
+      </div>
+    </div>
+
+    <div class="cand-campo"><label>Por que quer trabalhar no Chegô?</label>
+      <textarea id="cand-motivo" rows="3" placeholder="Conte um pouco sobre sua motivação..."></textarea>
+    </div>
+
+    <div class="cand-campo"><label>Você tem smartphone com dados móveis funcionando? *</label>
+      <div class="cand-opcoes">
+        <label class="cand-opcao" id="cand-smart-sim"><input type="radio" name="cand-smart" value="sim" onchange="_candSel(this,'smart')"> <span class="cand-opcao-label">✅ Sim</span></label>
+        <label class="cand-opcao" id="cand-smart-nao"><input type="radio" name="cand-smart" value="nao" onchange="_candSel(this,'smart')"> <span class="cand-opcao-label">❌ Não</span></label>
+      </div>
+    </div>
+
+    <div class="cand-campo"><label>Você conhece bem as ruas da cidade onde vai operar? *</label>
+      <div class="cand-opcoes">
+        <label class="cand-opcao" id="cand-ruas-sim"><input type="radio" name="cand-ruas" value="sim" onchange="_candSel(this,'ruas')"> <span class="cand-opcao-label">✅ Sim, conheço bem</span></label>
+        <label class="cand-opcao" id="cand-ruas-nao"><input type="radio" name="cand-ruas" value="nao" onchange="_candSel(this,'ruas')"> <span class="cand-opcao-label">❌ Não muito bem ainda</span></label>
+      </div>
+    </div>
+
+    <div class="cand-campo"><label>Você tem alguma restrição que possa impedir entregas?</label>
+      <div class="cand-opcoes">
+        <label class="cand-opcao" id="cand-rest-sim"><input type="radio" name="cand-rest" value="sim" onchange="_candSel(this,'rest');document.getElementById('cand-rest-detalhe').style.display='block'"> <span class="cand-opcao-label">Sim</span></label>
+        <label class="cand-opcao" id="cand-rest-nao"><input type="radio" name="cand-rest" value="nao" onchange="_candSel(this,'rest');document.getElementById('cand-rest-detalhe').style.display='none'"> <span class="cand-opcao-label">Não</span></label>
+      </div>
+      <div id="cand-rest-detalhe" style="display:none;margin-top:10px;">
+        <input type="text" id="cand-rest-texto" placeholder="Qual restrição?">
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Documentos -->
+  <div class="cand-step" id="cand-step-3">
+    <div class="cand-step-titulo">Documentos</div>
+    <div class="cand-step-sub">Envie fotos nítidas dos documentos. Arquivos aceitos: JPG, PNG.</div>
+
+    <input type="file" id="cand-doc-input" accept="image/*" style="display:none" onchange="_candDocUpload(this)">
+
+    <div class="cand-doc-item" id="cand-doc-cnh-frente" onclick="_candDocAbrirInput('cnh_frente')">
+      <span class="cand-doc-icone">🪪</span>
+      <div class="cand-doc-info"><div class="cand-doc-nome">CNH — frente *</div><div class="cand-doc-status" id="cand-doc-status-cnh_frente">Toque para enviar</div></div>
+      <span id="cand-doc-ok-cnh_frente" style="font-size:18px;"></span>
+    </div>
+    <div class="cand-doc-item" id="cand-doc-cnh-verso" onclick="_candDocAbrirInput('cnh_verso')">
+      <span class="cand-doc-icone">🪪</span>
+      <div class="cand-doc-info"><div class="cand-doc-nome">CNH — verso *</div><div class="cand-doc-status" id="cand-doc-status-cnh_verso">Toque para enviar</div></div>
+      <span id="cand-doc-ok-cnh_verso" style="font-size:18px;"></span>
+    </div>
+    <div class="cand-doc-item" id="cand-doc-crlv" onclick="_candDocAbrirInput('crlv')">
+      <span class="cand-doc-icone">📄</span>
+      <div class="cand-doc-info"><div class="cand-doc-nome">Documento do veículo (CRLV) *</div><div class="cand-doc-status" id="cand-doc-status-crlv">Toque para enviar</div></div>
+      <span id="cand-doc-ok-crlv" style="font-size:18px;"></span>
+    </div>
+    <div class="cand-doc-item" id="cand-doc-comprovante" onclick="_candDocAbrirInput('comprovante')">
+      <span class="cand-doc-icone">🏠</span>
+      <div class="cand-doc-info"><div class="cand-doc-nome">Comprovante de residência *</div><div class="cand-doc-status" id="cand-doc-status-comprovante">Toque para enviar</div></div>
+      <span id="cand-doc-ok-comprovante" style="font-size:18px;"></span>
+    </div>
+    <div class="cand-doc-item" id="cand-doc-selfie" onclick="_candDocAbrirInput('selfie_cnh')">
+      <span class="cand-doc-icone">🤳</span>
+      <div class="cand-doc-info"><div class="cand-doc-nome">Selfie segurando a CNH *</div><div class="cand-doc-status" id="cand-doc-status-selfie_cnh">Toque para enviar</div></div>
+      <span id="cand-doc-ok-selfie_cnh" style="font-size:18px;"></span>
+    </div>
+  </div>
+
+  <!-- Tela de confirmação -->
+  <div class="cand-step" id="cand-step-ok">
+    <div style="text-align:center;padding:40px 0 20px;">
+      <div style="font-size:64px;margin-bottom:16px;">🎉</div>
+      <div style="font-size:22px;font-weight:900;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:8px;">Candidatura enviada!</div>
+      <div style="font-size:14px;color:var(--texto2);line-height:1.6;margin-bottom:24px;">Recebemos seus dados e documentos.<br>Nossa equipe vai analisar e te avisar pelo WhatsApp.</div>
+      <div id="cand-score-display" style="margin-bottom:24px;"></div>
+      <button onclick="window.location.href='/app'" style="background:var(--verde);border:none;color:#000;font-size:15px;font-weight:800;padding:16px 32px;border-radius:14px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Acessar o app</button>
+    </div>
+  </div>
+
+  <div class="cand-nav" id="cand-nav">
+    <button id="cand-btn-voltar" onclick="_candPrev()" style="flex:0 0 auto;padding:14px 20px;border-radius:12px;border:1.5px solid var(--cinza3);background:transparent;color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;display:none;">← Voltar</button>
+    <button id="cand-btn-prox" onclick="_candNext()" style="flex:1;padding:16px;border-radius:12px;background:var(--verde);border:none;color:#000;font-size:15px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Continuar →</button>
+  </div>
+</div>
+
 <!-- PARCEIRO — Auto-cadastro via convite -->
 <div class="tela" id="tela-parceiro">
   <div class="parceiro-header">
@@ -1759,6 +1935,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="nav-btn" onclick="adminNav(this,'repasses')">Repasses</div>
       <div class="nav-btn" onclick="adminNav(this,'lojas')">Estabelecimentos</div>
       <div class="nav-btn" onclick="adminNav(this,'motoboys')">Motoboys</div>
+      <div class="nav-btn" onclick="adminNav(this,'candidatos')" id="nav-candidatos" style="color:#fb923c;border-color:#fb923c40;">🛵 Candidatos</div>
       <div class="nav-btn" onclick="adminNav(this,'mapa')" style="color:#22d3ee;border-color:#22d3ee40;">🗺️ Mapa</div>
       <div class="nav-btn" onclick="adminNav(this,'cupons')">Cupons</div>
       <div class="nav-btn" onclick="adminNav(this,'sorteio')" style="color:#facc15;border-color:#facc1540;">🎟️ Sorteio</div>
@@ -8774,6 +8951,7 @@ async function renderAdmin(secao) {
   if(secao === 'cupons') { renderAdminCupons(); return; }
   if(secao === 'sorteio') { renderAdminSorteio(); return; }
   if(secao === 'metricas') { renderAdminMetricas(); return; }
+  if(secao === 'candidatos') { await renderAdminCandidatos(); return; }
 
   if (secao !== 'cadastrar') {
     el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando painel...</div>';
@@ -10855,6 +11033,297 @@ function adminNav(btn, secao) {
   renderAdmin(secao);
 }
 
+// =============================================
+// CANDIDATURA MOTOBOY — formulário público
+// =============================================
+var _candAtual = 1;
+var _candDocs = { cnh_frente: '', cnh_verso: '', crlv: '', comprovante: '', selfie_cnh: '' };
+var _candDocAtivo = null;
+
+function _candAbrirFormulario() {
+  document.getElementById('tela-candidatura').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  _candAtual = 1;
+  _candMostrarStep(1);
+}
+
+function _candMostrarStep(n) {
+  document.querySelectorAll('.cand-step').forEach(function(s){ s.classList.remove('ativo'); });
+  var el = document.getElementById('cand-step-' + (n === 4 ? 'ok' : n));
+  if(el) el.classList.add('ativo');
+
+  var progs = document.querySelectorAll('.cand-prog-item');
+  progs.forEach(function(p, i) {
+    p.classList.remove('ativo','feito');
+    if(i < n-1) p.classList.add('feito');
+    else if(i === n-1) p.classList.add('ativo');
+  });
+
+  var navEl = document.getElementById('cand-nav');
+  if(navEl) navEl.style.display = n === 4 ? 'none' : 'flex';
+  var btnV = document.getElementById('cand-btn-voltar');
+  if(btnV) btnV.style.display = n > 1 ? '' : 'none';
+  var btnP = document.getElementById('cand-btn-prox');
+  if(btnP) btnP.textContent = n === 3 ? '📤 Enviar candidatura' : 'Continuar →';
+}
+
+function _candSel(input, grupo) {
+  document.querySelectorAll('input[name="cand-' + grupo + '"]').forEach(function(r){
+    var label = r.closest('.cand-opcao');
+    if(label) label.classList.toggle('selecionado', r === input);
+  });
+}
+
+function _candNext() {
+  if(_candAtual === 1) {
+    var nome = document.getElementById('cand-nome').value.trim();
+    var cpf = document.getElementById('cand-cpf').value.trim();
+    var wpp = document.getElementById('cand-wpp').value.trim();
+    var cidade = document.getElementById('cand-cidade').value.trim();
+    var veiculo = document.getElementById('cand-veiculo').value;
+    var pix = document.getElementById('cand-pix').value.trim();
+    var nasc = document.getElementById('cand-nasc').value;
+    if(!nome || !cpf || !wpp || !cidade || !veiculo || !pix || !nasc) {
+      showToast('⚠️','Campos obrigatórios','Preencha todos os campos com *');
+      return;
+    }
+  } else if(_candAtual === 2) {
+    var noite = document.querySelector('input[name="cand-noite"]:checked');
+    var horas = document.querySelector('input[name="cand-horas"]:checked');
+    var exp = document.querySelector('input[name="cand-exp"]:checked');
+    var smart = document.querySelector('input[name="cand-smart"]:checked');
+    var ruas = document.querySelector('input[name="cand-ruas"]:checked');
+    if(!noite || !horas || !exp || !smart || !ruas) {
+      showToast('⚠️','Campos obrigatórios','Responda todas as perguntas');
+      return;
+    }
+  } else if(_candAtual === 3) {
+    var obrig = ['cnh_frente','cnh_verso','crlv','comprovante','selfie_cnh'];
+    var faltam = obrig.filter(function(k){ return !_candDocs[k]; });
+    if(faltam.length > 0) {
+      showToast('⚠️','Documentos faltando','Envie todos os documentos obrigatórios');
+      return;
+    }
+    _candEnviar();
+    return;
+  }
+  _candAtual++;
+  _candMostrarStep(_candAtual);
+  window.scrollTo(0,0);
+}
+
+function _candPrev() {
+  if(_candAtual <= 1) return;
+  _candAtual--;
+  _candMostrarStep(_candAtual);
+  window.scrollTo(0,0);
+}
+
+function _candDocAbrirInput(tipo) {
+  _candDocAtivo = tipo;
+  document.getElementById('cand-doc-input').value = '';
+  document.getElementById('cand-doc-input').click();
+}
+
+async function _candDocUpload(input) {
+  var file = input.files[0];
+  if(!file || !_candDocAtivo) return;
+  var tipo = _candDocAtivo;
+  var statusEl = document.getElementById('cand-doc-status-' + tipo);
+  var okEl = document.getElementById('cand-doc-ok-' + tipo);
+  var itemEl = document.getElementById('cand-doc-' + tipo.replace('_','-'));
+  if(statusEl) statusEl.textContent = '⏳ Enviando...';
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var max = 1400, ratio = Math.min(max/img.width, max/img.height, 1);
+      canvas.width = Math.round(img.width*ratio); canvas.height = Math.round(img.height*ratio);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      var base64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+      apiCall('/api/candidaturas/motoboy/upload-doc', { method:'POST', body:{ base64, contentType:'image/jpeg', tipo } })
+        .then(function(r) {
+          _candDocs[tipo] = r.url;
+          if(statusEl) statusEl.textContent = '✅ Enviado';
+          if(okEl) okEl.textContent = '✅';
+          if(itemEl) itemEl.classList.add('ok');
+        })
+        .catch(function(err) {
+          if(statusEl) statusEl.textContent = '❌ Erro — tente novamente';
+        });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function _candEnviar() {
+  var btnP = document.getElementById('cand-btn-prox');
+  if(btnP) { btnP.disabled = true; btnP.textContent = '⏳ Enviando...'; }
+  try {
+    var body = {
+      nome: document.getElementById('cand-nome').value.trim(),
+      cpf: document.getElementById('cand-cpf').value.trim(),
+      nascimento: document.getElementById('cand-nasc').value,
+      email: document.getElementById('cand-email').value.trim() || null,
+      whatsapp: document.getElementById('cand-wpp').value.trim(),
+      cidade: document.getElementById('cand-cidade').value.trim(),
+      tipo_veiculo: document.getElementById('cand-veiculo').value,
+      placa: document.getElementById('cand-placa').value.trim() || null,
+      chave_pix: document.getElementById('cand-pix').value.trim(),
+      banco: document.getElementById('cand-banco').value.trim() || null,
+      disponivel_noite: document.querySelector('input[name="cand-noite"]:checked')?.value === 'sim',
+      horas_por_dia: document.querySelector('input[name="cand-horas"]:checked')?.value,
+      experiencia_anterior: document.querySelector('input[name="cand-exp"]:checked')?.value === 'sim',
+      experiencia_detalhes: document.getElementById('cand-exp-texto')?.value.trim() || null,
+      motivo_chegou: document.getElementById('cand-motivo')?.value.trim() || null,
+      tem_smartphone: document.querySelector('input[name="cand-smart"]:checked')?.value === 'sim',
+      conhece_ruas: document.querySelector('input[name="cand-ruas"]:checked')?.value === 'sim',
+      tem_restricao: document.querySelector('input[name="cand-rest"]:checked')?.value === 'sim',
+      restricao_detalhes: document.getElementById('cand-rest-texto')?.value.trim() || null,
+      doc_cnh_frente: _candDocs.cnh_frente,
+      doc_cnh_verso: _candDocs.cnh_verso,
+      doc_crlv: _candDocs.crlv,
+      doc_comprovante: _candDocs.comprovante,
+      doc_selfie_cnh: _candDocs.selfie_cnh,
+    };
+    var r = await apiCall('/api/candidaturas/motoboy', { method:'POST', body });
+    // Score display
+    var scoreEl = document.getElementById('cand-score-display');
+    if(scoreEl) {
+      var s = r.score || 0;
+      var cor = s >= 70 ? '#22c55e' : s >= 45 ? '#f59e0b' : '#ef4444';
+      var label = s >= 70 ? 'Perfil forte 💪' : s >= 45 ? 'Perfil médio' : 'Perfil em desenvolvimento';
+      scoreEl.innerHTML = '<div style="font-size:13px;color:var(--texto2);margin-bottom:6px;">Sua pontuação de perfil</div>' +
+        '<div style="font-size:40px;font-weight:900;color:' + cor + ';">' + s + '<span style="font-size:18px;">/100</span></div>' +
+        '<div style="font-size:14px;color:' + cor + ';font-weight:700;margin-top:4px;">' + label + '</div>';
+    }
+    _candAtual = 4;
+    _candMostrarStep(4);
+  } catch(e) {
+    showToast('❌','Erro ao enviar','Tente novamente: ' + e.message);
+    if(btnP) { btnP.disabled = false; btnP.textContent = '📤 Enviar candidatura'; }
+  }
+}
+
+// =============================================
+// ADMIN — Painel de candidatos
+// =============================================
+async function renderAdminCandidatos(filtro) {
+  filtro = filtro || 'pendente';
+  var el = document.getElementById('admin-conteudo');
+  if(!el) return;
+  el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando candidatos...</div>';
+  try {
+    var lista = await apiCall('/api/candidaturas?status=' + filtro);
+    var filtros = ['pendente','aprovado','reprovado'];
+    var filtrosHtml = filtros.map(function(f) {
+      var cor = f === 'pendente' ? '#fb923c' : f === 'aprovado' ? '#22c55e' : '#ef4444';
+      var bg = f === filtro ? cor : 'transparent';
+      var col = f === filtro ? '#000' : cor;
+      return '<button onclick="renderAdminCandidatos(\'' + f + '\')" style="padding:6px 14px;border-radius:20px;border:1.5px solid ' + cor + ';background:' + bg + ';color:' + col + ';font-size:12px;font-weight:700;cursor:pointer;">' +
+        (f === 'pendente' ? '⏳ Pendentes' : f === 'aprovado' ? '✅ Aprovados' : '❌ Reprovados') + '</button>';
+    }).join('');
+
+    var scoreBar = function(s) {
+      var cor = s >= 70 ? '#22c55e' : s >= 45 ? '#f59e0b' : '#ef4444';
+      return '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">' +
+        '<div style="flex:1;height:5px;border-radius:3px;background:var(--cinza3);overflow:hidden;">' +
+          '<div style="height:100%;width:' + s + '%;background:' + cor + ';border-radius:3px;"></div>' +
+        '</div>' +
+        '<span style="font-size:12px;font-weight:700;color:' + cor + ';">' + s + '/100</span>' +
+      '</div>';
+    };
+
+    el.innerHTML =
+      '<div class="secao-titulo" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
+        '<span>🛵 Candidatos motoboy</span>' +
+        '<button onclick="renderAdminCandidatos(\'' + filtro + '\')" style="font-size:12px;padding:5px 12px;border-radius:8px;border:none;background:var(--cinza3);color:var(--texto);cursor:pointer;">🔄 Atualizar</button>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">' + filtrosHtml + '</div>' +
+      (lista.length === 0
+        ? '<div class="vazio"><div class="vazio-icon">🛵</div>Nenhum candidato ' + filtro + '</div>'
+        : lista.map(function(c) {
+            var veiculo = { moto:'🏍️ Moto', bicicleta:'🚲 Bicicleta', carro:'🚗 Carro' }[c.tipo_veiculo] || c.tipo_veiculo;
+            var docs = [c.doc_cnh_frente, c.doc_cnh_verso, c.doc_crlv, c.doc_comprovante, c.doc_selfie_cnh].filter(Boolean).length;
+            var btnsAcao = filtro === 'pendente'
+              ? '<div style="display:flex;gap:8px;margin-top:12px;">' +
+                  '<button class="btn-acao" onclick="adminAprovarCandidato(\'' + c.id + '\',\'' + sanitizar(c.nome) + '\')" style="flex:1;background:#22c55e;color:#000;font-weight:700;">✅ Aprovar</button>' +
+                  '<button class="btn-acao secundario" onclick="adminReprovarCandidato(\'' + c.id + '\',\'' + sanitizar(c.nome) + '\')" style="flex:1;border-color:#ef4444;color:#ef4444;">❌ Reprovar</button>' +
+                '</div>'
+              : '';
+            var docsHtml = '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">' +
+              [['cnh_frente','CNH Frente'], ['cnh_verso','CNH Verso'], ['crlv','CRLV'], ['comprovante','Comprovante'], ['selfie_cnh','Selfie+CNH']].map(function(d) {
+                var url = c['doc_' + d[0]];
+                return url
+                  ? '<a href="' + url + '" target="_blank" style="font-size:11px;padding:4px 10px;border-radius:8px;background:rgba(34,197,94,.15);color:#22c55e;text-decoration:none;border:1px solid rgba(34,197,94,.3);">✅ ' + d[1] + '</a>'
+                  : '<span style="font-size:11px;padding:4px 10px;border-radius:8px;background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.25);">❌ ' + d[1] + '</span>';
+              }).join('') +
+            '</div>';
+            return '<div style="background:var(--cinza2);border:1px solid var(--cinza3);border-radius:14px;padding:14px 16px;margin-bottom:12px;">' +
+              '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+                '<div>' +
+                  '<div style="font-size:15px;font-weight:800;">' + sanitizar(c.nome) + '</div>' +
+                  '<div style="font-size:12px;color:var(--texto2);margin-top:2px;">' + veiculo + ' · ' + sanitizar(c.cidade) + ' · ' + sanitizar(c.whatsapp) + '</div>' +
+                  '<div style="font-size:11px;color:var(--texto2);margin-top:2px;">Cadastrado ' + new Date(c.criado_em).toLocaleDateString('pt-BR') + '</div>' +
+                '</div>' +
+                '<div style="font-size:11px;color:var(--texto2);white-space:nowrap;">' + docs + '/5 docs</div>' +
+              '</div>' +
+              scoreBar(c.score) +
+              docsHtml +
+              (c.obs_admin ? '<div style="font-size:12px;color:var(--texto2);margin-top:8px;font-style:italic;">Obs: ' + sanitizar(c.obs_admin) + '</div>' : '') +
+              btnsAcao +
+            '</div>';
+          }).join('')
+      );
+  } catch(e) {
+    el.innerHTML = '<div class="vazio"><div class="vazio-icon">⚠️</div>Erro: ' + e.message + '</div>';
+  }
+}
+
+async function adminAprovarCandidato(id, nome) {
+  var obs = prompt('Observação para o arquivo (opcional):', '');
+  if(obs === null) return;
+  try {
+    await apiCall('/api/candidaturas/' + id + '/aprovar', { method:'POST', body:{ obs } });
+    showToast('✅', nome + ' aprovado!', 'WhatsApp de boas-vindas enviado automaticamente.');
+    renderAdminCandidatos('pendente');
+    // Atualizar badge
+    _admAtualizarBadgeCandidatos();
+  } catch(e) { showToast('❌','Erro',e.message); }
+}
+
+async function adminReprovarCandidato(id, nome) {
+  var obs = prompt('Motivo da reprovação (opcional — não é enviado ao candidato):', '');
+  if(obs === null) return;
+  try {
+    await apiCall('/api/candidaturas/' + id + '/reprovar', { method:'POST', body:{ obs } });
+    showToast('🔴', nome + ' reprovado', 'WhatsApp de agradecimento enviado.');
+    renderAdminCandidatos('pendente');
+    _admAtualizarBadgeCandidatos();
+  } catch(e) { showToast('❌','Erro',e.message); }
+}
+
+async function _admAtualizarBadgeCandidatos() {
+  try {
+    var lista = await apiCall('/api/candidaturas?status=pendente');
+    var btn = document.getElementById('nav-candidatos');
+    if(btn) btn.textContent = '🛵 Candidatos' + (lista.length > 0 ? ' (' + lista.length + ')' : '');
+  } catch(_) {}
+}
+
+// Verificar candidatura via URL (?candidatura=motoboy)
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  if(params.get('candidatura') === 'motoboy') {
+    window.addEventListener('DOMContentLoaded', function() {
+      _candAbrirFormulario();
+    });
+    if(document.readyState !== 'loading') _candAbrirFormulario();
+  }
+})();
 
 </script>
 
