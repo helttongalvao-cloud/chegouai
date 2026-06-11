@@ -5842,6 +5842,15 @@ function usarEnderecoSalvo(latLng, label) {
 
 function simularFrete(endereco) {
   var subtotal = calcularTotalCarrinho();
+  // Encomendas: frete a combinar com o lojista
+  if(estAtual && estAtual.categoria === 'encomenda') {
+    document.getElementById('taxa-entrega-valor').textContent = 'A combinar';
+    document.getElementById('taxa-entrega-valor').style.color = 'var(--texto2)';
+    document.getElementById('taxa-entrega-info').textContent = '📦 O lojista entrará em contato para combinar o envio.';
+    document.getElementById('total-valor').textContent = 'R$ ' + subtotal.toFixed(2).replace('.',',');
+    window.taxaEntregaSimulada = 0;
+    return;
+  }
   if (!endereco || endereco.length < 5) {
     document.getElementById('taxa-entrega-valor').textContent = 'Preencha o Endereço';
     document.getElementById('taxa-entrega-valor').style.color = 'var(--texto2)';
@@ -5904,7 +5913,9 @@ async function irCheckout(_manterScroll) {
     var compsHtml = (i.complementos && i.complementos.length)
       ? '<div style="font-size:11px;color:var(--verde);margin-top:2px;margin-left:58px;">+ ' + i.complementos.map(function(c){ return sanitizar(c.nome); }).join(', ') + '</div>'
       : '';
-    var obsHtml = i.observacao ? '<div style="font-size:11px;color:var(--texto2);font-style:italic;margin-top:2px;margin-left:58px;">📝 ' + sanitizar(i.observacao) + '</div>' : '';
+    // Mostrar só a descrição da arte, sem a URL do storage
+    var obsTexto = (i.observacao || '').replace(/\s*\|\s*🖼️\s*https?:\/\/\S+/g,'').replace(/🖼️\s*https?:\/\/\S+/g,'').trim();
+    var obsHtml = obsTexto ? '<div style="font-size:11px;color:var(--texto2);font-style:italic;margin-top:2px;margin-left:58px;">📝 ' + sanitizar(obsTexto) + (i.arte_url ? ' 🖼️' : '') + '</div>' : '';
     return '<div class="item-resumo" style="flex-direction:column;align-items:stretch;">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;">' +
         '<div style="display:flex;align-items:center;gap:10px;">' +
@@ -5970,7 +5981,7 @@ async function irCheckout(_manterScroll) {
   if(!_manterScroll) window.scrollTo(0, 0);
 
   // Linguagem e-commerce para lojas
-  var ehLoja = estAtual && estAtual.categoria === 'loja';
+  var ehLoja = estAtual && (estAtual.categoria === 'loja' || estAtual.categoria === 'encomenda');
   var elCheckoutTitle = document.querySelector('#tela-checkout .header h3');
   var elCheckoutBtn = document.querySelector('#tela-checkout .btn-principal');
   if(elCheckoutTitle) elCheckoutTitle.textContent = ehLoja ? 'Meu Carrinho' : 'Meu Pedido';
@@ -6277,7 +6288,7 @@ async function confirmarPedido() {
     cupomAplicado = null;
     alert(e.message || 'Erro ao criar pedido. Tente novamente.');
   } finally {
-    if(btn) { btn.disabled = false; btn.textContent = (estAtual && estAtual.categoria === 'loja') ? 'Finalizar compra' : 'Confirmar pedido'; }
+    if(btn) { btn.disabled = false; btn.textContent = (estAtual && (estAtual.categoria === 'loja' || estAtual.categoria === 'encomenda')) ? 'Finalizar compra' : 'Confirmar pedido'; }
   }
 }
 
