@@ -5332,10 +5332,11 @@ function renderLojaEcommerce(produtos) {
       }).join('');
 
   lista.innerHTML =
-    '<div style="position:relative;">' +
-      bannerHtml +
-      '<button onclick="irHome()" style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,.55);border:none;color:#fff;font-size:14px;font-weight:700;padding:7px 14px;border-radius:20px;cursor:pointer;backdrop-filter:blur(6px);font-family:\'DM Sans\',sans-serif;z-index:5;">← Voltar</button>' +
+    '<div style="position:sticky;top:0;z-index:30;background:var(--preto);border-bottom:1px solid var(--cinza3);display:flex;align-items:center;padding:10px 14px;gap:10px;">' +
+      '<button onclick="irHome()" style="display:flex;align-items:center;gap:6px;background:var(--cinza2);border:1.5px solid var(--cinza3);border-radius:10px;color:var(--texto);font-size:15px;font-weight:700;padding:10px 16px;cursor:pointer;font-family:\'DM Sans\',sans-serif;min-width:44px;min-height:44px;">← Voltar</button>' +
+      '<span style="font-size:15px;font-weight:800;font-family:\'Plus Jakarta Sans\',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + sanitizar(estAtual && estAtual.nome || '') + '</span>' +
     '</div>' +
+    bannerHtml +
     '<div class="ecom-header">' +
       '<div class="ecom-loja-info">' + logoHtml + '<div><div class="ecom-loja-nome">' + sanitizar(estAtual && estAtual.nome || '') + '</div><div class="ecom-loja-meta">' + metaHtml + '</div></div></div>' +
       '<div class="ecom-search-row"><span style="font-size:15px;color:var(--texto2);">🔍</span><input type="text" placeholder="Buscar no catálogo..." value="' + _ecomQueryAtiva + '" oninput="_ecomBuscar(this.value)"></div>' +
