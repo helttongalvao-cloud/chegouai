@@ -76,18 +76,18 @@ router.post('/motoboy', [
 
     if (error) throw error;
 
-    // Alertar admin via WhatsApp
+    res.json({ ok: true, id: data.id, score });
+
+    // Alertar admin (fire-and-forget)
     const scoreMensagem = score >= 70 ? '🟢 Alto' : score >= 45 ? '🟡 Médio' : '🔴 Baixo';
-    await alertarAdmin(
+    alertarAdmin(
       `🛵 *Nova candidatura de motoboy!*\n\n` +
       `*Nome:* ${d.nome}\n` +
       `*Cidade:* ${d.cidade}\n` +
       `*Veículo:* ${d.tipo_veiculo}\n` +
       `*Score:* ${score}/100 (${scoreMensagem})\n\n` +
       `Acesse o painel para aprovar ou reprovar.`
-    );
-
-    res.json({ ok: true, id: data.id, score });
+    ).catch(() => {});
   } catch (e) { next(e); }
 });
 
@@ -245,8 +245,11 @@ router.post('/lojista', [
 
     if (error) throw error;
 
-    // Alerta para o admin
-    await alertarAdmin(
+    // Responde imediatamente — WhatsApp é fire-and-forget
+    res.json({ ok: true, id: data.id });
+
+    // Alerta admin (não bloqueia resposta)
+    alertarAdmin(
       `🏪 *Novo interesse de lojista!*\n\n` +
       `*Nome:* ${d.nome}\n` +
       `*Cidade:* ${d.cidade}\n` +
@@ -254,19 +257,17 @@ router.post('/lojista', [
       `${d.descricao ? '*Descrição:* ' + d.descricao + '\n' : ''}` +
       `*WhatsApp:* ${d.whatsapp}\n\n` +
       `Acesse o painel para entrar em contato.`
-    );
+    ).catch(() => {});
 
     // Confirmação para o lojista
     if (d.whatsapp) {
-      await enviarWhatsApp(d.whatsapp,
+      enviarWhatsApp(d.whatsapp,
         `Olá, ${d.nome.split(' ')[0]}! 👋\n\n` +
         `Recebemos seu interesse em abrir sua loja no *Chegô*!\n\n` +
         `Nossa equipe vai entrar em contato em breve pelo WhatsApp para agendar uma conversa.\n\n` +
         `Aguarde — vai ser rápido! 🚀`
-      );
+      ).catch(() => {});
     }
-
-    res.json({ ok: true, id: data.id });
   } catch (e) { next(e); }
 });
 
