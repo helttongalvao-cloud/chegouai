@@ -1203,4 +1203,145 @@ router.delete('/pendentes/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// =============================================
+// GET /api/admin/clientes — lista com busca e métricas
+// =============================================
+router.get('/clientes', async (req, res, next) => {
+  try {
+    const { q, limit = 50, offset = 0 } = req.query;
+
+    let query = supabaseAdmin
+      .from('profiles')
+      .select('id, nome, telefone, email, criado_em')
+      .eq('perfil', 'cliente')
+      .order('criado_em', { ascending: false })
+      .range(Number(offset), Number(offset) + Number(limit) - 1);
+
+    if (q) query = query.or(`nome.ilike.%${q}%,telefone.ilike.%${q}%`);
+
+    const { data: clientes, error } = await query;
+    if (error) throw error;
+
+    // Métricas por cliente (contagem e soma de pedidos)
+    const ids = (clientes || []).map(c => c.id);
+    let metricasMap = {};
+    if (ids.length) {
+      const { data: metricas } = await supabaseAdmin
+        .from('pedidos')
+        .select('cliente_id, total, status')
+        .in('cliente_id', ids)
+        .eq('status', 'entregue');
+      (metricas || []).forEach(p => {
+        if (!metricasMap[p.cliente_id]) metricasMap[p.cliente_id] = { pedidos: 0, gasto: 0 };
+        metricasMap[p.cliente_id].pedidos++;
+        metricasMap[p.cliente_id].gasto += Number(p.total) || 0;
+      });
+    }
+
+    const resultado = (clientes || []).map(c => ({
+      ...c,
+      total_pedidos: metricasMap[c.id]?.pedidos || 0,
+      total_gasto: metricasMap[c.id]?.gasto || 0,
+    }));
+
+    res.json(resultado);
+  } catch (e) { next(e); }
+});
+
+// =============================================
+// GET /api/admin/clientes/:id — ficha completa
+// =============================================
+router.get('/clientes/:id', async (req, res, next) => {
+  try {
+    const { data: perfil, error } = await supabaseAdmin
+      .from('profiles')
+      .select('id, nome, telefone, email, criado_em')
+      .eq('id', req.params.id)
+      .eq('perfil', 'cliente')
+      .single();
+    if (error || !perfil) return res.status(404).json({ error: 'Cliente não encontrado' });
+
+    const { data: pedidos } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, total, status, pagamento_status, criado_em, estabelecimentos(nome)')
+      .eq('cliente_id', req.params.id)
+      .order('criado_em', { ascending: false })
+      .limit(20);
+
+    const entregues = (pedidos || []).filter(p => p.status === 'entregue');
+    const totalGasto = entregues.reduce((acc, p) => acc + Number(p.total), 0);
+
+    res.json({
+      ...perfil,
+      pedidos: pedidos || [],
+      total_pedidos: entregues.length,
+      total_gasto: totalGasto,
+    });
+  } catch (e) { next(e); }
+});
+
+// =============================================
+// GET /api/admin/motoboys/:id/ficha — ficha completa motoboy
+// =============================================
+router.get('/motoboys/:id/ficha', async (req, res, next) => {
+  try {
+    const { data: mb, error } = await supabaseAdmin
+      .from('motoboys')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+    if (error || !mb) return res.status(404).json({ error: 'Motoboy não encontrado' });
+
+    const { data: entregas } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, total, taxa_entrega, comissao_motoboy, status, criado_em, estabelecimentos(nome)')
+      .eq('motoboy_id', req.params.id)
+      .order('criado_em', { ascending: false })
+      .limit(30);
+
+    const concluidas = (entregas || []).filter(p => p.status === 'entregue');
+    const totalRecebido = concluidas.reduce((acc, p) => acc + Number(p.comissao_motoboy || p.taxa_entrega || 0), 0);
+
+    res.json({
+      ...mb,
+      entregas: entregas || [],
+      total_entregas: concluidas.length,
+      total_recebido: totalRecebido,
+    });
+  } catch (e) { next(e); }
+});
+
+// =============================================
+// GET /api/admin/establishments/:id/ficha — ficha completa lojista
+// =============================================
+router.get('/establishments/:id/ficha', async (req, res, next) => {
+  try {
+    const { data: est, error } = await supabaseAdmin
+      .from('estabelecimentos')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+    if (error || !est) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
+
+    const { data: pedidos } = await supabaseAdmin
+      .from('pedidos')
+      .select('id, total, comissao_plataforma, status, pagamento_status, criado_em')
+      .eq('estabelecimento_id', req.params.id)
+      .order('criado_em', { ascending: false })
+      .limit(30);
+
+    const entregues = (pedidos || []).filter(p => p.status === 'entregue');
+    const gmv = entregues.reduce((acc, p) => acc + Number(p.total), 0);
+    const comissao = entregues.reduce((acc, p) => acc + Number(p.comissao_plataforma || 0), 0);
+
+    res.json({
+      ...est,
+      pedidos: pedidos || [],
+      total_pedidos: entregues.length,
+      gmv,
+      comissao_plataforma: comissao,
+    });
+  } catch (e) { next(e); }
+});
+
 module.exports = router;
