@@ -127,6 +127,18 @@ const migrations = [
 )`
   },
   {
+    name: 'campanhas_estabelecimento: coluna kit_descricao',
+    sql: `ALTER TABLE public.campanhas_estabelecimento ADD COLUMN IF NOT EXISTS kit_descricao TEXT`
+  },
+  {
+    name: 'campanhas_estabelecimento: remover constraint tipo antiga',
+    sql: `ALTER TABLE public.campanhas_estabelecimento DROP CONSTRAINT IF EXISTS campanhas_estabelecimento_tipo_check`
+  },
+  {
+    name: 'campanhas_estabelecimento: nova constraint tipo com kit',
+    sql: `ALTER TABLE public.campanhas_estabelecimento ADD CONSTRAINT campanhas_estabelecimento_tipo_check CHECK (tipo IN ('percentual', 'fixo', 'frete_gratis', 'combo', 'kit'))`
+  },
+  {
     name: 'criar tabela cupons',
     sql: `CREATE TABLE IF NOT EXISTS public.cupons (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
