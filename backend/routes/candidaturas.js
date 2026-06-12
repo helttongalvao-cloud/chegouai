@@ -243,7 +243,10 @@ router.post('/lojista', [
       .select('id')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[Candidaturas/lojista] Supabase error:', JSON.stringify(error));
+      throw error;
+    }
 
     // Responde imediatamente — WhatsApp é fire-and-forget
     res.json({ ok: true, id: data.id });
