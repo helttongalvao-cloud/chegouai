@@ -1720,8 +1720,14 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 
 <!-- LIGHTBOX -->
 <div id="lightbox" onclick="fecharLightbox()">
-  <button id="lightbox-close" onclick="fecharLightbox()">← Voltar</button>
   <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  <div style="position:absolute;bottom:32px;left:50%;transform:translateX(-50%);display:flex;gap:12px;align-items:center;" onclick="event.stopPropagation()">
+    <button id="lightbox-close" onclick="fecharLightbox()" style="padding:12px 28px;background:rgba(255,255,255,0.15);border:none;border-radius:999px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;backdrop-filter:blur(8px);">← Voltar</button>
+    <a id="lightbox-download" href="" download="arte-cliente.jpg" target="_blank"
+      style="padding:12px 28px;background:var(--verde);border-radius:999px;color:#000;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;">
+      ⬇️ Baixar imagem
+    </a>
+  </div>
 </div>
 
 <!-- TOUR GUIADO -->
@@ -4614,6 +4620,8 @@ function abrirLightbox(url) {
   var img = document.getElementById('lightbox-img');
   if(!lb || !img || !url) return;
   img.src = url;
+  var dl = document.getElementById('lightbox-download');
+  if(dl) { dl.href = url; dl.download = 'arte-cliente-' + Date.now() + '.jpg'; }
   lb.classList.add('aberto');
   document.body.style.overflow = 'hidden';
 }
@@ -8403,7 +8411,15 @@ async function _renderEstabelecimentoInterno() {
             var arteMatch = obsDecoded.match(/🖼️\s*(https?:\/\/\S+)/);
             var arteUrl = arteMatch ? arteMatch[1] : null;
             if(obsTexto) extras += '<div style="color:var(--verde);font-size:12px;">✎ ' + sanitizar(obsTexto) + '</div>';
-            if(arteUrl) extras += '<div style="margin-top:4px;"><img src="' + arteUrl + '" style="max-width:160px;max-height:140px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onclick="abrirLightbox(\'' + arteUrl + '\')" title="Arte do cliente"></div>';
+            if(arteUrl) extras +=
+              '<div style="margin-top:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;max-width:200px;">' +
+                '<div style="font-size:10px;font-weight:700;color:#71717a;padding:5px 8px;letter-spacing:.5px;text-transform:uppercase;">🖼️ Arte do cliente</div>' +
+                '<img src="' + arteUrl + '" style="width:100%;max-height:180px;object-fit:contain;cursor:zoom-in;display:block;background:#000;" onclick="abrirLightbox(\'' + arteUrl + '\')" title="Toque para ampliar e baixar">' +
+                '<div style="padding:6px 8px;display:flex;gap:6px;">' +
+                  '<button onclick="abrirLightbox(\'' + arteUrl + '\')" style="flex:1;padding:6px;border-radius:6px;border:none;background:var(--verde);color:#000;font-size:11px;font-weight:700;cursor:pointer;">🔍 Ampliar</button>' +
+                  '<a href="' + arteUrl + '" download="arte-cliente.jpg" target="_blank" style="flex:1;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;text-align:center;display:block;">⬇️ Baixar</a>' +
+                '</div>' +
+              '</div>';
           }
           return '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid var(--cinza3);">' +
             thumb +
