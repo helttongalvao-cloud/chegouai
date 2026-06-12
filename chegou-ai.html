@@ -1550,45 +1550,6 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
   </div>
 </div>
 
-<!-- CONTRATO DIGITAL -->
-<div id="tela-contrato" style="display:none;position:fixed;inset:0;z-index:9999;background:#09090b;overflow-y:auto;">
-  <div style="max-width:600px;margin:0 auto;padding:24px 16px 40px;">
-    <div style="text-align:center;margin-bottom:24px;">
-      <img src="/icons/icon-192.png?v=4" style="width:56px;height:56px;border-radius:14px;margin-bottom:12px;" alt="">
-      <div style="font-size:20px;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;" id="contrato-titulo">Contrato de Parceria</div>
-      <div style="font-size:13px;color:#71717a;margin-top:4px;">Leia com atenção antes de assinar</div>
-    </div>
-
-    <!-- Texto do contrato -->
-    <div id="contrato-corpo" style="background:#18181b;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:20px;font-size:13px;line-height:1.7;color:#d4d4d8;white-space:pre-wrap;max-height:55vh;overflow-y:auto;margin-bottom:20px;"></div>
-
-    <!-- Badge "role até o fim" -->
-    <div id="contrato-aviso-rolar" style="display:flex;align-items:center;gap:8px;background:rgba(251,146,60,0.12);border:1px solid rgba(251,146,60,0.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#fb923c;">
-      <span>⬇️</span><span>Role até o final do contrato para habilitar a assinatura</span>
-    </div>
-
-    <!-- Assinatura -->
-    <div id="contrato-form" style="display:none;">
-      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;padding:14px;background:#18181b;border:1px solid rgba(255,255,255,0.07);border-radius:12px;cursor:pointer;" onclick="_contratoToggleAceite()">
-        <div id="contrato-check" style="width:22px;height:22px;min-width:22px;border:2px solid #52525b;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;"></div>
-        <div style="font-size:13px;color:#d4d4d8;line-height:1.5;">Li e compreendi integralmente o contrato acima e concordo com todos os seus termos e condições.</div>
-      </div>
-
-      <div style="margin-bottom:16px;">
-        <label style="font-size:12px;color:#71717a;display:block;margin-bottom:6px;">Assine digitalmente com seu nome completo</label>
-        <input id="contrato-nome" type="text" placeholder="Seu nome completo"
-          style="width:100%;padding:14px;background:#18181b;border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-size:14px;box-sizing:border-box;outline:none;font-family:'Plus Jakarta Sans',sans-serif;">
-      </div>
-
-      <button id="contrato-btn" onclick="_contratoAssinar()"
-        style="width:100%;padding:16px;border-radius:14px;background:var(--verde);border:none;color:#000;font-size:16px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;opacity:0.4;pointer-events:none;">
-        ✍️ Assinar Digitalmente
-      </button>
-      <div style="font-size:11px;color:#52525b;text-align:center;margin-top:10px;">Sua assinatura eletrônica tem validade jurídica (MP 2.200-2/2001 e Lei 14.063/2020)</div>
-    </div>
-  </div>
-</div>
-
 <!-- PARCEIRO — Auto-cadastro via convite -->
 <div class="tela" id="tela-parceiro">
   <div class="parceiro-header">
@@ -3313,7 +3274,6 @@ function entrarComo(perfil) {
     }
   }
   else if(perfil === 'estabelecimento') {
-    verificarContrato('estabelecimento', function() {
     irTela('tela-estabelecimento');
     ativarWakeLock();
     setTimeout(function() { renderEstabelecimento(); mostrarOnboardingLojista(); }, 50);
@@ -3336,10 +3296,8 @@ function entrarComo(perfil) {
     }
     ativarNotificacoesPush().then(verificarBannerPush);
     verificarBannerPush();
-    }); // fim verificarContrato estabelecimento
   }
   else if(perfil === 'motoboy') {
-    verificarContrato('motoboy', function() {
     irTela('tela-motoboy');
     renderMotoboy();
     iniciarRealtimeMotoboy();
@@ -3357,7 +3315,6 @@ function entrarComo(perfil) {
         }
       });
     }
-    }); // fim verificarContrato motoboy
   }
   else if(perfil === 'admin') { renderAdmin('pedidos'); irTela('tela-admin'); }
 }
@@ -11022,98 +10979,6 @@ function abrirTelaCheiaGanhador(nome, tel, premio) {
   win.document.close();
 }
 
-// =============================================
-// CONTRATO DIGITAL
-// =============================================
-var _contratoAceite = false;
-var _contratoCallback = null;
-
-async function verificarContrato(perfil, callback) {
-  if (perfil !== 'motoboy' && perfil !== 'estabelecimento') { callback(); return; }
-  try {
-    var resp = await apiCall('/api/contratos/meu');
-    if (resp.assinou) { callback(); return; }
-    // Não assinou — exibir contrato
-    _contratoCallback = callback;
-    _contratoAceite = false;
-    var tipo = perfil === 'motoboy' ? 'motoboy' : 'lojista';
-    var ct = await apiCall('/api/contratos/texto/' + tipo);
-    document.getElementById('contrato-titulo').textContent = ct.titulo;
-    var corpo = document.getElementById('contrato-corpo');
-    corpo.textContent = ct.texto;
-    document.getElementById('contrato-aviso-rolar').style.display = 'flex';
-    document.getElementById('contrato-form').style.display = 'none';
-    document.getElementById('contrato-check').innerHTML = '';
-    document.getElementById('contrato-check').style.background = 'transparent';
-    document.getElementById('contrato-check').style.borderColor = '#52525b';
-    document.getElementById('contrato-nome').value = '';
-    _contratoAceite = false;
-    _contratoAtualizarBotao();
-    document.getElementById('tela-contrato').style.display = 'block';
-    // Detectar scroll até o fim
-    corpo.onscroll = function() {
-      if (corpo.scrollTop + corpo.clientHeight >= corpo.scrollHeight - 30) {
-        document.getElementById('contrato-aviso-rolar').style.display = 'none';
-        document.getElementById('contrato-form').style.display = 'block';
-        corpo.onscroll = null;
-      }
-    };
-  } catch(e) {
-    // Se falhar a verificação, deixa passar (não bloqueia o login)
-    console.warn('[Contrato] Erro ao verificar:', e.message);
-    callback();
-  }
-}
-
-function _contratoToggleAceite() {
-  _contratoAceite = !_contratoAceite;
-  var check = document.getElementById('contrato-check');
-  if (_contratoAceite) {
-    check.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7L6 11L12 3" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    check.style.background = 'var(--verde)';
-    check.style.borderColor = 'var(--verde)';
-  } else {
-    check.innerHTML = '';
-    check.style.background = 'transparent';
-    check.style.borderColor = '#52525b';
-  }
-  _contratoAtualizarBotao();
-}
-
-function _contratoAtualizarBotao() {
-  var nome = (document.getElementById('contrato-nome')?.value || '').trim();
-  var btn = document.getElementById('contrato-btn');
-  var ativo = _contratoAceite && nome.length >= 3;
-  btn.style.opacity = ativo ? '1' : '0.4';
-  btn.style.pointerEvents = ativo ? 'auto' : 'none';
-}
-
-// Chamado ao digitar no campo nome
-document.addEventListener('DOMContentLoaded', function() {
-  var nomeInput = document.getElementById('contrato-nome');
-  if (nomeInput) nomeInput.addEventListener('input', _contratoAtualizarBotao);
-});
-
-async function _contratoAssinar() {
-  var nome = document.getElementById('contrato-nome').value.trim();
-  if (!_contratoAceite || nome.length < 3) return;
-  var btn = document.getElementById('contrato-btn');
-  btn.textContent = 'Assinando...';
-  btn.style.opacity = '0.6';
-  btn.style.pointerEvents = 'none';
-  try {
-    await apiCall('/api/contratos/assinar', 'POST', { nome_assinante: nome });
-    document.getElementById('tela-contrato').style.display = 'none';
-    var cb = _contratoCallback;
-    _contratoCallback = null;
-    if (cb) cb();
-  } catch(e) {
-    btn.textContent = '✍️ Assinar Digitalmente';
-    btn.style.opacity = '1';
-    btn.style.pointerEvents = 'auto';
-    showToast('❌', 'Erro', e.message || 'Não foi possível registrar a assinatura');
-  }
-}
 
 var _metricasTimer = null;
 
