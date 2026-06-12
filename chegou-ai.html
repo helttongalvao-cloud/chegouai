@@ -12278,6 +12278,12 @@ function alertarNovoPedido() {
   } catch(e) { console.warn('[Alerta] Web Audio não suportado:', e.message); }
 }
 
+// Alias simplificado — mostrarToast('Mensagem') ou mostrarToast('Texto', 'erro')
+function mostrarToast(msg, tipo) {
+  var icon = tipo === 'erro' ? '⚠️' : 'ℹ️';
+  showToast(icon, tipo === 'erro' ? 'Erro' : 'Aviso', msg);
+}
+
 function showToast(icon, title, msg) {
   var container = document.getElementById('toast-container');
   if(!container) return;
