@@ -245,7 +245,8 @@ router.post('/lojista', [
 
     if (error) {
       console.error('[Candidaturas/lojista] Supabase error:', JSON.stringify(error));
-      throw error;
+      // Expõe erro real temporariamente para diagnóstico
+      return res.status(500).json({ error: error.message || JSON.stringify(error) });
     }
 
     // Responde imediatamente — WhatsApp é fire-and-forget
