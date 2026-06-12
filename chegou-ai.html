@@ -8397,12 +8397,13 @@ async function _renderEstabelecimentoInterno() {
             extras += '<div style="color:var(--texto2);font-size:12px;margin-top:2px;">› ' + i.complementos.map(function(c){ return sanitizar(c.nome); }).join(' · ') + '</div>';
           }
           if(i.observacao) {
-            // Separar URL de arte do texto da observação
-            var obsTexto = i.observacao.replace(/\s*\|\s*🖼️\s*https?:\/\/\S+/g,'').replace(/^🖼️\s*https?:\/\/\S+\s*/,'').trim();
-            var arteMatch = i.observacao.match(/🖼️\s*(https?:\/\/\S+)/);
+            // Decodificar entidades HTML que podem ter sido inseridas por escape() do validator
+            var obsDecoded = i.observacao.replace(/&#x2F;/g,'/').replace(/&#x27;/g,"'").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,"'");
+            var obsTexto = obsDecoded.replace(/\s*\|\s*🖼️\s*https?:\/\/\S+/g,'').replace(/^🖼️\s*https?:\/\/\S+\s*/,'').trim();
+            var arteMatch = obsDecoded.match(/🖼️\s*(https?:\/\/\S+)/);
             var arteUrl = arteMatch ? arteMatch[1] : null;
             if(obsTexto) extras += '<div style="color:var(--verde);font-size:12px;">✎ ' + sanitizar(obsTexto) + '</div>';
-            if(arteUrl) extras += '<div style="margin-top:4px;"><img src="' + arteUrl + '" style="max-width:120px;max-height:100px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onclick="abrirLightbox(\'' + arteUrl + '\')" title="Arte do cliente"></div>';
+            if(arteUrl) extras += '<div style="margin-top:4px;"><img src="' + arteUrl + '" style="max-width:160px;max-height:140px;border-radius:8px;object-fit:cover;cursor:zoom-in;" onclick="abrirLightbox(\'' + arteUrl + '\')" title="Arte do cliente"></div>';
           }
           return '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid var(--cinza3);">' +
             thumb +
