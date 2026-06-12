@@ -1,16 +1,26 @@
 const { supabaseAdmin } = require('../config/supabase');
 const { alertarAdmin } = require('./whatsapp');
 
+// Manaus é UTC-4, sem horário de verão
+const MANAUS_OFFSET_MS = 4 * 60 * 60 * 1000;
+
+function agoraManaus() {
+  return new Date(Date.now() - MANAUS_OFFSET_MS);
+}
+
+// Converte data local Manaus (YYYY-MM-DD) para UTC
+function manausDateToUTC(dateStr, horaStr = '00:00:00.000') {
+  return new Date(`${dateStr}T${horaStr}Z`).getTime() + MANAUS_OFFSET_MS;
+}
+
 // Gera e envia relatório diário via WhatsApp para o admin
 async function enviarRelatorioDiario() {
-  const agora = new Date();
+  const hoje = agoraManaus().toISOString().slice(0, 10);            // YYYY-MM-DD em Manaus
+  const ontemStr = new Date(Date.now() - MANAUS_OFFSET_MS - 24 * 60 * 60 * 1000)
+    .toISOString().slice(0, 10);
 
-  // Janela: ontem 00:00 → ontem 23:59 (Brasília = UTC-3)
-  const ontem = new Date(agora);
-  ontem.setUTCHours(3, 0, 0, 0); // meia-noite Brasília de hoje em UTC
-  if (ontem > agora) ontem.setUTCDate(ontem.getUTCDate() - 1);
-  const inicioDia = new Date(ontem.getTime() - 24 * 60 * 60 * 1000);
-  const fimDia   = new Date(ontem.getTime() - 1);
+  const inicioDia = new Date(manausDateToUTC(ontemStr, '00:00:00.000'));
+  const fimDia   = new Date(manausDateToUTC(ontemStr, '23:59:59.999'));
 
   try {
     const { data: pedidos } = await supabaseAdmin
@@ -19,20 +29,20 @@ async function enviarRelatorioDiario() {
       .gte('criado_em', inicioDia.toISOString())
       .lte('criado_em', fimDia.toISOString());
 
-    const todos        = pedidos || [];
-    const entregues    = todos.filter(p => p.status === 'entregue');
-    const cancelados   = todos.filter(p => p.status === 'cancelado');
-    const gmv          = entregues.reduce((s, p) => s + Number(p.total || 0), 0);
-    const comissao     = entregues.reduce((s, p) => s + Number(p.comissao_plataforma || 0), 0);
-    const ticketMedio  = entregues.length ? gmv / entregues.length : 0;
+    const todos       = pedidos || [];
+    const entregues   = todos.filter(p => p.status === 'entregue');
+    const cancelados  = todos.filter(p => p.status === 'cancelado');
+    const gmv         = entregues.reduce((s, p) => s + Number(p.total || 0), 0);
+    const comissao    = entregues.reduce((s, p) => s + Number(p.comissao_plataforma || 0), 0);
+    const ticketMedio = entregues.length ? gmv / entregues.length : 0;
 
-    const { count: motoboysAtivos } = await supabaseAdmin
+    const { count: motoboyAtivos } = await supabaseAdmin
       .from('motoboys').select('id', { count: 'exact', head: true }).eq('ativo', true);
 
     const { count: lojistasAtivos } = await supabaseAdmin
       .from('estabelecimentos').select('id', { count: 'exact', head: true }).eq('ativo', true);
 
-    const dtOntem = inicioDia.toLocaleDateString('pt-BR', { timeZone: 'America/Manaus' });
+    const dtOntem = new Date(inicioDia).toLocaleDateString('pt-BR', { timeZone: 'America/Manaus' });
 
     const msg =
       `📊 *Relatório diário — ${dtOntem}*\n\n` +
@@ -40,7 +50,7 @@ async function enviarRelatorioDiario() {
       `💰 *GMV:* R$ ${gmv.toFixed(2).replace('.', ',')}\n` +
       `🎯 *Comissão:* R$ ${comissao.toFixed(2).replace('.', ',')}\n` +
       `🧾 *Ticket médio:* R$ ${ticketMedio.toFixed(2).replace('.', ',')}\n\n` +
-      `🛵 *Motoboys ativos:* ${motoboysAtivos || 0}\n` +
+      `🛵 *Motoboys ativos:* ${motoboyAtivos || 0}\n` +
       `🏪 *Lojistas ativos:* ${lojistasAtivos || 0}`;
 
     await alertarAdmin(msg);
@@ -50,34 +60,32 @@ async function enviarRelatorioDiario() {
   }
 }
 
-// Verifica se é hora de enviar o relatório (7h da manhã horário de Brasília)
+// Verifica se é hora de enviar o relatório (7h da manhã horário de Manaus)
 function deveEnviarAgora() {
   const agora = new Date();
-  // UTC-4 (Manaus) = horário local do usuário
-  const horaManaus = (agora.getUTCHours() - 4 + 24) % 24;
+  const horaManaus = (agora.getUTCHours() - 4 + 24) % 24; // UTC-4, sem DST
   const minuto = agora.getUTCMinutes();
-  return horaManaus === 7 && minuto < 5; // janela de 5 min para não perder
+  return horaManaus === 7 && minuto < 5;
 }
 
 let relatorioDiarioEnviado = false;
-let ultimoDiaRelatorio = -1;
+let ultimoDiaRelatorioManaus = '';
 
 function iniciarMonitorRelatorios() {
   setInterval(async () => {
-    const agora = new Date();
-    const diaAtual = agora.getUTCDate();
+    const diaAtualManaus = agoraManaus().toISOString().slice(0, 10);
 
-    // Resetar flag ao mudar de dia
-    if (diaAtual !== ultimoDiaRelatorio) {
+    // Resetar flag ao mudar de dia em Manaus
+    if (diaAtualManaus !== ultimoDiaRelatorioManaus) {
       relatorioDiarioEnviado = false;
-      ultimoDiaRelatorio = diaAtual;
+      ultimoDiaRelatorioManaus = diaAtualManaus;
     }
 
     if (!relatorioDiarioEnviado && deveEnviarAgora()) {
       relatorioDiarioEnviado = true;
       await enviarRelatorioDiario();
     }
-  }, 60 * 1000); // verifica a cada minuto
+  }, 60 * 1000);
 
   console.log('[Relatório] Monitor de relatórios diários iniciado');
 }

@@ -1064,7 +1064,7 @@ router.get('/metrics-ceo', async (req, res, next) => {
         .gte('criado_em', inicio30.toISOString()),
       // Top 5 motoboys por entregas (30 dias)
       supabaseAdmin.from('pedidos')
-        .select('motoboy_id, total, motoboys(nome)')
+        .select('motoboy_id, total, comissao_motoboy, taxa_entrega, motoboys(nome)')
         .eq('status', 'entregue')
         .eq('pagamento_status', 'aprovado')
         .not('motoboy_id', 'is', null)
@@ -1126,7 +1126,7 @@ router.get('/metrics-ceo', async (req, res, next) => {
       const id = p.motoboy_id;
       if (!motoMap[id]) motoMap[id] = { nome: p.motoboys?.nome || 'Motoboy', entregas: 0, ganhos: 0 };
       motoMap[id].entregas += 1;
-      motoMap[id].ganhos += Number(p.total || 0) * 0.15; // estimativa repasse
+      motoMap[id].ganhos += Number(p.comissao_motoboy ?? p.taxa_entrega ?? 0);
     });
     const topMotoboys = Object.values(motoMap).sort((a, b) => b.entregas - a.entregas).slice(0, 5);
 
@@ -1395,7 +1395,10 @@ router.get('/clientes', async (req, res, next) => {
       .order('criado_em', { ascending: false })
       .range(Number(offset), Number(offset) + Number(limit) - 1);
 
-    if (q) query = query.or(`nome.ilike.%${q}%,telefone.ilike.%${q}%`);
+    if (q) {
+      const safe = q.replace(/[%_\\]/g, '\\$&').slice(0, 60);
+      query = query.or(`nome.ilike.%${safe}%,telefone.ilike.%${safe}%`);
+    }
 
     const { data: clientes, error } = await query;
     if (error) throw error;
@@ -1472,13 +1475,13 @@ router.get('/motoboys/:id/ficha', async (req, res, next) => {
 
     const { data: entregas } = await supabaseAdmin
       .from('pedidos')
-      .select('id, total, taxa_entrega, comissao_motoboy, status, criado_em, estabelecimentos(nome)')
+      .select('id, total, taxa_entrega, comissao_motoboy, status, pagamento_status, criado_em, estabelecimentos(nome)')
       .eq('motoboy_id', req.params.id)
       .order('criado_em', { ascending: false })
       .limit(30);
 
-    const concluidas = (entregas || []).filter(p => p.status === 'entregue');
-    const totalRecebido = concluidas.reduce((acc, p) => acc + Number(p.comissao_motoboy || p.taxa_entrega || 0), 0);
+    const concluidas = (entregas || []).filter(p => p.status === 'entregue' && p.pagamento_status === 'aprovado');
+    const totalRecebido = concluidas.reduce((acc, p) => acc + Number(p.comissao_motoboy ?? p.taxa_entrega ?? 0), 0);
 
     res.json({
       ...mb,
@@ -1508,14 +1511,14 @@ router.get('/establishments/:id/ficha', async (req, res, next) => {
       .order('criado_em', { ascending: false })
       .limit(30);
 
-    const entregues = (pedidos || []).filter(p => p.status === 'entregue');
-    const gmv = entregues.reduce((acc, p) => acc + Number(p.total), 0);
-    const comissao = entregues.reduce((acc, p) => acc + Number(p.comissao_plataforma || 0), 0);
+    const entreguesPagos = (pedidos || []).filter(p => p.status === 'entregue' && p.pagamento_status === 'aprovado');
+    const gmv = entreguesPagos.reduce((acc, p) => acc + Number(p.total), 0);
+    const comissao = entreguesPagos.reduce((acc, p) => acc + Number(p.comissao_plataforma || 0), 0);
 
     res.json({
       ...est,
       pedidos: pedidos || [],
-      total_pedidos: entregues.length,
+      total_pedidos: entreguesPagos.length,
       gmv,
       comissao_plataforma: comissao,
     });

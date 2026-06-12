@@ -27,11 +27,11 @@ async function enviarWhatsApp(numero, mensagem) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, message: mensagem }),
     });
-    const body = await r.json().catch(() => ({}));
+    const bodyText = await r.text().catch(() => '');
     if (r.ok) {
       console.log('[WhatsApp] ✓ Enviado para', phone.substring(0, 8) + '***');
     } else {
-      console.error('[WhatsApp] ✗ Erro Z-API:', body);
+      console.error(`[WhatsApp] ✗ Erro Z-API HTTP ${r.status}:`, bodyText.slice(0, 200));
     }
   } catch (e) {
     console.error('[WhatsApp] ✗ Falha ao enviar:', e.message);

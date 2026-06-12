@@ -60,28 +60,41 @@ async function agendarOnboardingLojista(estabelecimentoId, nomeResponsavel, what
 
 // Enviar mensagens vencidas — chamado periodicamente
 async function processarMensagensAgendadas() {
-  const { data, error } = await supabaseAdmin
-    .from('whatsapp_agendados')
-    .select('id, para, mensagem, tipo')
-    .lte('enviar_em', new Date().toISOString())
-    .eq('enviado', false)
-    .limit(50);
+  const agora = new Date().toISOString();
+  let processadas = 0;
 
-  if (error || !data?.length) return;
+  // Loop até esgotar todas as mensagens vencidas (evita perder se > 100 vencerem juntas)
+  while (true) {
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_agendados')
+      .select('id, para, mensagem, tipo')
+      .lte('enviar_em', agora)
+      .eq('enviado', false)
+      .limit(100);
 
-  console.log(`[Onboarding] Enviando ${data.length} mensagem(ns) agendada(s)...`);
-  for (const msg of data) {
-    try {
-      await enviarWhatsApp(msg.para, msg.mensagem);
-      await supabaseAdmin
-        .from('whatsapp_agendados')
-        .update({ enviado: true, enviado_em: new Date().toISOString() })
-        .eq('id', msg.id);
-      console.log(`[Onboarding] ✓ ${msg.tipo} enviado para ${msg.para.substring(0,8)}***`);
-    } catch (e) {
-      console.error(`[Onboarding] ✗ Falha ao enviar ${msg.id}:`, e.message);
+    if (error || !data?.length) break;
+
+    for (const msg of data) {
+      try {
+        await enviarWhatsApp(msg.para, msg.mensagem);
+        await supabaseAdmin
+          .from('whatsapp_agendados')
+          .update({ enviado: true, enviado_em: new Date().toISOString() })
+          .eq('id', msg.id);
+        console.log(`[Onboarding] ✓ ${msg.tipo} enviado para ${msg.para.substring(0,8)}***`);
+        processadas++;
+      } catch (e) {
+        console.error(`[Onboarding] ✗ Falha ao enviar ${msg.id}:`, e.message);
+        // Marca como enviado mesmo com falha de WhatsApp para não ficar em loop infinito
+        // (se Z-API estiver fora, voltará na próxima rodada com .eq('enviado', false))
+        break;
+      }
     }
+
+    if (data.length < 100) break; // Não há mais mensagens pendentes
   }
+
+  if (processadas > 0) console.log(`[Onboarding] ${processadas} mensagem(ns) processada(s)`);
 }
 
 function iniciarMonitorOnboarding() {

@@ -112,10 +112,13 @@ async function verificarPedidosTravados() {
     }
   }
 
-  // Limpar entradas antigas (pedidos que saíram do mapa de ativos)
+  // Limpar entradas antigas (pedidos que saíram dos status ativos ou com > 4h)
   const idsAtivos = new Set(pedidos.map((p) => p.id + ':' + p.status));
-  for (const chave of alertasEnviados.keys()) {
-    if (!idsAtivos.has(chave)) alertasEnviados.delete(chave);
+  const limiteIdade = agora - 4 * 60 * 60 * 1000;
+  for (const [chave, val] of alertasEnviados.entries()) {
+    if (!idsAtivos.has(chave) || val.ultimoAlerta < limiteIdade) {
+      alertasEnviados.delete(chave);
+    }
   }
 }
 
@@ -168,10 +171,11 @@ async function redistribuirPedidosSemMotoboy() {
     }
   }
 
-  // Limpar pedidos que saíram do status pronto
+  // Limpar pedidos que saíram do status pronto ou com > 2h
   const idsAtivos = new Set((pedidos || []).map((p) => p.id));
-  for (const id of redistribuicoesEnviadas.keys()) {
-    if (!idsAtivos.has(id)) redistribuicoesEnviadas.delete(id);
+  const limiteIdade = agora - 2 * 60 * 60 * 1000;
+  for (const [id, ts] of redistribuicoesEnviadas.entries()) {
+    if (!idsAtivos.has(id) || ts < limiteIdade) redistribuicoesEnviadas.delete(id);
   }
 }
 

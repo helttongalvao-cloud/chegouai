@@ -126,9 +126,10 @@ router.get('/texto/:tipo', (req, res) => {
 // =============================================
 // GET /api/contratos/meu — autenticado (verificar se assinou)
 // =============================================
-router.get('/meu', requireRole(['motoboy', 'estabelecimento', 'admin']), async (req, res, next) => {
+router.get('/meu', requireRole('motoboy', 'estabelecimento', 'admin'), async (req, res, next) => {
   try {
-    const tipo = req.user.perfil === 'motoboy' ? 'motoboy' : 'lojista';
+    const perfil = req.user.profile.perfil;
+    const tipo = perfil === 'motoboy' ? 'motoboy' : 'lojista';
     const { data } = await supabaseAdmin
       .from('contratos')
       .select('id, tipo, versao, assinado_em, nome_assinante')
@@ -143,14 +144,15 @@ router.get('/meu', requireRole(['motoboy', 'estabelecimento', 'admin']), async (
 // =============================================
 // POST /api/contratos/assinar — autenticado
 // =============================================
-router.post('/assinar', requireRole(['motoboy', 'estabelecimento']), async (req, res, next) => {
+router.post('/assinar', requireRole('motoboy', 'estabelecimento'), async (req, res, next) => {
   try {
     const { nome_assinante } = req.body;
     if (!nome_assinante || nome_assinante.trim().length < 3) {
       return res.status(400).json({ error: 'Nome completo obrigatório' });
     }
 
-    const tipo = req.user.perfil === 'motoboy' ? 'motoboy' : 'lojista';
+    const perfil = req.user.profile.perfil;
+    const tipo = perfil === 'motoboy' ? 'motoboy' : 'lojista';
 
     // Idempotente: não duplica assinatura
     const { data: existente } = await supabaseAdmin
