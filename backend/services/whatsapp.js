@@ -1,34 +1,40 @@
-const twilio = require('twilio');
+// Z-API: conecta WhatsApp Business a qualquer número sem opt-in
+// Env vars: ZAPI_INSTANCE_ID, ZAPI_TOKEN, ADMIN_WHATSAPP
 
-let client = null;
-
-if (process.env.TWILIO_SID && process.env.TWILIO_AUTH_TOKEN) {
-  client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
-  console.log('[WhatsApp] Twilio inicializado');
-} else {
-  console.warn('[WhatsApp] TWILIO_SID/AUTH_TOKEN não configurados — alertas WhatsApp desativados');
-}
+const ZAPI_BASE = 'https://api.z-api.io';
 
 function formatarNumero(num) {
   if (!num) return null;
   const digits = num.replace(/\D/g, '');
   if (digits.length < 10) return null;
-  return 'whatsapp:+55' + digits;
+  // Z-API espera número com DDI sem + (ex: 5511936217798)
+  return digits.startsWith('55') ? digits : '55' + digits;
 }
 
 async function enviarWhatsApp(numero, mensagem) {
-  if (!client) return;
-  const to = formatarNumero(numero);
-  if (!to) return;
+  const instanceId = process.env.ZAPI_INSTANCE_ID;
+  const token = process.env.ZAPI_TOKEN;
+  if (!instanceId || !token) {
+    console.warn('[WhatsApp] ZAPI_INSTANCE_ID/TOKEN não configurados — mensagem não enviada');
+    return;
+  }
+  const phone = formatarNumero(numero);
+  if (!phone) return;
   try {
-    await client.messages.create({
-      from: 'whatsapp:' + process.env.TWILIO_WHATSAPP_FROM,
-      to,
-      body: mensagem,
+    const url = `${ZAPI_BASE}/instances/${instanceId}/token/${token}/send-text`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, message: mensagem }),
     });
-    console.log('[WhatsApp] ✓ Enviado para', to.substring(0, 20));
+    const body = await r.json().catch(() => ({}));
+    if (r.ok) {
+      console.log('[WhatsApp] ✓ Enviado para', phone.substring(0, 8) + '***');
+    } else {
+      console.error('[WhatsApp] ✗ Erro Z-API:', body);
+    }
   } catch (e) {
-    console.error('[WhatsApp] ✗ Erro ao enviar para', to, ':', e.message);
+    console.error('[WhatsApp] ✗ Falha ao enviar:', e.message);
   }
 }
 

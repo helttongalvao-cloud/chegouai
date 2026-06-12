@@ -216,4 +216,122 @@ router.post('/:id/reprovar', requireRole('admin'), async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// =============================================
+// POST /api/candidaturas/lojista — público
+// =============================================
+router.post('/lojista', [
+  body('nome').trim().notEmpty().withMessage('Nome obrigatório'),
+  body('whatsapp').trim().notEmpty().withMessage('WhatsApp obrigatório'),
+  body('cidade').trim().notEmpty().withMessage('Cidade obrigatória'),
+  body('tipo_negocio').trim().notEmpty().withMessage('Tipo de negócio obrigatório'),
+], async (req, res, next) => {
+  try {
+    const erros = validationResult(req);
+    if (!erros.isEmpty()) return res.status(400).json({ error: erros.array()[0].msg });
+
+    const d = req.body;
+    const { data, error } = await supabaseAdmin
+      .from('lojista_candidatos')
+      .insert({
+        nome: d.nome?.trim(),
+        whatsapp: d.whatsapp?.replace(/\D/g, ''),
+        cidade: d.cidade?.trim(),
+        tipo_negocio: d.tipo_negocio?.trim(),
+        descricao: d.descricao?.trim() || null,
+        status: 'novo',
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+
+    // Alerta para o admin
+    await alertarAdmin(
+      `🏪 *Novo interesse de lojista!*\n\n` +
+      `*Nome:* ${d.nome}\n` +
+      `*Cidade:* ${d.cidade}\n` +
+      `*Negócio:* ${d.tipo_negocio}\n` +
+      `${d.descricao ? '*Descrição:* ' + d.descricao + '\n' : ''}` +
+      `*WhatsApp:* ${d.whatsapp}\n\n` +
+      `Acesse o painel para entrar em contato.`
+    );
+
+    // Confirmação para o lojista
+    if (d.whatsapp) {
+      await enviarWhatsApp(d.whatsapp,
+        `Olá, ${d.nome.split(' ')[0]}! 👋\n\n` +
+        `Recebemos seu interesse em abrir sua loja no *Chegô*!\n\n` +
+        `Nossa equipe vai entrar em contato em breve pelo WhatsApp para agendar uma conversa.\n\n` +
+        `Aguarde — vai ser rápido! 🚀`
+      );
+    }
+
+    res.json({ ok: true, id: data.id });
+  } catch (e) { next(e); }
+});
+
+// =============================================
+// GET /api/candidaturas/lojistas — admin
+// =============================================
+router.get('/lojistas', requireRole('admin'), async (req, res, next) => {
+  try {
+    const { status } = req.query;
+    let q = supabaseAdmin
+      .from('lojista_candidatos')
+      .select('*')
+      .order('criado_em', { ascending: false });
+    if (status) q = q.eq('status', status);
+    const { data, error } = await q;
+    if (error) throw error;
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+// =============================================
+// POST /api/candidaturas/lojistas/:id/contatar — admin
+// =============================================
+router.post('/lojistas/:id/contatar', requireRole('admin'), async (req, res, next) => {
+  try {
+    const { obs } = req.body;
+    const { error } = await supabaseAdmin
+      .from('lojista_candidatos')
+      .update({ status: 'contatado', obs_admin: obs || null })
+      .eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+// =============================================
+// POST /api/candidaturas/lojistas/:id/reprovar — admin
+// =============================================
+router.post('/lojistas/:id/reprovar', requireRole('admin'), async (req, res, next) => {
+  try {
+    const { obs } = req.body;
+    const { data: cand, error: errBusca } = await supabaseAdmin
+      .from('lojista_candidatos')
+      .select('nome, whatsapp')
+      .eq('id', req.params.id)
+      .single();
+    if (errBusca || !cand) return res.status(404).json({ error: 'Candidato não encontrado' });
+
+    const { error } = await supabaseAdmin
+      .from('lojista_candidatos')
+      .update({ status: 'reprovado', reprovado_em: new Date().toISOString(), obs_admin: obs || null })
+      .eq('id', req.params.id);
+    if (error) throw error;
+
+    if (cand.whatsapp) {
+      await enviarWhatsApp(cand.whatsapp,
+        `Olá, ${cand.nome.split(' ')[0]}! 👋\n\n` +
+        `Agradecemos seu interesse no *Chegô*.\n\n` +
+        `Infelizmente, não conseguimos prosseguir com a parceria no momento.\n\n` +
+        `Obrigado e muito sucesso! 🙏`
+      );
+    }
+
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
 module.exports = router;

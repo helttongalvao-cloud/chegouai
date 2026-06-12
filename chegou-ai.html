@@ -127,6 +127,20 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 .cand-doc-nome { font-size:14px; font-weight:700; }
 .cand-doc-status { font-size:12px; color:var(--texto2); margin-top:2px; }
 .cand-score-badge { display:inline-block; padding:8px 20px; border-radius:20px; font-size:18px; font-weight:900; margin-bottom:8px; }
+/* ===== INTERESSE LOJISTA ===== */
+#tela-interesse-lojista { background:var(--preto); min-height:100vh; }
+.iloj-header { padding:20px 20px 0; display:flex; align-items:center; gap:10px; }
+.iloj-titulo { font-size:20px; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; }
+.iloj-sub { font-size:14px; color:var(--texto2); margin-top:2px; }
+.iloj-tipos { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:6px; }
+.iloj-tipo { background:var(--cinza2); border:2px solid var(--cinza3); border-radius:14px; padding:16px 10px; text-align:center; cursor:pointer; transition:all .2s; }
+.iloj-tipo.sel { border-color:var(--verde); background:rgba(0,200,83,.09); }
+.iloj-tipo-icon { font-size:28px; margin-bottom:6px; }
+.iloj-tipo-label { font-size:13px; font-weight:700; }
+.iloj-calendly { background:linear-gradient(135deg,#0d1f0f,#0f2a12); border:1.5px solid var(--verde); border-radius:16px; padding:24px 20px; text-align:center; margin:24px 0; }
+.iloj-calendly h3 { font-size:18px; font-weight:800; color:var(--verde); margin-bottom:8px; font-family:'Plus Jakarta Sans',sans-serif; }
+.iloj-calendly p { font-size:14px; color:var(--texto2); line-height:1.5; margin-bottom:16px; }
+.iloj-btn-calendly { display:block; width:100%; padding:16px; border-radius:14px; background:var(--verde); border:none; color:#000; font-size:16px; font-weight:800; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; text-decoration:none; }
 /* ===== PARCEIRO — AUTO-CADASTRO ===== */
 #tela-parceiro { background:var(--preto); }
 .parceiro-header { padding:24px 20px 0; display:flex; align-items:center; gap:12px; }
@@ -1333,6 +1347,64 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
 </div>
 
 <!-- CANDIDATURA MOTOBOY — público via ?candidatura=motoboy -->
+<!-- INTERESSE LOJISTA — formulário público -->
+<div id="tela-interesse-lojista" style="display:none;">
+  <div class="iloj-header">
+    <span style="font-size:28px;">🏪</span>
+    <div><div class="iloj-titulo">Abra sua loja no Chegô</div><div class="iloj-sub">Cadastre seu interesse — nossa equipe entra em contato</div></div>
+  </div>
+  <div class="cand-prog" id="iloj-prog" style="padding:16px 20px 0;">
+    <div class="cand-prog-item ativo"></div>
+    <div class="cand-prog-item"></div>
+  </div>
+
+  <!-- STEP 1: Contato -->
+  <div class="cand-step ativo" id="iloj-step-1">
+    <div class="cand-step-titulo" style="margin-top:16px;">Seus dados de contato</div>
+    <div class="cand-step-sub">Vamos entrar em contato pelo WhatsApp para dar o próximo passo.</div>
+    <div class="cand-campo"><label>Nome completo *</label><input type="text" id="iloj-nome" placeholder="Seu nome"></div>
+    <div class="cand-campo"><label>WhatsApp *</label><input type="tel" id="iloj-wpp" placeholder="(97) 99999-9999" oninput="mascaraTelefone(this)"></div>
+    <div class="cand-campo"><label>Cidade *</label><input type="text" id="iloj-cidade" placeholder="Sua cidade"></div>
+  </div>
+
+  <!-- STEP 2: Negócio -->
+  <div class="cand-step" id="iloj-step-2">
+    <div class="cand-step-titulo" style="margin-top:16px;">Seu negócio</div>
+    <div class="cand-step-sub">Qual tipo de negócio você tem?</div>
+    <div class="iloj-tipos">
+      <div class="iloj-tipo" onclick="_ilojSelecionarTipo('Restaurante/Lanchonete',this)"><div class="iloj-tipo-icon">🍽️</div><div class="iloj-tipo-label">Restaurante / Lanchonete</div></div>
+      <div class="iloj-tipo" onclick="_ilojSelecionarTipo('Mercado/Farmácia',this)"><div class="iloj-tipo-icon">🛒</div><div class="iloj-tipo-label">Mercado / Farmácia</div></div>
+      <div class="iloj-tipo" onclick="_ilojSelecionarTipo('Loja de roupas/calçados',this)"><div class="iloj-tipo-icon">👗</div><div class="iloj-tipo-label">Roupas / Calçados</div></div>
+      <div class="iloj-tipo" onclick="_ilojSelecionarTipo('Produtos personalizados',this)"><div class="iloj-tipo-icon">🎨</div><div class="iloj-tipo-label">Personalizados</div></div>
+      <div class="iloj-tipo" onclick="_ilojSelecionarTipo('Pet shop',this)"><div class="iloj-tipo-icon">🐾</div><div class="iloj-tipo-label">Pet shop</div></div>
+      <div class="iloj-tipo" onclick="_ilojSelecionarTipo('Outro',this)"><div class="iloj-tipo-icon">🏬</div><div class="iloj-tipo-label">Outro</div></div>
+    </div>
+    <div class="cand-campo" style="margin-top:14px;"><label>Descreva brevemente (opcional)</label><textarea id="iloj-desc" rows="3" placeholder="Ex: vendo marmitas caseiras e quentinhas para entrega..."></textarea></div>
+  </div>
+
+  <!-- Tela de sucesso -->
+  <div class="cand-step" id="iloj-step-ok">
+    <div style="text-align:center;padding:32px 0 20px;">
+      <div style="font-size:64px;margin-bottom:16px;">🎉</div>
+      <div style="font-size:22px;font-weight:900;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:8px;">Interesse registrado!</div>
+      <div style="font-size:14px;color:var(--texto2);line-height:1.6;margin-bottom:28px;">Nossa equipe vai entrar em contato pelo WhatsApp em breve.<br>Enquanto isso, você já pode agendar uma conversa:</div>
+
+      <div class="iloj-calendly">
+        <h3>📅 Agende uma conversa</h3>
+        <p>Conheça como o Chegô funciona, tire dúvidas e dê o primeiro passo para abrir sua loja.</p>
+        <a class="iloj-btn-calendly" id="iloj-btn-calendly" href="#" target="_blank">Escolher horário →</a>
+      </div>
+
+      <button onclick="window.location.href='/app'" style="background:none;border:1.5px solid var(--cinza3);color:var(--texto);font-size:14px;font-weight:600;padding:14px 28px;border-radius:12px;cursor:pointer;width:100%;">Voltar ao início</button>
+    </div>
+  </div>
+
+  <div class="cand-nav" id="iloj-nav">
+    <button id="iloj-btn-voltar" onclick="_ilojPrev()" style="flex:0 0 auto;padding:14px 20px;border-radius:12px;border:1.5px solid var(--cinza3);background:transparent;color:var(--texto);font-size:14px;font-weight:600;cursor:pointer;display:none;">← Voltar</button>
+    <button id="iloj-btn-prox" onclick="_ilojNext()" style="flex:1;padding:16px;border-radius:12px;background:var(--verde);border:none;color:#000;font-size:15px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Continuar →</button>
+  </div>
+</div>
+
 <div id="tela-candidatura" style="display:none;">
   <div class="cand-header">
     <span style="font-size:28px;">🛵</span>
@@ -1936,6 +2008,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="nav-btn" onclick="adminNav(this,'lojas')">Estabelecimentos</div>
       <div class="nav-btn" onclick="adminNav(this,'motoboys')">Motoboys</div>
       <div class="nav-btn" onclick="adminNav(this,'candidatos')" id="nav-candidatos" style="color:#fb923c;border-color:#fb923c40;">🛵 Candidatos</div>
+      <div class="nav-btn" onclick="adminNav(this,'lojistas-interessados')" style="color:#34d399;border-color:#34d39940;">🏪 Lojistas</div>
       <div class="nav-btn" onclick="adminNav(this,'mapa')" style="color:#22d3ee;border-color:#22d3ee40;">🗺️ Mapa</div>
       <div class="nav-btn" onclick="adminNav(this,'cupons')">Cupons</div>
       <div class="nav-btn" onclick="adminNav(this,'sorteio')" style="color:#facc15;border-color:#facc1540;">🎟️ Sorteio</div>
@@ -8964,6 +9037,7 @@ async function renderAdmin(secao) {
   if(secao === 'sorteio') { renderAdminSorteio(); return; }
   if(secao === 'metricas') { renderAdminMetricas(); return; }
   if(secao === 'candidatos') { await renderAdminCandidatos(); return; }
+  if(secao === 'lojistas-interessados') { await renderAdminLojistasInteressados(); return; }
 
   if (secao !== 'cadastrar') {
     el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando painel...</div>';
@@ -11326,16 +11400,174 @@ async function _admAtualizarBadgeCandidatos() {
   } catch(_) {}
 }
 
-// Verificar candidatura via URL (?candidatura=motoboy)
+// Verificar candidatura via URL (?candidatura=motoboy|lojista)
 (function() {
   var params = new URLSearchParams(window.location.search);
   if(params.get('candidatura') === 'motoboy') {
-    window.addEventListener('DOMContentLoaded', function() {
-      _candAbrirFormulario();
-    });
+    window.addEventListener('DOMContentLoaded', function() { _candAbrirFormulario(); });
     if(document.readyState !== 'loading') _candAbrirFormulario();
   }
+  if(params.get('candidatura') === 'lojista') {
+    window.addEventListener('DOMContentLoaded', function() { _ilojAbrirFormulario(); });
+    if(document.readyState !== 'loading') _ilojAbrirFormulario();
+  }
 })();
+
+// =============================================
+// INTERESSE LOJISTA — formulário público
+// =============================================
+var _ilojAtual = 1;
+var _ilojTipoSel = '';
+// URL do Calendly (placeholder — trocar pela URL real quando disponível)
+var CALENDLY_URL = 'https://calendly.com/chegouai';
+
+function _ilojAbrirFormulario() {
+  document.getElementById('tela-interesse-lojista').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  _ilojAtual = 1;
+  _ilojTipoSel = '';
+  _ilojMostrarStep(1);
+}
+
+function _ilojMostrarStep(n) {
+  document.querySelectorAll('#tela-interesse-lojista .cand-step').forEach(function(el, i) {
+    el.classList.toggle('ativo', i === n - 1);
+  });
+  // progresso
+  var items = document.querySelectorAll('#iloj-prog .cand-prog-item');
+  items.forEach(function(el, i) {
+    el.classList.toggle('ativo', i === n - 1);
+    el.classList.toggle('feito', i < n - 1);
+  });
+  // botões nav
+  var nav = document.getElementById('iloj-nav');
+  var btnV = document.getElementById('iloj-btn-voltar');
+  var btnP = document.getElementById('iloj-btn-prox');
+  if (!nav) return;
+  var isOk = document.getElementById('iloj-step-ok').classList.contains('ativo');
+  nav.style.display = isOk ? 'none' : 'flex';
+  btnV.style.display = n > 1 ? 'block' : 'none';
+  btnP.textContent = n === 2 ? 'Enviar interesse →' : 'Continuar →';
+}
+
+function _ilojSelecionarTipo(tipo, el) {
+  _ilojTipoSel = tipo;
+  document.querySelectorAll('.iloj-tipo').forEach(function(t) { t.classList.remove('sel'); });
+  el.classList.add('sel');
+}
+
+function _ilojNext() {
+  if (_ilojAtual === 1) {
+    var nome = document.getElementById('iloj-nome').value.trim();
+    var wpp = document.getElementById('iloj-wpp').value.trim();
+    var cidade = document.getElementById('iloj-cidade').value.trim();
+    if (!nome || !wpp || !cidade) { mostrarToast('Preencha nome, WhatsApp e cidade'); return; }
+    _ilojAtual = 2;
+    _ilojMostrarStep(2);
+  } else if (_ilojAtual === 2) {
+    if (!_ilojTipoSel) { mostrarToast('Selecione o tipo de negócio'); return; }
+    _ilojEnviar();
+  }
+}
+
+function _ilojPrev() {
+  if (_ilojAtual > 1) { _ilojAtual--; _ilojMostrarStep(_ilojAtual); }
+}
+
+async function _ilojEnviar() {
+  var btn = document.getElementById('iloj-btn-prox');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    var body = {
+      nome: document.getElementById('iloj-nome').value.trim(),
+      whatsapp: document.getElementById('iloj-wpp').value.trim(),
+      cidade: document.getElementById('iloj-cidade').value.trim(),
+      tipo_negocio: _ilojTipoSel,
+      descricao: document.getElementById('iloj-desc').value.trim() || undefined,
+    };
+    await apiCall('/api/candidaturas/lojista', { method: 'POST', body });
+    // Atualizar link Calendly com nome pré-preenchido
+    var calendlyEl = document.getElementById('iloj-btn-calendly');
+    if (calendlyEl) {
+      var nome1 = encodeURIComponent(body.nome);
+      calendlyEl.href = CALENDLY_URL + '?name=' + nome1;
+    }
+    // Mostrar tela de sucesso
+    document.querySelectorAll('#tela-interesse-lojista .cand-step').forEach(function(el) { el.classList.remove('ativo'); });
+    document.getElementById('iloj-step-ok').classList.add('ativo');
+    document.getElementById('iloj-nav').style.display = 'none';
+    document.getElementById('iloj-prog').style.display = 'none';
+  } catch(e) {
+    mostrarToast('Erro ao enviar: ' + (e.message || 'Tente novamente'));
+    btn.disabled = false; btn.textContent = 'Enviar interesse →';
+  }
+}
+
+// =============================================
+// ADMIN — lojistas interessados
+// =============================================
+async function renderAdminLojistasInteressados(filtro) {
+  filtro = filtro || 'novo';
+  var el = document.getElementById('admin-content');
+  el.innerHTML = '<div class="vazio"><div class="loading-spinner" style="margin:0 auto 8px;"></div>Carregando...</div>';
+  try {
+    var lista = await apiCall('/api/candidaturas/lojistas?status=' + filtro);
+    var filtros = [
+      { k: 'novo', label: '🆕 Novos' },
+      { k: 'contatado', label: '📞 Contatados' },
+      { k: 'aprovado', label: '✅ Aprovados' },
+      { k: 'reprovado', label: '❌ Reprovados' },
+    ];
+    var html = '<div style="padding:16px;">';
+    html += '<div style="font-size:20px;font-weight:800;margin-bottom:16px;font-family:\'Plus Jakarta Sans\',sans-serif;">🏪 Interessados — Lojistas</div>';
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">' +
+      filtros.map(function(f) {
+        var ativ = f.k === filtro;
+        return '<button onclick="renderAdminLojistasInteressados(\'' + f.k + '\')" style="padding:6px 14px;border-radius:20px;border:1.5px solid ' + (ativ ? 'var(--verde)' : 'var(--cinza3)') + ';background:' + (ativ ? 'var(--verde)' : 'transparent') + ';color:' + (ativ ? '#000' : 'var(--texto)') + ';font-size:12px;font-weight:700;cursor:pointer;">' + f.label + '</button>';
+      }).join('') + '</div>';
+    if (!lista.length) {
+      html += '<div class="vazio"><div class="vazio-icon">🏪</div>Nenhum lojista neste status.</div>';
+    } else {
+      lista.forEach(function(c) {
+        var dt = new Date(c.criado_em).toLocaleDateString('pt-BR');
+        html += '<div style="background:var(--cinza2);border-radius:14px;padding:16px;margin-bottom:10px;border:1px solid var(--cinza3);">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">' +
+            '<div><div style="font-weight:800;font-size:15px;">' + c.nome + '</div>' +
+            '<div style="font-size:12px;color:var(--texto2);">' + c.tipo_negocio + ' · ' + c.cidade + ' · ' + dt + '</div></div>' +
+          '</div>' +
+          (c.descricao ? '<div style="font-size:13px;color:var(--texto2);margin-bottom:10px;">' + c.descricao + '</div>' : '') +
+          '<div style="font-size:13px;margin-bottom:12px;">📱 ' + c.whatsapp + '</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+            '<a href="https://wa.me/55' + c.whatsapp.replace(/\D/g,'') + '" target="_blank" style="padding:8px 14px;border-radius:10px;background:rgba(37,211,102,.15);border:1px solid #25d366;color:#25d366;font-size:12px;font-weight:700;text-decoration:none;">💬 WhatsApp</a>' +
+            (filtro === 'novo' || filtro === 'contatado' ? '<button onclick="adminLojistasContatar(\'' + c.id + '\')" style="padding:8px 14px;border-radius:10px;border:1px solid var(--cinza3);background:transparent;color:var(--texto);font-size:12px;font-weight:700;cursor:pointer;">✓ Marcar contatado</button>' : '') +
+            (filtro !== 'reprovado' ? '<button onclick="adminLojistasReprovar(\'' + c.id + '\')" style="padding:8px 14px;border-radius:10px;border:1px solid #ef4444;background:transparent;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;">✗ Reprovar</button>' : '') +
+          '</div>' +
+        '</div>';
+      });
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="vazio">Erro: ' + e.message + '</div>';
+  }
+}
+
+async function adminLojistasContatar(id) {
+  try {
+    await apiCall('/api/candidaturas/lojistas/' + id + '/contatar', { method: 'POST', body: {} });
+    mostrarToast('Marcado como contatado');
+    renderAdminLojistasInteressados('novo');
+  } catch(e) { mostrarToast('Erro: ' + e.message); }
+}
+
+async function adminLojistasReprovar(id) {
+  if (!confirm('Reprovar este lojista e enviar mensagem de agradecimento?')) return;
+  try {
+    await apiCall('/api/candidaturas/lojistas/' + id + '/reprovar', { method: 'POST', body: {} });
+    mostrarToast('Reprovado');
+    renderAdminLojistasInteressados('novo');
+  } catch(e) { mostrarToast('Erro: ' + e.message); }
+}
 
 </script>
 
