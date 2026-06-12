@@ -995,6 +995,184 @@ router.patch('/establishments/:id/recipient/transfer', async (req, res, next) =>
 });
 
 // =============================================
+// GET /api/admin/metrics-ceo — Dashboard CEO (tempo real)
+// =============================================
+router.get('/metrics-ceo', async (req, res, next) => {
+  try {
+    const agora = new Date();
+
+    // Limites de tempo (UTC-4 Manaus)
+    const offsetMs = 4 * 60 * 60 * 1000;
+    const agoraLocal = new Date(agora.getTime() - offsetMs);
+    const inicioHojeLocal = new Date(agoraLocal.toISOString().slice(0, 10) + 'T00:00:00');
+    const inicioHojeUTC = new Date(inicioHojeLocal.getTime() + offsetMs);
+    const inicioOntemUTC = new Date(inicioHojeUTC.getTime() - 24 * 60 * 60 * 1000);
+    const fimOntemUTC = new Date(inicioHojeUTC.getTime() - 1);
+    const inicioSemanaUTC = new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const inicioSemanaAntUTC = new Date(agora.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const inicio30 = new Date(agora.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [
+      { data: pedidosHoje },
+      { data: pedidosOntem },
+      { data: pedidosSemana },
+      { data: pedidosSemanaAnt },
+      { data: pedidos30 },
+      { data: pedidosAtivos },
+      { count: motoboysonline },
+      { count: lojistasAtivos },
+      { data: topLojas30 },
+      { data: topMotoboys30 },
+    ] = await Promise.all([
+      // Pedidos hoje
+      supabaseAdmin.from('pedidos')
+        .select('id, total, comissao_plataforma, status, pagamento_status')
+        .gte('criado_em', inicioHojeUTC.toISOString()),
+      // Pedidos ontem
+      supabaseAdmin.from('pedidos')
+        .select('id, total, comissao_plataforma, status, pagamento_status')
+        .gte('criado_em', inicioOntemUTC.toISOString())
+        .lte('criado_em', fimOntemUTC.toISOString()),
+      // Pedidos esta semana
+      supabaseAdmin.from('pedidos')
+        .select('id, total, status, pagamento_status')
+        .gte('criado_em', inicioSemanaUTC.toISOString()),
+      // Pedidos semana anterior
+      supabaseAdmin.from('pedidos')
+        .select('id, total, status, pagamento_status')
+        .gte('criado_em', inicioSemanaAntUTC.toISOString())
+        .lt('criado_em', inicioSemanaUTC.toISOString()),
+      // Pedidos 30 dias (para gráfico GMV + funil)
+      supabaseAdmin.from('pedidos')
+        .select('id, total, comissao_plataforma, status, pagamento_status, criado_em, estabelecimento_id')
+        .gte('criado_em', inicio30.toISOString())
+        .order('criado_em', { ascending: true }),
+      // Pedidos ativos agora
+      supabaseAdmin.from('pedidos')
+        .select('id, status, total, estabelecimentos(nome)')
+        .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega'])
+        .eq('pagamento_status', 'aprovado'),
+      // Motoboys online
+      supabaseAdmin.from('motoboys').select('id', { count: 'exact', head: true }).eq('disponivel', true).eq('ativo', true),
+      // Lojistas ativos
+      supabaseAdmin.from('estabelecimentos').select('id', { count: 'exact', head: true }).eq('ativo', true),
+      // Top 5 lojas por GMV (30 dias)
+      supabaseAdmin.from('pedidos')
+        .select('estabelecimento_id, total, status, pagamento_status, estabelecimentos(nome)')
+        .eq('pagamento_status', 'aprovado')
+        .eq('status', 'entregue')
+        .gte('criado_em', inicio30.toISOString()),
+      // Top 5 motoboys por entregas (30 dias)
+      supabaseAdmin.from('pedidos')
+        .select('motoboy_id, total, motoboys(nome)')
+        .eq('status', 'entregue')
+        .eq('pagamento_status', 'aprovado')
+        .not('motoboy_id', 'is', null)
+        .gte('criado_em', inicio30.toISOString()),
+    ]);
+
+    // ---- Helpers ----
+    const aprov = (arr) => (arr || []).filter(p => p.pagamento_status === 'aprovado');
+    const entregues = (arr) => (arr || []).filter(p => p.status === 'entregue');
+    const gmv = (arr) => arr.reduce((s, p) => s + Number(p.total || 0), 0);
+    const comissao = (arr) => arr.reduce((s, p) => s + Number(p.comissao_plataforma || 0), 0);
+    const pct = (a, b) => b > 0 ? parseFloat(((a - b) / b * 100).toFixed(1)) : (a > 0 ? 100 : 0);
+
+    // ---- Hoje ----
+    const hojeAprov = aprov(pedidosHoje);
+    const hojeEnt = entregues(hojeAprov);
+    const gmvHoje = gmv(hojeEnt);
+    const comissaoHoje = comissao(hojeEnt);
+    const ticketHoje = hojeEnt.length ? gmvHoje / hojeEnt.length : 0;
+
+    // ---- Ontem ----
+    const ontemAprov = aprov(pedidosOntem);
+    const ontemEnt = entregues(ontemAprov);
+    const gmvOntem = gmv(ontemEnt);
+    const comissaoOntem = comissao(ontemEnt);
+
+    // ---- Semana ----
+    const semAprov = aprov(pedidosSemana);
+    const semEnt = entregues(semAprov);
+    const semAntAprov = aprov(pedidosSemanaAnt);
+    const semAntEnt = entregues(semAntAprov);
+
+    // ---- 30 dias: funil ----
+    const p30 = pedidos30 || [];
+    const funnelCriados = p30.length;
+    const funnelAprovados = aprov(p30).length;
+    const funnelEntregues = entregues(aprov(p30)).length;
+
+    // ---- GMV por dia (gráfico, 30 dias) ----
+    const gmvPorDia = {};
+    aprov(p30).filter(p => p.status === 'entregue').forEach(p => {
+      const dia = p.criado_em.slice(0, 10);
+      gmvPorDia[dia] = (gmvPorDia[dia] || 0) + Number(p.total || 0);
+    });
+
+    // ---- Top lojas ----
+    const lojaMap = {};
+    (topLojas30 || []).forEach(p => {
+      const id = p.estabelecimento_id;
+      if (!lojaMap[id]) lojaMap[id] = { nome: p.estabelecimentos?.nome || id, gmv: 0, pedidos: 0 };
+      lojaMap[id].gmv += Number(p.total || 0);
+      lojaMap[id].pedidos += 1;
+    });
+    const topLojas = Object.values(lojaMap).sort((a, b) => b.gmv - a.gmv).slice(0, 5);
+
+    // ---- Top motoboys ----
+    const motoMap = {};
+    (topMotoboys30 || []).forEach(p => {
+      const id = p.motoboy_id;
+      if (!motoMap[id]) motoMap[id] = { nome: p.motoboys?.nome || 'Motoboy', entregas: 0, ganhos: 0 };
+      motoMap[id].entregas += 1;
+      motoMap[id].ganhos += Number(p.total || 0) * 0.15; // estimativa repasse
+    });
+    const topMotoboys = Object.values(motoMap).sort((a, b) => b.entregas - a.entregas).slice(0, 5);
+
+    res.json({
+      atualizadoEm: agora.toISOString(),
+      hoje: {
+        gmv: parseFloat(gmvHoje.toFixed(2)),
+        comissao: parseFloat(comissaoHoje.toFixed(2)),
+        pedidos: hojeAprov.length,
+        entregues: hojeEnt.length,
+        ticketMedio: parseFloat(ticketHoje.toFixed(2)),
+        varGmv: pct(gmvHoje, gmvOntem),
+        varPedidos: pct(hojeAprov.length, ontemAprov.length),
+        varComissao: pct(comissaoHoje, comissaoOntem),
+      },
+      ontem: {
+        gmv: parseFloat(gmvOntem.toFixed(2)),
+        pedidos: ontemAprov.length,
+        entregues: ontemEnt.length,
+      },
+      semana: {
+        gmv: parseFloat(gmv(semEnt).toFixed(2)),
+        pedidos: semAprov.length,
+        entregues: semEnt.length,
+        varGmv: pct(gmv(semEnt), gmv(semAntEnt)),
+        varPedidos: pct(semAprov.length, semAntAprov.length),
+      },
+      aovivo: {
+        pedidosAtivos: (pedidosAtivos || []).length,
+        motoboysonline: motoboysonline || 0,
+        lojistasAtivos: lojistasAtivos || 0,
+      },
+      funil: {
+        criados: funnelCriados,
+        aprovados: funnelAprovados,
+        entregues: funnelEntregues,
+        taxaConversao: funnelCriados > 0 ? parseFloat((funnelEntregues / funnelCriados * 100).toFixed(1)) : 0,
+      },
+      gmvPorDia,
+      topLojas,
+      topMotoboys,
+    });
+  } catch (err) { next(err); }
+});
+
+// =============================================
 // GET /api/admin/metrics — Painel de métricas de audiência
 // =============================================
 router.get('/metrics', async (req, res, next) => {
