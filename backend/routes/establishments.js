@@ -876,11 +876,17 @@ router.post('/me/campanhas', requireRole('estabelecimento'), async (req, res, ne
   try {
     const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
     if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
-    const { nome, tipo, valor, valor_minimo, combo_preco } = req.body;
+    const { nome, tipo, valor, valor_minimo, combo_preco, kit_descricao } = req.body;
     if (!nome || !tipo) return res.status(400).json({ error: 'nome e tipo obrigatórios' });
-    if (!['percentual', 'fixo', 'frete_gratis', 'combo'].includes(tipo)) return res.status(400).json({ error: 'tipo inválido' });
+    if (!['percentual', 'fixo', 'frete_gratis', 'combo', 'kit'].includes(tipo)) return res.status(400).json({ error: 'tipo inválido' });
     if (tipo === 'combo' && (!(parseInt(valor) >= 2) || !(parseFloat(combo_preco) > 0))) {
       return res.status(400).json({ error: 'Combo: informe quantidade mínima (≥2) e preço do combo' });
+    }
+    if (tipo === 'kit' && (!kit_descricao || !String(kit_descricao).trim())) {
+      return res.status(400).json({ error: 'Kit: informe a descrição do que está incluído' });
+    }
+    if (tipo === 'kit' && !(parseFloat(combo_preco) > 0)) {
+      return res.status(400).json({ error: 'Kit: informe o preço do kit' });
     }
     const { data, error } = await supabaseAdmin.from('campanhas_estabelecimento').insert({
       estabelecimento_id: est.id,
@@ -889,6 +895,7 @@ router.post('/me/campanhas', requireRole('estabelecimento'), async (req, res, ne
       valor: parseFloat(valor) || 0,
       valor_minimo: parseFloat(valor_minimo) || 0,
       combo_preco: parseFloat(combo_preco) || 0,
+      kit_descricao: kit_descricao ? String(kit_descricao).trim().slice(0, 200) : null,
       ativo: true,
     }).select().single();
     if (error) throw error;
@@ -900,7 +907,7 @@ router.put('/me/campanhas/:id', requireRole('estabelecimento'), async (req, res,
   try {
     const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
     if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
-    const allowed = ['nome', 'tipo', 'valor', 'valor_minimo', 'combo_preco', 'ativo'];
+    const allowed = ['nome', 'tipo', 'valor', 'valor_minimo', 'combo_preco', 'kit_descricao', 'ativo'];
     const updates = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
     if (updates.valor !== undefined) updates.valor = parseFloat(updates.valor) || 0;
