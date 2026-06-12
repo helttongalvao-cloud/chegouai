@@ -6092,7 +6092,7 @@ async function irCheckout(_manterScroll) {
       } else if(c.tipo === 'combo') {
         descStr = '📦 Leve ' + parseInt(c.valor) + ' do mesmo item por R$ ' + parseFloat(c.combo_preco).toFixed(2).replace('.',',');
       } else if(c.tipo === 'kit') {
-        descStr = '💝 Kit Especial disponível: ' + c.nome;
+        descStr = '🎁 Kit Especial disponível: ' + c.nome;
       } else {
         descStr = '🎯 ' + c.nome;
       }
@@ -7281,7 +7281,7 @@ function _renderKitCard(camp) {
     el.style.display = 'block';
     el.innerHTML =
       '<div style="background:linear-gradient(135deg,rgba(244,114,182,0.12) 0%,rgba(0,200,83,0.08) 100%);border:1.5px solid rgba(244,114,182,0.35);border-radius:16px;padding:16px;">' +
-        '<div style="font-size:12px;font-weight:700;color:#f472b6;margin-bottom:4px;letter-spacing:0.5px;">💝 KIT ESPECIAL</div>' +
+        '<div style="font-size:12px;font-weight:700;color:#f472b6;margin-bottom:4px;letter-spacing:0.5px;">🎁 KIT ESPECIAL</div>' +
         '<div style="font-size:17px;font-weight:800;color:var(--texto);margin-bottom:6px;">' + sanitizar(camp.nome) + '</div>' +
         '<div style="font-size:13px;color:var(--texto2);line-height:1.55;margin-bottom:' + (preco > 0 ? '10' : '0') + 'px;">' + sanitizar(camp.kit_descricao || '') + '</div>' +
         (preco > 0 ? '<div style="font-size:18px;font-weight:800;color:var(--verde);">R$ ' + preco.toFixed(2).replace('.',',') + '</div>' : '') +
@@ -7313,7 +7313,7 @@ async function renderCampanhas() {
         icone = '📦'; desc = 'Leve ' + parseInt(c.valor) + ' itens iguais por R$ ' + parseFloat(c.combo_preco).toFixed(2).replace('.',',');
         cond = 'Aplicado por produto — ex: 3x X + 3x Y = cada grupo com desconto';
       } else if(c.tipo === 'kit') {
-        icone = '💝'; desc = 'Kit Especial — R$ ' + parseFloat(c.combo_preco || 0).toFixed(2).replace('.',',');
+        icone = '🎁'; desc = 'Kit Especial — R$ ' + parseFloat(c.combo_preco || 0).toFixed(2).replace('.',',');
         cond = c.kit_descricao || 'Combo com itens variados';
       } else {
         icone = '🎯'; desc = c.tipo; cond = '';
@@ -7336,7 +7336,7 @@ async function renderCampanhas() {
     el.innerHTML =
       '<div style="background:rgba(0,200,83,0.06);border:1px solid rgba(0,200,83,0.2);border-radius:14px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--texto2);line-height:1.6;">' +
         '🎯 <strong style="color:var(--texto);">Campanhas automáticas</strong> são promoções que o cliente recebe sem precisar digitar código.<br>' +
-        '<strong style="color:var(--verde);">Tipos disponíveis:</strong> desconto %, valor fixo, frete grátis, <strong>combo</strong> (leve X por preço especial) e <strong>💝 kit especial</strong> (combo com itens variados).' +
+        '<strong style="color:var(--verde);">Tipos disponíveis:</strong> desconto %, valor fixo, frete grátis, <strong>combo</strong> (leve X por preço especial) e <strong>🎁 kit especial</strong> (combo com itens variados).' +
       '</div>' +
       itensHtml +
       '<button onclick="abrirModalCampanha()" style="width:100%;padding:14px;border-radius:14px;background:var(--verde);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">+ Nova campanha</button>';
@@ -7360,7 +7360,7 @@ function abrirModalCampanha() {
       '<div style="margin-bottom:12px;">' +
         '<label style="font-size:13px;color:var(--texto2);">Tipo de promoção</label>' +
         '<select id="camp-tipo" onchange="atualizarCampTipo()" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;margin-top:6px;font-family:\'DM Sans\',sans-serif;">' +
-          '<option value="kit">💝 Kit Especial — combo com itens variados (ex: Dia dos Namorados)</option>' +
+          '<option value="kit">🎁 Kit Especial — combo com itens variados (ex: Kit Família, Kit Festa)</option>' +
           '<option value="combo">📦 Combo — leve X do mesmo item por preço fixo (ex: 3 por R$30)</option>' +
           '<option value="percentual">🎉 Desconto percentual (ex: 10% off)</option>' +
           '<option value="fixo">🎉 Desconto fixo em reais (ex: R$ 5,00 off)</option>' +
@@ -7370,9 +7370,9 @@ function abrirModalCampanha() {
 
       /* Campos do KIT ESPECIAL */
       '<div id="camp-kit-wrap" style="background:rgba(244,114,182,0.06);border:1px solid rgba(244,114,182,0.25);border-radius:12px;padding:14px;margin-bottom:12px;">' +
-        '<div style="font-size:12px;color:#f472b6;font-weight:700;margin-bottom:10px;">💝 O kit aparece em destaque no topo da loja. Descreva livremente os itens incluídos.</div>' +
+        '<div style="font-size:12px;color:#f472b6;font-weight:700;margin-bottom:10px;">🎁 O kit aparece em destaque no topo da loja. Descreva livremente os itens incluídos.</div>' +
         '<label style="font-size:13px;color:var(--texto2);">O que inclui o kit?</label>' +
-        '<textarea id="camp-kit-descricao" rows="3" maxlength="200" placeholder="Ex: 1 Hambúrguer Love + 1 Batata Frita + 1 Suco de Maracujá" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;margin-bottom:10px;font-family:\'DM Sans\',sans-serif;resize:vertical;"></textarea>' +
+        '<textarea id="camp-kit-descricao" rows="3" maxlength="200" placeholder="Ex: 2 Hambúrgueres + 2 Refrigerantes + 1 Batata Grande" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;margin-bottom:10px;font-family:\'DM Sans\',sans-serif;resize:vertical;"></textarea>' +
         '<label style="font-size:13px;color:var(--texto2);">Preço do kit (R$) — exibido para o cliente</label>' +
         '<input id="camp-kit-preco" type="number" min="0.01" step="0.01" placeholder="45.00" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;box-sizing:border-box;margin-top:6px;font-family:\'DM Sans\',sans-serif;">' +
       '</div>' +
