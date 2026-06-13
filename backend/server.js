@@ -313,7 +313,9 @@ app.get('/api/health', (req, res) => {
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   const status = err.status || 500;
-  const message = err.message;
+  const message = process.env.NODE_ENV === 'production'
+    ? (status < 500 ? err.message : 'Erro interno do servidor')
+    : err.message;
 
   console.error(`[ERROR] ${req.method} ${req.path}:`, err.message);
 

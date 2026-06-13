@@ -862,13 +862,27 @@ router.get('/me/relatorio/exportar', requireRole('estabelecimento'), async (req,
 // =============================================
 // CAMPANHAS DE DESCONTO
 // =============================================
+
+// Kit especial: descrição codificada no campo nome como JSON {"n":"nome","d":"descrição"}
+// Isso evita depender de coluna nova no PostgREST antes do cache recarregar
+function encodeKitNome(nome, descricao) {
+  return JSON.stringify({ n: String(nome).trim().slice(0, 80), d: String(descricao).trim().slice(0, 200) });
+}
+function decodeKit(c) {
+  if (!c || c.tipo !== 'kit') return c;
+  try {
+    const p = JSON.parse(c.nome);
+    return { ...c, nome: p.n || c.nome, kit_descricao: p.d || '' };
+  } catch { return c; }
+}
+
 router.get('/me/campanhas', requireRole('estabelecimento'), async (req, res, next) => {
   try {
     const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
     if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
     const { data } = await supabaseAdmin.from('campanhas_estabelecimento')
       .select('*').eq('estabelecimento_id', est.id).order('criado_em', { ascending: false });
-    res.json(data || []);
+    res.json((data || []).map(decodeKit));
   } catch (err) { next(err); }
 });
 
@@ -888,18 +902,18 @@ router.post('/me/campanhas', requireRole('estabelecimento'), async (req, res, ne
     if (tipo === 'kit' && !(parseFloat(combo_preco) > 0)) {
       return res.status(400).json({ error: 'Kit: informe o preço do kit' });
     }
+    const nomeDb = tipo === 'kit' ? encodeKitNome(nome, kit_descricao) : String(nome).trim().slice(0, 80);
     const { data, error } = await supabaseAdmin.from('campanhas_estabelecimento').insert({
       estabelecimento_id: est.id,
-      nome: String(nome).trim().slice(0, 80),
+      nome: nomeDb,
       tipo,
       valor: parseFloat(valor) || 0,
       valor_minimo: parseFloat(valor_minimo) || 0,
       combo_preco: parseFloat(combo_preco) || 0,
-      kit_descricao: kit_descricao ? String(kit_descricao).trim().slice(0, 200) : null,
       ativo: true,
     }).select().single();
     if (error) throw error;
-    res.json(data);
+    res.json(decodeKit(data));
   } catch (err) { next(err); }
 });
 
@@ -907,7 +921,7 @@ router.put('/me/campanhas/:id', requireRole('estabelecimento'), async (req, res,
   try {
     const { data: est } = await supabaseAdmin.from('estabelecimentos').select('id').eq('user_id', req.user.id).single();
     if (!est) return res.status(404).json({ error: 'Loja não encontrada' });
-    const allowed = ['nome', 'tipo', 'valor', 'valor_minimo', 'combo_preco', 'kit_descricao', 'ativo'];
+    const allowed = ['nome', 'tipo', 'valor', 'valor_minimo', 'combo_preco', 'ativo'];
     const updates = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
     if (updates.valor !== undefined) updates.valor = parseFloat(updates.valor) || 0;
@@ -916,7 +930,7 @@ router.put('/me/campanhas/:id', requireRole('estabelecimento'), async (req, res,
     const { data, error } = await supabaseAdmin.from('campanhas_estabelecimento')
       .update(updates).eq('id', req.params.id).eq('estabelecimento_id', est.id).select().single();
     if (error) throw error;
-    res.json(data);
+    res.json(decodeKit(data));
   } catch (err) { next(err); }
 });
 
@@ -935,7 +949,7 @@ router.get('/:estId/campanha-ativa', async (req, res, next) => {
     const { data } = await supabaseAdmin.from('campanhas_estabelecimento')
       .select('*').eq('estabelecimento_id', req.params.estId).eq('ativo', true)
       .order('criado_em', { ascending: false }).limit(1);
-    res.json(data && data[0] ? data[0] : null);
+    res.json(data && data[0] ? decodeKit(data[0]) : null);
   } catch (err) { next(err); }
 });
 
