@@ -13791,9 +13791,18 @@ async function removerMotoboyProprio(id, btn) {
 // ============================================================
 // SELECIONAR MOTOBOY — modal ao clicar "Saiu para entrega"
 // ============================================================
-function escolherTipoEntregaModal(pedidoId) {
+async function escolherTipoEntregaModal(pedidoId) {
   var anterior = document.getElementById('modal-tipo-entrega');
   if(anterior) anterior.remove();
+
+  // Primeiro marca como pronto — notifica cliente e inicia os 30min de confirmação de endereço
+  try {
+    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'pronto' } });
+    renderEstabelecimento();
+  } catch(e) {
+    showToast('❌', 'Erro', e.message);
+    return;
+  }
 
   var modal = document.createElement('div');
   modal.id = 'modal-tipo-entrega';
@@ -13801,7 +13810,7 @@ function escolherTipoEntregaModal(pedidoId) {
   modal.innerHTML =
     '<div style="background:var(--cinza1);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;">' +
       '<h3 style="margin:0 0 6px;">🚚 Como será a entrega?</h3>' +
-      '<p style="font-size:13px;color:var(--texto2);margin:0 0 16px;">Pedido pronto — escolha o tipo de entrega</p>' +
+      '<p style="font-size:13px;color:var(--texto2);margin:0 0 16px;">Cliente foi notificado e tem 30 min para confirmar o endereço</p>' +
       '<button onclick="escolherMotoboyProprio(\'' + pedidoId + '\')" ' +
         'style="width:100%;padding:14px;border-radius:12px;background:var(--cinza2);border:1.5px solid var(--cinza3);color:var(--texto);font-size:15px;font-weight:600;cursor:pointer;text-align:left;margin-bottom:10px;">' +
         '🛵 Motoboy próprio<br>' +
@@ -13813,7 +13822,7 @@ function escolherTipoEntregaModal(pedidoId) {
         '<span style="font-size:12px;color:var(--texto2);font-weight:400;">Notificar entregadores disponíveis na plataforma</span>' +
       '</button>' +
       '<button onclick="document.getElementById(\'modal-tipo-entrega\').remove()" ' +
-        'style="width:100%;padding:12px;border-radius:12px;background:var(--cinza3);border:none;color:var(--texto);font-weight:600;cursor:pointer;">Cancelar</button>' +
+        'style="width:100%;padding:12px;border-radius:12px;background:var(--cinza3);border:none;color:var(--texto);font-weight:600;cursor:pointer;">Fechar</button>' +
     '</div>';
   document.body.appendChild(modal);
 }
@@ -13824,17 +13833,10 @@ function escolherMotoboyProprio(pedidoId) {
   selecionarMotoboyEntrega(pedidoId);
 }
 
-async function escolherMotoboyApp(pedidoId, btn) {
-  if(btn) { btn.disabled = true; btn.innerHTML = '⏳ Notificando...'; }
-  try {
-    await apiCall('/api/orders/' + pedidoId + '/status', { method: 'PATCH', body: { status: 'pronto' } });
-    document.getElementById('modal-tipo-entrega')?.remove();
-    showToast('📲', 'Motoboys notificados!', 'Os entregadores disponíveis foram avisados.');
-    renderEstabelecimento();
-  } catch(e) {
-    if(btn) { btn.disabled = false; btn.innerHTML = '📲 Motoboy do app<br><span style="font-size:12px;color:var(--texto2);font-weight:400;">Notificar entregadores disponíveis na plataforma</span>'; }
-    showToast('❌', 'Erro', e.message);
-  }
+function escolherMotoboyApp(pedidoId, btn) {
+  // Status já foi setado como 'pronto' em escolherTipoEntregaModal — motoboys já foram notificados
+  document.getElementById('modal-tipo-entrega')?.remove();
+  showToast('📲', 'Motoboys notificados!', 'Os entregadores disponíveis foram avisados.');
 }
 
 async function selecionarMotoboyEntrega(pedidoId) {
