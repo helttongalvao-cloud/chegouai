@@ -8360,6 +8360,10 @@ async function _renderEstabelecimentoInterno() {
       window._lojistaEstId = data.estabelecimento.id;
       var btnCap = document.getElementById('est-nav-cardapio');
       if(btnCap) btnCap.textContent = labelCardapio(data.estabelecimento.categoria);
+      // Ajustar tab "Fazendo" conforme tipo de loja
+      var _isLojaEncomenda = data.estabelecimento.categoria === 'loja' || data.estabelecimento.categoria === 'encomenda';
+      var tabFazendo = _tabsCfg.find(function(t){ return t.id === 'fazendo'; });
+      if(tabFazendo) tabFazendo.label = _isLojaEncomenda ? '⚙️ Produzindo' : '👨‍🍳 Fazendo';
       // Só (re)iniciar Realtime se o ID mudou ou ainda não foi iniciado
       if(!estIdAnterior || estIdAnterior !== data.estabelecimento.id) iniciarRealtimeLojista(data.estabelecimento.id);
       // Atualizar estado de pausa
@@ -8402,15 +8406,17 @@ async function _renderEstabelecimentoInterno() {
              : p.status === 'pronto' ? 'badge-pronto'
              : p.status === 'coletado' ? 'badge-coletado'
              : p.status === 'entregue' ? 'badge-entregue' : 'badge-pronto';
+      var _catEstLocal = (data.estabelecimento && data.estabelecimento.categoria) ? data.estabelecimento.categoria : (estDataCache && estDataCache.estabelecimento ? estDataCache.estabelecimento.categoria : '');
+      var _isLojaEnc = _catEstLocal === 'loja' || _catEstLocal === 'encomenda';
       var sl = p.status === 'aceito' ? '🔔 Novo'
-             : p.status === 'preparando' ? '👨‍🍳 Preparando'
+             : p.status === 'preparando' ? (_isLojaEnc ? '⚙️ Produzindo' : '👨‍🍳 Preparando')
              : p.status === 'em_producao' ? '🏭 Em produção'
              : p.status === 'separando' ? '📦 Separando'
              : p.status === 'pronto' ? '✅ Pronto'
              : p.status === 'coletado' ? '🛵 Em entrega'
              : p.status === 'entregue' ? '✅ Entregue' : '✅ Pronto';
       var isEncerrado = p.status === 'coletado' || p.status === 'entregue';
-      var catEst = estDataCache && estDataCache.estabelecimento ? estDataCache.estabelecimento.categoria : '';
+      var catEst = (data.estabelecimento && data.estabelecimento.categoria) ? data.estabelecimento.categoria : (estDataCache && estDataCache.estabelecimento ? estDataCache.estabelecimento.categoria : '');
       var isLojaEncomenda = catEst === 'loja' || catEst === 'encomenda';
       var botao = '';
       if(p.status === 'pendente')
