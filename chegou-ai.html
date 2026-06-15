@@ -12939,7 +12939,8 @@ function _renderTimelineEncomenda(status, historico) {
   ];
 
   var ordem = passos.map(function(p) { return p.key; });
-  var idxAtual = ordem.indexOf(status);
+  var statusNorm = status === 'preparando' ? 'em_producao' : status; // 'preparando' = alias de 'em_producao' na timeline e-commerce
+  var idxAtual = ordem.indexOf(statusNorm);
   if(idxAtual === -1) idxAtual = 0;
 
   function fmtHora(iso) {
@@ -13000,7 +13001,9 @@ function atualizarRastreioPedido(status, historico) {
   var info = {
     'pendente':          { icon:'⏳', titulo:'Pedido recebido!',        sub:'Aguardando confirmação da loja...', cls:'' },
     'aceito':            { icon:'✅', titulo:'Pedido aceito!',           sub:'O estabelecimento confirmou seu pedido.', cls:'' },
-    'preparando':        { icon:'👨‍🍳', titulo:'Preparando...',            sub:'Seu pedido está sendo preparado.',       cls:'' },
+    'preparando':        (estAtual && (estAtual.categoria === 'loja' || estAtual.categoria === 'encomenda'))
+                       ? { icon:'⚙️', titulo:'Em produção!',             sub:'Seu produto está sendo fabricado.',      cls:'' }
+                       : { icon:'👨‍🍳', titulo:'Preparando...',            sub:'Seu pedido está sendo preparado.',       cls:'' },
     'em_producao':       { icon:'🏭', titulo:'Em produção!',             sub:'Seu pedido está sendo produzido com cuidado.', cls:'' },
     'separando':         { icon:'📦', titulo:'Separando pedido!',        sub:'Quase lá! Seu pedido está sendo separado.', cls:'' },
     'pronto':            { icon:'📦', titulo:'Pedido pronto!',           sub:'Confirme seu endereço de entrega abaixo.',  cls:'' },
