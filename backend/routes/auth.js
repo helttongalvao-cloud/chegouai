@@ -422,41 +422,73 @@ router.post('/cadastro-parceiro', async (req, res, next) => {
   if (telLimpo.length < 10 || telLimpo.length > 11) return res.status(400).json({ error: 'WhatsApp inválido (DDD + número, sem código do país)' });
 
   try {
+    console.log('[cadastro-parceiro] início', { nomeLoja, email: email?.toLowerCase(), tel: telLimpo, token: token?.slice(0,8) });
     // Validar token
     const { data: conviteData } = await supabaseAdmin
       .from('configuracoes').select('valor').eq('chave', `convite_${token}`).maybeSingle();
-    if (!conviteData) return res.status(400).json({ error: 'Convite inválido' });
+    if (!conviteData) { console.log('[cadastro-parceiro] token não encontrado'); return res.status(400).json({ error: 'Convite inválido' }); }
     const convite = JSON.parse(conviteData.valor);
-    if (convite.usado) return res.status(400).json({ error: 'Convite já utilizado' });
-    if (new Date(convite.expira_em) < new Date()) return res.status(400).json({ error: 'Convite expirado' });
+    if (convite.usado) { console.log('[cadastro-parceiro] token já usado'); return res.status(400).json({ error: 'Convite já utilizado' }); }
+    if (new Date(convite.expira_em) < new Date()) { console.log('[cadastro-parceiro] token expirado'); return res.status(400).json({ error: 'Convite expirado' }); }
 
     const emailNorm = email.toLowerCase().trim();
 
     // Verificar e-mail e WhatsApp duplicados
     const [{ data: existeEmail }, { data: existeTel }] = await Promise.all([
-      supabaseAdmin.from('profiles').select('id').eq('email', emailNorm).maybeSingle(),
-      supabaseAdmin.from('profiles').select('id').eq('telefone', telLimpo).maybeSingle(),
+      supabaseAdmin.from('profiles').select('id, perfil').eq('email', emailNorm).maybeSingle(),
+      supabaseAdmin.from('profiles').select('id, perfil').eq('telefone', telLimpo).maybeSingle(),
     ]);
-    if (existeEmail) return res.status(409).json({ error: 'E-mail já cadastrado' });
-    if (existeTel) return res.status(409).json({ error: 'WhatsApp já cadastrado' });
 
-    // Criar usuário no Auth
-    const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
-      email: emailNorm, password: senha, email_confirm: true,
-      user_metadata: { nome: nomeResponsavel, telefone: telLimpo },
-    });
-    if (authErr) {
-      if (authErr.message.includes('already been registered')) return res.status(409).json({ error: 'E-mail já cadastrado' });
-      throw authErr;
+    // Bloquear se já existe como não-cliente (estabelecimento, motoboy, admin)
+    const perfilExistente = existeEmail || existeTel;
+    if (perfilExistente && perfilExistente.perfil !== 'cliente') {
+      const campo = existeEmail ? 'E-mail' : 'WhatsApp';
+      console.log(`[cadastro-parceiro] ${campo} duplicado (perfil: ${perfilExistente.perfil})`);
+      return res.status(409).json({ error: `${campo} já cadastrado com outro tipo de conta` });
     }
-    const userId = authData.user.id;
 
-    // Criar perfil
-    const { error: profErr } = await supabaseAdmin.from('profiles').upsert({
-      id: userId, nome: nomeResponsavel.trim(), telefone: telLimpo,
-      email: emailNorm, perfil: 'estabelecimento',
-    });
-    if (profErr) { await supabaseAdmin.auth.admin.deleteUser(userId); throw profErr; }
+    let userId;
+
+    if (perfilExistente && perfilExistente.perfil === 'cliente') {
+      // Cliente existente virando lojista — reutilizar account
+      userId = perfilExistente.id;
+      console.log('[cadastro-parceiro] cliente existente convertendo para lojista:', userId);
+
+      // Atualizar senha e metadados no Auth
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: senha,
+        user_metadata: { nome: nomeResponsavel, telefone: telLimpo },
+      });
+
+      // Atualizar perfil
+      const { error: profErr } = await supabaseAdmin.from('profiles').update({
+        nome: nomeResponsavel.trim(),
+        telefone: telLimpo,
+        email: emailNorm,
+        perfil: 'estabelecimento',
+      }).eq('id', userId);
+      if (profErr) throw profErr;
+    } else {
+      // Criar novo usuário no Auth
+      const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+        email: emailNorm, password: senha, email_confirm: true,
+        user_metadata: { nome: nomeResponsavel, telefone: telLimpo },
+      });
+      if (authErr) {
+        console.error('[cadastro-parceiro] createUser error:', authErr.message);
+        if (authErr.message.includes('already been registered')) return res.status(409).json({ error: 'E-mail já cadastrado' });
+        throw authErr;
+      }
+      userId = authData.user.id;
+      console.log('[cadastro-parceiro] auth user criado:', userId);
+
+      // Criar perfil
+      const { error: profErr } = await supabaseAdmin.from('profiles').upsert({
+        id: userId, nome: nomeResponsavel.trim(), telefone: telLimpo,
+        email: emailNorm, perfil: 'estabelecimento',
+      });
+      if (profErr) { await supabaseAdmin.auth.admin.deleteUser(userId); throw profErr; }
+    }
 
     // Criar estabelecimento com ativo=false (aguardando aprovação)
     const { data: est, error: estErr } = await supabaseAdmin
@@ -474,7 +506,13 @@ router.post('/cadastro-parceiro', async (req, res, next) => {
         aberto: false,
       })
       .select().single();
-    if (estErr) { await supabaseAdmin.auth.admin.deleteUser(userId); throw estErr; }
+    if (estErr) {
+      console.error('[cadastro-parceiro] estabelecimento insert error:', estErr.message);
+      // Só apaga o auth user se foi criado agora (não era cliente)
+      if (!perfilExistente) await supabaseAdmin.auth.admin.deleteUser(userId);
+      throw estErr;
+    }
+    console.log('[cadastro-parceiro] estabelecimento criado:', est.id, '— aguardando aprovação');
 
     // Marcar token como usado
     await supabaseAdmin.from('configuracoes')
