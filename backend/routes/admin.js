@@ -1047,9 +1047,9 @@ router.get('/metrics-ceo', async (req, res, next) => {
         .select('id, total, comissao_plataforma, status, pagamento_status, criado_em, estabelecimento_id')
         .gte('criado_em', inicio30.toISOString())
         .order('criado_em', { ascending: true }),
-      // Pedidos ativos agora
+      // Pedidos ativos agora (com timestamp para detectar travados)
       supabaseAdmin.from('pedidos')
-        .select('id, status, total, estabelecimentos(nome)')
+        .select('id, status, total, criado_em, motoboy_id, estabelecimentos(nome)')
         .in('status', ['pendente', 'aceito', 'preparando', 'pronto', 'coletado', 'saiu_para_entrega'])
         .eq('pagamento_status', 'aprovado'),
       // Motoboys online
@@ -1130,6 +1130,25 @@ router.get('/metrics-ceo', async (req, res, next) => {
     });
     const topMotoboys = Object.values(motoMap).sort((a, b) => b.entregas - a.entregas).slice(0, 5);
 
+    // ---- Alertas operacionais em tempo real ----
+    const agora2 = Date.now();
+    const alertasCeo = [];
+    for (const p of (pedidosAtivos || [])) {
+      const min = Math.floor((agora2 - new Date(p.criado_em).getTime()) / 60000);
+      const loja = p.estabelecimentos?.nome || 'Loja';
+      const val = 'R$ ' + parseFloat(p.total || 0).toFixed(2).replace('.', ',');
+      if (p.status === 'pendente' && min >= 3) {
+        alertasCeo.push({ prioridade: 'critica', icone: '🚨', msg: `${loja} — sem aceite há ${min}min · ${val}`, pedidoId: p.id });
+      } else if (p.status === 'pronto' && !p.motoboy_id && min >= 5) {
+        alertasCeo.push({ prioridade: 'critica', icone: '🚨', msg: `${loja} — pronto sem motoboy há ${min}min · ${val}`, pedidoId: p.id });
+      } else if ((p.status === 'aceito' || p.status === 'preparando') && min >= 30) {
+        alertasCeo.push({ prioridade: 'atencao', icone: '⚠️', msg: `${loja} — preparo há ${min}min · ${val}`, pedidoId: p.id });
+      } else if ((p.status === 'coletado' || p.status === 'saiu_para_entrega') && min >= 45) {
+        alertasCeo.push({ prioridade: 'atencao', icone: '⚠️', msg: `${loja} — em rota há ${min}min · ${val}`, pedidoId: p.id });
+      }
+    }
+    alertasCeo.sort((a, b) => (a.prioridade === 'critica' ? -1 : 1) - (b.prioridade === 'critica' ? -1 : 1));
+
     res.json({
       atualizadoEm: agora.toISOString(),
       hoje: {
@@ -1168,6 +1187,7 @@ router.get('/metrics-ceo', async (req, res, next) => {
       gmvPorDia,
       topLojas,
       topMotoboys,
+      alertas: alertasCeo,
     });
   } catch (err) { next(err); }
 });
