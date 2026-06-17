@@ -454,11 +454,15 @@ router.post('/cadastro-parceiro', async (req, res, next) => {
       userId = perfilExistente.id;
       console.log('[cadastro-parceiro] cliente existente convertendo para lojista:', userId);
 
-      // Atualizar senha e metadados no Auth
-      await supabaseAdmin.auth.admin.updateUserById(userId, {
+      // Atualizar senha (nova senha de lojista) e metadados no Auth
+      const { error: updateAuthErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
         password: senha,
         user_metadata: { nome: nomeResponsavel, telefone: telLimpo },
       });
+      if (updateAuthErr) {
+        console.error('[cadastro-parceiro] updateUserById error:', updateAuthErr.message);
+        return res.status(500).json({ error: 'Erro ao atualizar conta. Tente novamente.' });
+      }
 
       // Atualizar perfil
       const { error: profErr } = await supabaseAdmin.from('profiles').update({
@@ -467,7 +471,10 @@ router.post('/cadastro-parceiro', async (req, res, next) => {
         email: emailNorm,
         perfil: 'estabelecimento',
       }).eq('id', userId);
-      if (profErr) throw profErr;
+      if (profErr) {
+        console.error('[cadastro-parceiro] profile update error:', profErr.message);
+        return res.status(500).json({ error: 'Erro ao atualizar perfil. Tente novamente.' });
+      }
     } else {
       // Criar novo usuário no Auth
       const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
