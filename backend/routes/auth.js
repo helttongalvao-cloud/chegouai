@@ -454,8 +454,9 @@ router.post('/cadastro-parceiro', async (req, res, next) => {
       userId = perfilExistente.id;
       console.log('[cadastro-parceiro] cliente existente convertendo para lojista:', userId);
 
-      // Atualizar senha (nova senha de lojista) e metadados no Auth
+      // Atualizar e-mail, senha e metadados no Auth (e-mail do Auth era tel_@chegouai.app como cliente)
       const { error: updateAuthErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        email: emailNorm,
         password: senha,
         user_metadata: { nome: nomeResponsavel, telefone: telLimpo },
       });
