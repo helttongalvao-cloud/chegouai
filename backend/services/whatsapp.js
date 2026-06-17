@@ -14,6 +14,7 @@ function formatarNumero(num) {
 async function enviarWhatsApp(numero, mensagem) {
   const instanceId = process.env.ZAPI_INSTANCE_ID;
   const token = process.env.ZAPI_TOKEN;
+  const clientToken = process.env.ZAPI_CLIENT_TOKEN;
   if (!instanceId || !token) {
     console.warn('[WhatsApp] ZAPI_INSTANCE_ID/TOKEN não configurados — mensagem não enviada');
     return;
@@ -22,9 +23,11 @@ async function enviarWhatsApp(numero, mensagem) {
   if (!phone) return;
   try {
     const url = `${ZAPI_BASE}/instances/${instanceId}/token/${token}/send-text`;
+    const headers = { 'Content-Type': 'application/json' };
+    if (clientToken) headers['Client-Token'] = clientToken;
     const r = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ phone, message: mensagem }),
     });
     const bodyText = await r.text().catch(() => '');
