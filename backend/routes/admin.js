@@ -1371,9 +1371,11 @@ router.patch('/pendentes/:id/aprovar', async (req, res, next) => {
       .from('estabelecimentos')
       .update({ ativo: true, aberto: false })
       .eq('id', req.params.id)
-      .select('id, nome, whatsapp, user_id')
+      .select('id, nome, whatsapp, user_id, profiles(nome)')
       .single();
     if (error || !data) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
+
+    const nomeResponsavel = data.profiles?.nome || data.nome;
 
     // Push + WhatsApp ao parceiro
     try {
@@ -1383,6 +1385,12 @@ router.patch('/pendentes/:id/aprovar', async (req, res, next) => {
     try {
       const { enviarWhatsApp } = require('../services/whatsapp');
       if (data.whatsapp) enviarWhatsApp(data.whatsapp, `🎉 Parabéns! Sua loja *${data.nome}* foi aprovada no Chegô!\n\nAcesse o app, faça login e complete seu cadastro.\n\n*chegouaiapp.com.br/app*`);
+    } catch (_) {}
+
+    // Iniciar sequência de onboarding (dias 1,2,3,5,7,15)
+    try {
+      const { agendarOnboardingLojista } = require('../services/onboarding');
+      if (data.whatsapp) await agendarOnboardingLojista(data.id, nomeResponsavel, data.whatsapp);
     } catch (_) {}
 
     res.json({ ok: true });
