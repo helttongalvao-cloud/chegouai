@@ -43,7 +43,7 @@ async function agendarOnboardingLojista(estabelecimentoId, nomeResponsavel, what
   if (!whatsapp) return;
   const agora = new Date();
   const registros = SEQUENCIA.map(({ dia, tipo, mensagem }) => {
-    const enviarEm = new Date(agora.getTime() + dia * 24 * 60 * 60 * 1000);
+    const enviarEm = new Date(agora.getTime() + (dia - 1) * 24 * 60 * 60 * 1000);
     return {
       enviar_em: enviarEm.toISOString(),
       para: whatsapp.replace(/\D/g, ''),
