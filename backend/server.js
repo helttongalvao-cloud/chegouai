@@ -339,6 +339,7 @@ const { iniciarMonitorAlertas } = require('./services/monitor-alertas');
 const { iniciarMonitorPagamentos } = require('./services/monitor-pagamentos');
 const { iniciarMonitorOnboarding } = require('./services/onboarding');
 const { iniciarMonitorRelatorios } = require('./services/relatorios');
+const { iniciarAna } = require('./services/ana');
 
 app.listen(PORT, () => {
   console.log(`\n🛵  Chegô — Backend rodando`);
@@ -349,6 +350,7 @@ app.listen(PORT, () => {
   iniciarMonitorPagamentos();
   iniciarMonitorOnboarding();
   iniciarMonitorRelatorios();
+  iniciarAna();
 
   // Registrar webhook do Telegram automaticamente (idempotente)
   if (process.env.NODE_ENV === 'production' && process.env.TELEGRAM_BOT_TOKEN && process.env.FRONTEND_URL) {
