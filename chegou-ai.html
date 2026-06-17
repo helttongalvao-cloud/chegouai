@@ -11923,10 +11923,14 @@ async function centralVerLojista(id) {
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">' +
       _fichaItem('📁', 'Categoria', ficha.categoria || '—') +
       _fichaItem('📍', 'Cidade', ficha.cidade || '—') +
+      _fichaItem('👤', 'Responsável', ficha.responsavel_nome || '—') +
+      _fichaItem('📧', 'E-mail', ficha.responsavel_email || '—') +
+      _fichaItem('📱', 'WhatsApp', ficha.whatsapp || ficha.responsavel_telefone || '—') +
+      _fichaItem('🔵', 'Status', ficha.ativo ? (ficha.aberto ? 'Aberto' : 'Fechado') : 'Inativo') +
       _fichaItem('📦', 'Pedidos entregues', ficha.total_pedidos) +
       _fichaItem('💰', 'GMV total', 'R$ ' + (ficha.gmv || 0).toFixed(2).replace('.',',')) +
       _fichaItem('🎯', 'Comissão plataforma', 'R$ ' + (ficha.comissao_plataforma || 0).toFixed(2).replace('.',',')) +
-      _fichaItem('🔵', 'Status', ficha.ativo ? (ficha.aberto ? 'Aberto' : 'Fechado') : 'Inativo') +
+      _fichaItem('🏦', 'Pagar.me', ficha.pagarme_recipient_id ? '✅ Configurado' : '⚠️ Pendente') +
     '</div>' +
     '<div style="font-size:13px;font-weight:700;color:var(--texto2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Últimos pedidos</div>' +
     (ficha.pedidos.length ? ficha.pedidos.slice(0,10).map(function(p) {

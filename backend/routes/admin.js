@@ -1524,12 +1524,17 @@ router.get('/establishments/:id/ficha', async (req, res, next) => {
       .single();
     if (error || !est) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
 
-    const { data: pedidos } = await supabaseAdmin
-      .from('pedidos')
-      .select('id, total, comissao_plataforma, status, pagamento_status, criado_em')
-      .eq('estabelecimento_id', req.params.id)
-      .order('criado_em', { ascending: false })
-      .limit(30);
+    const [{ data: pedidos }, { data: profile }] = await Promise.all([
+      supabaseAdmin
+        .from('pedidos')
+        .select('id, total, comissao_plataforma, status, pagamento_status, criado_em')
+        .eq('estabelecimento_id', req.params.id)
+        .order('criado_em', { ascending: false })
+        .limit(30),
+      est.user_id
+        ? supabaseAdmin.from('profiles').select('email, nome, telefone').eq('id', est.user_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
 
     const entreguesPagos = (pedidos || []).filter(p => p.status === 'entregue' && p.pagamento_status === 'aprovado');
     const gmv = entreguesPagos.reduce((acc, p) => acc + Number(p.total), 0);
@@ -1537,6 +1542,9 @@ router.get('/establishments/:id/ficha', async (req, res, next) => {
 
     res.json({
       ...est,
+      responsavel_nome: profile?.nome || null,
+      responsavel_email: profile?.email || null,
+      responsavel_telefone: profile?.telefone || null,
       pedidos: pedidos || [],
       total_pedidos: entreguesPagos.length,
       gmv,
