@@ -40,7 +40,7 @@ router.post(
       .isArray({ min: 1 })
       .withMessage('Pedido deve ter pelo menos 1 item'),
     body('itens.*.produtoId').isUUID().withMessage('Produto inválido'),
-    body('itens.*.quantidade').isFloat({ min: 0.5 }).withMessage('Quantidade inválida'),
+    body('itens.*.quantidade').isFloat({ min: 0.1 }).withMessage('Quantidade inválida'),
     body('itens.*.observacao').optional().trim().isLength({ max: 500 }),
     body('enderecoEntrega')
       .trim()

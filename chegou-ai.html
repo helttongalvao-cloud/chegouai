@@ -5786,9 +5786,10 @@ function abrirModalPeso(item, idx) {
       '<div class="modal-titulo">🥩 ' + item.nome + '</div>' +
       '<div style="font-size:13px;color:var(--texto2);margin-bottom:16px;text-align:center;">R$ ' + precoKg.toFixed(2).replace('.',',') + ' / kg — escolha a quantidade</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;" id="peso-opcoes">' +
-        opcoes.map(function(o) {
+        opcoes.map(function(o, i) {
           var total = (precoKg * o.g / 1000).toFixed(2).replace('.',',');
-          return '<button onclick="selecionarPesoOpcao(' + o.g + ', this)" style="padding:14px 8px;border-radius:12px;border:2px solid var(--cinza3);background:var(--cinza2);color:var(--texto);cursor:pointer;font-family:\'DM Sans\',sans-serif;">' +
+          var fullRow = (i === opcoes.length - 1 && opcoes.length % 2 !== 0) ? 'grid-column:1/-1;' : '';
+          return '<button onclick="selecionarPesoOpcao(' + o.g + ', this)" style="' + fullRow + 'padding:14px 8px;border-radius:12px;border:2px solid var(--cinza3);background:var(--cinza2);color:var(--texto);cursor:pointer;font-family:\'DM Sans\',sans-serif;">' +
             '<div style="font-size:17px;font-weight:700;">' + o.label + '</div>' +
             '<div style="font-size:13px;color:var(--verde);margin-top:2px;">R$ ' + total + '</div>' +
           '</button>';
