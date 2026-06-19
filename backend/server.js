@@ -241,6 +241,8 @@ app.get('/api/config', (req, res) => {
     pedidoMinimo: parseFloat(process.env.PEDIDO_MINIMO_GLOBAL || '0'),
     // Username do bot Telegram (para deep link dos motoboys)
     telegramBotUsername: process.env.TELEGRAM_BOT_USERNAME || '',
+    // Mercado Pago public key (tokenização no cliente)
+    mpPublicKey: process.env.MP_PUBLIC_KEY || '',
   });
 });
 

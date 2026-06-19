@@ -58,6 +58,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"></noscript>
@@ -2106,6 +2107,14 @@ async function inicializarApp() {
     if(cfg.taxaCartaoCliente) TAXA_CARTAO_CLIENTE = cfg.taxaCartaoCliente;
     if(cfg.pedidoMinimo) pedidoMinimoGlobal = parseFloat(cfg.pedidoMinimo);
     if(cfg.telegramBotUsername) window._telegramBotUsername = cfg.telegramBotUsername;
+    if(cfg.mpPublicKey && window.MercadoPago) {
+      try {
+        window._mp = new MercadoPago(cfg.mpPublicKey, { locale: 'pt-BR' });
+      } catch(e) { console.warn('[MP] Erro ao inicializar SDK:', e.message); }
+    }
+    // Limpar cartão salvo do Pagar.me (card_id incompatível com Mercado Pago)
+    var cartaoAntigo = getCartaoSalvo();
+    if(cartaoAntigo && cartaoAntigo.card_id) localStorage.removeItem('chegouai_cartao_salvo');
   } catch(e) {
     console.warn('[Config] Erro ao carregar config do servidor:', e.message);
   }
@@ -2608,31 +2617,52 @@ function abrirGerenciarCartao() {
   document.getElementById('modal-cartao').classList.add('aberto');
 }
 
+function detectarBandeira(bin) {
+  var n = String(bin || '');
+  if (/^4011|^4312|^4389|^4514|^4576|^5041|^5067|^5090|^6277|^6362|^6516|^6550/.test(n)) return 'elo';
+  if (/^606282/.test(n)) return 'hipercard';
+  if (/^3[47]/.test(n)) return 'amex';
+  if (/^5[1-5]|^2[2-7]/.test(n)) return 'mastercard';
+  if (/^4/.test(n)) return 'visa';
+  return 'outro';
+}
+
+async function mpTokenizarCartao(dados) {
+  if (!window._mp) throw new Error('Serviço de pagamento não carregado. Recarregue a página.');
+  var tokenResp = await window._mp.createCardToken({
+    cardNumber:          dados.numero,
+    cardholderName:      dados.nome,
+    cardExpirationMonth: dados.mes,
+    cardExpirationYear:  dados.ano,
+    securityCode:        dados.cvv,
+  });
+  if (!tokenResp || !tokenResp.id) throw new Error('Falha ao processar cartão. Verifique os dados.');
+  var paymentMethodId = detectarBandeira(tokenResp.first_six_digits || '');
+  try {
+    var methods = await window._mp.getPaymentMethods({ bin: tokenResp.first_six_digits });
+    if (methods?.results?.[0]?.id) paymentMethodId = methods.results[0].id;
+  } catch(_) {}
+  return Object.assign(tokenResp, { _paymentMethodId: paymentMethodId });
+}
+
 async function salvarCartao(e) {
   e.preventDefault();
   var btn = e.target.querySelector('button[type=submit]');
   btn.disabled = true; btn.textContent = 'Salvando...';
   try {
-    var cartaoExistente = getCartaoSalvo();
-    var resp = await apiCall('/api/payments/salvar-cartao', {
-      method: 'POST',
-      body: {
-        holderName:  document.getElementById('sc-nome').value.trim(),
-        cardNumber:  document.getElementById('sc-numero').value.replace(/\D/g,''),
-        expiryMonth: document.getElementById('sc-mes').value.trim(),
-        expiryYear:  document.getElementById('sc-ano').value.trim(),
-        cvv:         document.getElementById('sc-cvv').value.trim(),
-        customerId:  cartaoExistente?.customer_id || null,
-      },
+    var tokenResp = await mpTokenizarCartao({
+      numero: document.getElementById('sc-numero').value.replace(/\D/g,''),
+      nome:   document.getElementById('sc-nome').value.trim(),
+      mes:    document.getElementById('sc-mes').value.trim(),
+      ano:    document.getElementById('sc-ano').value.trim(),
+      cvv:    document.getElementById('sc-cvv').value.trim(),
     });
     localStorage.setItem('chegouai_cartao_salvo', JSON.stringify({
-      customer_id: resp.customer_id,
-      card_id:     resp.card_id,
-      last4:       resp.last4,
-      brand:       resp.brand,
-      holder_name: resp.holder_name,
-      exp_month:   resp.exp_month,
-      exp_year:    resp.exp_year,
+      last4:       tokenResp.last_four_digits,
+      brand:       tokenResp._paymentMethodId,
+      holder_name: document.getElementById('sc-nome').value.trim(),
+      exp_month:   tokenResp.expiration_month,
+      exp_year:    tokenResp.expiration_year,
     }));
     document.getElementById('modal-cartao').classList.remove('aberto');
     mostrarToast('Cartão salvo com sucesso! 💳');
@@ -2819,30 +2849,32 @@ function _finalizarPagamentoCartao(resp) {
 async function submitCartaoSalvo(pedidoId) {
   var cartao = getCartaoSalvo();
   if (_usarCartaoSalvo && cartao) {
-    var last4 = cartao.last4 || '????';
-    var ok = confirm('Confirmar pagamento com o cartão ••••' + last4 + '?');
-    if (!ok) return;
+    // Mercado Pago não suporta pagamento sem inserir dados — redirecionar para formulário
+    toggleUsarCartaoSalvo(false);
+    mostrarToast('Preencha os dados do cartão para pagar.', 'info');
+    return;
   }
   var btn = document.querySelector('#pag-detalhe .btn-principal');
   if (btn) { btn.disabled = true; btn.textContent = 'Processando...'; }
   try {
-    var body = { pedidoId: pedidoId };
-
-    if (_usarCartaoSalvo && cartao) {
-      body.cardId = cartao.card_id;
-      body.savedCustomerId = cartao.customer_id;
-      body.installments = 1;
-    } else {
-      body.holderName  = document.getElementById('cc-nome')?.value.trim();
-      body.cardNumber  = document.getElementById('cc-numero')?.value.replace(/\D/g,'');
-      body.expiryMonth = document.getElementById('cc-mes')?.value.trim();
-      body.expiryYear  = document.getElementById('cc-ano')?.value.trim();
-      body.ccv         = document.getElementById('cc-cvv')?.value.trim();
-      body.cpf         = _cpfCheckout();
-      body.installments = _tipoCartaoSelecionado === 'debito' ? 1 : (document.getElementById('cc-parcelas')?.value || 1);
-    }
-
-    var resp = await apiCall('/api/payments/cartao', { method: 'POST', body });
+    var tokenResp = await mpTokenizarCartao({
+      numero: document.getElementById('cc-numero')?.value.replace(/\D/g,'') || '',
+      nome:   document.getElementById('cc-nome')?.value.trim() || '',
+      mes:    document.getElementById('cc-mes')?.value.trim() || '',
+      ano:    document.getElementById('cc-ano')?.value.trim() || '',
+      cvv:    document.getElementById('cc-cvv')?.value.trim() || '',
+    });
+    var resp = await apiCall('/api/payments/cartao', {
+      method: 'POST',
+      body: {
+        pedidoId:        pedidoId,
+        token:           tokenResp.id,
+        paymentMethodId: tokenResp._paymentMethodId,
+        holderName:      document.getElementById('cc-nome')?.value.trim(),
+        cpf:             _cpfCheckout(),
+        installments:    _tipoCartaoSelecionado === 'debito' ? 1 : (document.getElementById('cc-parcelas')?.value || 1),
+      },
+    });
     _finalizarPagamentoCartao(resp);
   } catch(err) {
     if (btn) { btn.disabled = false; btn.textContent = '💳 Pagar agora'; }
@@ -2867,17 +2899,22 @@ async function submitCartao(e, pedidoId) {
   var btn = e.target.querySelector('button[type=submit]');
   if (btn) { btn.disabled = true; btn.textContent = 'Processando...'; }
   try {
+    var tokenResp = await mpTokenizarCartao({
+      numero: document.getElementById('cc-numero').value.replace(/\D/g,''),
+      nome:   document.getElementById('cc-nome').value.trim(),
+      mes:    document.getElementById('cc-mes').value.trim(),
+      ano:    document.getElementById('cc-ano').value.trim(),
+      cvv:    document.getElementById('cc-cvv').value.trim(),
+    });
     var resp = await apiCall('/api/payments/cartao', {
       method: 'POST',
       body: {
-        pedidoId:    pedidoId,
-        holderName:  document.getElementById('cc-nome').value.trim(),
-        cardNumber:  document.getElementById('cc-numero').value.replace(/\D/g,''),
-        expiryMonth: document.getElementById('cc-mes').value.trim(),
-        expiryYear:  document.getElementById('cc-ano').value.trim(),
-        ccv:         document.getElementById('cc-cvv').value.trim(),
-        cpf:         cpfVal,
-        installments: _tipoCartaoSelecionado === 'debito' ? 1 : (document.getElementById('cc-parcelas')?.value || 1),
+        pedidoId:        pedidoId,
+        token:           tokenResp.id,
+        paymentMethodId: tokenResp._paymentMethodId,
+        holderName:      document.getElementById('cc-nome').value.trim(),
+        cpf:             cpfVal,
+        installments:    _tipoCartaoSelecionado === 'debito' ? 1 : (document.getElementById('cc-parcelas')?.value || 1),
       },
     });
     _finalizarPagamentoCartao(resp);
