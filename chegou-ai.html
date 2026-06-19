@@ -1040,6 +1040,7 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
       <div class="cat-icon-grid" id="cats-local">
         <div class="cat-icon-item ativo" onclick="filtrarCatIcon(this,'todos')"><span>✨</span><span style="font-size:13px;font-weight:700;">Todos</span></div>
         <div class="cat-icon-item" onclick="filtrarCatIcon(this,'comida')"><span>🍔</span><span style="font-size:13px;font-weight:700;">Comida</span></div>
+        <div class="cat-icon-item" onclick="filtrarCatIcon(this,'acougue')"><span>🥩</span><span style="font-size:13px;font-weight:700;">Açougue</span></div>
         <div class="cat-icon-item" onclick="filtrarCatIcon(this,'farmacia')"><span>💊</span><span style="font-size:13px;font-weight:700;">Farmácias</span></div>
         <div class="cat-icon-item" onclick="filtrarCatIcon(this,'bebida')"><span>🥤</span><span style="font-size:13px;font-weight:700;">Bebidas</span></div>
       </div>
@@ -1597,6 +1598,11 @@ h1,h2,h3,h4 { font-family:'Plus Jakarta Sans',sans-serif; }
         <div class="tipo-card-icon">🛍️</div>
         <div class="tipo-card-label">Loja</div>
         <div class="tipo-card-sub">Roupas, calçados, produtos</div>
+      </div>
+      <div class="tipo-card" onclick="parceiroSelecionarTipo('acougue',this)">
+        <div class="tipo-card-icon">🥩</div>
+        <div class="tipo-card-label">Açougue</div>
+        <div class="tipo-card-sub">Carnes, frangos, peixes, embutidos</div>
       </div>
       <div class="tipo-card" onclick="parceiroSelecionarTipo('encomenda',this)">
         <div class="tipo-card-icon">🎨</div>
@@ -3887,7 +3893,7 @@ async function carregarEstabelecimentos(cat, _retry) {
 }
 
 var _CATS_NACIONAL = ['loja','encomenda'];
-var _CATS_LOCAL    = ['restaurante','mercado','farmacia','lanche','bebida'];
+var _CATS_LOCAL    = ['restaurante','mercado','farmacia','lanche','bebida','acougue'];
 var _modoHome = 'local';
 
 function trocarModoHome(modo) {
@@ -4764,7 +4770,7 @@ var _parceiroToken = '';
 var _parceiroData = { categoria: '', tipoEntrega: 'app' };
 var _parceiroSteps = [0, 1, 2, 3, 4, 5]; // step 2 pode ser pulado
 
-var _tipoLabels = { lanche:'Lanchonete', restaurante:'Restaurante', mercado:'Mercado', farmacia:'Farmácia', loja:'Loja de Produtos', encomenda:'Encomendas', bebida:'Bebidas' };
+var _tipoLabels = { lanche:'Lanchonete', restaurante:'Restaurante', mercado:'Mercado', farmacia:'Farmácia', loja:'Loja de Produtos', encomenda:'Encomendas', bebida:'Bebidas', acougue:'Açougue' };
 var _modalLabels = { app:'Motoboys da plataforma', proprio:'Motoboy próprio' };
 
 async function iniciarCadastroParceiro() {
@@ -7919,6 +7925,8 @@ function abrirModalProduto(idx) {
   var catAtual = estDataCache?.estabelecimento?.categoria;
   var opcoes = catAtual === 'farmacia'
     ? [['medicamento','Medicamento'],['perfumaria','Perfumaria'],['controlado','Controlado'],['higiene','Higiene'],['outros','Outros']]
+    : catAtual === 'acougue'
+    ? [['bovino','Bovino'],['suino','Suíno'],['frango','Frango'],['peixe','Peixe e Frutos do Mar'],['embutido','Embutidos'],['miudos','Miúdos'],['temperado','Temperados / Marinados'],['outros','Outros']]
     : catAtual === 'mercado'
     ? [['principal','Principal'],['hortifruti','Hortifruti'],['acougue','Açougue'],['padaria','Padaria'],['bebidas','Bebidas'],['limpeza','Limpeza'],['higiene','Higiene'],['outros','Outros']]
     : catAtual === 'loja'
@@ -7989,7 +7997,7 @@ function abrirModalProduto(idx) {
     var promoEl = document.getElementById('prod-preco-promo');
     if(promoEl) promoEl.value = '';
     document.getElementById('prod-estoque').value = '';
-    document.getElementById('prod-unidade').value = 'un';
+    document.getElementById('prod-unidade').value = catAtual === 'acougue' ? 'kg' : 'un';
     var prazoEl = document.getElementById('prod-prazo');
     if(prazoEl) prazoEl.value = '';
     document.getElementById('prod-disponivel').checked = true;
