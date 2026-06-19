@@ -1369,7 +1369,7 @@ router.patch('/pendentes/:id/aprovar', async (req, res, next) => {
   try {
     const { data, error } = await supabaseAdmin
       .from('estabelecimentos')
-      .update({ ativo: true, aberto: false })
+      .update({ ativo: true, aberto: true })
       .eq('id', req.params.id)
       .select('id, nome, whatsapp, user_id, profiles(nome)')
       .single();
