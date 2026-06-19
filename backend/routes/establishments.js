@@ -236,11 +236,10 @@ router.get('/:id', [param('id').isUUID()], async (req, res, next) => {
         const [hF, mF] = horDia.fecha.split(':').map(Number);
         const minAtual = agoraBR.getHours() * 60 + agoraBR.getMinutes();
         const minAbre = hA * 60 + mA;
-        const minFecha = hF * 60 + mF;
+        const minFecha = hF === 0 && mF === 0 ? 1440 : hF * 60 + mF;
         est.aberto = minAtual >= minAbre && minAtual < minFecha;
-      } else {
-        est.aberto = false;
       }
+      // Sem horário para hoje: respeita o campo aberto do banco
     }
     if (est.pausado) est.aberto = false;
 
