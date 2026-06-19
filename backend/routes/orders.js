@@ -77,7 +77,7 @@ router.post(
       // 1. Validar estabelecimento
       const { data: est, error: estErr } = await supabaseAdmin
         .from('estabelecimentos')
-        .select('id, nome, aberto, taxa_entrega, tipo_frete, frete_base, frete_por_km, cadastro_data, ativo, user_id, valor_minimo, whatsapp, tipo_entrega, pausado')
+        .select('id, nome, aberto, horarios, taxa_entrega, tipo_frete, frete_base, frete_por_km, cadastro_data, ativo, user_id, valor_minimo, whatsapp, tipo_entrega, pausado')
         .eq('id', estabelecimentoId)
         .eq('ativo', true)
         .single();
@@ -85,6 +85,21 @@ router.post(
       if (estErr || !est) {
         return res.status(404).json({ error: 'Estabelecimento não encontrado' });
       }
+
+      // Recalcular aberto com base no horário (mesmo que o campo no banco esteja desatualizado)
+      if (est.horarios && !est.pausado) {
+        const agora = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Eirunepe' }));
+        const diaChave = ['dom','seg','ter','qua','qui','sex','sab'][agora.getDay()];
+        const h = est.horarios[diaChave];
+        if (h && h.abre && h.fecha) {
+          const [hA, mA] = h.abre.split(':').map(Number);
+          const [hF, mF] = h.fecha.split(':').map(Number);
+          const fechaMin = hF === 0 && mF === 0 ? 1440 : hF * 60 + mF;
+          const minAtual = agora.getHours() * 60 + agora.getMinutes();
+          est.aberto = minAtual >= hA * 60 + mA && minAtual < fechaMin;
+        }
+      }
+
       if (!est.aberto) {
         return res.status(400).json({ error: 'Estabelecimento fechado no momento' });
       }
