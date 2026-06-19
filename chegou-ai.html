@@ -8917,12 +8917,11 @@ function verificarHorarioAuto(est) {
   var agora = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Eirunepe' }));
   var diaChave = ['dom','seg','ter','qua','qui','sex','sab'][agora.getDay()];
   var h = est.horarios[diaChave];
-  var deveriaAbrir = false;
-  if(h && h.abre && h.fecha) {
-    var toMin = function(s) { var p = s.split(':'); return parseInt(p[0])*60 + parseInt(p[1]); };
-    var minAtual = agora.getHours()*60 + agora.getMinutes();
-    deveriaAbrir = minAtual >= toMin(h.abre) && minAtual < toMin(h.fecha);
-  }
+  // Se não há horário cadastrado para hoje, não alterar o estado
+  if(!h || !h.abre || !h.fecha) return;
+  var toMin = function(s) { var p = s.split(':'); var m = parseInt(p[0])*60 + parseInt(p[1]); return m === 0 ? 1440 : m; };
+  var minAtual = agora.getHours()*60 + agora.getMinutes();
+  var deveriaAbrir = minAtual >= toMin(h.abre) && minAtual < toMin(h.fecha);
   var estado = deveriaAbrir ? 'aberto' : 'fechado';
   if(_ultimoEstadoAuto === estado) return;
   _ultimoEstadoAuto = estado;
