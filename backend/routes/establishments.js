@@ -154,11 +154,10 @@ router.get('/', async (req, res, next) => {
         if (h && h.abre && h.fecha) {
           const [hA, mA] = h.abre.split(':').map(Number);
           const [hF, mF] = h.fecha.split(':').map(Number);
-          est.aberto = minAtual >= hA * 60 + mA && minAtual < hF * 60 + mF;
-        } else {
-          // horários configurados mas hoje não tem entrada = fechado
-          est.aberto = false;
+          const fechaMin = hF === 0 && mF === 0 ? 1440 : hF * 60 + mF; // 00:00 = meia-noite
+          est.aberto = minAtual >= hA * 60 + mA && minAtual < fechaMin;
         }
+        // Se não há horário para hoje, respeita o campo aberto do banco
       }
       if (est.pausado) est.aberto = false;
       return est;
