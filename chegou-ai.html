@@ -5756,7 +5756,105 @@ function adicionarItem(idx) {
     abrirModalArte(item, idx);
     return;
   }
+  if(item.unidade === 'kg') {
+    abrirModalPeso(item, idx);
+    return;
+  }
   abrirModalObservacao(item, idx);
+}
+
+// ─── Modal de peso — açougue / produtos vendidos por kg ──────────────────────
+function abrirModalPeso(item, idx) {
+  var overlay = document.getElementById('modal-peso');
+  if(!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'modal-peso';
+    overlay.className = 'modal-overlay';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e){ if(e.target===this) this.classList.remove('aberto'); });
+  }
+  var precoKg = parseFloat(item.preco);
+  var opcoes = [
+    { g: 250,  label: '250g'  },
+    { g: 500,  label: '500g'  },
+    { g: 1000, label: '1 kg'  },
+    { g: 1500, label: '1,5 kg'},
+    { g: 2000, label: '2 kg'  },
+  ];
+  overlay.innerHTML =
+    '<div class="modal-box" style="max-width:360px;">' +
+      '<div class="modal-titulo">🥩 ' + item.nome + '</div>' +
+      '<div style="font-size:13px;color:var(--texto2);margin-bottom:16px;text-align:center;">R$ ' + precoKg.toFixed(2).replace('.',',') + ' / kg — escolha a quantidade</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;" id="peso-opcoes">' +
+        opcoes.map(function(o) {
+          var total = (precoKg * o.g / 1000).toFixed(2).replace('.',',');
+          return '<button onclick="selecionarPesoOpcao(' + o.g + ', this)" style="padding:14px 8px;border-radius:12px;border:2px solid var(--cinza3);background:var(--cinza2);color:var(--texto);cursor:pointer;font-family:\'DM Sans\',sans-serif;">' +
+            '<div style="font-size:17px;font-weight:700;">' + o.label + '</div>' +
+            '<div style="font-size:13px;color:var(--verde);margin-top:2px;">R$ ' + total + '</div>' +
+          '</button>';
+        }).join('') +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">' +
+        '<input type="number" id="peso-custom-g" placeholder="Outra quantidade (g)" min="100" max="30000" step="50" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:\'DM Sans\',sans-serif;" oninput="atualizarPesoCustom()">' +
+        '<div style="font-size:13px;color:var(--verde);font-weight:700;min-width:60px;text-align:right;" id="peso-custom-total"></div>' +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--texto2);margin-bottom:8px;">Observação (opcional)</div>' +
+      '<input type="text" id="peso-obs" placeholder="Ex: peça inteira, moída, sem gordura..." maxlength="200" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--cinza3);background:var(--cinza2);color:var(--texto);font-size:14px;font-family:\'DM Sans\',sans-serif;margin-bottom:14px;" oninput="this.value=this.value.replace(/<[^>]*>/g,\'\')">' +
+      '<button class="btn-principal" id="peso-btn-add" disabled style="opacity:0.5;">Escolha uma quantidade</button>' +
+      '<button onclick="document.getElementById(\'modal-peso\').classList.remove(\'aberto\')" style="width:100%;background:transparent;border:none;color:var(--texto2);padding:14px;cursor:pointer;font-size:14px;font-family:\'DM Sans\',sans-serif;">Cancelar</button>' +
+    '</div>';
+  window._pesoItem = item;
+  window._pesoIdx  = idx;
+  window._pesoGSelecionado = 0;
+  overlay.classList.add('aberto');
+}
+
+function selecionarPesoOpcao(gramas, btn) {
+  document.querySelectorAll('#peso-opcoes button').forEach(function(b){ b.style.borderColor='var(--cinza3)'; b.style.background='var(--cinza2)'; b.style.color='var(--texto)'; });
+  btn.style.borderColor = 'var(--verde)';
+  btn.style.background  = 'rgba(0,200,100,0.1)';
+  document.getElementById('peso-custom-g').value = '';
+  document.getElementById('peso-custom-total').textContent = '';
+  window._pesoGSelecionado = gramas;
+  _atualizarBotaoPeso(gramas);
+}
+
+function atualizarPesoCustom() {
+  document.querySelectorAll('#peso-opcoes button').forEach(function(b){ b.style.borderColor='var(--cinza3)'; b.style.background='var(--cinza2)'; b.style.color='var(--texto)'; });
+  var g = parseInt(document.getElementById('peso-custom-g').value) || 0;
+  var precoKg = parseFloat(window._pesoItem?.preco || 0);
+  if(g >= 100) {
+    var total = (precoKg * g / 1000).toFixed(2).replace('.',',');
+    document.getElementById('peso-custom-total').textContent = 'R$ ' + total;
+    window._pesoGSelecionado = g;
+  } else {
+    document.getElementById('peso-custom-total').textContent = '';
+    window._pesoGSelecionado = 0;
+  }
+  _atualizarBotaoPeso(window._pesoGSelecionado);
+}
+
+function _atualizarBotaoPeso(gramas) {
+  var btn = document.getElementById('peso-btn-add');
+  if(!btn) return;
+  var item = window._pesoItem;
+  if(!item || !gramas) { btn.disabled = true; btn.style.opacity = '0.5'; btn.textContent = 'Escolha uma quantidade'; return; }
+  var precoKg = parseFloat(item.preco);
+  var total = (precoKg * gramas / 1000).toFixed(2).replace('.',',');
+  var label = gramas >= 1000 ? (gramas/1000).toFixed(gramas%1000===0?0:1).replace('.',',') + ' kg' : gramas + 'g';
+  btn.disabled = false; btn.style.opacity = '1';
+  btn.textContent = 'Adicionar ' + label + ' — R$ ' + total;
+  btn.onclick = function() {
+    var obs = (document.getElementById('peso-obs')?.value || '').trim().replace(/<[^>]*>/g,'').substring(0,200);
+    var qtdKg = parseFloat((gramas / 1000).toFixed(3));
+    var it = window._pesoItem;
+    carrinho.push({ id:it.id, nome:it.nome, preco:it.preco, emoji:it.emoji, disponivel:it.disponivel, imagem_url:it.imagem_url||'', categoria:it.categoria||'', unidade:'kg', qtd:qtdKg, observacao:obs, complementos:[] });
+    atualizarCarrinho();
+    document.getElementById('modal-peso').classList.remove('aberto');
+    var btns = document.querySelectorAll('.item-add');
+    var pesoIdx = window._pesoIdx;
+    if(btns[pesoIdx]) { btns[pesoIdx].style.background='var(--verde2)'; setTimeout(function(){ btns[pesoIdx].style.background='var(--verde)'; },200); }
+  };
 }
 
 function compQtdAlterar(delta) {
