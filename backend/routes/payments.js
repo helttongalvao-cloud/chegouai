@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, param, validationResult } = require('express-validator');
-const { optionalAuth } = require('../middleware/auth');
+const { optionalAuth, requireAuth } = require('../middleware/auth');
 const { paymentLimiter } = require('../middleware/security');
 const { supabaseAdmin } = require('../config/supabase');
 const {
@@ -13,6 +13,48 @@ const { calcularSplit } = require('../services/commission');
 const { enviarPush } = require('./notifications');
 const { enviarWhatsApp, alertarAdmin } = require('../services/whatsapp');
 const { enviarTelegram } = require('../services/telegram');
+
+// ─── Helper: buscar token MP do lojista ──────────────────────────────────────
+async function buscarTokenLojista(estabelecimentoId) {
+  const { data } = await supabaseAdmin
+    .from('estabelecimentos')
+    .select('mp_access_token, mp_refresh_token, mp_token_expires_at')
+    .eq('id', estabelecimentoId)
+    .single();
+  if (!data?.mp_access_token) return null;
+  // Se expirado, tentar renovar
+  if (data.mp_token_expires_at && new Date(data.mp_token_expires_at) < new Date()) {
+    return await renovarTokenLojista(estabelecimentoId, data.mp_refresh_token);
+  }
+  return data.mp_access_token;
+}
+
+async function renovarTokenLojista(estabelecimentoId, refreshToken) {
+  try {
+    const r = await fetch('https://api.mercadopago.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'refresh_token',
+        client_id: process.env.MP_CLIENT_ID,
+        client_secret: process.env.MP_CLIENT_SECRET,
+        refresh_token: refreshToken,
+      }),
+    });
+    const data = await r.json();
+    if (!data.access_token) return null;
+    const expiresAt = new Date(Date.now() + (data.expires_in - 300) * 1000).toISOString();
+    await supabaseAdmin.from('estabelecimentos').update({
+      mp_access_token: data.access_token,
+      mp_refresh_token: data.refresh_token || refreshToken,
+      mp_token_expires_at: expiresAt,
+    }).eq('id', estabelecimentoId);
+    return data.access_token;
+  } catch (e) {
+    console.error('[MP OAuth] Falha ao renovar token:', e.message);
+    return null;
+  }
+}
 
 const router = express.Router();
 
@@ -212,6 +254,7 @@ router.post('/pix', paymentLimiter, optionalAuth, [
     const firstName = partes[0] || 'Cliente';
     const lastName = partes.slice(1).join(' ') || 'Chegô';
 
+    const mpTokenLojista = await buscarTokenLojista(pedido.estabelecimento_id);
     const pagamento = await criarPagamentoPix({
       total: split.total,
       orderId: pedidoId,
@@ -220,6 +263,8 @@ router.post('/pix', paymentLimiter, optionalAuth, [
       payerFirstName: firstName,
       payerLastName: lastName,
       payerCpf: cpfFinal,
+      mpAccessToken: mpTokenLojista || undefined,
+      applicationFee: mpTokenLojista ? split.valorPlataforma : undefined,
     });
 
     if (!pagamento.qrCode) {
@@ -311,6 +356,7 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
       totalCobranca = parseFloat((parcelaCeiling * nParcelas).toFixed(2));
     }
 
+    const mpTokenLojista = await buscarTokenLojista(pedido.estabelecimento_id);
     const pagamento = await criarPagamentoCartao({
       total: totalCobranca,
       token,
@@ -323,6 +369,8 @@ router.post('/cartao', paymentLimiter, optionalAuth, [
       payerFirstName: firstName,
       payerLastName: lastName,
       payerCpf: cpfFinal,
+      mpAccessToken: mpTokenLojista || undefined,
+      applicationFee: mpTokenLojista ? split.valorPlataforma : undefined,
     });
 
     await salvarCobranca(pedidoId, pagamento.paymentId, split);
@@ -423,6 +471,84 @@ router.get('/status/:pedidoId', [
   } catch (err) {
     next(err);
   }
+});
+
+// =============================================
+// GET /api/payments/mp-oauth/url — URL de autorização MP para lojista
+// =============================================
+router.get('/mp-oauth/url', requireAuth, async (req, res) => {
+  const { data: est } = await supabaseAdmin
+    .from('estabelecimentos')
+    .select('id')
+    .eq('user_id', req.user.id)
+    .single();
+  if (!est) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
+
+  const redirectUri = `${process.env.WEBHOOK_URL}/api/payments/mp-oauth/callback`;
+  const url = `https://auth.mercadopago.com.br/authorization?client_id=${process.env.MP_CLIENT_ID}&response_type=code&platform_id=mp&redirect_uri=${encodeURIComponent(redirectUri)}&state=${est.id}`;
+  res.json({ url });
+});
+
+// =============================================
+// GET /api/payments/mp-oauth/callback — Callback OAuth MP
+// =============================================
+router.get('/mp-oauth/callback', async (req, res) => {
+  const { code, state: estabelecimentoId } = req.query;
+  if (!code || !estabelecimentoId) return res.redirect('/app?mp_oauth=erro');
+
+  try {
+    const redirectUri = `${process.env.WEBHOOK_URL}/api/payments/mp-oauth/callback`;
+    const r = await fetch('https://api.mercadopago.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'authorization_code',
+        client_id: process.env.MP_CLIENT_ID,
+        client_secret: process.env.MP_CLIENT_SECRET,
+        code,
+        redirect_uri: redirectUri,
+      }),
+    });
+    const data = await r.json();
+    if (!data.access_token) {
+      console.error('[MP OAuth] Falha:', data);
+      return res.redirect('/app?mp_oauth=erro');
+    }
+    const expiresAt = new Date(Date.now() + (data.expires_in - 300) * 1000).toISOString();
+    await supabaseAdmin.from('estabelecimentos').update({
+      mp_access_token: data.access_token,
+      mp_refresh_token: data.refresh_token,
+      mp_token_expires_at: expiresAt,
+      mp_user_id: String(data.user_id),
+    }).eq('id', estabelecimentoId);
+
+    console.log(`[MP OAuth] Lojista ${estabelecimentoId} conectado — user_id: ${data.user_id}`);
+    res.redirect('/app?mp_oauth=ok');
+  } catch (e) {
+    console.error('[MP OAuth] Erro callback:', e.message);
+    res.redirect('/app?mp_oauth=erro');
+  }
+});
+
+// =============================================
+// DELETE /api/payments/mp-oauth — Desconectar conta MP do lojista
+// =============================================
+router.delete('/mp-oauth', requireAuth, async (req, res) => {
+  const { data: est } = await supabaseAdmin
+    .from('estabelecimentos')
+    .select('id')
+    .eq('user_id', req.user.id)
+    .single();
+  if (!est) return res.status(404).json({ error: 'Estabelecimento não encontrado' });
+
+  await supabaseAdmin.from('estabelecimentos').update({
+    mp_access_token: null,
+    mp_refresh_token: null,
+    mp_token_expires_at: null,
+    mp_user_id: null,
+  }).eq('id', est.id);
+
+  res.json({ ok: true });
 });
 
 module.exports = router;

@@ -2127,6 +2127,19 @@ async function inicializarApp() {
 }
 inicializarApp();
 
+// Tratar retorno do OAuth Mercado Pago
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var mpOauth = params.get('mp_oauth');
+  if(mpOauth === 'ok') {
+    mostrarToast('✅ Mercado Pago conectado! Repasses automáticos ativados.');
+    history.replaceState(null, '', '/app');
+  } else if(mpOauth === 'erro') {
+    mostrarToast('Erro ao conectar Mercado Pago. Tente novamente.', 'erro');
+    history.replaceState(null, '', '/app');
+  }
+})();
+
 // ============================================
 // PUSH NOTIFICATIONS
 // ============================================
@@ -7762,14 +7775,14 @@ async function renderInfoLoja() {
     '</div></div>' +
     '<button class="btn-principal" style="margin-top:16px;" id="btn-salvar-loja" onclick="salvarInfoLoja()">Salvar alterações</button>' +
     '<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--cinza3);">' +
-    '<label style="font-size:13px;font-weight:600;color:var(--texto2);display:block;margin-bottom:8px;">Pagamentos — Pagar.me</label>' +
-    (est.pagarme_recipient_id
-      ? '<div style="display:flex;align-items:center;gap:8px;padding:12px;border-radius:10px;background:rgba(0,200,100,0.08);border:1px solid rgba(0,200,100,0.25);">' +
+    '<label style="font-size:13px;font-weight:600;color:var(--texto2);display:block;margin-bottom:8px;">💳 Recebimentos — Mercado Pago</label>' +
+    '<p style="font-size:12px;color:var(--texto2);margin:0 0 12px;">Conecte sua conta do Mercado Pago para receber os pagamentos automaticamente, sem precisar aguardar repasse manual.</p>' +
+    (est.mp_user_id
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:12px;border-radius:10px;background:rgba(0,200,100,0.08);border:1px solid rgba(0,200,100,0.25);margin-bottom:10px;">' +
         '<span style="color:#00c864;font-size:18px;">✓</span>' +
-        '<span style="font-size:13px;color:var(--texto);">Recebedor configurado (ID: ' + est.pagarme_recipient_id + ') — repasse automático ativo</span></div>'
-      : '<div style="display:flex;align-items:center;gap:8px;padding:12px;border-radius:10px;background:rgba(255,180,0,0.08);border:1px solid rgba(255,180,0,0.25);">' +
-        '<span style="color:#ffb400;font-size:18px;">!</span>' +
-        '<span style="font-size:13px;color:var(--texto);">Recebedor não configurado — entre em contato com o suporte para cadastrar como recipient Pagar.me</span></div>'
+        '<span style="font-size:13px;color:var(--texto);flex:1;">Conta Mercado Pago conectada — repasse automático ativo</span></div>' +
+        '<button onclick="desconectarMP()" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid var(--erro);background:transparent;color:var(--erro);font-size:13px;font-weight:600;cursor:pointer;">Desconectar conta MP</button>'
+      : '<button onclick="conectarMP()" style="width:100%;padding:13px;border-radius:12px;background:#009ee3;border:none;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">🔗 Conectar Mercado Pago</button>'
     ) +
     '</div>' +
     '<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--cinza3);">' +
@@ -7938,6 +7951,26 @@ function toggleHorario(dia) {
   var label = document.getElementById('hor-' + dia + '-label');
   if(inputs) inputs.style.display = ativo ? 'flex' : 'none';
   if(label) label.textContent = ativo ? 'Aberto' : 'Fechado';
+}
+
+async function conectarMP() {
+  try {
+    var resp = await apiCall('/api/payments/mp-oauth/url');
+    window.location.href = resp.url;
+  } catch(e) {
+    mostrarToast('Erro ao conectar: ' + e.message, 'erro');
+  }
+}
+
+async function desconectarMP() {
+  if(!confirm('Desconectar sua conta Mercado Pago? Os repasses passarão a ser manuais.')) return;
+  try {
+    await apiCall('/api/payments/mp-oauth', { method: 'DELETE' });
+    mostrarToast('Conta MP desconectada');
+    renderInfoLoja();
+  } catch(e) {
+    mostrarToast('Erro: ' + e.message, 'erro');
+  }
 }
 
 async function salvarInfoLoja() {
