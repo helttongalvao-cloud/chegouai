@@ -9526,10 +9526,9 @@ async function renderAdmin(secao) {
         var btnStatus = e.ativo
           ? '<button class="btn-acao secundario" onclick="adminToggleLoja(\'' + e.id + '\')" style="margin-left:6px;padding:6px 10px;">Desativar</button>'
           : '<button class="btn-acao" onclick="adminToggleLoja(\'' + e.id + '\')" style="margin-left:6px;padding:6px 10px;background:var(--verde);">Ativar</button>';
-        var btnRecebedor = e.pagarme_recipient_id
-          ? '<span style="font-size:11px;color:#00c864;padding:4px 8px;border-radius:8px;background:rgba(0,200,100,0.1);">✓ Pagar.me</span>' +
-            '<button class="btn-acao" onclick="adminAtivarTransferencia(\'' + e.id + '\',this)" style="padding:4px 8px;font-size:11px;background:var(--cinza3);">💸 Auto-transfer</button>'
-          : '<button class="btn-acao" onclick="adminCadastrarRecebedor(\'' + e.id + '\',\'' + sanitizar(e.nome) + '\')" style="padding:6px 10px;background:#ff6d00;">+ Pagar.me</button>';
+        var btnRecebedor = e.mp_user_id
+          ? '<span style="font-size:11px;color:#00c864;padding:4px 8px;border-radius:8px;background:rgba(0,200,100,0.1);">✓ MP conectado</span>'
+          : '<span style="font-size:11px;color:#ffb400;padding:4px 8px;border-radius:8px;background:rgba(255,180,0,0.1);">⚠ MP pendente</span>';
         return '<div class="tabela-row" style="align-items:center;">' +
           '<div class="info" style="flex:1;"><div class="nome">' + e.nome + (e.ativo ? '' : ' <i>(Inativo)</i>') + '</div><div class="sub">' + (c.descricao || '') + '</div></div>' +
           '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">' +
