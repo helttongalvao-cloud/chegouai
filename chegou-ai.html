@@ -9828,9 +9828,8 @@ async function adminSalvarLoja(id) {
     slug:         document.getElementById('adm-loja-slug').value.trim() || null,
     aberto:       document.getElementById('adm-loja-aberta').checked,
     endereco:     document.getElementById('adm-loja-endereco').value.trim() || null,
-    lat:          window._admLojaLat || null,
-    lng:          window._admLojaLng || null,
   };
+  if (window._admLojaLat && window._admLojaLng) { body.lat = window._admLojaLat; body.lng = window._admLojaLng; }
   if (!body.nome) return mostrarToast('Nome é obrigatório');
   try {
     await apiCall('/api/admin/establishments/' + id, { method: 'PUT', body });
